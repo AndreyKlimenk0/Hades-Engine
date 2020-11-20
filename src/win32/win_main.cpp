@@ -1,7 +1,11 @@
+#include <stdio.h>
+
 #include "win_local.h"
 #include "../render/base.h"
+#include "../math/vector.h"
 
 bool game_end = false;
+
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -24,22 +28,63 @@ void create_and_show_window(Win32_State *win32, int nCmdShow)
 	if (hwnd == NULL) {
 		return;
 	}
-	ShowWindow(win32->window, nCmdShow);
+	
 	win32->window = hwnd;
-
 	HDC window_dc = GetDC(win32->window);
 	win32->window_width = GetDeviceCaps(window_dc, HORZRES);
 	win32->window_height = GetDeviceCaps(window_dc, VERTRES);
+
+	ShowWindow(win32->window, nCmdShow);
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
+	Vector4 vec(11, 8, 9, 13);
+	Vector4 vec2(3, 4, 5, 7);
+
+	AllocConsole();
+	freopen("conin$", "r", stdin);
+	freopen("conout$", "w", stdout);
+	freopen("conout$", "w", stderr);
+	HWND consoleHandle = GetConsoleWindow();
+	MoveWindow(consoleHandle, 1, 1, 680, 480, 1);
+
+	Vector4 result = vec + vec2;
+	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec - vec2;
+	printf("- x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec * vec2;
+	printf(" * x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec / vec2;
+	printf("/ x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z , result.w);
+
+	result = vec + 10;
+	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec - 10;
+	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec * 10;
+	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec / 10;
+	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec.normalize();
+	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
+
+	result = vec.normalize();
+	printf("dot = %f\n", vec.dot(vec2));
+	printf("dot = %f\n", vec.length());
+
 	Win32_State win32_state;
 
 	//create_console(&win32_state);
 	win32_state.hinstance = hInstance;
 	create_and_show_window(&win32_state, nCmdShow);
-
 
 	Direct3D_State direct3d;
 	direct3d.init(&win32_state);
