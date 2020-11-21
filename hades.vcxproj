@@ -85,6 +85,7 @@
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
       <ShaderType>Effect</ShaderType>
+      <ObjectFileOutput>$(OutDir)compiled_fx\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -129,13 +130,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\elib\ds\string.cpp" />
+    <ClCompile Include="src\framework\file.cpp" />
     <ClCompile Include="src\render\base.cpp" />
+    <ClCompile Include="src\render\effect.cpp" />
+    <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\math\vector.h" />
+    <ClInclude Include="src\elib\ds\array.h" />
+    <ClInclude Include="src\elib\ds\string.h" />
+    <ClInclude Include="src\framework\file.h" />
+    <ClInclude Include="src\elib\math\vector.h" />
     <ClInclude Include="src\render\base.h" />
+    <ClInclude Include="src\render\effect.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\win32\win_local.h" />
   </ItemGroup>

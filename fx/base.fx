@@ -22,7 +22,7 @@ Vertex_Out vs_main(Vertex_In vertex)
 
 float4 ps_main(Vertex_Out pixel) : SV_Target
 {
-	return pixel.color;
+	return pixel.color.x + 0.2f;
 }
 
 

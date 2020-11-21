@@ -2,7 +2,10 @@
 
 #include "win_local.h"
 #include "../render/base.h"
-#include "../math/vector.h"
+#include "../render/effect.h"
+#include "../elib/math/vector.h"
+#include "../elib/ds/array.h"
+#include "../elib/ds/string.h"
 
 bool game_end = false;
 
@@ -49,43 +52,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	HWND consoleHandle = GetConsoleWindow();
 	MoveWindow(consoleHandle, 1, 1, 680, 480, 1);
 
-	Vector4 result = vec + vec2;
-	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec - vec2;
-	printf("- x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec * vec2;
-	printf(" * x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec / vec2;
-	printf("/ x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z , result.w);
-
-	result = vec + 10;
-	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec - 10;
-	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec * 10;
-	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec / 10;
-	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec.normalize();
-	printf("x = %f, y = %f, z = %f, w = %f\n", result.x, result.y, result.z, result.w);
-
-	result = vec.normalize();
-	printf("dot = %f\n", vec.dot(vec2));
-	printf("dot = %f\n", vec.length());
-
 	Win32_State win32_state;
 
 	//create_console(&win32_state);
+
 	win32_state.hinstance = hInstance;
 	create_and_show_window(&win32_state, nCmdShow);
 
+	char *result = concatenate_c_str("E:\\andrey\\dev\\hades\\Debug\\compiled_fx\\", "*");
+	printf("%s\n", result);
+	
 	Direct3D_State direct3d;
 	direct3d.init(&win32_state);
 
