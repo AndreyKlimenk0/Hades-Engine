@@ -62,6 +62,9 @@
     <ClInclude Include="src\elib\ds\string.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\elib\ds\hash_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="fx\base.fx" />

@@ -2,28 +2,55 @@
 #define ARRAY_H
 
 #include <string.h>
-
+#include <assert.h>
 
 template <typename T>
 struct Array {
-	T *array = NULL;
+	T *array;
 	int count;
 	int size;
 
 	Array(int _size = 8);
 	~Array() { delete[] array; }
+
+	T &operator[](int i);
+	const T &operator[](int i) const;
+
 	void push(const T &item);
 	T &pop();
 	void resize();
+	T &at(int index);
 };
+
+template <typename T>
+T &Array<T>::at(int index)
+{
+	return array[index];
+}
 
 template <typename T>
 Array<T>::Array(int _size)
 {
+	array = NULL;
 	count = 0;
 	size = _size;
 	resize();
 }
+
+template <typename T>
+T &Array<T>::operator[](int i)
+{
+	assert(count > i);
+	return array[i];
+}
+
+template <typename T>
+const T &Array<T>::operator[](int i) const
+{
+	assert(count > i);
+	return array[i];
+}
+
 
 template <typename T>
 void Array<T>::resize()
@@ -40,7 +67,6 @@ void Array<T>::resize()
 	delete[] temp_array;
 }
 
-
 template <typename T>
 void Array<T>::push(const T &item)
 {
@@ -53,6 +79,7 @@ void Array<T>::push(const T &item)
 template <typename T>
 T &Array<T>::pop()
 {
+	assert(count > 0);
 	return array[--count];
 }
 
