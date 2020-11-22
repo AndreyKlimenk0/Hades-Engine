@@ -2,10 +2,9 @@
 
 #include "win_local.h"
 #include "../render/base.h"
-#include "../render/effect.h"
-#include "../elib/math/vector.h"
 #include "../elib/ds/array.h"
-#include "../elib/ds/string.h"
+#include "../elib/ds/hash_table.h"
+
 
 bool game_end = false;
 
@@ -42,9 +41,6 @@ void create_and_show_window(Win32_State *win32, int nCmdShow)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-	Vector4 vec(11, 8, 9, 13);
-	Vector4 vec2(3, 4, 5, 7);
-
 	AllocConsole();
 	freopen("conin$", "r", stdin);
 	freopen("conout$", "w", stdout);
@@ -56,12 +52,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	//create_console(&win32_state);
 
+	Hash_Table<const char *, int> test = Hash_Table<const char *, int>();
+	test.set("andrey", 222);
+	test.set("klimenko", 442);
+	test.set("value", 555);
+
+	printf("%d\n", test.get("andrey"));
+	printf("%d\n", test.get("klimenko"));
+	printf("%d\n", test.get("value"));
+
 	win32_state.hinstance = hInstance;
 	create_and_show_window(&win32_state, nCmdShow);
 
-	char *result = concatenate_c_str("E:\\andrey\\dev\\hades\\Debug\\compiled_fx\\", "*");
-	printf("%s\n", result);
-	
 	Direct3D_State direct3d;
 	direct3d.init(&win32_state);
 

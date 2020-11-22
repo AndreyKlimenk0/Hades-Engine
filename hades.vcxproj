@@ -69,7 +69,10 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)dependecies\lib\x86;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -140,6 +143,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\elib\ds\array.h" />
+    <ClInclude Include="src\elib\ds\hash_table.h" />
     <ClInclude Include="src\elib\ds\string.h" />
     <ClInclude Include="src\framework\file.h" />
     <ClInclude Include="src\elib\math\vector.h" />
