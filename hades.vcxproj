@@ -145,6 +145,7 @@
     <ClInclude Include="src\elib\ds\array.h" />
     <ClInclude Include="src\elib\ds\hash_table.h" />
     <ClInclude Include="src\elib\ds\string.h" />
+    <ClInclude Include="src\elib\math\matrix.h" />
     <ClInclude Include="src\framework\file.h" />
     <ClInclude Include="src\elib\math\vector.h" />
     <ClInclude Include="src\render\base.h" />

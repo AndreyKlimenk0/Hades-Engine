@@ -1,6 +1,9 @@
 #ifndef HASH_TABLE_H
 #define HASH_TABLE_H
 
+#include <map>
+#include <string>
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,9 +45,10 @@ struct Hash_Table {
 	Hash_Table(int _size = 53);
 	~Hash_Table();
 
-	_Value_ &operator[](const _Key_ &key);
+	_Value_ & operator[](const _Key_ &key);
+	//_Value_ &operator[](const _Key_ &key, const _Value_ &value);
 	void set(const _Key_ &key, const _Value_ &value);
-	_Value_ get(const _Key_ &key);
+	bool get(const _Key_ &key, _Value_ &value);
 };
 
 template <typename _Key_, typename _Value_>
@@ -66,6 +70,9 @@ Hash_Table<_Key_, _Value_>::~Hash_Table()
 template <typename _Key_, typename _Value_>
 _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
 {
+	_Value_ value;
+	get(key, value);
+	return value;
 }
 
 template <typename _Key_, typename _Value_>
@@ -84,19 +91,20 @@ void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
 }
 
 template <typename _Key_, typename _Value_>
-_Value_ Hash_Table<_Key_, _Value_>::get(const _Key_ &key)
+bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
 {
 	int index = double_hash(key, size, 0);
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
 	int i = 1;
 	while (node != NULL) {
 		if (!strcmp(key, node->key)) {
-			return node->value;
+			value = node->value;
+			return true;
 		}
 		index = double_hash(key, size, i);
 		node = &node[index];
 		i++;
 	}
-	return NULL;
+	return false;
 }
 #endif
