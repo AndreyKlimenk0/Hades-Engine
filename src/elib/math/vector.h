@@ -1,8 +1,9 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <DirectXMath.h>
 #include <math.h>
+#include <assert.h>
+#include <DirectXMath.h>
 
 using namespace DirectX;
 
@@ -42,11 +43,13 @@ struct Vector2 {
 
 inline float &Vector2::operator[](int i)
 {
+	assert(i < 2);
 	return (&x)[i];
 }
 
 inline const float &Vector2::operator[](int i) const
 {
+	assert(i < 2);
 	return (&x)[i];
 }
 
@@ -199,18 +202,21 @@ struct Vector3 {
 
 	operator XMVECTOR();
 
-	float   length();
 	Vector3 normalize();
+	Vector3 cross(const Vector3 &other);
+	float   length();
 	float dot(const Vector3 & other);
 };
 
 inline float &Vector3::operator[](int i)
 {
+	assert(i < 3);
 	return (&x)[i];
 }
 
 inline const float &Vector3::operator[](int i) const
 {
+	assert(i < 3);
 	return (&x)[i];
 }
 
@@ -343,6 +349,12 @@ inline float Vector3::dot(const Vector3 &other)
 	return x * other.x + y * other.y + z * other.z;
 }
 
+inline Vector3 Vector3::cross(const  Vector3 &other)
+{
+	return Vector3(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
+}
+
+
 struct Vector4 {
 	float x;
 	float y;
@@ -374,18 +386,20 @@ struct Vector4 {
 
 	operator XMVECTOR();
 
-	float   length();
 	Vector4 normalize();
+	float   length();
 	float dot(const Vector4 & other);
 };
 
 inline float &Vector4::operator[](int i)
 {
+	assert(i < 4);
 	return (&x)[i];
 }
 
 inline const float &Vector4::operator[](int i) const
 {
+	assert(i < 4);
 	return (&x)[i];
 }
 

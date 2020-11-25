@@ -2,9 +2,7 @@
 
 #include "win_local.h"
 #include "../render/base.h"
-#include "../elib/ds/array.h"
-#include "../elib/ds/hash_table.h"
-
+#include "../elib/math/matrix.h"
 
 bool game_end = false;
 
@@ -52,14 +50,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	//create_console(&win32_state);
 
-	Hash_Table<const char *, int> test = Hash_Table<const char *, int>();
-	test.set("andrey", 222);
-	test.set("klimenko", 442);
-	test.set("value", 555);
-
-	printf("%d\n", test.get("andrey"));
-	printf("%d\n", test.get("klimenko"));
-	printf("%d\n", test.get("value"));
+	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
+	Matrix4 test2 = Matrix4(Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88), Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88));
+	Matrix4 test3 = Matrix4(Vector4(1, 0, 0, 1), Vector4(0, 2, 1, 2), Vector4(2, 1, 0, 1), Vector4(2, 0, 1, 4));
+	test3.inverse();
+	//Matrix4 result = test1 * test2;
+	//print_mat(result);
 
 	win32_state.hinstance = hInstance;
 	create_and_show_window(&win32_state, nCmdShow);
