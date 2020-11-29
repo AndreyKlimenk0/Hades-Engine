@@ -2,11 +2,11 @@
 #define VERTEX_H
 
 #include <d3d11.h>
+#include "../render/base.h"
+#include "../libs/math/vector.h"
 
-#include "../elib/math/vector.h"
 
-
-struct Vertex_Col {
+struct Vertex_Color {
 	Vector3 position;
 	Vector4 color;
 };
@@ -14,9 +14,9 @@ struct Vertex_Col {
 struct Input_Layout {
 	~Input_Layout();
 	
-	static const ID3D11InputLayout *vertex_col;
+	static ID3D11InputLayout *vertex_color;
 	static const D3D11_INPUT_ELEMENT_DESC vertex_col_desc[2];
 	
-	void init();
+	static void init(const Direct3D * direct3d);
 };
 #endif

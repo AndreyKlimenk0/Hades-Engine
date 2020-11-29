@@ -1,11 +1,12 @@
 #include <stdio.h>
 
 #include "win_local.h"
-#include "../render/base.h"
-#include "../elib/math/matrix.h"
+#include "../render/render_frame.h"
+#include "../render/effect.h"
+#include "../render/vertex.h"
+#include "../libs/math/matrix.h"
 
 bool game_end = false;
-
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -30,10 +31,10 @@ void create_and_show_window(Win32_State *win32, int nCmdShow)
 	}
 	
 	win32->window = hwnd;
-	HDC window_dc = GetDC(win32->window);
-	win32->window_width = GetDeviceCaps(window_dc, HORZRES);
-	win32->window_height = GetDeviceCaps(window_dc, VERTRES);
-
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	win32->window_height = rect.bottom - rect.top;
+	win32->window_width = rect.right - rect.left;
 	ShowWindow(win32->window, nCmdShow);
 }
 
@@ -46,8 +47,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	HWND consoleHandle = GetConsoleWindow();
 	MoveWindow(consoleHandle, 1, 1, 680, 480, 1);
 
-	Win32_State win32_state;
-
 	//create_console(&win32_state);
 
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
@@ -57,11 +56,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
 
+	Win32_State win32_state;
 	win32_state.hinstance = hInstance;
 	create_and_show_window(&win32_state, nCmdShow);
-
-	Direct3D_State direct3d;
+	
+	Direct3D direct3d;
 	direct3d.init(&win32_state);
+
+
+	//Direct3D direct3d;
+
+	Input_Layout::init(&direct3d);
+
+	get_fx_shaders(&direct3d);
 
 	MSG msg = { };
 	while (!game_end) {
@@ -70,7 +77,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 			DispatchMessage(&msg);
 		}
 
-		render_frame(&direct3d);
+		render_frame(&direct3d, &win32_state);
 	}
 	direct3d.shutdown();
 	return 0;
@@ -91,6 +98,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			EndPaint(hwnd, &ps);
 			return 0;
 		}
+		case WM_SIZE: {
+		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
+
+typedef BYTE  u8;
+typedef WORD  u16;
+typedef UINT  u32;
+typedef DWORD u64;
+
+

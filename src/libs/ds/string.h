@@ -4,6 +4,6 @@
 #include "array.h"
 
 char *concatenate_c_str(const char *str1, const char *str2);
-Array<char *> *split(char *string, const char *characters);
+void split(char *string, const char *characters, Array<char *> *array);
 
 #endif

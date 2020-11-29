@@ -1,5 +1,7 @@
 #include <string.h>
 #include "string.h"
+#include <stdlib.h>
+
 
 char *concatenate_c_str(const char *str1, const char *str2)
 {
@@ -16,14 +18,13 @@ char *concatenate_c_str(const char *str1, const char *str2)
 }
 
 
-Array<char *> *split(char *string, const char *characters)
+void split(char *string, const char *characters, Array<char *> *array)
 {
-	Array<char *> *temp = new Array<char *>();
+	//Array<char *> *temp = new Array<char *>();
 	char *next = NULL;
 	char *token = strtok_s(string, characters, &next);
 	while (token != NULL) {
-		temp->push(token);
+		array->push(token);
 		token = strtok_s(NULL, characters, &next);
 	}
-	return temp;
 }

@@ -11,23 +11,9 @@
 #define HT_PRIME_1 151
 #define HT_PRIME_2 163
 
-int hash(const char* string, const int factor, const int table_count)
-{
-	long hash = 0;
-	const int len = strlen(string);
-	for (int i = 0; i < len; i++) {
-		hash += (long)pow(factor, len - (i + 1)) * string[i];
-		hash = hash % table_count;
-	}
-	return (int)hash;
-}
+int hash(const char* string, const int factor, const int table_count);
+int double_hash(const char* string, const int table_count, const int attempt);
 
-int double_hash(const char* string, const int table_count, const int attempt)
-{
-	const int hash_a = hash(string, HT_PRIME_1, table_count);
-	const int hash_b = hash(string, HT_PRIME_2, table_count);
-	return (hash_a + (attempt * (hash_b + 1))) % table_count;
-}
 
 template <typename _Key_, typename _Value_>
 struct Hash_Node {
@@ -45,8 +31,6 @@ struct Hash_Table {
 	Hash_Table(int _size = 53);
 	~Hash_Table();
 
-	_Value_ & operator[](const _Key_ &key);
-	//_Value_ &operator[](const _Key_ &key, const _Value_ &value);
 	void set(const _Key_ &key, const _Value_ &value);
 	bool get(const _Key_ &key, _Value_ &value);
 };
@@ -67,16 +51,9 @@ Hash_Table<_Key_, _Value_>::~Hash_Table()
 	nodes = NULL;
 }
 
-template <typename _Key_, typename _Value_>
-_Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
-{
-	_Value_ value;
-	get(key, value);
-	return value;
-}
 
 template <typename _Key_, typename _Value_>
-void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
+inline void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
 {
 	int index = double_hash(key, size, 0);
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
@@ -91,7 +68,7 @@ void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
 }
 
 template <typename _Key_, typename _Value_>
-bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
+inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
 {
 	int index = double_hash(key, size, 0);
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
