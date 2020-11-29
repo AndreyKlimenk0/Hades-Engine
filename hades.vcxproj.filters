@@ -33,7 +33,16 @@
     <ClCompile Include="src\framework\file.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\elib\ds\string.cpp">
+    <ClCompile Include="src\render\render_frame.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\ds\string.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\ds\hash_table.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\math\matrix.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,19 +62,25 @@
     <ClInclude Include="src\framework\file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\elib\ds\array.h">
+    <ClInclude Include="src\render\render_frame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\elib\math\vector.h">
+    <ClInclude Include="src\libs\ds\string.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\elib\ds\string.h">
+    <ClInclude Include="src\libs\ds\hash_table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\elib\ds\hash_table.h">
+    <ClInclude Include="src\libs\ds\array.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\elib\math\matrix.h">
+    <ClInclude Include="src\libs\math\matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\math\vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\general.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

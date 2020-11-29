@@ -71,7 +71,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)dependecies\lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(ProjectDir)dependencies\lib\x86</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -83,7 +83,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -133,23 +133,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\elib\ds\string.cpp" />
     <ClCompile Include="src\framework\file.cpp" />
+    <ClCompile Include="src\libs\ds\hash_table.cpp" />
+    <ClCompile Include="src\libs\ds\string.cpp" />
+    <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\render\base.cpp" />
     <ClCompile Include="src\render\effect.cpp" />
+    <ClCompile Include="src\render\render_frame.cpp" />
     <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\elib\ds\array.h" />
-    <ClInclude Include="src\elib\ds\hash_table.h" />
-    <ClInclude Include="src\elib\ds\string.h" />
-    <ClInclude Include="src\elib\math\matrix.h" />
     <ClInclude Include="src\framework\file.h" />
-    <ClInclude Include="src\elib\math\vector.h" />
+    <ClInclude Include="src\libs\ds\array.h" />
+    <ClInclude Include="src\libs\ds\hash_table.h" />
+    <ClInclude Include="src\libs\ds\string.h" />
+    <ClInclude Include="src\libs\general.h" />
+    <ClInclude Include="src\libs\math\matrix.h" />
+    <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\render\base.h" />
     <ClInclude Include="src\render\effect.h" />
+    <ClInclude Include="src\render\render_frame.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\win32\win_local.h" />
   </ItemGroup>
