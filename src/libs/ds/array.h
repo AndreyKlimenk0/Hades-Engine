@@ -11,15 +11,17 @@ struct Array {
 	int size;
 
 	Array(int _size = 8);
-	~Array() { delete[] array; }
+	~Array() { if (array) delete[] array; }
 
 	T &operator[](int i);
 	const T &operator[](int i) const;
 
-	void push(const T &item);
 	T &pop();
-	void resize();
 	T &at(int index);
+	void resize();
+	void shutdown();
+	void push(const T &item);
+	
 };
 
 template <typename T>
@@ -83,5 +85,11 @@ T &Array<T>::pop()
 	return array[--count];
 }
 
-
+template <typename T>
+void Array<T>::shutdown()
+{
+	if (array) delete[] array;
+	size = 0;
+	count = 0;
+}
 #endif

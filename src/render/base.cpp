@@ -2,10 +2,10 @@
 
 #include "base.h"
 #include "vertex.h"
-#include "../elib/math/vector.h"
+#include "../libs/math/vector.h"
 
 
-void Direct3D_State::init(const Win32_State *win32)
+void Direct3D::init(const Win32_State *win32)
 {
 	UINT create_device_flag = 0;
 
@@ -74,7 +74,7 @@ void Direct3D_State::init(const Win32_State *win32)
 	resize(win32);
 }
 
-void Direct3D_State::shutdown()
+void Direct3D::shutdown()
 {
 	RELEASE_COM(device);
 	RELEASE_COM(device_context);
@@ -84,7 +84,7 @@ void Direct3D_State::shutdown()
 	RELEASE_COM(depth_stencil_buffer);
 }
 
-void Direct3D_State::resize(const Win32_State *win32)
+void Direct3D::resize(const Win32_State *win32)
 {
 	assert(device);
 	assert(device_context);
@@ -151,65 +151,4 @@ void Direct3D_State::resize(const Win32_State *win32)
 	device_context->RSSetViewports(1, &mScreenViewport);
 }
 
-Vector4 White   = { 1.0f, 1.0f, 1.0f, 1.0f };
-Vector4 Black   = { 0.0f, 0.0f, 0.0f, 1.0f };
-Vector4 Red     = { 1.0f, 0.0f, 0.0f, 1.0f };
-Vector4 Green   = { 0.0f, 1.0f, 0.0f, 1.0f };
-Vector4 Blue    = { 0.0f, 0.0f, 1.0f, 1.0f };
-Vector4 Yellow  = { 1.0f, 1.0f, 0.0f, 1.0f };
-Vector4 Cyan    = { 0.0f, 1.0f, 1.0f, 1.0f };
-Vector4 Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
-Vector4 Silver  = { 0.75f, 0.75f, 0.75f, 1.0f };
-Vector4 LightSteelBlue = { 0.69f, 0.77f, 0.87f, 1.0f };
 
-
-
-void render_frame(Direct3D_State *direct3d)
-{
-	const float color[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	direct3d->device_context->ClearRenderTargetView(direct3d->render_target_view, color);
-
-	Vertex_Col vertices[] =
-	{
-		{ Vector3(-1.0f, -1.0f, -1.0f), White },
-		{ Vector3(-1.0f, +1.0f, -1.0f), Black   },
-		{ Vector3(+1.0f, +1.0f, -1.0f), Red     },
-		{ Vector3(+1.0f, -1.0f, -1.0f), Green   },
-		{ Vector3(-1.0f, -1.0f, +1.0f), Blue    },
-		{ Vector3(-1.0f, +1.0f, +1.0f), Yellow  },
-		{ Vector3(+1.0f, +1.0f, +1.0f), Cyan    },
-		{ Vector3(+1.0f, -1.0f, +1.0f), Magenta }
-	};
-
-	UINT indices[] = {
-		// front face
-		0, 1, 2,
-		0, 2, 3,
-
-		// back face
-		4, 6, 5,
-		4, 7, 6,
-
-		// left face
-		4, 5, 1,
-		4, 1, 0,
-
-		// right face
-		3, 2, 6,
-		3, 6, 7,
-
-		// top face
-		1, 5, 6,
-		1, 6, 2,
-
-		// bottom face
-		4, 0, 3,
-		4, 3, 7
-	};
-
-	ID3D11Buffer *box_vertex = NULL;
-	ID3D11Buffer *box_index = NULL;
-	create_default_buffer(direct3d->device, sizeof(vertices), &vertices, sizeof(indices), &indices, &box_vertex, &box_index);
-
-	direct3d->swap_chain->Present(0, 0);
-}
