@@ -149,6 +149,8 @@ void Direct3D::resize(const Win32_State *win32)
 	mScreenViewport.MaxDepth = 1.0f;
 
 	device_context->RSSetViewports(1, &mScreenViewport);
+
+	perspective_matrix = get_perspective_matrix(win32);
 }
 
 
