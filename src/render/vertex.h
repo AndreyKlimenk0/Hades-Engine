@@ -9,6 +9,14 @@
 struct Vertex_Color {
 	Vector3 position;
 	Vector4 color;
+	Vertex_Color() {}
+	Vertex_Color(Vector3 position, Vector4 color) : position(position), color(color) {}
+};
+
+struct Vertex {
+	Vector3 position;
+	Vector3 normal;
+	Vector2 uv;
 };
 
 struct Input_Layout {

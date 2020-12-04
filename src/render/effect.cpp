@@ -2,9 +2,9 @@
 
 #include "base.h"
 #include "effect.h"
-#include "../framework/file.h"
-#include "../libs/ds/string.h"
 #include "../libs/general.h"
+#include "../libs/ds/string.h"
+#include "../framework/file.h"
 
 
 Hash_Table<const char *, ID3DX11Effect *> *get_fx_shaders(const Direct3D *direct3d)

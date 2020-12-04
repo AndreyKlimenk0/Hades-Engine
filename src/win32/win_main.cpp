@@ -1,12 +1,17 @@
 #include <stdio.h>
+#include <windowsx.h>
 
 #include "win_local.h"
-#include "../render/render_frame.h"
 #include "../render/effect.h"
+#include "../render/render_frame.h"
+#include "../framework/input.h"
+#include "../framework/event.h"
+#include "../framework/camera.h"
+
 #include "../render/vertex.h"
 #include "../libs/math/matrix.h"
+#include "../libs/ds/queue.h"
 
-bool game_end = false;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -35,10 +40,9 @@ void create_and_show_window(Win32_State *win32, int nCmdShow)
 	GetWindowRect(hwnd, &rect);
 	win32->window_height = rect.bottom - rect.top;
 	win32->window_width = rect.right - rect.left;
-	ShowWindow(win32->window, nCmdShow);
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+void set_up_conlose_in_out()
 {
 	AllocConsole();
 	freopen("conin$", "r", stdin);
@@ -47,7 +51,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	HWND consoleHandle = GetConsoleWindow();
 	MoveWindow(consoleHandle, 1, 1, 680, 480, 1);
 
+}
+Direct3D direct3d;
+Win32_State win32_state;
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+{
 	//create_console(&win32_state);
+	set_up_conlose_in_out();
 
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
 	Matrix4 test2 = Matrix4(Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88), Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88));
@@ -56,29 +67,32 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
 
-	Win32_State win32_state;
 	win32_state.hinstance = hInstance;
+	
 	create_and_show_window(&win32_state, nCmdShow);
 	
-	Direct3D direct3d;
 	direct3d.init(&win32_state);
 
+	
+	ShowWindow(win32_state.window, nCmdShow);
 
-	//Direct3D direct3d;
-
+	Key_Input::init();
 	Input_Layout::init(&direct3d);
 
-	get_fx_shaders(&direct3d);
+	Free_Camera camera;
+	camera.init();
 
-	MSG msg = { };
-	while (!game_end) {
-		if (PeekMessage(&msg, win32_state.window, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		render_frame(&direct3d, &win32_state);
+	Render_World world;
+	world.init(&direct3d, &win32_state, &camera);
+	
+	while (1) {
+		pump_events();
+		run_event_loop();
+		camera.update(&win32_state);
+		world.render_world();
 	}
+
+
 	direct3d.shutdown();
 	return 0;
 }
@@ -87,7 +101,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg) {
 		case WM_DESTROY: {
-			game_end = true;
 			PostQuitMessage(0);
 			return 0;
 		}
@@ -99,14 +112,31 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case WM_SIZE: {
+			RECT rect;
+			GetWindowRect(win32_state.window, &rect);
+			win32_state.window_height = rect.bottom - rect.top;
+			win32_state.window_width = rect.right - rect.left;
+			direct3d.resize(&win32_state);
+			return 0;
+		}
+		case WM_LBUTTONDOWN: {
+			SetCapture(win32_state.window);
+			Mouse_Input::last_x = GET_X_LPARAM(lParam);
+			Mouse_Input::last_y = GET_Y_LPARAM(lParam);
+			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 1);
+			return 0;
+		}
+		case WM_LBUTTONUP: {
+			ReleaseCapture();
+			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 0);
+			return 0;
+		}
+		case WM_MOUSEMOVE: {
+			int x = GET_X_LPARAM(lParam);
+			int y = GET_Y_LPARAM(lParam);
+			push_event(EVENT_TYPE_MOUSE, x, y);
 		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
-
-typedef BYTE  u8;
-typedef WORD  u16;
-typedef UINT  u32;
-typedef DWORD u64;
-
 

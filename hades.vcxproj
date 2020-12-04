@@ -133,30 +133,41 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\framework\camera.cpp" />
+    <ClCompile Include="src\framework\event.cpp" />
     <ClCompile Include="src\framework\file.cpp" />
+    <ClCompile Include="src\framework\input.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\ds\string.cpp" />
+    <ClCompile Include="src\libs\general.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\render\base.cpp" />
     <ClCompile Include="src\render\effect.cpp" />
+    <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\render_frame.cpp" />
     <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\framework\camera.h" />
+    <ClInclude Include="src\framework\event.h" />
     <ClInclude Include="src\framework\file.h" />
+    <ClInclude Include="src\framework\input.h" />
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\hash_table.h" />
+    <ClInclude Include="src\libs\ds\queue.h" />
     <ClInclude Include="src\libs\ds\string.h" />
     <ClInclude Include="src\libs\general.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\render\base.h" />
     <ClInclude Include="src\render\effect.h" />
+    <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\render_frame.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\win32\win_local.h" />
+    <ClInclude Include="src\win32\win_types.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="fx\base.fx" />
