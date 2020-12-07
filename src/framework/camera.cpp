@@ -21,17 +21,16 @@ float clamp(float value, float min, float max)
 
 void Free_Camera::update(Win32_State *win32)
 {
+
 	const float Pi = 3.1415926535f;
 	if (Key_Input::is_key_down(VK_LBUTTON)) {
 
-		//static float mPhi;
-		//static float mTheta;
 		float mPhi = XMConvertToRadians(Mouse_Input::y % 360);
 		float mTheta = XMConvertToRadians(Mouse_Input::x % 360);
-		
-		//mPhi = clamp(mPhi, 0.1, Pi - 0.1f);
+
 		
 		float mRadius = 10.0f;
+
 
 		float x = mRadius * sinf(mPhi)*cosf(mTheta);
 		float z = mRadius * sinf(mPhi)*sinf(mTheta);

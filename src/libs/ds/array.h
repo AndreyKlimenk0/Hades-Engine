@@ -19,6 +19,17 @@ struct Array {
 	T &pop();
 	T &at(int index);
 	void resize();
+
+	void abort() 
+	{
+		if (array) {
+			delete[] array;
+			array = NULL;
+		}
+		count = 0;
+		size = 8;
+		resize();
+	}
 	void shutdown();
 	void push(const T &item);
 	
@@ -88,7 +99,11 @@ T &Array<T>::pop()
 template <typename T>
 void Array<T>::shutdown()
 {
-	if (array) delete[] array;
+	if (array) {
+		delete[] array;
+		array = NULL;
+	}
+
 	size = 0;
 	count = 0;
 }

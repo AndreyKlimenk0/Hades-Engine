@@ -15,7 +15,7 @@ struct Free_Camera {
 	int last_mouse_y;
 
 	Matrix4 get_view_matrix();
-	void init(const Vector3 &_position = Vector3(0.0f, 0.0f, -10.0f), 
+	void init(const Vector3 &_position = Vector3(0.0f, 3.0f, -10.0f), 
 		const Vector3 &_target = Vector3(0.0f , 0.0f, 0.0f), const Vector3 & _up = Vector3(0.0f, 1.0f, 0.0f));
 	void update(Win32_State *win32);
 };

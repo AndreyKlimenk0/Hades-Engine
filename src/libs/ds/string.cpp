@@ -20,11 +20,33 @@ char *concatenate_c_str(const char *str1, const char *str2)
 
 void split(char *string, const char *characters, Array<char *> *array)
 {
-	//Array<char *> *temp = new Array<char *>();
 	char *next = NULL;
+	array->abort();
+
 	char *token = strtok_s(string, characters, &next);
 	while (token != NULL) {
 		array->push(token);
 		token = strtok_s(NULL, characters, &next);
 	}
+}
+
+char *get_next_line(char **buffer)
+{
+	char *t = *buffer;
+	if (!*t) return NULL;
+	char *s = t;
+
+	while (*t && (*t != '\n') && (*t != '\r')) t++;
+
+	char *end = t;
+	if (*t) {
+		end++;
+		if (*t == '\r') {
+			if (*end = '\n') end++;
+		}
+		*t = '\0';
+	}
+
+	*buffer = end;
+	return s;
 }

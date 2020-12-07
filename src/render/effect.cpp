@@ -14,6 +14,7 @@ Hash_Table<const char *, ID3DX11Effect *> *get_fx_shaders(const Direct3D *direct
 		Array<char *> file_name;
 		Array<char *> file_names;
 		const char *full_path_to_dir = "E:\\andrey\\dev\\hades\\Debug\\compiled_fx\\";
+
 		effects = new Hash_Table<const char *, ID3DX11Effect *>();
 
 		bool success = get_file_names_from_dir(full_path_to_dir, &file_names);

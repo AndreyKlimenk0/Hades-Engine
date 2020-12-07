@@ -51,7 +51,8 @@ struct Direct3D {
 
 inline Matrix4 get_perspective_matrix(const Win32_State *win32)
 {
-	XMMATRIX m = XMMatrixPerspectiveFovLH(0.25f * Pi, (float)(win32->window_width / win32->window_height), 1.0f, 1000.0f);
+
+	XMMATRIX m = XMMatrixPerspectiveFovLH(0.25f * Pi, (float)win32->window_width / (float)win32->window_height, 1.0f, 1000.0f);
 	return Matrix4(m);
 }
 #endif

@@ -140,10 +140,12 @@
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\ds\string.cpp" />
     <ClCompile Include="src\libs\general.cpp" />
+    <ClCompile Include="src\libs\geometry_generator.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\render\base.cpp" />
     <ClCompile Include="src\render\effect.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
+    <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_frame.cpp" />
     <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
@@ -159,11 +161,13 @@
     <ClInclude Include="src\libs\ds\queue.h" />
     <ClInclude Include="src\libs\ds\string.h" />
     <ClInclude Include="src\libs\general.h" />
+    <ClInclude Include="src\libs\geometry_generator.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\render\base.h" />
     <ClInclude Include="src\render\effect.h" />
     <ClInclude Include="src\render\mesh.h" />
+    <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_frame.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\win32\win_local.h" />
