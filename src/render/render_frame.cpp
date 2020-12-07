@@ -3,11 +3,15 @@
 
 
 #include "effect.h"
+#include "model.h"
+#include "mesh.h"
 #include "vertex.h"
 #include "render_frame.h"
 #include "../libs/general.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
+#include "../libs/geometry_generator.h"
+
 
 
 void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_camera)
@@ -16,16 +20,30 @@ void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_
 	win32 = _win32;
 	camera = _camera;
 
+
+	Triangle_Mesh *mesh2 = new Triangle_Mesh();
+	//load_model_from_obj_file("D:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\models\\aline.obj", mesh2);
+	//create_default_buffer(direct3d->device, mesh2);
+
+
 	Triangle_Mesh *mesh = new Triangle_Mesh();
 	generate_box(mesh);
 	create_default_buffer(direct3d->device, mesh);
 
 	Triangle_Mesh *mesh1 = new Triangle_Mesh();
+
 	generate_grid(50, 50, mesh1);
 	create_default_buffer(direct3d->device, mesh1);
 
-	meshes.push(mesh);
+	//meshes.push(mesh);
 	meshes.push(mesh1);
+
+	generate_grid(40, 40, mesh1);
+	create_default_buffer(direct3d->device, mesh1);
+
+	//meshes.push(mesh);
+	meshes.push(mesh1);
+//	meshes.push(mesh2);
 
 }
 

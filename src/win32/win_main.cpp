@@ -136,6 +136,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			int y = GET_Y_LPARAM(lParam);
 			push_event(EVENT_TYPE_MOUSE, x, y);
 		}
+		case WM_SYSKEYDOWN: {
+			push_event(EVENT_TYPE_KEY, wParam, 1);
+		}
+		case WM_SYSKEYUP: {
+			//push_event(EVENT_TYPE_KEY, wParam, 0);
+		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
