@@ -201,6 +201,7 @@ struct Vector3 {
 	Vector3 &operator/=(const Vector3 &other);
 
 	operator XMVECTOR();
+	operator Vector2();
 
 	Vector3 normalize();
 	Vector3 cross(const Vector3 &other);
@@ -332,6 +333,11 @@ inline Vector3 &Vector3::operator/=(const Vector3 &other)
 inline Vector3::operator XMVECTOR()
 {
 	return XMVectorSet(x, y, z, 0.0f);
+}
+
+inline Vector3::operator Vector2()
+{
+	return Vector2(x, y);
 }
 
 inline float Vector3::length()
