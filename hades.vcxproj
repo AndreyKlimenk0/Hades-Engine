@@ -139,6 +139,7 @@
     <ClCompile Include="src\framework\input.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\ds\string.cpp" />
+    <ClCompile Include="src\libs\fbx_loader.cpp" />
     <ClCompile Include="src\libs\general.cpp" />
     <ClCompile Include="src\libs\geometry_generator.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="src\libs\ds\hash_table.h" />
     <ClInclude Include="src\libs\ds\queue.h" />
     <ClInclude Include="src\libs\ds\string.h" />
+    <ClInclude Include="src\libs\fbx_loader.h" />
     <ClInclude Include="src\libs\general.h" />
     <ClInclude Include="src\libs\geometry_generator.h" />
     <ClInclude Include="src\libs\math\matrix.h" />

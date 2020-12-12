@@ -13,7 +13,6 @@
 #include "../libs/geometry_generator.h"
 
 
-
 void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_camera)
 {
 	direct3d = _direct3d;
