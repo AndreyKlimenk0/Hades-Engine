@@ -6,7 +6,8 @@
 typedef BYTE    u8;
 typedef WORD    u16;
 typedef UINT    u32;
-typedef DWORD64 u64;
+typedef DWORD   u64;
+
 
 typedef INT8    s8;
 typedef INT16   s16;
