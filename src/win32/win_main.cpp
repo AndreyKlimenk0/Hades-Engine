@@ -11,7 +11,7 @@
 #include "../render/vertex.h"
 #include "../libs/math/matrix.h"
 #include "../libs/ds/queue.h"
-
+#include "../render/mesh.h"
 #include "../libs/fbx_loader.h"
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -63,8 +63,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	//read("E:\\andrey\\dev\\hades\\data\\models\\FBX\\men.fbx");
 	//get_fbx_data("E:\\andrey\\dev\\models\\test.fbx");
 
-	Fbx_Binary_File box;
-	box.read("E:\\andrey\\dev\\models\\test.fbx");
+	//Triangle_Mesh box_mesh;
+	//Fbx_Binary_File box;
+	//box.read("E:\\andrey\\dev\\models\\test.fbx");
+	//box.fill_out_mesh(&box_mesh);
 
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
 	Matrix4 test2 = Matrix4(Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88), Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88));

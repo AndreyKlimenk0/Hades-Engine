@@ -138,4 +138,7 @@
   <ItemGroup>
     <FxCompile Include="fx\base.fx" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
 </Project>

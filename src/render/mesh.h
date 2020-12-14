@@ -14,15 +14,31 @@
 #define CLEAR_MESH_DATA(x) if (x->vertices) delete[] x->vertices, x->vertex_count = 0, if (x->indices) delete[] x->indices, x->index_count = 0;
 
 struct Triangle_Mesh {
-	ID3D11Buffer *vertex_buffer = NULL;
 	ID3D11Buffer *index_buffer = NULL;
+	ID3D11Buffer *vertex_buffer = NULL;
 
 	Vertex_Color *vertices = NULL;
 	u32 *indices = NULL;
 	u32 vertex_count;
 	u32 index_count;
 	~Triangle_Mesh();
+	void allocate_vertices(int number);
+	void allocate_indices(int number);
 };
+
+inline void Triangle_Mesh::allocate_vertices(int number)
+{
+	assert(vertices == NULL);
+	vertices = new Vertex_Color[number];
+	vertex_count = number;
+}
+
+inline void Triangle_Mesh::allocate_indices(int number)
+{
+	assert(indices == NULL);
+	indices = new u32[number];
+	index_count = number;
+}
 
 inline void create_default_buffer(ID3D11Device *device, Triangle_Mesh *mesh)
 {

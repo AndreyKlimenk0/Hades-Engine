@@ -8,10 +8,11 @@ typedef WORD    u16;
 typedef UINT    u32;
 typedef DWORD   u64;
 
-
 typedef INT8    s8;
 typedef INT16   s16;
 typedef INT32   s32;
 typedef INT64   s64;
 
+typedef float  float32;
+typedef double float64;
 #endif 

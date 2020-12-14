@@ -87,7 +87,7 @@ void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh)
 	mesh->indices = new u32[indices.count];
 	mesh->vertex_count = vertices.count;
 	mesh->index_count = indices.count;
-	memcpy(mesh->vertices, vertices.array, vertices.count);
-	memcpy(mesh->indices, indices.array, indices.count);
+	memcpy(mesh->vertices, vertices.items, vertices.count);
+	memcpy(mesh->indices, indices.items, indices.count);
 //	DELETE_PTR(buffer);
 }
