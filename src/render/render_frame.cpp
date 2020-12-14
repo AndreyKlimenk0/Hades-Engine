@@ -12,6 +12,7 @@
 #include "../libs/math/matrix.h"
 #include "../libs/geometry_generator.h"
 
+#include "../libs/fbx_loader.h"
 
 void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_camera)
 {
@@ -35,15 +36,20 @@ void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_
 	create_default_buffer(direct3d->device, mesh1);
 
 	//meshes.push(mesh);
-	meshes.push(mesh1);
+	//meshes.push(mesh1);
 
 	generate_grid(40, 40, mesh1);
 	create_default_buffer(direct3d->device, mesh1);
 
+	Triangle_Mesh *box_mesh = new Triangle_Mesh();
+	Fbx_Binary_File box;
+	box.read("E:\\andrey\\dev\\models\\test.fbx");
+	box.fill_out_mesh(box_mesh);
+	create_default_buffer(direct3d->device, box_mesh);
 	//meshes.push(mesh);
-	meshes.push(mesh1);
+//	meshes.push(mesh1);
 //	meshes.push(mesh2);
-
+	meshes.push(box_mesh);
 }
 
 void Render_World::render_world()

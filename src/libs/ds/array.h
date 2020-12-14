@@ -6,25 +6,26 @@
 
 template <typename T>
 struct Array {
-	T *array;
+	T *items;
 	int count;
 	int size;
 
 	Array(int _size = 8);
-	~Array() { if (array) delete[] array; }
+	~Array() { if (items) delete[] items; }
 
 	T &operator[](int i);
 	const T &operator[](int i) const;
 
 	T &pop();
 	T &at(int index);
+	const T &at(int index) const;
 	void resize();
 
 	void abort() 
 	{
-		if (array) {
-			delete[] array;
-			array = NULL;
+		if (items) {
+			delete[] items;
+			items = NULL;
 		}
 		count = 0;
 		size = 8;
@@ -38,13 +39,19 @@ struct Array {
 template <typename T>
 T &Array<T>::at(int index)
 {
-	return array[index];
+	return items[index];
+}
+
+template <typename T>
+const T &Array<T>::at(int index) const
+{
+	return items[index];
 }
 
 template <typename T>
 Array<T>::Array(int _size)
 {
-	array = NULL;
+	items = NULL;
 	count = 0;
 	size = _size;
 	resize();
@@ -54,28 +61,28 @@ template <typename T>
 T &Array<T>::operator[](int i)
 {
 	assert(count > i);
-	return array[i];
+	return items[i];
 }
 
 template <typename T>
 const T &Array<T>::operator[](int i) const
 {
 	assert(count > i);
-	return array[i];
+	return items[i];
 }
 
 
 template <typename T>
 void Array<T>::resize()
 {
-	if (!array) {
-		array = new T[size];
+	if (!items) {
+		items = new T[size];
 		return;
 	}
 	
-	T *temp_array = array;
-	array = new T[size * 2];
-	memcpy(array, temp_array, sizeof(T) * size);
+	T *temp_array = items;
+	items = new T[size * 2];
+	memcpy(items, temp_array, sizeof(T) * size);
 	size = size * 2;
 	delete[] temp_array;
 }
@@ -86,22 +93,22 @@ void Array<T>::push(const T &item)
 	if (count + 1 >= size) {
 		resize();
 	}
-	array[count++] = item;
+	items[count++] = item;
 }
 
 template <typename T>
 T &Array<T>::pop()
 {
 	assert(count > 0);
-	return array[--count];
+	return items[--count];
 }
 
 template <typename T>
 void Array<T>::shutdown()
 {
-	if (array) {
-		delete[] array;
-		array = NULL;
+	if (items) {
+		delete[] items;
+		items = NULL;
 	}
 
 	size = 0;
