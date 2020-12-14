@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../render/mesh.h"
 #include "../framework/file.h"
 #include "../win32/win_types.h"
 
@@ -22,20 +23,6 @@ enum Property_Value_Type {
 enum Fbx_Property_Type {
 	PROPERTY_TYPE_VALUE,
 	PROPERTY_TYPE_VALUE_ARRAY
-};
-
-struct Property_Value {
-	Property_Value_Type type;
-	union {
-		bool boolean;
-		s8  int8;
-		s16 int16;
-		s32 int32;
-		s64 int64;
-		float  real32;
-		double real64;
-		char *string;
-	};
 };
 
 struct Fbx_Property {
@@ -64,8 +51,8 @@ struct Fbx_Property {
 		} array;
 	};
 	void copy_data_to_array(u8 *data, u32 array_byte_len, u32 array_count, u8 type);
+	auto get_value_from_array(int index);
 };
-
 
 struct Fbx_Node {
 	char *name;
@@ -77,11 +64,15 @@ struct Fbx_Node {
 	u32 read(FILE *file, u32 start_offset);
 };
 
+
 struct Fbx_Binary_File {
 	Array<Fbx_Node *> root_nodes;
 	
 	void read(const char *file_name);
-	Fbx_Node *get_node(const char *name);
+	void fill_out_mesh(Triangle_Mesh *mesh);
 	bool check_title(FILE *file);
+	Fbx_Node *get_node(const char *name);
 };
+
+Fbx_Node *fbx_node_searcher(const Array<Fbx_Node *> *nodes, const char *name);
 #endif
