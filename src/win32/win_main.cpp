@@ -100,7 +100,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		world.render_world();
 	}
 
-
 	direct3d.shutdown();
 	return 0;
 }

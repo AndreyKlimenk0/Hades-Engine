@@ -21,14 +21,14 @@ void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_
 	camera = _camera;
 
 
-	Triangle_Mesh *mesh2 = new Triangle_Mesh();
+	//Triangle_Mesh *mesh2 = new Triangle_Mesh();
 	//load_model_from_obj_file("D:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\models\\aline.obj", mesh2);
 	//create_default_buffer(direct3d->device, mesh2);
 
 
-	Triangle_Mesh *mesh = new Triangle_Mesh();
-	generate_box(mesh);
-	create_default_buffer(direct3d->device, mesh);
+	//Triangle_Mesh *mesh = new Triangle_Mesh();
+	//generate_box(mesh);
+	//create_default_buffer(direct3d->device, mesh);
 
 	Triangle_Mesh *mesh1 = new Triangle_Mesh();
 
@@ -36,18 +36,20 @@ void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_
 	create_default_buffer(direct3d->device, mesh1);
 
 	//meshes.push(mesh);
-	//meshes.push(mesh1);
+	 //meshes.push(mesh1);
 
-	generate_grid(40, 40, mesh1);
-	create_default_buffer(direct3d->device, mesh1);
+//	generate_grid(40, 40, mesh1);
+//	create_default_buffer(direct3d->device, mesh1);
 
 	Triangle_Mesh *box_mesh = new Triangle_Mesh();
 	Fbx_Binary_File box;
-	box.read("E:\\andrey\\dev\\models\\test.fbx");
+	//box.read("E:\\andrey\\dev\\models\\test.fbx");
+	box.read("E:\\andrey\\dev\\hades\\data\\models\\FBX\\men.fbx");
 	box.fill_out_mesh(box_mesh);
 	create_default_buffer(direct3d->device, box_mesh);
+	
 	//meshes.push(mesh);
-//	meshes.push(mesh1);
+	//meshes.push(mesh1);
 //	meshes.push(mesh2);
 	meshes.push(box_mesh);
 }
@@ -92,5 +94,4 @@ void draw_mesh(Direct3D *direct3d, Triangle_Mesh *mesh, Matrix4 world_view_proje
 	direct3d->device_context->DrawIndexed(mesh->index_count, 0, 0);
 
 	HR(direct3d->swap_chain->Present(0, 0));
-
 }

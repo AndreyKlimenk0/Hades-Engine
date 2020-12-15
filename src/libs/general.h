@@ -3,7 +3,6 @@
 
 #include "math/vector.h"
 
-#define DELETE(x) if (x) delete x;
 #define DELETE_PTR(x) if (x) delete x, x = NULL;
 #define DELETE_ARRAY(x) if (x) delete[] x;
 

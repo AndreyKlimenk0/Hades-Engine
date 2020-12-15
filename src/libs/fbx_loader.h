@@ -26,6 +26,7 @@ enum Fbx_Property_Type {
 };
 
 struct Fbx_Property {
+
 	Fbx_Property_Type type;
 	Property_Value_Type value_type;
 	union {
@@ -37,7 +38,7 @@ struct Fbx_Property {
 			s64 int64;
 			float  real32;
 			double real64;
-			char *string;
+			char *string = NULL;
 		} value;
 		struct {
 			union {
@@ -50,15 +51,17 @@ struct Fbx_Property {
 			u32 count;
 		} array;
 	};
+	Fbx_Property() {};
+	~Fbx_Property();
 	void copy_data_to_array(u8 *data, u32 array_byte_len, u32 array_count, u8 type);
-	auto get_value_from_array(int index);
 };
 
 struct Fbx_Node {
-	char *name;
+	char *name = NULL;
 	Array<Fbx_Property *> properties;
 	Array<Fbx_Node *> sub_nodes;
 
+	~Fbx_Node();
 	void add_property_value(FILE *file);
 	bool is_null();
 	u32 read(FILE *file, u32 start_offset);

@@ -100,25 +100,36 @@ static void read_property_value(Fbx_Node *node, FILE *file)
 	}
 }
 
-Fbx_Node *fbx_node_searcher(const Array<Fbx_Node *> *nodes, const char *name)
+Fbx_Property::~Fbx_Property()
 {
-	for (int i = 0; i < nodes->count; i++) {
-		Fbx_Node *node = nodes->at(i);
-		if (node->is_null()) {
-			return NULL;
-		}
-
-		if (!strcmp(node->name, name)) {
-			return node;
-		} else {
-			Fbx_Node * searched_node = fbx_node_searcher(&node->sub_nodes, name);
-			if (!searched_node) {
-				continue;
+	if (type = PROPERTY_TYPE_VALUE_ARRAY) {
+		switch (value_type) {
+			case PROPERTY_VALUE_TYPE_BOOL: {
+				delete array.boolean;
+				break;
 			}
-			return searched_node;
+			case PROPERTY_VALUE_TYPE_S32: {
+				delete array.int32;
+				break;
+			}
+			case PROPERTY_VALUE_TYPE_S64: {
+				delete array.int64;
+				break;
+			}
+			case PROPERTY_VALUE_TYPE_REAL32: {
+				delete array.real32;
+				break;
+			}
+			case PROPERTY_VALUE_TYPE_REAL64: {
+				delete array.real64;
+				break;
+			}
+		}
+	} else {
+		if (value_type == PROPERTY_VALUE_TYPE_STRING) {
+			delete value.string;
 		}
 	}
-	return NULL;
 }
 
 void Fbx_Property::copy_data_to_array(u8 *data, u32 array_byte_len, u32 array_count, u8 type)
@@ -152,6 +163,13 @@ void Fbx_Property::copy_data_to_array(u8 *data, u32 array_byte_len, u32 array_co
 	}
 }
 
+Fbx_Node::~Fbx_Node()
+{
+	if (name) {
+		delete name;
+	}
+}
+
 void Fbx_Node::add_property_value(FILE *file)
 {
 	read_property_value(this, file);
@@ -160,6 +178,27 @@ void Fbx_Node::add_property_value(FILE *file)
 bool Fbx_Node::is_null()
 {
 	return sub_nodes.count == 0 && properties.count == 0 && strlen(name) == 0;
+}
+
+Fbx_Node *fbx_node_searcher(const Array<Fbx_Node *> *nodes, const char *name)
+{
+	for (int i = 0; i < nodes->count; i++) {
+		Fbx_Node *node = nodes->at(i);
+		if (node->is_null()) {
+			return NULL;
+		}
+
+		if (!strcmp(node->name, name)) {
+			return node;
+		} else {
+			Fbx_Node * searched_node = fbx_node_searcher(&node->sub_nodes, name);
+			if (!searched_node) {
+				continue;
+			}
+			return searched_node;
+		}
+	}
+	return NULL;
 }
 
 u32 Fbx_Node::read(FILE *file, u32 start_offset)
@@ -211,30 +250,32 @@ void Fbx_Binary_File::read(const char *file_name)
 
 bool Fbx_Binary_File::check_title(FILE *file)
 {
+	bool result = true;
 	u32 max_fbx_version = 7400;
-	static char fbx_title[21] = "Kaydara FBX Binary  ";
 	char *magic_string = new char[21];
+	static char fbx_title[21] = "Kaydara FBX Binary  ";
 
 	fread(magic_string, sizeof(u8), 21, file);
 	if (strcmp(fbx_title, magic_string)) {
 		printf("Fbx magic string failed, it can be not fbx file");
-		return false;
+		result = false;
 	}
 
 	if (read_u8(file) != 0x1A) {
-		return false;
+		result = false;
 	}
 
 	if (read_u8(file) != 0x00) {
-		return false;
+		result = false;
 	}
 
 	u32 version = read_u32(file);
 	if (version > max_fbx_version) {
 		printf("Unsupported FBX file version %d, needed file version %d or less", version, max_fbx_version);
-		return false;
+		result = false;
 	}
-	return true;
+	DELETE_PTR(magic_string);
+	return result;
 }
 
 
@@ -243,20 +284,13 @@ Fbx_Node *Fbx_Binary_File::get_node(const char *name)
 	return fbx_node_searcher(&root_nodes, name);
 }
 
-auto Fbx_Property::get_value_from_array(int index)
-{
-	assert(type != PROPERTY_TYPE_VALUE);
-	switch(value_type) 
-}
-
-//#define RETURN_NEEDED_FBX_PROPETY_ARRAY_FIED(property)
-#define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_AND_CAST_TO_FLOAT32(type, mesh, property) \
+#define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, pointer_name) \
 				for (int i = 0; i < mesh->vertex_count; i++) { \
-					mesh->vertices[i].position.x = static_cast<type>(vertex_property->array.real32[i]); \
-					mesh->vertices[i].position.y = vertex_property->array.real32[i]; \
-					mesh->vertices[i].position.z = vertex_property->array.real32[i]; \
+					mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3]); \
+					mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 1]); \
+					mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 2]); \
 				} \
-
+								
 void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 {
 	Fbx_Node *vertices = get_node("Vertices");
@@ -272,22 +306,55 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 	
 	if (vertex_property->type != PROPERTY_TYPE_VALUE_ARRAY || index_property->type != PROPERTY_TYPE_VALUE_ARRAY) {
 		printf("Vertex fbx property of index fbx property doesn't appropriate array type\n");
+		return;
 	}
 
 	assert(vertex_property->array.count / 3 != 0);
 	mesh->allocate_vertices(vertex_property->array.count / 3);
-	mesh->allocate_indices(index_property->array.count);
+	//mesh->allocate_indices(36);
 
-	mesh->indices = (u32 *)index_property->array.int32;
-	index_property->array.int32 = NULL;
-	index_property->array.count = 0;
+
+	if (index_property->array.int32[2] < 0) {
+		mesh->allocate_indices(index_property->array.count);
+		u32 triangle_index_count = mesh->index_count / 3;
+		for (int i = 0; i < triangle_index_count; i++) {
+			mesh->indices[i * 3]  = index_property->array.int32[i * 3];
+			mesh->indices[i * 3 + 1] = index_property->array.int32[i * 3 + 1];
+			mesh->indices[i * 3 + 2] = (index_property->array.int32[i * 3 + 2] * -1) - 1;
+
+		}
+
+	} else if (index_property->array.int32[3] < 0) {
+		mesh->allocate_indices((index_property->array.count / 4) * 6);
+		int k = 0;
+		s32 quard_index_count = mesh->index_count / 4;
+		for (int i = 0; i < quard_index_count; i++) {
+			s32 first_index  = index_property->array.int32[i * 4];
+			s32 second_index = index_property->array.int32[i * 4 + 1];
+			s32 thrid_index  = index_property->array.int32[i * 4 + 2];
+			s32 fourth_index = index_property->array.int32[i * 4 + 3];
+			fourth_index *= -1;
+			fourth_index -= 1;
+
+			if (k < mesh->index_count) {
+				mesh->indices[k] = first_index;
+				mesh->indices[k + 1] = second_index;
+				mesh->indices[k + 2] = thrid_index;
+
+				mesh->indices[k + 3] = thrid_index;
+				mesh->indices[k + 4] = fourth_index;
+				mesh->indices[k + 5] = first_index;
+				k += 6;
+			}
+		}
+	}
 
 	switch (vertex_property->value_type) {
 		case PROPERTY_VALUE_TYPE_REAL32: {
 			for (int i = 0; i < mesh->vertex_count; i++) {
-				mesh->vertices[i].position.x = vertex_property->array.real32[i * 1];
-				mesh->vertices[i].position.y = vertex_property->array.real32[i * 2];
-				mesh->vertices[i].position.z = vertex_property->array.real32[i * 3];
+				mesh->vertices[i].position.x = vertex_property->array.real32[i * 3];
+				mesh->vertices[i].position.y = vertex_property->array.real32[i * 3 + 1];
+				mesh->vertices[i].position.z = vertex_property->array.real32[i * 3 + 2];
 				mesh->vertices[i].color = Yellow;
 			}
 			break;
@@ -303,18 +370,18 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 		}
 		case PROPERTY_VALUE_TYPE_S32: {
 			for (int i = 0; i < mesh->vertex_count; i++) {
-				mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array.int32[i * 1]);
-				mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array.int32[i * 2]);
-				mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array.int32[i * 3]);
+				mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array.int32[i * 3]);
+				mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array.int32[i * 3 + 1]);
+				mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array.int32[i * 3 + 2]);
 				mesh->vertices[i].color = Yellow;
 			}
 			break;
 		}
 		case PROPERTY_VALUE_TYPE_S64: {
 			for (int i = 0; i < mesh->vertex_count; i++) {
-				mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array.int64[i * 1]);
-				mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array.int64[i * 2]);
-				mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array.int64[i * 3]);
+				mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array.int64[i * 3]);
+				mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array.int64[i * 3 + 1]);
+				mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array.int64[i * 3 + 2]);
 				mesh->vertices[i].color = Yellow;
 			}
 			break;
