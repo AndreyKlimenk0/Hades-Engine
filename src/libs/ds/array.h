@@ -11,7 +11,7 @@ struct Array {
 	int size;
 
 	Array(int _size = 8);
-	~Array() { if (items) delete[] items; }
+	~Array();
 
 	T &operator[](int i);
 	const T &operator[](int i) const;
@@ -55,6 +55,15 @@ Array<T>::Array(int _size)
 	count = 0;
 	size = _size;
 	resize();
+}
+
+template <typename T>
+Array<T>::~Array()
+{
+	if (items) {
+		delete[] items;
+		items = NULL;
+	}
 }
 
 template <typename T>

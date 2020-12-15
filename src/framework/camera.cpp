@@ -29,7 +29,7 @@ void Free_Camera::update(Win32_State *win32)
 		float mTheta = XMConvertToRadians(Mouse_Input::x % 360);
 
 		
-		float mRadius = 10.0f;
+		float mRadius = 300.0f;
 
 
 		float x = mRadius * sinf(mPhi)*cosf(mTheta);
@@ -37,7 +37,7 @@ void Free_Camera::update(Win32_State *win32)
 		float y = mRadius * cosf(mPhi);
 
 		position.x = x;
-		position.y = y;
+		position.y = y + 300;
 		position.z = z;
 
 		Mouse_Input::last_x = Mouse_Input::x;

@@ -14,13 +14,14 @@
 #define CLEAR_MESH_DATA(x) if (x->vertices) delete[] x->vertices, x->vertex_count = 0, if (x->indices) delete[] x->indices, x->index_count = 0;
 
 struct Triangle_Mesh {
-	ID3D11Buffer *index_buffer = NULL;
 	ID3D11Buffer *vertex_buffer = NULL;
+	ID3D11Buffer *index_buffer = NULL;
 
 	Vertex_Color *vertices = NULL;
 	u32 *indices = NULL;
 	u32 vertex_count;
 	u32 index_count;
+	
 	~Triangle_Mesh();
 	void allocate_vertices(int number);
 	void allocate_indices(int number);
