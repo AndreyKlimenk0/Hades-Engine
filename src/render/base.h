@@ -49,10 +49,10 @@ struct Direct3D {
 	void resize(const Win32_State *win32);
 };
 
-inline Matrix4 get_perspective_matrix(const Win32_State *win32)
+inline Matrix4 get_perspective_matrix(int window_width, int window_height, float near_z, float far_z)
 {
 
-	XMMATRIX m = XMMatrixPerspectiveFovLH(0.25f * Pi, (float)win32->window_width / (float)win32->window_height, 1.0f, 1000.0f);
+	XMMATRIX m = XMMatrixPerspectiveFovLH(0.25f * Pi, (float)window_width / (float)window_height, near_z, far_z);
 	return Matrix4(m);
 }
 #endif
