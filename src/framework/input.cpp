@@ -4,8 +4,7 @@
 
 int Mouse_Input::x = 0;
 int Mouse_Input::y = 0;
-int Mouse_Input::last_x = 0;
-int Mouse_Input::last_y = 0;
+
 
 bool Key_Input::keys[KEY_NUMBER];
 

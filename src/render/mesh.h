@@ -11,8 +11,6 @@
 #include "../libs/general.h"
 
 
-#define CLEAR_MESH_DATA(x) if (x->vertices) delete[] x->vertices, x->vertex_count = 0, if (x->indices) delete[] x->indices, x->index_count = 0;
-
 struct Triangle_Mesh {
 	ID3D11Buffer *vertex_buffer = NULL;
 	ID3D11Buffer *index_buffer = NULL;
