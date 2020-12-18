@@ -32,11 +32,11 @@ void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_
 
 	Triangle_Mesh *mesh1 = new Triangle_Mesh();
 
-	generate_grid(50, 50, mesh1);
+	generate_grid(1000, 1000, mesh1);
 	create_default_buffer(direct3d->device, mesh1);
 
 	//meshes.push(mesh);
-	 //meshes.push(mesh1);
+	meshes.push(mesh1);
 
 //	generate_grid(40, 40, mesh1);
 //	create_default_buffer(direct3d->device, mesh1);
@@ -56,19 +56,20 @@ void Render_World::init(Direct3D *_direct3d, Win32_State *_win32, Free_Camera *_
 
 void Render_World::render_world()
 {
-	Matrix4 r = camera->get_view_matrix() * get_perspective_matrix(win32);
+	direct3d->device_context->ClearRenderTargetView(direct3d->render_target_view, (float *)&LightSteelBlue);
+	direct3d->device_context->ClearDepthStencilView(direct3d->depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	
+	Matrix4 r = camera->get_view_projection_matrix();
 	for (int i = 0; i < meshes.count; i++) {
 		draw_mesh(direct3d, meshes.at(i), r);
 	}
+	HR(direct3d->swap_chain->Present(0, 0));
 }
 
 void draw_mesh(Direct3D *direct3d, Triangle_Mesh *mesh, Matrix4 world_view_projection)
 {
 	assert(mesh->vertex_buffer != NULL);
 	assert(mesh->index_buffer != NULL);
-
-	direct3d->device_context->ClearRenderTargetView(direct3d->render_target_view, (float *)&LightSteelBlue);
-	direct3d->device_context->ClearDepthStencilView(direct3d->depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	direct3d->device_context->IASetInputLayout(Input_Layout::vertex_color);
 	direct3d->device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -92,6 +93,4 @@ void draw_mesh(Direct3D *direct3d, Triangle_Mesh *mesh, Matrix4 world_view_proje
 	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, direct3d->device_context);
 
 	direct3d->device_context->DrawIndexed(mesh->index_count, 0, 0);
-
-	HR(direct3d->swap_chain->Present(0, 0));
 }

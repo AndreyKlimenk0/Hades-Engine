@@ -54,49 +54,42 @@ void set_up_conlose_in_out()
 
 }
 Direct3D direct3d;
-Win32_State win32_state;
+Win32_State win32;
 
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
 	set_up_conlose_in_out();
-	//read("E:\\andrey\\dev\\hades\\data\\models\\FBX\\men.fbx");
-	//get_fbx_data("E:\\andrey\\dev\\models\\test.fbx");
-
-	//Triangle_Mesh box_mesh;
-	//Fbx_Binary_File box;
-	//box.read("E:\\andrey\\dev\\models\\test.fbx");
-	//box.fill_out_mesh(&box_mesh);
 
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
 	Matrix4 test2 = Matrix4(Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88), Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88));
 	Matrix4 test3 = Matrix4(Vector4(1, 0, 0, 1), Vector4(0, 2, 1, 2), Vector4(2, 1, 0, 1), Vector4(2, 0, 1, 4));
-	test3.inverse();
+	//test3.inverse();
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
 
-	win32_state.hinstance = hInstance;
+	win32.hinstance = hInstance;
 	
-	create_and_show_window(&win32_state, nCmdShow);
+	create_and_show_window(&win32, nCmdShow);
 	
-	direct3d.init(&win32_state);
+	direct3d.init(&win32);
 
 	
-	ShowWindow(win32_state.window, nCmdShow);
+	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
 	Input_Layout::init(&direct3d);
 
 	Free_Camera camera;
-	camera.init();
+	camera.init(&win32);
 
 	Render_World world;
-	world.init(&direct3d, &win32_state, &camera);
+	world.init(&direct3d, &win32, &camera);
 	
 	while (1) {
 		pump_events();
 		run_event_loop();
-		camera.update(&win32_state);
+		camera.update();
 		world.render_world();
 	}
 
@@ -120,16 +113,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		case WM_SIZE: {
 			RECT rect;
-			GetWindowRect(win32_state.window, &rect);
-			win32_state.window_height = rect.bottom - rect.top;
-			win32_state.window_width = rect.right - rect.left;
-			direct3d.resize(&win32_state);
+			GetWindowRect(win32.window, &rect);
+			win32.window_height = rect.bottom - rect.top;
+			win32.window_width = rect.right - rect.left;
+			direct3d.resize(&win32);
 			return 0;
 		}
 		case WM_LBUTTONDOWN: {
-			SetCapture(win32_state.window);
-			Mouse_Input::last_x = GET_X_LPARAM(lParam);
-			Mouse_Input::last_y = GET_Y_LPARAM(lParam);
+			SetCapture(win32.window);
 			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 1);
 			return 0;
 		}
@@ -142,12 +133,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			int x = GET_X_LPARAM(lParam);
 			int y = GET_Y_LPARAM(lParam);
 			push_event(EVENT_TYPE_MOUSE, x, y);
+			return 0;
 		}
 		case WM_SYSKEYDOWN: {
 			push_event(EVENT_TYPE_KEY, wParam, 1);
+			return 0;
 		}
 		case WM_SYSKEYUP: {
-			//push_event(EVENT_TYPE_KEY, wParam, 0);
+			push_event(EVENT_TYPE_KEY, wParam, 0);
+			return 0;
+		}
+		case WM_KEYDOWN: {
+			push_event(EVENT_TYPE_KEY, wParam, 1);
+			return 0;
+		}
+		case WM_KEYUP:{
+			push_event(EVENT_TYPE_KEY, wParam, 0);
+			return 0;
 		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

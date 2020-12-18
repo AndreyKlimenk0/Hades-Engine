@@ -36,9 +36,10 @@ struct Vector2 {
 	
 	operator XMVECTOR();
 
-	float   length();
-	Vector2 normalize();
+	void normalize();
+	float length();
 	float dot(const Vector2 & other);
+	
 };
 
 inline float &Vector2::operator[](int i)
@@ -162,9 +163,10 @@ inline float Vector2::length()
 	return (float)sqrt(x * x + y * y);
 }
 
-inline Vector2 Vector2::normalize()
+inline void Vector2::normalize()
 {
-	return Vector2(x / length(), y / length());
+	x /= length(); 
+	y /= length();
 }
 
 inline float Vector2::dot(const Vector2 &other)
@@ -179,6 +181,7 @@ struct Vector3 {
 
 	Vector3() {};
 	Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+	Vector3(const XMVECTOR &xm_vec);
 
 	float  &operator[](int i);
 	const float  &operator[](int i) const;
@@ -203,11 +206,20 @@ struct Vector3 {
 	operator XMVECTOR();
 	operator Vector2();
 
-	Vector3 normalize();
-	Vector3 cross(const Vector3 &other);
-	float   length();
+	void normalize();
+
+	float length();
 	float dot(const Vector3 & other);
+	
+	Vector3 cross(const Vector3 &other);
 };
+
+inline Vector3::Vector3(const XMVECTOR &xm_vec)
+{
+	x = XMVectorGetX(xm_vec);
+	y = XMVectorGetY(xm_vec);
+	z = XMVectorGetZ(xm_vec);
+}
 
 inline float &Vector3::operator[](int i)
 {
@@ -345,9 +357,12 @@ inline float Vector3::length()
 	return (float)sqrt(x * x + y * y + z * z);
 }
 
-inline Vector3 Vector3::normalize()
+inline void Vector3::normalize()
 {
-	return Vector3(x / length(), y / length(), z / length());
+	float len = length();
+	x /= len; 
+	y /= len; 
+	z /= len;
 }
 
 inline float Vector3::dot(const Vector3 &other)
@@ -359,7 +374,6 @@ inline Vector3 Vector3::cross(const  Vector3 &other)
 {
 	return Vector3(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
 }
-
 
 struct Vector4 {
 	float x;
@@ -392,7 +406,7 @@ struct Vector4 {
 
 	operator XMVECTOR();
 
-	Vector4 normalize();
+	void normalize();
 	float   length();
 	float dot(const Vector4 & other);
 };
@@ -537,9 +551,13 @@ inline float Vector4::length()
 	return (float)sqrt(x * x + y * y + z * z + w * w);
 }
 
-inline Vector4 Vector4::normalize()
+inline void Vector4::normalize()
 {
-	return Vector4(x / length(), y / length(), z / length(), w / length());
+	float len = length();
+	x /= len;
+	y /= len;
+	z /= len;
+	w /= len;
 }
 
 inline float Vector4::dot(const Vector4 &other)
@@ -547,4 +565,7 @@ inline float Vector4::dot(const Vector4 &other)
 	return x * other.x + y * other.y + z * other.z * w + other.w;
 }
 
+extern Vector3 base_x_vec;
+extern Vector3 base_y_vec;
+extern Vector3 base_z_vec;
 #endif

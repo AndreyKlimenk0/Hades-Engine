@@ -8,6 +8,7 @@ enum Event_Type {
 	EVENT_TYPE_NONE,
 	EVENT_TYPE_KEY,
 	EVENT_TYPE_MOUSE,
+	EVENT_TYPE_MOUSE_MOVE,
 	EVENT_TYPE_MOUSE_KEY,
 };
 
@@ -18,6 +19,7 @@ struct Event {
 
 	bool is_key_event() { return type == EVENT_TYPE_KEY; }
 	bool is_mouse_event() { return type == EVENT_TYPE_MOUSE; }
+	bool is_mouse_move_event() { return type == EVENT_TYPE_MOUSE_MOVE; }
 	bool is_mouse_key_event() { return type == EVENT_TYPE_MOUSE_KEY; };
 	bool is_key_down() { return second_value != 0; }
 	int get_x_coord() { return first_value; }

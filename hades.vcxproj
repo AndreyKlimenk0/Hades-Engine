@@ -144,6 +144,7 @@
     <ClCompile Include="src\libs\general.cpp" />
     <ClCompile Include="src\libs\geometry_generator.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
+    <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\render\base.cpp" />
     <ClCompile Include="src\render\effect.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
@@ -165,6 +166,7 @@
     <ClInclude Include="src\libs\fbx_loader.h" />
     <ClInclude Include="src\libs\general.h" />
     <ClInclude Include="src\libs\geometry_generator.h" />
+    <ClInclude Include="src\libs\math\common.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\render\base.h" />
