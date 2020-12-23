@@ -1,6 +1,7 @@
 #include <zlib.h>
 
 #include "fbx_loader.h"
+#include "../libs/ds/string.h"
 #include "../libs/general.h"
 
 
@@ -180,7 +181,7 @@ bool Fbx_Node::is_null()
 	return sub_nodes.count == 0 && properties.count == 0 && strlen(name) == 0;
 }
 
-Fbx_Node *fbx_node_searcher(const Array<Fbx_Node *> *nodes, const char *name)
+Fbx_Node *find_fbx_node(const Array<Fbx_Node *> *nodes, const char *name)
 {
 	for (int i = 0; i < nodes->count; i++) {
 		Fbx_Node *node = nodes->at(i);
@@ -191,7 +192,7 @@ Fbx_Node *fbx_node_searcher(const Array<Fbx_Node *> *nodes, const char *name)
 		if (!strcmp(node->name, name)) {
 			return node;
 		} else {
-			Fbx_Node * searched_node = fbx_node_searcher(&node->sub_nodes, name);
+			Fbx_Node * searched_node = find_fbx_node(&node->sub_nodes, name);
 			if (!searched_node) {
 				continue;
 			}
@@ -281,7 +282,7 @@ bool Fbx_Binary_File::check_title(FILE *file)
 
 Fbx_Node *Fbx_Binary_File::get_node(const char *name)
 {
-	return fbx_node_searcher(&root_nodes, name);
+	return find_fbx_node(&root_nodes, name);
 }
 
 #define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, pointer_name) \
@@ -289,29 +290,53 @@ Fbx_Node *Fbx_Binary_File::get_node(const char *name)
 					mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3]); \
 					mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 1]); \
 					mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 2]); \
-					mesh->vertices[i].color = Yellow; \
 				} \
 								
 void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 {
 	Fbx_Node *vertices = get_node("Vertices");
 	Fbx_Node *indices = get_node("PolygonVertexIndex");
+	Fbx_Node *normals = get_node("Normals");
+	Fbx_Node *uv =  get_node("UV");
+	Fbx_Node *uv_indices =  get_node("UVIndex");
 
-	if (!vertices || !indices) {
-		printf("Vertex or index data from the fbx file for the triangle mesh wasn't foundn");
+	if (!vertices || !indices || !normals || !uv || !uv_indices) {
+		printf("Some mesh data from the fbx file for the triangle mesh wasn't foundn");
 		return;
 	}
 
 	Fbx_Property *vertex_property = vertices->properties[0];
 	Fbx_Property *index_property = indices->properties[0];
+	Fbx_Property *normal_property = normals->properties[0];
+	Fbx_Property *uv_property = uv->properties[0];
+	Fbx_Property *uv_index_property = uv_indices->properties[0];
 	
 	if (vertex_property->type != PROPERTY_TYPE_VALUE_ARRAY || index_property->type != PROPERTY_TYPE_VALUE_ARRAY) {
 		printf("Vertex fbx property of index fbx property doesn't appropriate array type\n");
 		return;
 	}
-
-	assert(vertex_property->array.count / 3 != 0 && vertex_property->array.count / 4 != 0);
+	
+	assert(vertex_property->array.count / 3 != 0);
 	mesh->allocate_vertices(vertex_property->array.count / 3);
+
+	switch (vertex_property->value_type) {
+		case PROPERTY_VALUE_TYPE_REAL32: {
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real32);
+			break;
+		}
+		case PROPERTY_VALUE_TYPE_REAL64: {
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real64);
+			break;
+		}
+		case PROPERTY_VALUE_TYPE_S32: {
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int32);
+			break;
+		}
+		case PROPERTY_VALUE_TYPE_S64: {
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int64);
+			break;
+		}
+	}
 
 
 	if (index_property->array.int32[2] < 0) {
@@ -346,23 +371,27 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 		}
 	}
 
-	switch (vertex_property->value_type) {
-		case PROPERTY_VALUE_TYPE_REAL32: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real32);
-			break;
-		}
-		case PROPERTY_VALUE_TYPE_REAL64: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real64);
-			break;
-		}
-		case PROPERTY_VALUE_TYPE_S32: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int32);
-			break;
-		}
-		case PROPERTY_VALUE_TYPE_S64: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int64);
-			break;
-		}
+	for (u32 i = 0; i < uv_index_property->array.count / 2; i++) {
+
 	}
 
+
+}
+
+char *Fbx_Binary_File::get_texture_name()
+{
+	Fbx_Node *texture_name = find_fbx_node(&root_nodes, "TextureName");
+	if (!texture_name) {
+		//@Note: here need to be warning message.
+		return NULL;
+	}
+	Fbx_Property *property = texture_name->properties[0];
+
+	if (property->is_property_type_value() && property->is_property_value_type_string()) {
+		Array<char *> buffer;
+		split(property->value.string, "::", &buffer);
+		return _strdup(buffer[1]);
+	}
+	//@Note: here need to be warning message.
+	return NULL;
 }

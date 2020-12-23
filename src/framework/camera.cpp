@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <math.h>
 #include <DirectXMath.h>
 
 #include "camera.h"
@@ -7,14 +5,15 @@
 #include "../render/base.h"
 #include "../libs/general.h"
 #include "../libs/math/vector.h"
+#include "../win32/win_local.h"
 
 using namespace DirectX;
 
 
-void Free_Camera::init(Win32_State *win32, float _near_z, float _far_z)
+void Free_Camera::init(float _near_z, float _far_z)
 {
-	window_width = win32->window_width;
-	window_hegith = win32->window_height;
+	window_width = win32.window_width;
+	window_hegith = win32.window_height;
 	near_z = _near_z;
 	far_z = _far_z;
 }
