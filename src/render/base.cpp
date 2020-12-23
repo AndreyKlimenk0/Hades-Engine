@@ -2,8 +2,10 @@
 
 #include "base.h"
 #include "vertex.h"
+#include "../libs/general.h"
 #include "../libs/math/vector.h"
 
+Direct3D direct3d;
 
 void Direct3D::init(const Win32_State *win32)
 {

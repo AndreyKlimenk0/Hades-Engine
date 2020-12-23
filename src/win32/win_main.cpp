@@ -7,12 +7,15 @@
 #include "../framework/input.h"
 #include "../framework/event.h"
 #include "../framework/camera.h"
+#include "../framework/file.h"
 
 #include "../render/vertex.h"
 #include "../libs/math/matrix.h"
 #include "../libs/ds/queue.h"
 #include "../render/mesh.h"
 #include "../libs/fbx_loader.h"
+
+Win32_State win32;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -53,12 +56,10 @@ void set_up_conlose_in_out()
 	MoveWindow(consoleHandle, 1, 1, 680, 480, 1);
 
 }
-Direct3D direct3d;
-Win32_State win32;
-
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
+
 	set_up_conlose_in_out();
 
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
@@ -70,6 +71,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	win32.hinstance = hInstance;
 	
+	init_base_path();
 	create_and_show_window(&win32, nCmdShow);
 	
 	direct3d.init(&win32);
@@ -78,13 +80,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
-	Input_Layout::init(&direct3d);
+	Input_Layout::init();
 
 	Free_Camera camera;
-	camera.init(&win32);
+	camera.init();
 
 	Render_World world;
-	world.init(&direct3d, &win32, &camera);
+	world.init(&camera);
 	
 	while (1) {
 		pump_events();

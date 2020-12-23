@@ -9,15 +9,13 @@
 #include "../libs/ds/array.h"
 
 struct Render_World {
-	Direct3D *direct3d = NULL;
-	Win32_State *win32 = NULL;
 	Free_Camera *camera  = NULL;
 	Array<Triangle_Mesh *> meshes;
 	
-	void init(Direct3D *direct3d, Win32_State *win32, Free_Camera *camera);
+	void init(Free_Camera *camera);
 	void render_world();
 };
 
-void draw_mesh(Direct3D *direct3d, Triangle_Mesh *mesh, Matrix4 world_view_projection);
+void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection);
 
 #endif
