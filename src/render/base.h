@@ -12,25 +12,6 @@ using namespace DirectX;
 
 const float Pi = 3.1415926535f;
 
-#if defined(DEBUG) | defined(_DEBUG)
-	#ifndef HR
-	#define HR(x)                                              \
-	{                                                          \
-		HRESULT hr = (x);                                      \
-		if(FAILED(hr))                                         \
-		{                                                      \
-			DXTrace(__FILE__, (DWORD)__LINE__, hr, #x, true); \
-		}                                                      \
-	}
-	#endif
-#else 
-	#ifndef HR
-	#define HR(x) x
-	#endif
-#endif
-
-#define RELEASE_COM(x) { if(x){ x->Release(); x = 0; } }
-
 struct Direct3D {
 	ID3D11Device *device = NULL;
 	ID3D11DeviceContext *device_context = NULL;
@@ -48,6 +29,8 @@ struct Direct3D {
 	void shutdown();
 	void resize(const Win32_State *win32);
 };
+
+extern Direct3D direct3d;
 
 inline Matrix4 get_perspective_matrix(int window_width, int window_height, float near_z, float far_z)
 {

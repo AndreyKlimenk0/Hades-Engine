@@ -4,6 +4,8 @@
 #include "file.h"
 #include "../libs/ds/string.h"
 
+char *base_path = NULL;
+
 
 u8 read_u8(FILE *file)
 {
@@ -102,6 +104,20 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 	return buffer;
 }
 
+char *get_file_extension(const char *file_name)
+{
+	Array<char *> buffer;
+	split(const_cast<char *>(file_name), ".", &buffer);
+	return _strdup(buffer[1]);
+}
+
+char *get_file_name(const char *file_name)
+{
+	Array<char *> buffer;
+	split(const_cast<char *>(file_name), ".", &buffer);
+	return _strdup(buffer[0]);
+}
+
 bool get_file_names_from_dir(const char *full_path, Array<char *> *file_names)
 {
 	full_path = concatenate_c_str(full_path, "*");
@@ -122,4 +138,24 @@ bool get_file_names_from_dir(const char *full_path, Array<char *> *file_names)
 	} while (FindNextFile(handle, &data));
 	FindClose(handle);
 	return true;
+}
+
+void init_base_path()
+{
+	char buffer[512];
+	GetCurrentDirectory(512, buffer);
+	int len = strlen(buffer) + 1;
+	base_path = new char[len];
+	memcpy(base_path, buffer, len);
+}
+
+char *build_full_path(const char *relative_path)
+{
+	int base_path_len = strlen(base_path);
+	int relative_path_len = strlen(relative_path);
+	int len = base_path_len + relative_path_len + 2;
+	char *new_path = new char[len];
+
+	sprintf(new_path, "%s\\%s", base_path, relative_path_len);
+	return new_path;
 }

@@ -10,6 +10,9 @@ struct Win32_State {
 	HINSTANCE hinstance;
 };
 
+extern Win32_State win32;
+
+
 typedef struct {
 	HWND		hWnd;
 	HWND		hwndBuffer;

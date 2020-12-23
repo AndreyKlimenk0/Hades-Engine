@@ -54,6 +54,9 @@ struct Fbx_Property {
 	Fbx_Property() {};
 	~Fbx_Property();
 	void copy_data_to_array(u8 *data, u32 array_byte_len, u32 array_count, u8 type);
+	bool is_property_type_value() { return type == PROPERTY_TYPE_VALUE; }
+	bool is_property_type_value_array() { return type == PROPERTY_TYPE_VALUE_ARRAY; }
+	bool is_property_value_type_string() { return value_type == PROPERTY_VALUE_TYPE_STRING; }
 };
 
 struct Fbx_Node {
@@ -74,8 +77,9 @@ struct Fbx_Binary_File {
 	void read(const char *file_name);
 	void fill_out_mesh(Triangle_Mesh *mesh);
 	bool check_title(FILE *file);
+	char *get_texture_name();
 	Fbx_Node *get_node(const char *name);
 };
 
-Fbx_Node *fbx_node_searcher(const Array<Fbx_Node *> *nodes, const char *name);
+Fbx_Node *find_fbx_node(const Array<Fbx_Node *> *nodes, const char *name);
 #endif

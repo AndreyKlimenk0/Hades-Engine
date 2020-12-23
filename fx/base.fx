@@ -38,31 +38,41 @@ cbuffer cbPerObject {
 	float4x4 world_view_projection;
 };
 
+Texture2D texture_map;
+
+SamplerState sampler_anisotropic {
+	Filter = ANISOTROPIC;
+	MaxAnisotropy = 4;
+
+	AddressU = WRAP;
+	AddressV = WRAP;
+};
+
 struct VertexIn {
 	float3 PosL  : POSITION;
-	float4 Color : COLOR;
+	float3 normal : NORMAL;
+	float2 uv : TEXCOORD;
 };
 
 struct VertexOut {
 	float4 PosH  : SV_POSITION;
-	float4 Color : COLOR;
+	float3 normal : NORMAL;
+	float2 uv : TEXCOORD;
 };
 
 VertexOut VS(VertexIn vin)
 {
 	VertexOut vout;
-	// Transform to homogeneous clip space.
 	vout.PosH = mul(float4(vin.PosL, 1.0f), world_view_projection);
-	//vout.PosH = float4(vin.PosL, 1.0f);
-	// Just pass vertex color into the pixel shader.
-	vout.Color = vin.Color;
+	vout.normal = vin.normal;
+	vout.uv = vin.uv;
 
 	return vout;
 }
 
 float4 PS(VertexOut pin) : SV_Target
 {
-	return pin.Color;
+	return texture_map.Sample(sampler_anisotropic, pin.uv);
 }
 
 technique11 ColorTech {

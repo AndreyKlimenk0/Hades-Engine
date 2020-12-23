@@ -17,14 +17,19 @@ struct Vertex {
 	Vector3 position;
 	Vector3 normal;
 	Vector2 uv;
+	Vertex() {}
+	Vertex(Vector3 position, Vector3 normal, Vector2 uv) : position(position), normal(normal), uv(uv) {}
+	Vertex(float p1, float p2, float p3, float n1, float n2, float n3, float uv1, float uv2) : Vertex(Vector3(p1, p2, p3), Vector3(n1, n2, n3), Vector2(uv1, uv2)) {}
 };
 
 struct Input_Layout {
 	~Input_Layout();
 	
 	static ID3D11InputLayout *vertex_color;
+	static ID3D11InputLayout *vertex;
 	static const D3D11_INPUT_ELEMENT_DESC vertex_col_desc[2];
+	static const D3D11_INPUT_ELEMENT_DESC vertex_desc[3];
 	
-	static void init(const Direct3D * direct3d);
+	static void init();
 };
 #endif

@@ -12,12 +12,13 @@ struct Free_Camera {
 	int window_width;
 	int window_hegith;
 
-	Vector3 position = Vector3(0.0f, 300.0f, -210.0f);
+	//Vector3 position = Vector3(0.0f, 300.0f, -210.0f);
+	Vector3 position = Vector3(0.0f, 10.0f, -10.0f);
 	Vector3 target = Vector3(0.0f, 0.0f, 0.0f);
 	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
 	Vector3 forward = Vector3(0.0f, 0.0f, 1.0f);
 
-	void init(Win32_State *win32, float _near_z = 1.0f, float _far_z = 10000.0f);
+	void init(float _near_z = 1.0f, float _far_z = 10000.0f);
 	void update();
 
 	Matrix4 get_view_matrix();
