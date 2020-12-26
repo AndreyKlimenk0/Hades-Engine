@@ -25,32 +25,34 @@ void Render_World::init(Free_Camera *_camera)
 
 
 	Triangle_Mesh *mesh = new Triangle_Mesh();
-	generate_box(10, 10, 10, mesh);
-	create_default_buffer(mesh);
+	//generate_box(10, 10, 10, mesh);
+	//create_default_buffer(mesh);
 
 	//Triangle_Mesh *mesh1 = new Triangle_Mesh();
 
 	//generate_grid(1000, 1000, mesh1);
 	//create_default_buffer(mesh1);
 
-	meshes.push(mesh);
+	//meshes.push(mesh);
 	//meshes.push(mesh1);
 
 //	generate_grid(40, 40, mesh1);
 //	create_default_buffer(direct3d->device, mesh1);
 
-	//Triangle_Mesh *box_mesh = new Triangle_Mesh();
-	//Fbx_Binary_File box;
+	Triangle_Mesh *box_mesh = new Triangle_Mesh();
+	Fbx_Binary_File box;
 	//box.read("E:\\andrey\\dev\\models\\test.fbx");
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\FBX\\men.fbx");
+	box.read("E:\\andrey\\dev\\hades\\data\\models\\FBX\\gun.fbx");
 	//box.read("E:\\andrey\\dev\\hades\\data\\models\\bird.fbx");
-	//box.fill_out_mesh(box_mesh);
-	//create_default_buffer(box_mesh);
+	//box.read("E:\\andrey\\dev\\hades\\data\\models\\box.fbx");
+	box.fill_out_mesh(box_mesh);
+	create_default_buffer(box_mesh);
 	
 	//meshes.push(mesh);
 	//meshes.push(mesh1);
 //	meshes.push(mesh2);
-	//meshes.push(box_mesh);
+	meshes.push(box_mesh);
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\gun.jpg", NULL, NULL, &texture, NULL));
 }
 
 void Render_World::render_world()
@@ -60,19 +62,18 @@ void Render_World::render_world()
 	
 	Matrix4 r = camera->get_view_projection_matrix();
 	for (int i = 0; i < meshes.count; i++) {
-		draw_mesh(meshes.at(i), r);
+		draw_mesh(meshes.at(i), r, texture);
 	}
 	HR(direct3d.swap_chain->Present(0, 0));
 }
 
-void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
+void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection, ID3D11ShaderResourceView *texture)
 {
 	assert(mesh->vertex_buffer != NULL);
 	assert(mesh->index_buffer != NULL);
 
-	ID3D11ShaderResourceView *texture = NULL;
 
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &texture, NULL));
 
 	direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
 	direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -99,5 +100,5 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, direct3d.device_context);
 
 	direct3d.device_context->DrawIndexed(mesh->index_count, 0, 0);
-	RELEASE_COM(texture);
+	//RELEASE_COM(texture);
 }
