@@ -285,11 +285,14 @@ Fbx_Node *Fbx_Binary_File::get_node(const char *name)
 	return find_fbx_node(&root_nodes, name);
 }
 
-#define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, pointer_name) \
+#define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, pointer_name, uv_property, uv_index_property) \
 				for (u32 i = 0; i < mesh->vertex_count; i++) { \
+					s32 uv_index = uv_index_property->array.int32[i]; \
 					mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3]); \
 					mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 1]); \
 					mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 2]); \
+					mesh->vertices[i].uv.x = uv_property->array.real64[uv_index * 2]; \
+					mesh->vertices[i].uv.y = uv_property->array.real64[uv_index * 2 + 1]; \
 				} \
 								
 void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
@@ -321,19 +324,19 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 
 	switch (vertex_property->value_type) {
 		case PROPERTY_VALUE_TYPE_REAL32: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real32);
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real32, uv_property, uv_index_property);
 			break;
 		}
 		case PROPERTY_VALUE_TYPE_REAL64: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real64);
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real64, uv_property, uv_index_property)
 			break;
 		}
 		case PROPERTY_VALUE_TYPE_S32: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int32);
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int32, uv_property, uv_index_property)
 			break;
 		}
 		case PROPERTY_VALUE_TYPE_S64: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int64);
+			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int64, uv_property, uv_index_property)
 			break;
 		}
 	}
@@ -370,12 +373,6 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 			}
 		}
 	}
-
-	for (u32 i = 0; i < uv_index_property->array.count / 2; i++) {
-
-	}
-
-
 }
 
 char *Fbx_Binary_File::get_texture_name()
