@@ -20,6 +20,7 @@ void Free_Camera::init(float _near_z, float _far_z)
 
 void Free_Camera::update()
 {
+	static int camera_speed = 1.0f;
 	static int last_mouse_x = 0.0f;
 	static int last_mouse_y = 0.0f;
 	static float pitch = 0.0f;
@@ -40,19 +41,19 @@ void Free_Camera::update()
 	last_mouse_y = Mouse_Input::y;
 
 	if (Key_Input::is_key_down(Key_W)) {
-		move_by_z += 2.0;
+		move_by_z += camera_speed;
 	}
 
 	if (Key_Input::is_key_down(Key_S)) {
-		move_by_z -= 2.0;
+		move_by_z -= camera_speed;
 	}
 
 	if (Key_Input::is_key_down(Key_A)) {
-		move_by_x -= 2.0;
+		move_by_x -= camera_speed;
 	}
 
 	if (Key_Input::is_key_down(Key_D)) {
-		move_by_x += 2.0;
+		move_by_x += camera_speed;
 	}
 
 	Matrix4 rotation = XMMatrixRotationRollPitchYaw(pitch, yam, 0);

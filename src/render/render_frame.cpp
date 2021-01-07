@@ -28,13 +28,13 @@ void Render_World::init(Free_Camera *_camera)
 	//generate_box(10, 10, 10, mesh);
 	//create_default_buffer(mesh);
 
-	//Triangle_Mesh *mesh1 = new Triangle_Mesh();
+	Triangle_Mesh *mesh1 = new Triangle_Mesh();
 
-	//generate_grid(1000, 1000, mesh1);
-	//create_default_buffer(mesh1);
+	generate_grid(1000, 1000, mesh1);
+	create_default_buffer(mesh1);
 
 	//meshes.push(mesh);
-	//meshes.push(mesh1);
+	meshes.push(mesh1);
 
 //	generate_grid(40, 40, mesh1);
 //	create_default_buffer(direct3d->device, mesh1);
@@ -42,17 +42,18 @@ void Render_World::init(Free_Camera *_camera)
 	Triangle_Mesh *box_mesh = new Triangle_Mesh();
 	Fbx_Binary_File box;
 	//box.read("E:\\andrey\\dev\\models\\test.fbx");
-	box.read("E:\\andrey\\dev\\hades\\data\\models\\FBX\\gun.fbx");
+	//box.read("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx");
+	//box.read("E:\\andrey\\dev\\hades\\data\\models\\golem.fbx");
 	//box.read("E:\\andrey\\dev\\hades\\data\\models\\bird.fbx");
 	//box.read("E:\\andrey\\dev\\hades\\data\\models\\box.fbx");
-	box.fill_out_mesh(box_mesh);
-	create_default_buffer(box_mesh);
+	//box.fill_out_mesh(box_mesh);
+	//create_default_buffer(box_mesh);
 	
 	//meshes.push(mesh);
 	//meshes.push(mesh1);
 //	meshes.push(mesh2);
-	meshes.push(box_mesh);
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\gun.jpg", NULL, NULL, &texture, NULL));
+	//meshes.push(box_mesh);
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &texture, NULL));
 }
 
 void Render_World::render_world()
