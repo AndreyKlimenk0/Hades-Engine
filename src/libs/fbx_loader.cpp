@@ -258,7 +258,7 @@ bool Fbx_Binary_File::check_title(FILE *file)
 
 	fread(magic_string, sizeof(u8), 21, file);
 	if (strcmp(fbx_title, magic_string)) {
-		printf("Fbx magic string failed, it can be not fbx file");
+		printf("Fbx magic string failed, it can be not fbx file\n");
 		result = false;
 	}
 
@@ -272,7 +272,7 @@ bool Fbx_Binary_File::check_title(FILE *file)
 
 	u32 version = read_u32(file);
 	if (version > max_fbx_version) {
-		printf("Unsupported FBX file version %d, needed file version %d or less", version, max_fbx_version);
+		printf("Unsupported FBX file version %d, needed file version %d or less\n", version, max_fbx_version);
 		result = false;
 	}
 	DELETE_PTR(magic_string);
@@ -304,7 +304,7 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 	Fbx_Node *uv_indices =  get_node("UVIndex");
 
 	if (!vertices || !indices || !normals || !uv || !uv_indices) {
-		printf("Some mesh data from the fbx file for the triangle mesh wasn't foundn");
+		printf("Some mesh data from the fbx file for the triangle mesh wasn't found\n");
 		return;
 	}
 
