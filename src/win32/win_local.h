@@ -10,43 +10,14 @@ struct Win32_State {
 	HINSTANCE hinstance;
 };
 
+
+struct Win_Console {
+	HWND window;
+	HBRUSH background_color;
+};
+
 extern Win32_State win32;
+extern Win_Console win_console;
 
-
-typedef struct {
-	HWND		hWnd;
-	HWND		hwndBuffer;
-
-	HWND		hwndButtonClear;
-	HWND		hwndButtonCopy;
-	HWND		hwndButtonQuit;
-
-	HWND		hwndErrorBox;
-	HWND		hwndErrorText;
-
-	HBITMAP		hbmLogo;
-	HBITMAP		hbmClearBitmap;
-
-	HBRUSH		hbrEditBackground;
-	HBRUSH		hbrErrorBackground;
-
-	HFONT		hfBufferFont;
-	HFONT		hfButtonFont;
-
-	HWND		hwndInputLine;
-
-	char		errorString[80];
-
-	char		consoleText[512], returnedText[512];
-	bool		quitOnClose;
-	int			windowWidth, windowHeight;
-
-	WNDPROC		SysInputLineWndProc;
-	int			nextHistoryLine;// the last line in the history buffer, not masked
-	int			historyLine;	// the line being displayed from history buffer
-								// will be <= nextHistoryLine
-} WinConData;
-
-static WinConData s_wcd;
-void create_console(const Win32_State *win32);
+void create_console();
 #endif
