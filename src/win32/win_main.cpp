@@ -85,7 +85,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	Free_Camera camera;
 	camera.init();
 
-	create_console(&win32);
+	create_console();
 
 	Render_World world;
 	world.init(&camera);
