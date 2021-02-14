@@ -9,15 +9,12 @@
 #include "../framework/camera.h"
 #include "../framework/file.h"
 
-#include "../render/vertex.h"
-#include "../libs/math/matrix.h"
-#include "../libs/ds/queue.h"
-#include "../render/mesh.h"
-#include "../libs/fbx_loader.h"
+#include "test.h"
 
 Win32_State win32;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
 
 void create_and_show_window(Win32_State *win32, int nCmdShow)
 {
@@ -31,7 +28,7 @@ void create_and_show_window(Win32_State *win32, int nCmdShow)
 
 	RegisterClass(&wc);
 
-	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Learn to Program Windows", WS_OVERLAPPEDWINDOW,
+	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32->hinstance, NULL
 	);
 
@@ -46,28 +43,8 @@ void create_and_show_window(Win32_State *win32, int nCmdShow)
 	win32->window_width = rect.right - rect.left;
 }
 
-void set_up_conlose_in_out()
-{
-	AllocConsole();
-	freopen("conin$", "r", stdin);
-	freopen("conout$", "w", stdout);
-	freopen("conout$", "w", stderr);
-	HWND consoleHandle = GetConsoleWindow();
-	MoveWindow(consoleHandle, 1, 1, 680, 480, 1);
-
-}
-
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-	//set_up_conlose_in_out();
-
-	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
-	Matrix4 test2 = Matrix4(Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88), Vector4(11, 22, 33, 44), Vector4(55, 66, 77, 88));
-	Matrix4 test3 = Matrix4(Vector4(1, 0, 0, 1), Vector4(0, 2, 1, 2), Vector4(2, 1, 0, 1), Vector4(2, 0, 1, 4));
-	//test3.inverse();
-	//Matrix4 result = test1 * test2;
-	//print_mat(result);
-
 	win32.hinstance = hInstance;
 	
 	init_base_path();
@@ -75,7 +52,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	
 	direct3d.init(&win32);
 
-	
 	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
@@ -88,12 +64,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Render_World world;
 	world.init(&camera);
-	
-	const char *text = "andrey full dependency tracking. Operating on a rolling release system.\n"
-					   "The default install provides a solid base that enables users to create a custom installation.\n"
-					   "The Arch Build System (ABS) also provides a way to easily build new packages, test\n";
-	append_text_to_text_edit_buffer(text);
-	append_text_to_text_edit_buffer(text);
+
+	test();
 	
 	while (1) {
 		pump_events();

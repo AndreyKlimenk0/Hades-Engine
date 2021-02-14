@@ -13,13 +13,14 @@ struct Array {
 	Array(int _size = 8);
 	~Array();
 
+	void resize();
+	bool is_empty();
 	T &operator[](int i);
 	const T &operator[](int i) const;
+	const T &at(int index) const;
 
 	T &pop();
 	T &at(int index);
-	const T &at(int index) const;
-	void resize();
 
 	void abort() 
 	{
@@ -122,5 +123,11 @@ void Array<T>::shutdown()
 
 	size = 0;
 	count = 0;
+}
+
+template <typename T>
+bool Array<T>::is_empty()
+{
+	return items == 0;
 }
 #endif
