@@ -75,18 +75,29 @@ LRESULT CALLBACK console_winproc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 LRESULT CALLBACK console_input_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	HBRUSH hbrBkgnd = NULL;
+	char temp[300];
 	switch (uMsg) {
-		case WM_CHAR: {
-			break;
-		}
+		//case WM_CHAR: {
+		//	switch (wParam) {
+		//		case VK_BACK: {
+		//			GetWindowText(win_console.input_line_buffer, temp, 300);
+		//			char *last_char = &temp[strlen(temp)];
+		//			if (*last_char == ':') {
+		//				return 1;
+		//			} else {
+		//				last_char = '\0';
+		//				SetWindowText(win_console.input_line_buffer, "");
+		//			}
+		//		}
+		//	}
+		//	break;
+		//}
 	}
 	return CallWindowProc(win_console.input_edit_proc, hwnd, uMsg, wParam, lParam);;
 }
 
 void create_console()
 {
-	//win_console.text_buffer_background_color = RGB(39,  40,  34);
 	win_console.text_buffer_background_color = RGB(30,  30,  30);
 	win_console.text_buffer_text_color       = RGB(255, 255, 255);
 	win_console.input_line_background_color  = RGB(39,  40,  40);
@@ -123,6 +134,7 @@ void create_console()
 
 	ShowWindow(win_console.window, SW_SHOWDEFAULT);
 	UpdateWindow(win_console.window);
+	SetFocus(win_console.input_line_buffer);
 	
 	win_console.input_edit_proc = (WNDPROC)SetWindowLong(win_console.input_line_buffer, GWL_WNDPROC, (long)console_input_proc);
 
@@ -131,12 +143,11 @@ void create_console()
 	SendMessage(win_console.text_buffer, WM_SETFONT, (WPARAM)text_buffer_font, 0);
 	SendMessage(win_console.input_line_buffer, WM_SETFONT, (WPARAM)intput_line_font, 0);
 	
-	const char *b = ":on a display or other device. The flags specify the relationship";
-	SendMessage(win_console.input_line_buffer, EM_LINESCROLL, 0, 0xffff);
-	SendMessage(win_console.input_line_buffer, EM_SCROLLCARET, 0, 0);
-	SendMessage(win_console.input_line_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)b);
-
-	SetFocus(win_console.input_line_buffer);
+	//const char *b = ":on a display or other device. The flags specify the relationship";
+	//
+	//SendMessage(win_console.input_line_buffer, EM_LINESCROLL, 0, 0xffff);
+	//SendMessage(win_console.input_line_buffer, EM_SCROLLCARET, 0, 0);
+	//SendMessage(win_console.input_line_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)b);
 }
 
 void append_text_to_text_edit_buffer(const char *text)
@@ -159,4 +170,9 @@ void append_text_to_text_edit_buffer(const char *text)
 	SendMessage(win_console.text_buffer, EM_LINESCROLL, 0, 0xffff);
 	SendMessage(win_console.text_buffer, EM_SCROLLCARET, 0, 0);
 	SendMessage(win_console.text_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)buffer.items);
+}
+
+void print()
+{
+	
 }
