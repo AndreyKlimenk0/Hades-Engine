@@ -59,7 +59,6 @@ void set_up_conlose_in_out()
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-
 	//set_up_conlose_in_out();
 
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
@@ -82,13 +81,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	Key_Input::init();
 	Input_Layout::init();
 
+	create_console();
 	Free_Camera camera;
 	camera.init();
 
-	create_console();
 
 	Render_World world;
 	world.init(&camera);
+	
+	const char *text = "andrey full dependency tracking. Operating on a rolling release system.\n"
+					   "The default install provides a solid base that enables users to create a custom installation.\n"
+					   "The Arch Build System (ABS) also provides a way to easily build new packages, test\n";
+	append_text_to_text_edit_buffer(text);
+	append_text_to_text_edit_buffer(text);
 	
 	while (1) {
 		pump_events();
