@@ -151,6 +151,7 @@
     <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_frame.cpp" />
     <ClCompile Include="src\render\vertex.cpp" />
+    <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
   </ItemGroup>
@@ -175,6 +176,7 @@
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_frame.h" />
     <ClInclude Include="src\render\vertex.h" />
+    <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_local.h" />
     <ClInclude Include="src\win32\win_types.h" />
   </ItemGroup>
