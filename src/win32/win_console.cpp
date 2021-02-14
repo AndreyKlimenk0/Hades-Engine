@@ -1,43 +1,97 @@
+#include <string.h>
+
 #include "win_local.h"
+#include "../libs/ds/array.h"
+
+#define EDIT_ID  100
+#define INPUT_ID 101
+#define INPUT_LINE_HEIGHT 23
+
+
+struct Win_Console {
+	HWND window;
+	HWND text_buffer;
+	HWND input_line_buffer;
+
+	COLORREF text_buffer_background_color;
+	COLORREF text_buffer_text_color;
+	COLORREF input_line_background_color;
+	COLORREF input_line_text_color;
+	COLORREF text_color;
+
+	WNDPROC input_edit_proc;
+};
 
 Win_Console win_console;
 
-#define EDIT_ID 100
+HBRUSH hbrBkgnd = NULL;
+HBRUSH hbrBkgnd2 = NULL;
 
-//void 
-//void print();
+static HFONT create_font(int size, const char *font_name)
+{
+	HDC hDC = GetDC(win_console.window);
+	int nHeight = -MulDiv(size, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+
+	HFONT font = CreateFont(nHeight, 0, 0, 0, FW_LIGHT, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN | FIXED_PITCH, font_name);
+
+	ReleaseDC(win_console.window, hDC);
+	return font;
+}
+
+static void get_window_size(HWND window, int *width, int *height)
+{
+	RECT rect;
+	GetClientRect(window, &rect);
+	*width = rect.right - rect.left;
+	*height = rect.bottom - rect.top;
+}
 
 LRESULT CALLBACK console_winproc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	HBRUSH hbrBkgnd = NULL;
 	switch (uMsg) {
-	case WM_CTLCOLORSTATIC:
-	{
-		HDC hdcStatic = (HDC)wParam;
-		SetTextColor(hdcStatic, RGB(255, 255, 255));
-		SetBkColor(hdcStatic, RGB(0, 0, 0));
+		case WM_CTLCOLORSTATIC: {
+			HDC hdcStatic = (HDC)wParam;
+			SetTextColor(hdcStatic, win_console.text_buffer_text_color);
+			SetBkColor(hdcStatic, win_console.text_buffer_background_color);
 
-		if (hbrBkgnd == NULL) {
-			hbrBkgnd = CreateSolidBrush(RGB(0, 0, 0));
+			if (hbrBkgnd == NULL) {
+				hbrBkgnd = CreateSolidBrush(win_console.text_buffer_background_color);
+			}
+			return (INT_PTR)hbrBkgnd;
 		}
-		return (INT_PTR)hbrBkgnd;
-	}
-	//case WM_CTLCOLORSTATIC: {
-	//	SetTextColor((HDC)wParam, RGB(0xa, 0xff, 0xff));
-	//	SetBkColor((HDC)wParam, RGB(0x00, 0x00, 0x00));
-	//	return (long)wconsole.background_color;
-	//}
-	case WM_CREATE:
-	{
-		win_console.background_color = CreateSolidBrush(RGB(0x00, 0x00, 0x00));
-		break;
-	}
+		case WM_CTLCOLOREDIT: {
+			HDC hdcStatic = (HDC)wParam;
+			SetTextColor(hdcStatic, win_console.input_line_text_color);
+			SetBkColor(hdcStatic, win_console.input_line_background_color);
+
+			if (hbrBkgnd2 == NULL) {
+				hbrBkgnd2 = CreateSolidBrush(win_console.input_line_background_color);
+			}
+			return (INT_PTR)hbrBkgnd2;
+		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
+LRESULT CALLBACK console_input_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	HBRUSH hbrBkgnd = NULL;
+	switch (uMsg) {
+		case WM_CHAR: {
+			break;
+		}
+	}
+	return CallWindowProc(win_console.input_edit_proc, hwnd, uMsg, wParam, lParam);;
+}
+
 void create_console()
 {
+	//win_console.text_buffer_background_color = RGB(39,  40,  34);
+	win_console.text_buffer_background_color = RGB(30,  30,  30);
+	win_console.text_buffer_text_color       = RGB(255, 255, 255);
+	win_console.input_line_background_color  = RGB(39,  40,  40);
+	win_console.input_line_text_color        = RGB(255, 255, 255);
+
 	char class_name[] = "Win32_Console";
 	WNDCLASS wc;
 	ZeroMemory(&wc, sizeof(WNDCLASS));
@@ -54,29 +108,55 @@ void create_console()
 	if (!win_console.window)
 		return;
 
-	RECT rect;
-	GetClientRect(win_console.window, &rect);
-	int width = rect.right - rect.left;
-	int height = rect.bottom - rect.top;
-	HWND b = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_BORDER |
-		ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY, CW_USEDEFAULT, CW_USEDEFAULT, width, height, win_console.window, (HMENU)100, win32.hinstance, NULL);
+	int text_buffer_width;
+	int text_buffer_height;
+	get_window_size(win_console.window, &text_buffer_width, &text_buffer_height);
+	
+	win_console.text_buffer = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL  | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY, 0, 0, text_buffer_width, text_buffer_height - INPUT_LINE_HEIGHT, win_console.window, (HMENU)EDIT_ID, win32.hinstance, NULL);
 
+	int input_line_width;
+	int input_line_height;
+	get_window_size(win_console.text_buffer, &input_line_width, &input_line_height);
+
+	win_console.input_line_buffer = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_OEMCONVERT, 0, text_buffer_height - INPUT_LINE_HEIGHT, input_line_width, INPUT_LINE_HEIGHT, win_console.window, (HMENU)INPUT_ID, win32.hinstance, NULL);
+	
 
 	ShowWindow(win_console.window, SW_SHOWDEFAULT);
 	UpdateWindow(win_console.window);
+	
+	win_console.input_edit_proc = (WNDPROC)SetWindowLong(win_console.input_line_buffer, GWL_WNDPROC, (long)console_input_proc);
 
+	HFONT text_buffer_font = create_font(11, "Consolas");
+	HFONT intput_line_font = create_font(11, "Consolas");
+	SendMessage(win_console.text_buffer, WM_SETFONT, (WPARAM)text_buffer_font, 0);
+	SendMessage(win_console.input_line_buffer, WM_SETFONT, (WPARAM)intput_line_font, 0);
+	
+	const char *b = ":on a display or other device. The flags specify the relationship";
+	SendMessage(win_console.input_line_buffer, EM_LINESCROLL, 0, 0xffff);
+	SendMessage(win_console.input_line_buffer, EM_SCROLLCARET, 0, 0);
+	SendMessage(win_console.input_line_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)b);
 
-
-	const char *buffer = "append this!\r\n asldfjlasdfjl;";
-	HWND hEdit = GetDlgItem(win_console.window, EDIT_ID);
-	int index = GetWindowTextLength(hEdit);
-	SetFocus(hEdit); // set focus
-	//SendMessageA(hEdit, EM_SETSEL, (WPARAM)index, (LPARAM)index); // set selection - end of text
-	//SendMessageA(hEdit, EM_REPLACESEL, 0, (LPARAM)buffer);
-	SendMessageA(hEdit, EM_SCROLLCARET, 0, 0);
+	SetFocus(win_console.input_line_buffer);
 }
 
-void append_text_to_edit_buffer(const char *text)
+void append_text_to_text_edit_buffer(const char *text)
 {
-
+	Array<char> buffer;
+	const char *t = text;
+	while (*t) {
+		if (*t == '\n' && *(t - 1) != '\r') {
+			buffer.push('\r');
+			buffer.push('\n');
+		} else {
+			buffer.push(*t);
+		}
+		t++;
+	}
+	buffer.push('\r');
+	buffer.push('\n');
+	buffer.push('\0');
+	
+	SendMessage(win_console.text_buffer, EM_LINESCROLL, 0, 0xffff);
+	SendMessage(win_console.text_buffer, EM_SCROLLCARET, 0, 0);
+	SendMessage(win_console.text_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)buffer.items);
 }

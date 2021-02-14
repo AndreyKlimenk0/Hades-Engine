@@ -10,14 +10,8 @@ struct Win32_State {
 	HINSTANCE hinstance;
 };
 
-
-struct Win_Console {
-	HWND window;
-	HBRUSH background_color;
-};
-
 extern Win32_State win32;
-extern Win_Console win_console;
 
+void append_text_to_text_edit_buffer(const char *text);
 void create_console();
 #endif
