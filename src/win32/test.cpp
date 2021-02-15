@@ -7,8 +7,7 @@
 #include "../libs/fbx_loader.h"
 #include "../libs/ds/queue.h"
 #include "../libs/ds/string.h"
-
-#define FOR(data_struct, item_buffer) for (int _i; _i < data_struct.items ? item_buffer = data_struct[_i]:; _i++)
+ 
 
 void test()
 {
@@ -19,15 +18,5 @@ void test()
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
 
-	//char *r = format("Andrey {}, Age {}, City {}", "Klimenko", 12, "kharkiv");
-	Array<char> temp;
-	temp.push('a');
-	temp.push('b');
-	temp.push('b');
-	temp.push('c');
-
-	char s;
-	FOR(temp, s) {
-		s += 1;
-	}
+	char *r = format("Andrey {}, Age {}, City {}", "Klimenko", 12, "kharkiv", "Common");
 }

@@ -14,7 +14,7 @@ void format_(Array<char *> *array) {}
 void split(char *string, const char *characters, Array<char *> *array)
 {
 	char *next = NULL;
-	array->abort();
+	array->clear();
 
 	char *token = strtok_s(string, characters, &next);
 	while (token != NULL) {
@@ -23,31 +23,58 @@ void split(char *string, const char *characters, Array<char *> *array)
 	}
 }
 
-void make_format_string(const char *string, Array<char> *buffer, Array<char *> *format_elements)
+void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars)
 {
-	int index_string = 0;
-	while (!format_elements->is_empty() || string[index_string]) {
-		if (string[index_string] == '{') {
-			char *format_element = format_elements->pop();
-			for (int i = 0; i < strlen(format_element); i++) {
-				buffer->push(format_element[i]);
+	assert(format_string);
+	assert(formatting_string);
+	assert(vars);
+
+	int var_index = 0;
+	const char *f_string = format_string;
+
+	while (*f_string) {
+		if (*f_string == '}') {
+			f_string++;
+			continue;
+		}
+		if (*f_string == '{') {
+			char *var = vars->at(var_index++);
+			int len = strlen(var);
+			for (int i = 0; i < len; i++) {
+				formatting_string->push(var[i]);
 			}
-			// Jump through '}'
-			index_string += 2;
-		} else if (index_string >= strlen(string)) {
-			// Push remaining elements
-			char *tail_string = format_elements->pop();
-			buffer->push(',');
-			buffer->push(' ');
-			for (int i = 0; i < strlen(tail_string); i++) {
-				buffer->push(tail_string[i]);
-			}
+			f_string += 1;
 		} else {
-			buffer->push(string[index_string++]);
+			formatting_string->push(*f_string);
+			f_string++;
 		}
 	}
-	buffer->push(',');
-	buffer->push(' ');
+}
+
+#define bytes_of(type, count) (sizeof(type) * count)
+
+void concatenate_string_with_format_string(const char *string, Array<char> *formatting_string)
+{
+	formatting_string->push(' ');
+	//const char *str = string;
+	//while (*str) {
+	//	formatting_string->push(*str);
+	//	str++;
+	//}
+	//
+	char *symbol = NULL;
+	int s_len = strlen(string);
+	int delta = formatting_string->size - formatting_string->count;
+	
+	if (s_len > delta) {
+		formatting_string->resize();
+		symbol = &formatting_string->at(formatting_string->count);
+		memcpy(symbol++, string, bytes_of(char, s_len));
+	} else {
+		symbol = &formatting_string->at(formatting_string->count);
+		memcpy(symbol++, string, bytes_of(char, s_len));
+	}
+	formatting_string->count += s_len;
 }
 
 char *concatenate_c_str(const char *str1, const char *str2)
