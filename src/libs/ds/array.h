@@ -4,6 +4,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define FOR(data_struct, item_buffer) for (int _i = 0; (_i < data_struct.count ? item_buffer = data_struct[_i], true : false); _i++)
+
 template <typename T>
 struct Array {
 	T *items;
@@ -22,7 +24,7 @@ struct Array {
 	T &pop();
 	T &at(int index);
 
-	void abort() 
+	void clear() 
 	{
 		if (items) {
 			delete[] items;

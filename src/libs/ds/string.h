@@ -2,9 +2,11 @@
 #define STRING_H
 
 #include "array.h"
+#include <windows.h>
 
+void format_(Array<char *> *array);
 void split(char *string, const char *characters, Array<char *> *array);
-void make_format_string(const char *string, Array<char> *buffer, Array<char *> *format_elements);
+void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars);
 
 char *get_next_line(char **buffer);
 char *concatenate_c_str(const char *str1, const char *str2);
@@ -21,6 +23,7 @@ char *to_string(const char *string);
 
 int is_format_string(const char *string);
 
+
 template <typename First, typename... Args>
 void format_(Array<char *> *array, First first, Args... args)
 {
@@ -29,43 +32,37 @@ void format_(Array<char *> *array, First first, Args... args)
 	format_(array, args...);
 }
 
-//#define FOR(data_struct, item_buffer) for (int _i; _i < data_struct.items ? item_buffer = data_struct[_i]:; _i++)
+void concatenate_string_with_format_string(const char *string, Array<char> *formatting_string);
+
+//#define COPY_STRING_TO_CHAR_ARRAY(string, char_array);
+
 
 template <typename... Args>
 char *format(Args... args)
 {
-	Array<char>   buffer;
-	Array<char *> args_buffer;
-	Array<char *> format_elements;
+	Array<char>   formatting_string;
+	Array<char *> strings;
+	Array<char *> vars_buffer;
 
-	//format_(&args_buffer, args...);
-	//for (int i = 0; i < args_buffer.items; i++) {
-	//	char *string = args_buffer[i];
-	//	int result = is_format_string();
-	//}
-	//char *string = NULL;
-	//FOR(args_buffer, string) {
+	format_(&strings, args...);
 
-	//}
-
-	//while (!args_buffer.is_empty()) {
-	//	char *string = args_buffer.pop();
-	//	int result = verify_is_format_string(string);
-	//	if (result) {
-	//		assert(args_buffer.items >= result);
-	//		for (int i = 0; i < result; i++) {
-	//			format_elements.push(args_buffer.pop());
-	//		}
-	//		make_format_string(string, &buffer, &format_elements);
-	//	} else {
-	//		copy_common_string(string, &buffer);
-	//	}
-	//}
-	//int len = buffer.items - 2;
-	//char *new_string = new char[len];
-	//memcpy(new_string, buffer.data, len);
-	//new_string[len] = '\0';
-	//return new_string;
+	for (int i = 0; i < strings.count; i++) {
+		char *string = strings[i];
+		int result = is_format_string(string);
+		if (result) {
+			assert(strings.count >= result);
+			int var_index = i + 1;
+			for (int j = 0; j < result; j++, i++) {
+				vars_buffer.push(strings[var_index++]);
+			}
+			format_string(string, &formatting_string, &vars_buffer);
+			vars_buffer.clear();
+		} else {
+			concatenate_string_with_format_string(string, &formatting_string);
+		}
+	}
+	formatting_string.push('\0');
+	return _strdup(formatting_string.items);
 }
 
 #endif
