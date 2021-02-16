@@ -4,9 +4,9 @@
 #include "base.h"
 #include "model.h"
 #include "../framework/file.h"
-#include "../libs/general.h"
+#include "../sys/sys_local.h"
 #include "../libs/fbx_loader.h"
-#include "../libs/ds/string.h"
+#include "../libs/str.h"
 
 
 Model::~Model()

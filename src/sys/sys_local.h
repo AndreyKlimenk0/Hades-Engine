@@ -1,11 +1,8 @@
-#ifndef GENERAL_H
-#define GENERAL_H
+#ifndef SYS_LOCAL_H
+#define SYS_LOCAL_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <Windows.h>
-
-#include "math/vector.h"
+#include "../libs/str.h"
+#include "../win32/win_local.h"
 #include "../win32/win_types.h"
 
 
@@ -24,26 +21,19 @@ void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *ex
 		}                                                      \
 	}
 #endif
-
 #else
-#ifndef HR
-#define HR(x) (x)
-#endif
+	#ifndef HR
+		#define HR(x) (x)
+	#endif
 #endif
 
 #define RELEASE_COM(x) { if(x){ x->Release(); x = 0; } }
 #define DELETE_PTR(x) if (x) delete x, x = NULL;
 #define DELETE_ARRAY(x) if (x) delete[] x;
 
-
-extern Vector4 White;
-extern Vector4 Black;
-extern Vector4 Red;
-extern Vector4 Green;
-extern Vector4 Blue;
-extern Vector4 Yellow;
-extern Vector4 Cyan;
-extern Vector4 Magenta;
-extern Vector4 Silver;
-extern Vector4 LightSteelBlue;
+template <typename... Args>
+void print(Args... args)
+{
+	append_text_to_text_buffer(format(args...));
+}
 #endif

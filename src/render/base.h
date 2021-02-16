@@ -12,6 +12,17 @@ using namespace DirectX;
 
 const float Pi = 3.1415926535f;
 
+extern Vector4 White;
+extern Vector4 Black;
+extern Vector4 Red;
+extern Vector4 Green;
+extern Vector4 Blue;
+extern Vector4 Yellow;
+extern Vector4 Cyan;
+extern Vector4 Magenta;
+extern Vector4 Silver;
+extern Vector4 LightSteelBlue;
+
 struct Direct3D {
 	ID3D11Device *device = NULL;
 	ID3D11DeviceContext *device_context = NULL;

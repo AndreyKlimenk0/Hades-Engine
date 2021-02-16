@@ -139,9 +139,8 @@
     <ClCompile Include="src\framework\file.cpp" />
     <ClCompile Include="src\framework\input.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
-    <ClCompile Include="src\libs\ds\string.cpp" />
+    <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\fbx_loader.cpp" />
-    <ClCompile Include="src\libs\general.cpp" />
     <ClCompile Include="src\libs\geometry_generator.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
@@ -151,6 +150,8 @@
     <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_frame.cpp" />
     <ClCompile Include="src\render\vertex.cpp" />
+    <ClCompile Include="src\sys\sys_debug.cpp" />
+    <ClCompile Include="src\sys\sys_output_info.cpp" />
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
@@ -163,9 +164,8 @@
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\hash_table.h" />
     <ClInclude Include="src\libs\ds\queue.h" />
-    <ClInclude Include="src\libs\ds\string.h" />
+    <ClInclude Include="src\libs\str.h" />
     <ClInclude Include="src\libs\fbx_loader.h" />
-    <ClInclude Include="src\libs\general.h" />
     <ClInclude Include="src\libs\geometry_generator.h" />
     <ClInclude Include="src\libs\math\common.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
@@ -176,6 +176,7 @@
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_frame.h" />
     <ClInclude Include="src\render\vertex.h" />
+    <ClInclude Include="src\sys\sys_local.h" />
     <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_local.h" />
     <ClInclude Include="src\win32\win_types.h" />
@@ -184,7 +185,7 @@
     <FxCompile Include="fx\base.fx" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cpp.hint" />
+    <Text Include="tasks.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

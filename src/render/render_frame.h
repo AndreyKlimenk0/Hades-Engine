@@ -11,11 +11,11 @@
 struct Render_World {
 	Free_Camera *camera  = NULL;
 	Array<Triangle_Mesh *> meshes;
-	ID3D11ShaderResourceView *texture = NULL;
+
 	void init(Free_Camera *camera);
 	void render_world();
 };
 
-void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection, ID3D11ShaderResourceView *texture);
+void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection);
 
 #endif

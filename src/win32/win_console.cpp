@@ -150,7 +150,7 @@ void create_console()
 	//SendMessage(win_console.input_line_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)b);
 }
 
-void append_text_to_text_edit_buffer(const char *text)
+void append_text_to_text_buffer(const char *text)
 {
 	Array<char> buffer;
 	const char *t = text;
@@ -163,6 +163,8 @@ void append_text_to_text_edit_buffer(const char *text)
 		}
 		t++;
 	}
+	buffer.push('\r');
+	buffer.push('\n');
 	buffer.push('\r');
 	buffer.push('\n');
 	buffer.push('\0');

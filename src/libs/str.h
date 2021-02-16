@@ -1,12 +1,12 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "array.h"
-#include <windows.h>
+#include "ds/array.h"
+#include "../win32/win_local.h"
+
 
 void format_(Array<char *> *array);
 void split(char *string, const char *characters, Array<char *> *array);
-void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars);
 
 char *get_next_line(char **buffer);
 char *concatenate_c_str(const char *str1, const char *str2);
@@ -32,37 +32,13 @@ void format_(Array<char *> *array, First first, Args... args)
 	format_(array, args...);
 }
 
-void concatenate_string_with_format_string(const char *string, Array<char> *formatting_string);
-
-//#define COPY_STRING_TO_CHAR_ARRAY(string, char_array);
-
+char * __do_formatting(Array<char *> *strings);
 
 template <typename... Args>
 char *format(Args... args)
 {
-	Array<char>   formatting_string;
 	Array<char *> strings;
-	Array<char *> vars_buffer;
-
 	format_(&strings, args...);
-
-	for (int i = 0; i < strings.count; i++) {
-		char *string = strings[i];
-		int result = is_format_string(string);
-		if (result) {
-			assert(strings.count >= result);
-			int var_index = i + 1;
-			for (int j = 0; j < result; j++, i++) {
-				vars_buffer.push(strings[var_index++]);
-			}
-			format_string(string, &formatting_string, &vars_buffer);
-			vars_buffer.clear();
-		} else {
-			concatenate_string_with_format_string(string, &formatting_string);
-		}
-	}
-	formatting_string.push('\0');
-	return _strdup(formatting_string.items);
+	return __do_formatting(&strings);
 }
-
 #endif

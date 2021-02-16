@@ -1,13 +1,25 @@
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "string.h"
+#include "str.h"
 
 
 #define MAX_DIGITS_IN_INT 12
 #define MAX_DIGITS_IN_LONG_LONG 21
 
+#define bytes_of(type, count) (sizeof(type) * count)
+
+#define COPY_STRING_TO_CHAR_ARRAY(string, char_array) {\
+	int s_len = strlen(string); \
+	while ((char_array->size - char_array->count) < s_len) { \
+		char_array->resize();\
+	} \
+	char *symbol = &char_array->at(char_array->count); \
+	memcpy(symbol, string, bytes_of(char, s_len));\
+	char_array->count += s_len; \
+}
 
 void format_(Array<char *> *array) {}
 
@@ -23,7 +35,7 @@ void split(char *string, const char *characters, Array<char *> *array)
 	}
 }
 
-void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars)
+static void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars)
 {
 	assert(format_string);
 	assert(formatting_string);
@@ -38,43 +50,41 @@ void format_string(const char *format_string, Array<char> *formatting_string, Ar
 			continue;
 		}
 		if (*f_string == '{') {
-			char *var = vars->at(var_index++);
-			int len = strlen(var);
-			for (int i = 0; i < len; i++) {
-				formatting_string->push(var[i]);
-			}
-			f_string += 1;
+			COPY_STRING_TO_CHAR_ARRAY(vars->items[var_index], formatting_string);
+			var_index++;
 		} else {
 			formatting_string->push(*f_string);
-			f_string++;
 		}
+		f_string++;
 	}
 }
 
-#define bytes_of(type, count) (sizeof(type) * count)
-
-void concatenate_string_with_format_string(const char *string, Array<char> *formatting_string)
+char * __do_formatting(Array<char *> *strings)
 {
-	formatting_string->push(' ');
-	//const char *str = string;
-	//while (*str) {
-	//	formatting_string->push(*str);
-	//	str++;
-	//}
-	//
-	char *symbol = NULL;
-	int s_len = strlen(string);
-	int delta = formatting_string->size - formatting_string->count;
-	
-	if (s_len > delta) {
-		formatting_string->resize();
-		symbol = &formatting_string->at(formatting_string->count);
-		memcpy(symbol++, string, bytes_of(char, s_len));
-	} else {
-		symbol = &formatting_string->at(formatting_string->count);
-		memcpy(symbol++, string, bytes_of(char, s_len));
+	Array<char>   formatting_string;
+	Array<char *> vars_buffer;
+
+	for (int i = 0; i < strings->count; i++) {
+		char *string = strings->at(i);
+		int result = is_format_string(string);
+		if (result) {
+			assert(strings->count >= result);
+			int var_index = i + 1;
+			for (int j = 0; j < result; j++, i++) {
+				vars_buffer.push(strings->at(var_index++));
+			}
+			format_string(string, &formatting_string, &vars_buffer);
+			vars_buffer.clear();
+			formatting_string.push(' ');
+		} else {
+			// Append string in buffer without needs for formatting
+			COPY_STRING_TO_CHAR_ARRAY(string, ((Array<char> *)&formatting_string));
+			formatting_string.push(' ');
+		}
 	}
-	formatting_string->count += s_len;
+	// Rewrite last not needed space
+	formatting_string[formatting_string.count - 1] = '\0';
+	return _strdup(formatting_string.items);
 }
 
 char *concatenate_c_str(const char *str1, const char *str2)
@@ -164,7 +174,7 @@ char *to_string(double num)
 {
 	char *str = new char[64];
 	memset(str, 0, 64);
-	_sprintf_p(str, 64, "%fL", num);
+	_sprintf_p(str, 64, "%F", num);
 	return str;
 }
 
@@ -172,10 +182,7 @@ char *to_string(bool val)
 {
 	static char _true[] = "true";
 	static char _false[] = "false";
-	if (val)
-		return _true;
-	return _false;
-	//return val ? _true : _false;
+	return val ? _true : _false;
 }
 
 char *to_string(const char *string)

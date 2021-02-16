@@ -2,7 +2,7 @@
 #include <windows.h>
 
 #include "file.h"
-#include "../libs/ds/string.h"
+#include "../libs/str.h"
 
 char *base_path = NULL;
 

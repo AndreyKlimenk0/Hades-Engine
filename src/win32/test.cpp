@@ -1,13 +1,8 @@
 #include "test.h"
 
-#include "../libs/ds/array.h"
 #include "../render/vertex.h"
-#include "../render/mesh.h"
 #include "../libs/math/matrix.h"
-#include "../libs/fbx_loader.h"
-#include "../libs/ds/queue.h"
-#include "../libs/ds/string.h"
- 
+#include "../sys/sys_local.h"
 
 void test()
 {
@@ -18,5 +13,8 @@ void test()
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
 
-	char *r = format("Andrey {}, Age {}, City {}", "Klimenko", 12, "kharkiv", "Common");
+	print("Andrey {}, Age {},", "Klimenko", 22, "I am living", "in", "Kharkiv");
+	print("Get", "Started", "My name Andrey", "I am Age {}", 22, "I am from city {}", "Kharkiv", "My height {}", 191.8f);
+	print("I am coward, Yes it is {}", true);
+	print("I am coward, Yes it is {}", false);
 }

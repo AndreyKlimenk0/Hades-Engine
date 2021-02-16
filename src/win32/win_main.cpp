@@ -16,31 +16,32 @@ Win32_State win32;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
-void create_and_show_window(Win32_State *win32, int nCmdShow)
+void create_and_show_window(int nCmdShow)
 {
 	const char CLASS_NAME[] = "Sample Window Class";
 
 	WNDCLASS wc = { };
 
 	wc.lpfnWndProc = WindowProc;
-	wc.hInstance = win32->hinstance;
+	wc.hInstance = win32.hinstance;
 	wc.lpszClassName = CLASS_NAME;
 
 	RegisterClass(&wc);
 
 	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32->hinstance, NULL
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32.hinstance, NULL
 	);
 
 	if (hwnd == NULL) {
 		return;
 	}
 	
-	win32->window = hwnd;
+	win32.window = hwnd;
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
-	win32->window_height = rect.bottom - rect.top;
-	win32->window_width = rect.right - rect.left;
+	win32.window_height = rect.bottom - rect.top;
+	win32.window_width = rect.right - rect.left;
+
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
@@ -48,22 +49,22 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	win32.hinstance = hInstance;
 	
 	init_base_path();
-	create_and_show_window(&win32, nCmdShow);
+	create_and_show_window(nCmdShow);
 	
 	direct3d.init(&win32);
-
 	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
 	Input_Layout::init();
 
-	create_console();
 	Free_Camera camera;
 	camera.init();
 
 
 	Render_World world;
 	world.init(&camera);
+	
+	create_console();
 
 	test();
 	
