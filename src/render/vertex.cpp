@@ -1,9 +1,9 @@
+#include <d3dx11effect.h>
 #include "base.h"
 #include "vertex.h"
 #include "effect.h"
 #include "../libs/ds/hash_table.h"
-#include "../libs/general.h"
-#include <d3dx11effect.h>
+#include "../sys/sys_local.h"
 
 ID3D11InputLayout *Input_Layout::vertex_color = NULL;
 ID3D11InputLayout *Input_Layout::vertex = NULL;
