@@ -1,8 +1,8 @@
 #include <zlib.h>
 
 #include "fbx_loader.h"
-#include "../libs/ds/string.h"
-#include "../libs/general.h"
+#include "../libs/str.h"
+#include "../sys/sys_local.h"
 
 
 static u32 property_value_type_size(u8 type)

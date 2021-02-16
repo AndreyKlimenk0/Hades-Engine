@@ -6,7 +6,7 @@
 #include "base.h"
 #include "vertex.h"
 #include "../libs/math/vector.h"
-#include "../libs/general.h"
+#include "../sys/sys_local.h"
 #include "../win32/win_types.h"
 
 
@@ -15,11 +15,13 @@ struct Triangle_Mesh {
 	ID3D11Buffer *vertex_buffer = NULL;
 	ID3D11Buffer *index_buffer = NULL;
 
+	ID3D11ShaderResourceView *texture = NULL;
+
 	Vertex *vertices = NULL;
 	u32 *indices = NULL;
 	u32 vertex_count;
 	u32 index_count;
-	
+
 	~Triangle_Mesh();
 	void allocate_vertices(int number);
 	void allocate_indices(int number);
@@ -41,6 +43,9 @@ inline void Triangle_Mesh::allocate_indices(int number)
 
 inline void create_default_buffer(Triangle_Mesh *mesh)
 {
+	assert(mesh->index_buffer == NULL);
+	assert(mesh->vertex_buffer == NULL);
+
 	D3D11_BUFFER_DESC vertex_buffer_desc;
 	ZeroMemory(&vertex_buffer_desc, sizeof(D3D11_BUFFER_DESC));
 	vertex_buffer_desc.Usage = D3D11_USAGE_DEFAULT;

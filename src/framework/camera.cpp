@@ -3,8 +3,8 @@
 #include "camera.h"
 #include "input.h"
 #include "../render/base.h"
-#include "../libs/general.h"
 #include "../libs/math/vector.h"
+#include "../sys/sys_local.h"
 #include "../win32/win_local.h"
 
 using namespace DirectX;
@@ -20,7 +20,8 @@ void Free_Camera::init(float _near_z, float _far_z)
 
 void Free_Camera::update()
 {
-	static int camera_speed = 1.0f;
+	//static int camera_speed = 1;
+	static float camera_speed = 0.2f;
 	static int last_mouse_x = 0.0f;
 	static int last_mouse_y = 0.0f;
 	static float pitch = 0.0f;

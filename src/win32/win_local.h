@@ -12,6 +12,6 @@ struct Win32_State {
 
 extern Win32_State win32;
 
-void append_text_to_text_edit_buffer(const char *text);
+void append_text_to_text_buffer(const char *text);
 void create_console();
 #endif

@@ -2,8 +2,8 @@
 
 #include "base.h"
 #include "effect.h"
-#include "../libs/general.h"
-#include "../libs/ds/string.h"
+#include "../sys/sys_local.h"
+#include "../libs/str.h"
 #include "../framework/file.h"
 
 

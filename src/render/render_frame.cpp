@@ -7,7 +7,8 @@
 #include "mesh.h"
 #include "vertex.h"
 #include "render_frame.h"
-#include "../libs/general.h"
+
+#include "../sys/sys_local.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
 #include "../libs/geometry_generator.h"
@@ -17,11 +18,8 @@
 void Render_World::init(Free_Camera *_camera)
 {
 	camera = _camera;
+	camera->position = Vector3(5, 20, 20);
 
-
-	//Triangle_Mesh *mesh2 = new Triangle_Mesh();
-	//load_model_from_obj_file("D:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\models\\aline.obj", mesh2);
-	//create_default_buffer(direct3d->device, mesh2);
 
 
 	Triangle_Mesh *mesh = new Triangle_Mesh();
@@ -32,28 +30,32 @@ void Render_World::init(Free_Camera *_camera)
 
 	generate_grid(1000, 1000, mesh1);
 	create_default_buffer(mesh1);
-
-	//meshes.push(mesh);
 	meshes.push(mesh1);
 
-//	generate_grid(40, 40, mesh1);
-//	create_default_buffer(direct3d->device, mesh1);
 
-	Triangle_Mesh *box_mesh = new Triangle_Mesh();
-	Fbx_Binary_File box;
-	//box.read("E:\\andrey\\dev\\models\\test.fbx");
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx");
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\golem.fbx");
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\bird.fbx");
+	//Triangle_Mesh *box_mesh = new Triangle_Mesh();
+	//Fbx_Binary_File box;
 	//box.read("E:\\andrey\\dev\\hades\\data\\models\\box.fbx");
 	//box.fill_out_mesh(box_mesh);
 	//create_default_buffer(box_mesh);
-	
-	//meshes.push(mesh);
-	//meshes.push(mesh1);
-//	meshes.push(mesh2);
 	//meshes.push(box_mesh);
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &texture, NULL));
+	
+	//box.read("E:\\andrey\\dev\\models\\test.fbx");
+	//box.read("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx");
+	//box.read("E:\\andrey\\dev\\hades\\data\\models\\bird.fbx");
+
+	//Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
+	//Fbx_Binary_File mutant_fbx;
+	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx");
+	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\golem.fbx");
+	//mutant_fbx.fill_out_mesh(mutant_mesh);
+	//create_default_buffer(mutant_mesh);
+	//meshes.push(mutant_mesh);
+	
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &mesh1->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\golem.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
 void Render_World::render_world()
@@ -61,20 +63,20 @@ void Render_World::render_world()
 	direct3d.device_context->ClearRenderTargetView(direct3d.render_target_view, (float *)&LightSteelBlue);
 	direct3d.device_context->ClearDepthStencilView(direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	
-	Matrix4 r = camera->get_view_projection_matrix();
+	Matrix4 wvp = camera->get_view_projection_matrix();
 	for (int i = 0; i < meshes.count; i++) {
-		draw_mesh(meshes.at(i), r, texture);
+		draw_mesh(meshes.at(i), wvp);
 	}
 	HR(direct3d.swap_chain->Present(0, 0));
 }
 
-void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection, ID3D11ShaderResourceView *texture)
+void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 {
-	assert(mesh->vertex_buffer != NULL);
-	assert(mesh->index_buffer != NULL);
+	assert(mesh);
+	assert(mesh->texture);
+	assert(mesh->vertex_buffer);
+	assert(mesh->index_buffer);
 
-
-	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &texture, NULL));
 
 	direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
 	direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -95,7 +97,7 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection, ID3D11ShaderR
 	ID3DX11EffectShaderResourceVariable *texture_map = fx->GetVariableByName("texture_map")->AsShaderResource();
 	ID3DX11EffectMatrixVariable *world_view_proejction = fx->GetVariableByName("world_view_projection")->AsMatrix();
 
-	texture_map->SetResource(texture);
+	texture_map->SetResource(mesh->texture);
 	world_view_proejction->SetMatrix((const float *)&world_view_projection);
 
 	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, direct3d.device_context);
