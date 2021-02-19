@@ -26,9 +26,9 @@ void load_texture(const char *name, ID3D11ShaderResourceView *texture)
 void Model::init_from_file(const char *file_name)
 {
 	assert(file_name != NULL);
-	name = get_file_name(file_name);
+	name = extract_file_name(file_name);
 	
-	char *file_extension = get_file_extension(file_name);
+	char *file_extension = extract_file_extension(file_name);
 	if (!strcmp(file_extension, "fbx")) {
 		Fbx_Binary_File fbx_file;
 		fbx_file.read(file_name);

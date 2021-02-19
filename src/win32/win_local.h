@@ -12,6 +12,7 @@ struct Win32_State {
 
 extern Win32_State win32;
 
-void append_text_to_text_buffer(const char *text);
 void create_console();
+void append_text_to_text_buffer(const char *text);
+void get_window_size(HWND window, int *width, int *height);
 #endif

@@ -47,6 +47,7 @@ void create_and_show_window(int nCmdShow)
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
 	win32.hinstance = hInstance;
+	create_console();
 	
 	init_base_path();
 	create_and_show_window(nCmdShow);
@@ -64,7 +65,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	Render_World world;
 	world.init(&camera);
 	
-	create_console();
 
 	test();
 	
