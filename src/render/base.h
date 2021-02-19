@@ -1,6 +1,7 @@
 #ifndef BASE_RENDER_H
 #define BASE_RENDER_H
 
+#include <d2d1.h>
 #include <d3d11.h>
 #include <DxErr.h>
 #include <DirectXMath.h>
@@ -22,6 +23,17 @@ extern Vector4 Cyan;
 extern Vector4 Magenta;
 extern Vector4 Silver;
 extern Vector4 LightSteelBlue;
+
+struct Direct2D {
+	~Direct2D();
+	
+	ID2D1Factory *factory = NULL;
+	ID2D1HwndRenderTarget *render_target = NULL;
+	ID2D1SolidColorBrush *gray_brush = NULL;
+	ID2D1SolidColorBrush *blue_brush = NULL;
+
+	void init();
+};
 
 struct Direct3D {
 	ID3D11Device *device = NULL;

@@ -3,6 +3,7 @@
 #include "fbx_loader.h"
 #include "../libs/str.h"
 #include "../sys/sys_local.h"
+#include "../framework/file.h"
 
 
 static u32 property_value_type_size(u8 type)
@@ -51,7 +52,7 @@ static void read_primitive_type_value(Fbx_Node *node, FILE *file, u8 type)
 		value->value_type = PROPERTY_VALUE_TYPE_STRING;
 		value->value.string = read_string(file, len);
 	} else {
-		printf("read_primitive_type_value didn't determine type of value\n");
+		print("read_primitive_type_value can not determine type of value");
 		assert(false);
 	}
 	node->properties.push(value);
@@ -74,7 +75,7 @@ static void read_array_data(Fbx_Node *node, FILE *file, u8 type)
 		fread(compressed_buffer, sizeof(u8), compressed_len, file);
 		int success = uncompress(decompressed_buffer, &array_byte_len, compressed_buffer, compressed_len);
 		if (success != Z_OK) {
-			printf("Erorr: Fbx property array decompressing failed\n");
+			print("Fbx property array decompressing failed");
 		}
 		array->copy_data_to_array(decompressed_buffer, array_byte_len, array_count, type);
 		
@@ -228,11 +229,13 @@ u32 Fbx_Node::read(FILE *file, u32 start_offset)
 }
 
 
-void Fbx_Binary_File::read(const char *file_name)
+void Fbx_Binary_File::read(const char *file_path)
 {
 	FILE *file;
-	if (fopen_s(&file, file_name, "rb")) {
-		printf("Fbx_Binary_FIle::read can't open the file by path %s\n", file_name);
+	file_name = extract_file_name(file_path);
+
+	if (fopen_s(&file, file_path, "rb")) {
+		print("Fbx_Binary_FIle::read: can't open the file {}", file_name);
 		return;
 	}
 
@@ -258,7 +261,7 @@ bool Fbx_Binary_File::check_title(FILE *file)
 
 	fread(magic_string, sizeof(u8), 21, file);
 	if (strcmp(fbx_title, magic_string)) {
-		printf("Fbx magic string failed, it can be not fbx file\n");
+		print("bx_Binary_File::check_title: Fbx magic string failed, it can be not fbx file\n");
 		result = false;
 	}
 
@@ -272,7 +275,7 @@ bool Fbx_Binary_File::check_title(FILE *file)
 
 	u32 version = read_u32(file);
 	if (version > max_fbx_version) {
-		printf("Unsupported FBX file version %d, needed file version %d or less\n", version, max_fbx_version);
+		print("Fbx_Binary_File::check_title: File {} has unsupported version {}, needed file version {} or less", file_name, version, max_fbx_version);
 		result = false;
 	}
 	DELETE_PTR(magic_string);
@@ -280,9 +283,40 @@ bool Fbx_Binary_File::check_title(FILE *file)
 }
 
 
-Fbx_Node *Fbx_Binary_File::get_node(const char *name)
+Fbx_Node *Fbx_Binary_File::find_node(const char *name)
 {
-	return find_fbx_node(&root_nodes, name);
+
+	Fbx_Node *node = find_fbx_node(&root_nodes, name);
+	if (!node) {
+		print("Fbx_Binary_File::find_node: Fbx node is not found in file {}", file_name);
+	}
+	return node;
+}
+
+inline void copy_fbx_mesh_data_to_triangle_mesh(Triangle_Mesh *mesh, Fbx_Property *vertex_property, Fbx_Property *uv_property, Fbx_Property *uv_index_property)
+{
+	for (u32 i = 0; i < mesh->vertex_count; i++) {
+		//s32 uv_index = uv_index_property->array.int32[i];
+		//s32 uv_index2 = uv_index_property->array.int32[i * 3 + 1];
+		//s32 uv_index3 = uv_index_property->array.int32[i * 3 + 2];
+
+		mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array.real64[i * 3]);
+		mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array.real64[i * 3 + 1]);
+		mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array.real64[i * 3 + 2]);
+		
+		//mesh->vertices[i].uv.x = uv_property->array.real64[uv_index];
+		//mesh->vertices[i].uv.x = uv_property->array.real64[uv_index + 1];
+		
+		//mesh->vertices[i].uv.x = 1 - uv_property->array.real64[uv_index * 2];
+		//mesh->vertices[i].uv.y =  1- uv_property->array.real64[uv_index * 2 + 1];
+
+		//mesh->vertices[i].uv.x = 1- uv_property->array.real64[uv_index2 * 2 ];
+		//mesh->vertices[i].uv.y = 1- uv_property->array.real64[uv_index2 * 2 + 1];
+
+		//mesh->vertices[i].uv.x =  1- uv_property->array.real64[uv_index3  * 2];
+		//mesh->vertices[i].uv.y = 1 - uv_property->array.real64[uv_index3  * 2 + 1];
+
+	}
 }
 
 #define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, pointer_name, uv_property, uv_index_property) \
@@ -291,20 +325,20 @@ Fbx_Node *Fbx_Binary_File::get_node(const char *name)
 					mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3]); \
 					mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 1]); \
 					mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 2]); \
-					mesh->vertices[i].uv.x = uv_property->array.real64[uv_index * 2]; \
-					mesh->vertices[i].uv.y = uv_property->array.real64[uv_index * 2 + 1]; \
+					mesh->vertices[i].uv.x = uv_property->array.real64[uv_index]; \
+					mesh->vertices[i].uv.y = uv_property->array.real64[uv_index + 1]; \
 				} \
 								
 void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 {
-	Fbx_Node *vertices = get_node("Vertices");
-	Fbx_Node *indices = get_node("PolygonVertexIndex");
-	Fbx_Node *normals = get_node("Normals");
-	Fbx_Node *uv =  get_node("UV");
-	Fbx_Node *uv_indices =  get_node("UVIndex");
+	Fbx_Node *vertices = find_node("Vertices");
+	Fbx_Node *indices = find_node("PolygonVertexIndex");
+	Fbx_Node *normals = find_node("Normals");
+	Fbx_Node *uv =  find_node("UV");
+	Fbx_Node *uv_indices =  find_node("UVIndex");
 
 	if (!vertices || !indices || !normals || !uv || !uv_indices) {
-		printf("Some mesh data from the fbx file for the triangle mesh wasn't found\n");
+		print("Some mesh data from the fbx file for the triangle mesh wasn't found");
 		return;
 	}
 
@@ -315,7 +349,7 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 	Fbx_Property *uv_index_property = uv_indices->properties[0];
 	
 	if (vertex_property->type != PROPERTY_TYPE_VALUE_ARRAY || index_property->type != PROPERTY_TYPE_VALUE_ARRAY) {
-		printf("Vertex fbx property of index fbx property doesn't appropriate array type\n");
+		print("Vertex fbx property of index fbx property doesn't appropriate array type");
 		return;
 	}
 	
@@ -328,7 +362,8 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 			break;
 		}
 		case PROPERTY_VALUE_TYPE_REAL64: {
-			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real64, uv_property, uv_index_property)
+			//COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, real64, uv_property, uv_index_property)
+			copy_fbx_mesh_data_to_triangle_mesh(mesh, vertex_property, uv_property, uv_index_property);
 			break;
 		}
 		case PROPERTY_VALUE_TYPE_S32: {
@@ -339,6 +374,18 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 			COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, int64, uv_property, uv_index_property)
 			break;
 		}
+	}
+
+	for (int i = 0; i < index_property->array.count; i++) {
+		s32 index;
+		s32 uv_index = uv_index_property->array.int32[i];
+		if (index_property->array.int32[i] < 0) {
+			index = (index_property->array.int32[i] * -1) - 1;
+		} else {
+			index = index_property->array.int32[i];
+		}
+		mesh->vertices[index].uv.x = uv_property->array.real64[uv_index];
+		mesh->vertices[index].uv.y =1 - uv_property->array.real64[uv_index + 1];
 	}
 
 
@@ -373,6 +420,12 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 			}
 		}
 	}
+	//for (int i = 0; i < mesh->index_count; i++) {
+	//	s32 index = mesh->indices[i];
+	//	s32 uv_index = uv_index_property->array.int32[i];
+	//	mesh->vertices[index].uv.x = uv_property->array.int32[uv_index];
+	//	mesh->vertices[index].uv.y = uv_property->array.int32[uv_index + 1];
+	//}
 }
 
 char *Fbx_Binary_File::get_texture_name()

@@ -18,6 +18,27 @@ Vector4 Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
 Vector4 Silver = { 0.75f, 0.75f, 0.75f, 1.0f };
 Vector4 LightSteelBlue = { 0.69f, 0.77f, 0.87f, 1.0f };
 
+Direct2D::~Direct2D()
+{
+	RELEASE_COM(factory);
+	RELEASE_COM(render_target);
+	RELEASE_COM(gray_brush);
+	RELEASE_COM(blue_brush);
+}
+
+void Direct2D::init()
+{
+	//HR(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &factory));
+
+	//D2D1_SIZE_U window_size;
+	//get_window_size(win32.window, (s32 *)&window_size.width, (s32 *)&window_size.height);
+	//HR(factory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(win32.window, window_size), &render_target));
+
+	//HR(render_target->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightSlateGray),&gray_brush));
+
+	//HR(render_target->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::CornflowerBlue),&blue_brush));
+}
+
 void Direct3D::init(const Win32_State *win32)
 {
 	UINT create_device_flag = 0;

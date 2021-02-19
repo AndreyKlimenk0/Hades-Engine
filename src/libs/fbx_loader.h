@@ -72,13 +72,15 @@ struct Fbx_Node {
 
 
 struct Fbx_Binary_File {
+	char *file_name;
 	Array<Fbx_Node *> root_nodes;
+
 	
-	void read(const char *file_name);
+	void read(const char *file_path);
 	void fill_out_mesh(Triangle_Mesh *mesh);
 	bool check_title(FILE *file);
 	char *get_texture_name();
-	Fbx_Node *get_node(const char *name);
+	Fbx_Node *find_node(const char *name);
 };
 
 Fbx_Node *find_fbx_node(const Array<Fbx_Node *> *nodes, const char *name);
