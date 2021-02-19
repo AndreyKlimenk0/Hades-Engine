@@ -2,6 +2,7 @@
 
 #include "win_local.h"
 #include "../libs/ds/array.h"
+#include <Windows.h>
 
 #define EDIT_ID  100
 #define INPUT_ID 101
@@ -38,7 +39,7 @@ static HFONT create_font(int size, const char *font_name)
 	return font;
 }
 
-static void get_window_size(HWND window, int *width, int *height)
+void get_window_size(HWND window, int *width, int *height)
 {
 	RECT rect;
 	GetClientRect(window, &rect);
@@ -163,8 +164,6 @@ void append_text_to_text_buffer(const char *text)
 		}
 		t++;
 	}
-	buffer.push('\r');
-	buffer.push('\n');
 	buffer.push('\r');
 	buffer.push('\n');
 	buffer.push('\0');

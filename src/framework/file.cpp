@@ -104,18 +104,18 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 	return buffer;
 }
 
-char *get_file_extension(const char *file_name)
+char *extract_file_extension(const char *file_path)
 {
 	Array<char *> buffer;
-	split(const_cast<char *>(file_name), ".", &buffer);
-	return _strdup(buffer[1]);
+	split(const_cast<char *>(file_path), ".", &buffer);
+	return _strdup(buffer[buffer.count - 1]);
 }
 
-char *get_file_name(const char *file_name)
+char *extract_file_name(const char *file_path)
 {
 	Array<char *> buffer;
-	split(const_cast<char *>(file_name), ".", &buffer);
-	return _strdup(buffer[0]);
+	split(const_cast<char *>(file_path), "\\", &buffer);
+	return _strdup(buffer[buffer.count -1]);
 }
 
 bool get_file_names_from_dir(const char *full_path, Array<char *> *file_names)

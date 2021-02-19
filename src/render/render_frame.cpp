@@ -22,40 +22,36 @@ void Render_World::init(Free_Camera *_camera)
 
 
 
-	Triangle_Mesh *mesh = new Triangle_Mesh();
+	//Triangle_Mesh *mesh = new Triangle_Mesh();
 	//generate_box(10, 10, 10, mesh);
 	//create_default_buffer(mesh);
 
-	Triangle_Mesh *mesh1 = new Triangle_Mesh();
+	Triangle_Mesh *grid = new Triangle_Mesh();
 
-	generate_grid(1000, 1000, mesh1);
-	create_default_buffer(mesh1);
-	meshes.push(mesh1);
+	generate_grid(1000, 1000, grid);
+	create_default_buffer(grid);
+	meshes.push(grid);
 
 
-	//Triangle_Mesh *box_mesh = new Triangle_Mesh();
-	//Fbx_Binary_File box;
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\box.fbx");
-	//box.fill_out_mesh(box_mesh);
-	//create_default_buffer(box_mesh);
-	//meshes.push(box_mesh);
+	Triangle_Mesh *box_mesh = new Triangle_Mesh();
+	Fbx_Binary_File box;
+	box.read("E:\\andrey\\dev\\hades\\data\\models\\test.fbx");
+	box.fill_out_mesh(box_mesh);
+	create_default_buffer(box_mesh);
+	meshes.push(box_mesh);
 	
-	//box.read("E:\\andrey\\dev\\models\\test.fbx");
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx");
-	//box.read("E:\\andrey\\dev\\hades\\data\\models\\bird.fbx");
-
 	//Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
 	//Fbx_Binary_File mutant_fbx;
-	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx");
-	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\golem.fbx");
+	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\earth_golem.fbx");
 	//mutant_fbx.fill_out_mesh(mutant_mesh);
 	//create_default_buffer(mutant_mesh);
 	//meshes.push(mutant_mesh);
 	
-	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &mesh1->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\golem.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
 void Render_World::render_world()

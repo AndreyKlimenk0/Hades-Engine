@@ -25,10 +25,12 @@ void format_(Array<char *> *array) {}
 
 void split(char *string, const char *characters, Array<char *> *array)
 {
+	// string copy is needed so that string char array don't point on the same memory location and don't free it 
+	char *string_copy = _strdup(string);
 	char *next = NULL;
 	array->clear();
 
-	char *token = strtok_s(string, characters, &next);
+	char *token = strtok_s(string_copy, characters, &next);
 	while (token != NULL) {
 		array->push(token);
 		token = strtok_s(NULL, characters, &next);

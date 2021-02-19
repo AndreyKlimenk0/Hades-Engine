@@ -21,7 +21,7 @@ void Free_Camera::init(float _near_z, float _far_z)
 void Free_Camera::update()
 {
 	//static int camera_speed = 1;
-	static float camera_speed = 0.2f;
+	static float camera_speed = 0.02f;
 	static int last_mouse_x = 0.0f;
 	static int last_mouse_y = 0.0f;
 	static float pitch = 0.0f;
