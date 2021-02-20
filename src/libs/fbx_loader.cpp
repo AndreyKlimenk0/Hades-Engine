@@ -288,7 +288,7 @@ Fbx_Node *Fbx_Binary_File::find_node(const char *name)
 
 	Fbx_Node *node = find_fbx_node(&root_nodes, name);
 	if (!node) {
-		print("Fbx_Binary_File::find_node: Fbx node is not found in file {}", file_name);
+		print("Fbx_Binary_File::find_node: Fbx node {} is not found in file {}", name, file_name);
 	}
 	return node;
 }
@@ -384,8 +384,8 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 		} else {
 			index = index_property->array.int32[i];
 		}
-		mesh->vertices[index].uv.x = uv_property->array.real64[uv_index];
-		mesh->vertices[index].uv.y =1 - uv_property->array.real64[uv_index + 1];
+		mesh->vertices[index].uv.x = uv_property->array.real64[uv_index * 2];
+		mesh->vertices[index].uv.y = uv_property->array.real64[uv_index * 2 + 1];
 	}
 
 
