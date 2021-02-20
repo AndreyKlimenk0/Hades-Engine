@@ -4,6 +4,7 @@
 #include "../libs/math/matrix.h"
 #include "../sys/sys_local.h"
 
+
 void test()
 {
 	Matrix4 test1 = Matrix4(Vector4(1, 2, 3, 4), Vector4(5, 6, 7, 8), Vector4(9, 10, 11, 12), Vector4(13, 14, 15, 16));
@@ -12,9 +13,4 @@ void test()
 	//test3.inverse();
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
-
-	//print("Andrey {}, Age {},", "Klimenko", 22, "I am living", "in", "Kharkiv");
-	//print("Get", "Started", "My name Andrey", "I am Age {}", 22, "I am from city {}", "Kharkiv", "My height {}", 191.8f);
-	//print("I am coward, Yes it is {}", true);
-	//print("I am coward, Yes it is {}", false);
 }

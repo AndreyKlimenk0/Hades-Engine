@@ -35,7 +35,7 @@ void Render_World::init(Free_Camera *_camera)
 
 	Triangle_Mesh *box_mesh = new Triangle_Mesh();
 	Fbx_Binary_File box;
-	box.read("E:\\andrey\\dev\\hades\\data\\models\\test.fbx");
+	box.read("E:\\andrey\\dev\\hades\\data\\models\\test_box.fbx");
 	box.fill_out_mesh(box_mesh);
 	create_default_buffer(box_mesh);
 	meshes.push(box_mesh);
