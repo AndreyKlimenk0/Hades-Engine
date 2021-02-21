@@ -88,7 +88,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;d2d1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>

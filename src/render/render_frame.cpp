@@ -1,5 +1,7 @@
 #include <d3dx11effect.h>
 #include <D3DX11.h>
+#include <d2d1.h>
+#include <d2d1_1.h>
 
 #include "base.h"
 #include "effect.h"
@@ -54,6 +56,23 @@ void Render_World::init(Free_Camera *_camera)
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
+void draw_2d()
+{
+//	ID2D1SolidColorBrush *black_brush = NULL;
+//	direct3d.direct2d.device_context->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &black_brush);
+//
+//	direct3d.direct2d.device_context->BeginDraw();
+//	direct3d.direct2d.device_context->DrawRectangle(
+//		D2D1::RectF(
+//			10.0f,
+//			10.0f,
+//			300.0f,
+//			300.0f),
+//		black_brush);
+//	direct3d.direct2d.device_context->EndDraw();
+//	RELEASE_COM(black_brush);
+}
+
 void Render_World::render_world()
 {
 	direct3d.device_context->ClearRenderTargetView(direct3d.render_target_view, (float *)&LightSteelBlue);
@@ -63,6 +82,8 @@ void Render_World::render_world()
 	for (int i = 0; i < meshes.count; i++) {
 		draw_mesh(meshes.at(i), wvp);
 	}
+	//draw_2d();
+	direct2d.draw();
 	HR(direct3d.swap_chain->Present(0, 0));
 }
 
