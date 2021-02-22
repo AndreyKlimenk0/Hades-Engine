@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -34,20 +34,20 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -70,13 +70,21 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(ProjectDir)dependencies\lib\x86</LibraryPath>
+    <IncludePath>E:\andrey\dev\hades\dependencies\include;$(IncludePath)</IncludePath>
+    <LibraryPath>E:\andrey\dev\hades\dependencies\lib\x86;$(LibraryPath)</LibraryPath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)dependencies\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)dependencies\lib\x86;$(LibraryPath)</LibraryPath>
+    <IncludePath>E:\andrey\dev\hades\dependencies\include;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\cppwinrtInclude\um;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\winrt;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\shared;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\um;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\ucrt;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Auxiliary\VS\include;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\atlmfc\include;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include</IncludePath>
+    <LibraryPath>E:\andrey\dev\hades\dependencies\lib\x86;C:\Program Files\Windows Kits\10\lib\10.0.17763.0\um\x86lib\um\x86;C:\Program Files\Windows Kits\10\lib\10.0.17763.0\ucrt\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Auxiliary\VS\lib\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\atlmfc\lib\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x86;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>E:\andrey\dev\hades\dependencies\include;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\cppwinrtInclude\um;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\winrt;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\shared;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\um;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\ucrt;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Auxiliary\VS\include;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\atlmfc\include;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include</IncludePath>
+    <LibraryPath>E:\andrey\dev\hades\dependencies\lib\x86;C:\Program Files\Windows Kits\10\lib\10.0.17763.0\um\x86lib\um\x86;C:\Program Files\Windows Kits\10\lib\10.0.17763.0\ucrt\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Auxiliary\VS\lib\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\atlmfc\lib\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x86;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>E:\andrey\dev\hades\dependencies\include;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\cppwinrtInclude\um;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\winrt;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\shared;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\um;C:\Program Files\Windows Kits\10\Include\10.0.17763.0\ucrt;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Auxiliary\VS\include;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\atlmfc\include;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include</IncludePath>
+    <LibraryPath>E:\andrey\dev\hades\dependencies\lib\x86;C:\Program Files\Windows Kits\10\lib\10.0.17763.0\um\x86lib\um\x86;C:\Program Files\Windows Kits\10\lib\10.0.17763.0\ucrt\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Auxiliary\VS\lib\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\atlmfc\lib\x86;C:\Program Files\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -88,12 +96,13 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;d2d1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>D3DCompiler.lib;d3d11.lib;d3dx11d.lib;d2d1.lib;dxgi.lib;effects11d.lib;legacy_stdio_definitions.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
       <ShaderType>Effect</ShaderType>
       <ObjectFileOutput>$(OutDir)compiled_fx\%(Filename).cso</ObjectFileOutput>
+      <AssemblerOutputFile>$(OutDir)compiled_fx\%(Filename).cso</AssemblerOutputFile>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -106,7 +115,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>d3dcompiler.lib;d3dx11d.lib;effects11d.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;d2d1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderType>Effect</ShaderType>
@@ -114,6 +123,7 @@
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>$(OutDir)compiled_fx\%(Filename).cso</ObjectFileOutput>
+      <AssemblerOutputFile>$(OutDir)compiled_fx\%(Filename).cso</AssemblerOutputFile>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -129,7 +139,21 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;d2d1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <DisableOptimizations>true</DisableOptimizations>
+    </FxCompile>
+    <FxCompile>
+      <EnableDebuggingInformation>true</EnableDebuggingInformation>
+    </FxCompile>
+    <FxCompile>
+      <ShaderType>Effect</ShaderType>
+    </FxCompile>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+      <AssemblerOutputFile>$(OutDir)compiled_fx\%(Filename).cso</AssemblerOutputFile>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -144,13 +168,28 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;d2d1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <DisableOptimizations>true</DisableOptimizations>
+    </FxCompile>
+    <FxCompile>
+      <EnableDebuggingInformation>true</EnableDebuggingInformation>
+    </FxCompile>
+    <FxCompile>
+      <ShaderType>Effect</ShaderType>
+    </FxCompile>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+      <AssemblerOutputFile>$(OutDir)compiled_fx\%(Filename).cso</AssemblerOutputFile>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\framework\camera.cpp" />
     <ClCompile Include="src\framework\event.cpp" />
     <ClCompile Include="src\framework\file.cpp" />
     <ClCompile Include="src\framework\input.cpp" />
+    <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\fbx_loader.cpp" />
@@ -174,6 +213,7 @@
     <ClInclude Include="src\framework\event.h" />
     <ClInclude Include="src\framework\file.h" />
     <ClInclude Include="src\framework\input.h" />
+    <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\hash_table.h" />
     <ClInclude Include="src\libs\ds\queue.h" />

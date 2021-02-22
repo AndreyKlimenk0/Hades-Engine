@@ -49,42 +49,24 @@ void Render_World::init(Free_Camera *_camera)
 	//create_default_buffer(mutant_mesh);
 	//meshes.push(mutant_mesh);
 	
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(directx_render.direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(directx_render.direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\golem.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
-void draw_2d()
-{
-//	ID2D1SolidColorBrush *black_brush = NULL;
-//	direct3d.direct2d.device_context->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &black_brush);
-//
-//	direct3d.direct2d.device_context->BeginDraw();
-//	direct3d.direct2d.device_context->DrawRectangle(
-//		D2D1::RectF(
-//			10.0f,
-//			10.0f,
-//			300.0f,
-//			300.0f),
-//		black_brush);
-//	direct3d.direct2d.device_context->EndDraw();
-//	RELEASE_COM(black_brush);
-}
-
 void Render_World::render_world()
 {
-	direct3d.device_context->ClearRenderTargetView(direct3d.render_target_view, (float *)&LightSteelBlue);
-	direct3d.device_context->ClearDepthStencilView(direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	directx_render.direct3d.device_context->ClearRenderTargetView(directx_render.direct3d.render_target_view, (float *)&Color::LightSteelBlue);
+	directx_render.direct3d.device_context->ClearDepthStencilView(directx_render.direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	
 	Matrix4 wvp = camera->get_view_projection_matrix();
 	for (int i = 0; i < meshes.count; i++) {
 		draw_mesh(meshes.at(i), wvp);
 	}
-	//draw_2d();
-	direct2d.draw();
-	HR(direct3d.swap_chain->Present(0, 0));
+	directx_render.test_draw();
+	HR(directx_render.direct3d.swap_chain->Present(0, 0));
 }
 
 void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
@@ -95,16 +77,16 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 	assert(mesh->index_buffer);
 
 
-	direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
-	direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	directx_render.direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
+	directx_render.direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
-	direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
-	direct3d.device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
+	directx_render.direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
+	directx_render.direct3d.device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
 
 	ID3DX11Effect *fx = NULL;
-	get_fx_shaders(&direct3d)->get("base", fx);
+	get_fx_shaders(&directx_render.direct3d)->get("base", fx);
 	
 	D3DX11_PASS_DESC pass_desc;
 	D3DX11_TECHNIQUE_DESC tech_desc;
@@ -117,8 +99,8 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 	texture_map->SetResource(mesh->texture);
 	world_view_proejction->SetMatrix((const float *)&world_view_projection);
 
-	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, direct3d.device_context);
+	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, directx_render.direct3d.device_context);
 
-	direct3d.device_context->DrawIndexed(mesh->index_count, 0, 0);
+	directx_render.direct3d.device_context->DrawIndexed(mesh->index_count, 0, 0);
 	//RELEASE_COM(texture);
 }

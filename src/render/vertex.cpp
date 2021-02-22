@@ -28,7 +28,7 @@ Input_Layout::~Input_Layout()
 void Input_Layout::init()
 {
 	ID3DX11Effect *fx = NULL;
-	if (!get_fx_shaders(&direct3d)->get("base", fx)) {
+	if (!get_fx_shaders(&directx_render.direct3d)->get("base", fx)) {
 		return;
 	}
 
@@ -36,6 +36,6 @@ void Input_Layout::init()
 	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&pass_desc);
 
 	//HR(direct3d.device->CreateInputLayout(vertex_col_desc, 2, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex_color));
-	HR(direct3d.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
+	HR(directx_render.direct3d.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
 
 }

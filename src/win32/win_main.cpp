@@ -52,7 +52,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	init_base_path();
 	create_and_show_window(nCmdShow);
 	
-	direct3d.init(&win32);
+	//direct3d.init();
+	directx_render.init();
 	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
@@ -60,8 +61,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Free_Camera camera;
 	camera.init();
-
-	direct2d.init();
 
 	Render_World world;
 	world.init(&camera);
@@ -75,8 +74,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		camera.update();
 		world.render_world();
 	}
-
-	direct3d.shutdown();
 	return 0;
 }
 
@@ -99,7 +96,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			GetWindowRect(win32.window, &rect);
 			win32.window_height = rect.bottom - rect.top;
 			win32.window_width = rect.right - rect.left;
-			direct3d.resize(&win32);
+			directx_render.direct3d.resize();
 			return 0;
 		}
 		case WM_LBUTTONDOWN: {

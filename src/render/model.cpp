@@ -19,7 +19,7 @@ void load_texture(const char *name, ID3D11ShaderResourceView *texture)
 {
 	char texture_dir[] = "data\\texture\\";
 	char *texture_path = build_full_path(concatenate_c_str(texture_dir, name));
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, texture_path, NULL, NULL, &texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(directx_render.direct3d.device, texture_path, NULL, NULL, &texture, NULL));
 	DELETE_PTR(texture_path);
 }
 

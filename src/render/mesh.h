@@ -56,7 +56,7 @@ inline void create_default_buffer(Triangle_Mesh *mesh)
 	ZeroMemory(&vertex_resource_data, sizeof(D3D11_SUBRESOURCE_DATA));
 	vertex_resource_data.pSysMem = (void *)mesh->vertices;
 
-	HR(direct3d.device->CreateBuffer(&vertex_buffer_desc, &vertex_resource_data, &mesh->vertex_buffer));
+	HR(directx_render.direct3d.device->CreateBuffer(&vertex_buffer_desc, &vertex_resource_data, &mesh->vertex_buffer));
 
 	D3D11_BUFFER_DESC index_buffer_desc;
 	ZeroMemory(&index_buffer_desc, sizeof(D3D11_BUFFER_DESC));
@@ -68,6 +68,6 @@ inline void create_default_buffer(Triangle_Mesh *mesh)
 	ZeroMemory(&index_resource_data, sizeof(D3D11_SUBRESOURCE_DATA));
 	index_resource_data.pSysMem = (void *)mesh->indices;
 
-	HR(direct3d.device->CreateBuffer(&index_buffer_desc, &index_resource_data, &mesh->index_buffer));
+	HR(directx_render.direct3d.device->CreateBuffer(&index_buffer_desc, &index_resource_data, &mesh->index_buffer));
 }
 #endif

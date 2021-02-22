@@ -6,72 +6,27 @@
 #include <d2d1_1.h>
 #include <d3d11_1.h>
 
-#include "../win32/win_local.h"
+#include "../libs/color.h"
 #include "../libs/math/matrix.h"
+#include "../libs/math/vector.h"
+#include "../win32/win_local.h"
 
 using namespace DirectX;
 
-
 const float Pi = 3.1415926535f;
 
-extern Vector4 White;
-extern Vector4 Black;
-extern Vector4 Red;
-extern Vector4 Green;
-extern Vector4 Blue;
-extern Vector4 Yellow;
-extern Vector4 Cyan;
-extern Vector4 Magenta;
-extern Vector4 Silver;
-extern Vector4 LightSteelBlue;
-
-//struct DirectX_Render {
-//	struct Direct2D {
-//		ID2D1Device *device = NULL;
-//		ID2D1DeviceContext *device_context = NULL;
-//		ID2D1Factory *factory = NULL;
-//		ID2D1Factory1 *factory1 = NULL;
-//		ID2D1RenderTarget *render_target = NULL;
-//		ID2D1SolidColorBrush *gray_brush = NULL;
-//		ID2D1SolidColorBrush *blue_brush = NULL;
-//	} direct2d;
-//	
-//	struct Direct3D {
-//		ID3D11Device *device = NULL;
-//		ID3D11DeviceContext *device_context = NULL;
-//		IDXGISwapChain *swap_chain = NULL;
-//
-//		ID3D11RenderTargetView *render_target_view = NULL;
-//		ID3D11DepthStencilView *depth_stencil_view = NULL;
-//		ID3D11Texture2D *depth_stencil_buffer = NULL;
-//		ID3D11Texture2D* back_buffer = NULL;
-//		IDXGISurface* back_buffer2 = NULL;
-//
-//		UINT quality_levels;
-//
-//		Matrix4 perspective_matrix;
-//	} direct3d;
-//};
-//
-//extern DirectX_Render directx_render;
 
 struct Direct2D {
 	~Direct2D();
-	
-	ID2D1Device *device = NULL;
-	ID2D1DeviceContext *device_context = NULL;
-	ID2D1Factory *factory = NULL;
-	ID2D1Factory1 *factory1 = NULL;
-	ID2D1Bitmap1 *bitmap1 = NULL;
 	ID2D1RenderTarget *render_target = NULL;
-	ID2D1SolidColorBrush *gray_brush = NULL;
-	ID2D1SolidColorBrush *blue_brush = NULL;
-
+	
 	void init();
 	void draw();
+	void shutdown();
 };
 
 struct Direct3D {
+	~Direct3D();
 	Direct2D direct2d;
 	ID3D11Device *device = NULL;
 	ID3D11DeviceContext *device_context = NULL;
@@ -86,13 +41,25 @@ struct Direct3D {
 
 	Matrix4 perspective_matrix;
 
-	void init(const Win32_State *win32);
+	void init();
 	void shutdown();
-	void resize(const Win32_State *win32);
+	void resize();
 };
 
-extern Direct3D direct3d;
-extern Direct2D direct2d;
+struct DirectX_Render {
+	~DirectX_Render();
+	Direct3D direct3d;
+	Direct2D direct2d;
+
+	void init();
+	void shutdown();
+	void resize_buffer();
+	void test_draw();
+	void fill_rect(int x, int y, int width, int height, Color &surface_color);
+	void draw_rect(int x, int y, int width, int height, Color &border_color);
+};
+
+extern DirectX_Render directx_render;
 
 inline Matrix4 get_perspective_matrix(int window_width, int window_height, float near_z, float far_z)
 {
