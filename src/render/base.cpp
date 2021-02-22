@@ -20,7 +20,6 @@ Direct2D::~Direct2D()
 
 void Direct2D::init()
 {
-	ID2D1Factory *factory = NULL;
 	HR(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &factory));
 
 	float dpi_x;
@@ -34,12 +33,12 @@ void Direct2D::init()
 
 	HR(factory->CreateDxgiSurfaceRenderTarget(surface, &rtDesc, &render_target));
 
-	RELEASE_COM(factory);
 	RELEASE_COM(surface);
 }
 
 void Direct2D::shutdown()
 {
+	RELEASE_COM(factory);
 	RELEASE_COM(render_target);
 }
 
@@ -196,12 +195,14 @@ void Direct3D::resize()
 	perspective_matrix = get_perspective_matrix(win32.window_width, win32.window_height, 1.0f, 1000.0f);
 }
 
+#define BEGIN_DRAW() (direct2d.render_target->BeginDraw())
+#define END_DRAW() (direct2d.render_target->EndDraw())
+
 DirectX_Render::~DirectX_Render()
 {
 	direct3d.shutdown();
 	direct2d.shutdown();
 }
-
 
 void DirectX_Render::init()
 {
@@ -217,14 +218,15 @@ void DirectX_Render::test_draw()
 	direct2d.render_target->BeginDraw();
 	direct2d.render_target->DrawRectangle(D2D1::RectF(10.0f, 10.0f, 200.0f, 200.0f), black_brush);
 	
-	fill_rect(10, 320, 200, 200, Color::Red);
-	//draw_rect(10, 320, 200, 200, Color::Green);
+	fill_rect(10, 320, 200, 200, Color::Black);
+	draw_rect(10, 320, 200, 200, Color::Red);
 	
 	direct2d.render_target->EndDraw();
 }
 
-void DirectX_Render::fill_rect(int x, int y, int width, int height, Color &surface_color)
+void DirectX_Render::fill_rect(int x, int y, int width, int height, Color &background_color)
 {
+	BEGIN_DRAW();
 	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
 	rect.left = x;
@@ -232,14 +234,16 @@ void DirectX_Render::fill_rect(int x, int y, int width, int height, Color &surfa
 	rect.right = x + width;
 	rect.bottom = y + height;
 	
-	direct2d.render_target->CreateSolidColorBrush((D2D1_COLOR_F)surface_color, &brush);
+	direct2d.render_target->CreateSolidColorBrush((D2D1_COLOR_F)background_color, &brush);
 	direct2d.render_target->FillRectangle(rect, brush);
 	
 	RELEASE_COM(brush);
+	END_DRAW();
 }
 
-void DirectX_Render::draw_rect(int x, int y, int width, int height, Color &border_color)
+void DirectX_Render::draw_rect(int x, int y, int width, int height, Color &stroke_color, ID2D1StrokeStyle *stroke_style, float stroke_width)
 {
+	BEGIN_DRAW();
 	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
 	rect.left = x;
@@ -247,8 +251,17 @@ void DirectX_Render::draw_rect(int x, int y, int width, int height, Color &borde
 	rect.right = x + width;
 	rect.bottom = y + height;
 	
-	direct2d.render_target->CreateSolidColorBrush(border_color, &brush);
-	direct2d.render_target->DrawRectangle(rect, brush, 3, NULL);
+	direct2d.render_target->CreateSolidColorBrush(stroke_color, &brush);
+	direct2d.render_target->DrawRectangle(rect, brush, stroke_width, stroke_style);
 
 	RELEASE_COM(brush);
+	END_DRAW();
+}
+
+ID2D1StrokeStyle *DirectX_Render::create_round_stroke_style()
+{
+	static ID2D1StrokeStyle *stroke_style = NULL;
+	auto propertins = StrokeStyleProperties(D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_ROUND, D2D1_LINE_JOIN_ROUND, 0.0f, D2D1_DASH_STYLE_SOLID, 0.0f);
+	HR(direct2d.factory->CreateStrokeStyle(propertins, NULL, 0, &stroke_style));
+	return stroke_style;
 }

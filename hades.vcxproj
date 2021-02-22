@@ -70,8 +70,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>E:\andrey\dev\hades\dependencies\include;$(IncludePath)</IncludePath>
-    <LibraryPath>E:\andrey\dev\hades\dependencies\lib\x86;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)dependencies\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(NETFXKitsDir)Lib\um\x86;$(WindowsSDK_LibraryPath_x86);$(VC_LibraryPath_x86);$(SolutionDIr)dependencies\lib\x86</LibraryPath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -204,6 +204,7 @@
     <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\sys\sys_debug.cpp" />
     <ClCompile Include="src\sys\sys_output_info.cpp" />
+    <ClCompile Include="src\ui\element.cpp" />
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
@@ -230,6 +231,7 @@
     <ClInclude Include="src\render\render_frame.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\sys\sys_local.h" />
+    <ClInclude Include="src\ui\element.h" />
     <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_local.h" />
     <ClInclude Include="src\win32\win_types.h" />

@@ -16,6 +16,8 @@
 #include "../libs/geometry_generator.h"
 
 #include "../libs/fbx_loader.h"
+#include "../ui/element.h"
+
 
 void Render_World::init(Free_Camera *_camera)
 {
@@ -65,7 +67,9 @@ void Render_World::render_world()
 	for (int i = 0; i < meshes.count; i++) {
 		draw_mesh(meshes.at(i), wvp);
 	}
-	directx_render.test_draw();
+	Editor editor = Editor();
+	editor.test();
+	editor.draw();
 	HR(directx_render.direct3d.swap_chain->Present(0, 0));
 }
 

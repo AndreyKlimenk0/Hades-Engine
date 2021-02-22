@@ -8,6 +8,7 @@
 #include "../framework/event.h"
 #include "../framework/camera.h"
 #include "../framework/file.h"
+#include "../ui/element.h"
 
 #include "test.h"
 
@@ -64,7 +65,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Render_World world;
 	world.init(&camera);
-	
+
+	//Editor editor = Editor();
+	//editor.test();
 
 	test();
 	

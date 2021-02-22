@@ -15,9 +15,9 @@ using namespace DirectX;
 
 const float Pi = 3.1415926535f;
 
-
 struct Direct2D {
 	~Direct2D();
+	ID2D1Factory *factory = NULL;
 	ID2D1RenderTarget *render_target = NULL;
 	
 	void init();
@@ -55,15 +55,17 @@ struct DirectX_Render {
 	void shutdown();
 	void resize_buffer();
 	void test_draw();
-	void fill_rect(int x, int y, int width, int height, Color &surface_color);
-	void draw_rect(int x, int y, int width, int height, Color &border_color);
+	
+	void fill_rect(int x, int y, int width, int height, Color &background_color);
+	void draw_rect(int x, int y, int width, int height, Color &stroke_color, ID2D1StrokeStyle *stroke_style = NULL, float stroke_width = 2.0f);
+
+	ID2D1StrokeStyle *create_round_stroke_style();
 };
 
 extern DirectX_Render directx_render;
 
 inline Matrix4 get_perspective_matrix(int window_width, int window_height, float near_z, float far_z)
 {
-
 	XMMATRIX m = XMMatrixPerspectiveFovLH(0.25f * Pi, (float)window_width / (float)window_height, near_z, far_z);
 	return Matrix4(m);
 }
