@@ -4,6 +4,7 @@
 #include <d2d1.h>
 
 #include "math/vector.h"
+#include "../win32/win_types.h"
 
 struct Color {
 	static Color White;
@@ -20,7 +21,8 @@ struct Color {
 	Vector4 color;
 
 	Color() {};
-	Color(float r, float g, float b, float a) : color(r, g, b, a) {}
+	Color(int r, int g, int b, int a = 255);
+	Color(float r, float g, float b, float a = 1.0f) : color(r, g, b, a) {}
 
 	operator D2D1_COLOR_F();
 };

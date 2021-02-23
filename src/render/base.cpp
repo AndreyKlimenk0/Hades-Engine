@@ -224,7 +224,7 @@ void DirectX_Render::test_draw()
 	direct2d.render_target->EndDraw();
 }
 
-void DirectX_Render::fill_rect(int x, int y, int width, int height, Color &background_color)
+void DirectX_Render::fill_rect(int x, int y, int width, int height, const Color &background_color)
 {
 	BEGIN_DRAW();
 	ID2D1SolidColorBrush *brush = NULL;
@@ -234,14 +234,14 @@ void DirectX_Render::fill_rect(int x, int y, int width, int height, Color &backg
 	rect.right = x + width;
 	rect.bottom = y + height;
 	
-	direct2d.render_target->CreateSolidColorBrush((D2D1_COLOR_F)background_color, &brush);
+	direct2d.render_target->CreateSolidColorBrush((Color)background_color, &brush);
 	direct2d.render_target->FillRectangle(rect, brush);
 	
 	RELEASE_COM(brush);
 	END_DRAW();
 }
 
-void DirectX_Render::draw_rect(int x, int y, int width, int height, Color &stroke_color, ID2D1StrokeStyle *stroke_style, float stroke_width)
+void DirectX_Render::draw_rect(int x, int y, int width, int height, const Color &stroke_color, ID2D1StrokeStyle *stroke_style, float stroke_width)
 {
 	BEGIN_DRAW();
 	ID2D1SolidColorBrush *brush = NULL;
@@ -251,7 +251,7 @@ void DirectX_Render::draw_rect(int x, int y, int width, int height, Color &strok
 	rect.right = x + width;
 	rect.bottom = y + height;
 	
-	direct2d.render_target->CreateSolidColorBrush(stroke_color, &brush);
+	direct2d.render_target->CreateSolidColorBrush((Color)stroke_color, &brush);
 	direct2d.render_target->DrawRectangle(rect, brush, stroke_width, stroke_style);
 
 	RELEASE_COM(brush);

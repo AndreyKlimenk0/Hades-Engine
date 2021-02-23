@@ -68,7 +68,7 @@ void Render_World::render_world()
 		draw_mesh(meshes.at(i), wvp);
 	}
 	Editor editor = Editor();
-	editor.test();
+	editor.init();
 	editor.draw();
 	HR(directx_render.direct3d.swap_chain->Present(0, 0));
 }

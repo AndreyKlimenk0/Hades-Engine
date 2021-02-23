@@ -56,8 +56,8 @@ struct DirectX_Render {
 	void resize_buffer();
 	void test_draw();
 	
-	void fill_rect(int x, int y, int width, int height, Color &background_color);
-	void draw_rect(int x, int y, int width, int height, Color &stroke_color, ID2D1StrokeStyle *stroke_style = NULL, float stroke_width = 2.0f);
+	void fill_rect(int x, int y, int width, int height, const Color &background_color);
+	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, ID2D1StrokeStyle *stroke_style = NULL, float stroke_width = 2.0f);
 
 	ID2D1StrokeStyle *create_round_stroke_style();
 };

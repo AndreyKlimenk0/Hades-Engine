@@ -8,6 +8,7 @@
 #include "../libs/ds/array.h"
 
 struct Element {
+	Element(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
 	int x;
 	int y;
 	int width;
@@ -17,6 +18,8 @@ struct Element {
 };
 
 struct Window : Element {
+	Window(int x, int y, int width, int height, Color &background_color) : Element(x, y, width, height), background_color(background_color) {}
+	
 	Color background_color;
 	Array<Element *> window_elements;
 	
@@ -39,7 +42,7 @@ struct Editor {
 	Array<Element *> elements;
 
 	void draw();
-	void test();
+	void init();
 	void add_element(Element *element);
 };
 
