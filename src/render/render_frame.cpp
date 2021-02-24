@@ -35,14 +35,14 @@ void Render_World::init(Free_Camera *_camera)
 
 	Triangle_Mesh *box_mesh = new Triangle_Mesh();
 	Fbx_Binary_File box;
-	box.read("E:\\andrey\\dev\\hades\\data\\models\\test_box.fbx");
+	box.read("E:\\andrey\\dev\\hades\\data\\models\\cube.fbx");
 	box.fill_out_mesh(box_mesh);
 	create_default_buffer(box_mesh);
 	meshes.push(box_mesh);
 	
 	//Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
 	//Fbx_Binary_File mutant_fbx;
-	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\earth_golem.fbx");
+	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\box.fbx");
 	//mutant_fbx.fill_out_mesh(mutant_mesh);
 	//create_default_buffer(mutant_mesh);
 	//meshes.push(mutant_mesh);
@@ -51,7 +51,7 @@ void Render_World::init(Free_Camera *_camera)
 	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\golem.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
-	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\box01.png", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
 void Render_World::render_world()
