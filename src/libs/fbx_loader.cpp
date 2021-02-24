@@ -321,12 +321,9 @@ inline void copy_fbx_mesh_data_to_triangle_mesh(Triangle_Mesh *mesh, Fbx_Propert
 
 #define COPY_VERTICES_TO_MESH_FROM_FBX_PROPERTY_ARRAY(mesh, vertex_property, pointer_name, uv_property, uv_index_property) \
 				for (u32 i = 0; i < mesh->vertex_count; i++) { \
-					s32 uv_index = uv_index_property->array.int32[i]; \
 					mesh->vertices[i].position.x = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3]); \
 					mesh->vertices[i].position.y = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 1]); \
 					mesh->vertices[i].position.z = static_cast<float32>(vertex_property->array. ## pointer_name ##[i * 3 + 2]); \
-					mesh->vertices[i].uv.x = uv_property->array.real64[uv_index]; \
-					mesh->vertices[i].uv.y = uv_property->array.real64[uv_index + 1]; \
 				} \
 								
 void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
@@ -376,6 +373,7 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 		}
 	}
 
+
 	for (int i = 0; i < index_property->array.count; i++) {
 		s32 index;
 		s32 uv_index = uv_index_property->array.int32[i];
@@ -384,8 +382,11 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 		} else {
 			index = index_property->array.int32[i];
 		}
+
 		mesh->vertices[index].uv.x = uv_property->array.real64[uv_index * 2];
 		mesh->vertices[index].uv.y = uv_property->array.real64[uv_index * 2 + 1];
+		Vector3 * pos = &mesh->vertices[index].position;
+		print("[{}] Vertex: x {} y {} z {},    Vertex index {}, UV x {}, y {},    UV_index {}", i, pos->x, pos->y, pos->z, index, mesh->vertices[index].uv.x, mesh->vertices[index].uv.y, uv_index);
 	}
 
 
