@@ -3,6 +3,7 @@
 
 #include "file.h"
 #include "../libs/str.h"
+#include "../sys/sys_local.h"
 
 char *base_path = NULL;
 
@@ -89,6 +90,7 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 {
 	FILE *f;
 	if (fopen_s(&f, name, mode)) {
+		print("Falied of reading file {}", name);
 		return NULL;
 	}
 

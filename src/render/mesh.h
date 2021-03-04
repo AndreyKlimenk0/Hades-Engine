@@ -18,6 +18,9 @@ struct Triangle_Mesh {
 	ID3D11ShaderResourceView *texture = NULL;
 
 	Vertex *vertices = NULL;
+	
+	bool is_indexed = true;
+	
 	u32 *indices = NULL;
 	u32 vertex_count;
 	u32 index_count;
@@ -57,6 +60,10 @@ inline void create_default_buffer(Triangle_Mesh *mesh)
 	vertex_resource_data.pSysMem = (void *)mesh->vertices;
 
 	HR(direct3d.device->CreateBuffer(&vertex_buffer_desc, &vertex_resource_data, &mesh->vertex_buffer));
+
+	if (!mesh->is_indexed) {
+		return;
+	}
 
 	D3D11_BUFFER_DESC index_buffer_desc;
 	ZeroMemory(&index_buffer_desc, sizeof(D3D11_BUFFER_DESC));
