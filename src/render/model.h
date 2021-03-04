@@ -16,4 +16,5 @@ struct Model {
 	void init_from_file(const char *file_name);
 };
 
+void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh);
 #endif

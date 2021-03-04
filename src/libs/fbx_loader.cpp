@@ -386,7 +386,7 @@ void Fbx_Binary_File::fill_out_mesh(Triangle_Mesh *mesh)
 		mesh->vertices[index].uv.x = uv_property->array.real64[uv_index * 2];
 		mesh->vertices[index].uv.y = uv_property->array.real64[uv_index * 2 + 1];
 		Vector3 * pos = &mesh->vertices[index].position;
-		print("[{}] Vertex: x {} y {} z {},    Vertex index {}, UV x {}, y {},    UV_index {}", i, pos->x, pos->y, pos->z, index, mesh->vertices[index].uv.x, mesh->vertices[index].uv.y, uv_index);
+		//print("[{}] Vertex: x {} y {} z {},    Vertex index {}, UV x {}, y {},    UV_index {}", i, pos->x, pos->y, pos->z, index, mesh->vertices[index].uv.x, mesh->vertices[index].uv.y, uv_index);
 	}
 
 
