@@ -38,7 +38,7 @@ void Render_World::init(Free_Camera *_camera)
 	box.read("E:\\andrey\\dev\\hades\\data\\models\\cube.fbx");
 	box.fill_out_mesh(box_mesh);
 	create_default_buffer(box_mesh);
-	meshes.push(box_mesh);
+	//meshes.push(box_mesh);
 	
 	//Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
 	//Fbx_Binary_File mutant_fbx;
@@ -46,11 +46,18 @@ void Render_World::init(Free_Camera *_camera)
 	//mutant_fbx.fill_out_mesh(mutant_mesh);
 	//create_default_buffer(mutant_mesh);
 	//meshes.push(mutant_mesh);
+
+	Triangle_Mesh *earth_golem = new Triangle_Mesh();
+	//load_model_from_obj_file("E:\\andrey\\dev\\hades\\data\\models\\Earth_Golem_OBJ.obj", earth_golem);
+	load_model_from_obj_file("E:\\andrey\\dev\\hades\\data\\models\\rocket2.obj", earth_golem);
+	create_default_buffer(earth_golem);
+	meshes.push(earth_golem);
 	
 	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
 	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
-	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\golem.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &earth_golem->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\rocket2.png", NULL, NULL, &earth_golem->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\box01.png", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
@@ -66,21 +73,47 @@ void Render_World::render_world()
 	HR(direct3d.swap_chain->Present(0, 0));
 }
 
+void draw_indexed_mesh(Triangle_Mesh *mesh)
+{
+	assert(mesh->index_buffer);
+
+	direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
+	direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
+	direct3d.device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
+
+	direct3d.device_context->DrawIndexed(mesh->index_count, 0, 0);
+}
+
+void draw_not_indexed_mesh(Triangle_Mesh *mesh)
+{
+	direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
+	direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
+
+	direct3d.device_context->Draw(mesh->vertex_count, 0);
+}
+
 void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 {
 	assert(mesh);
 	assert(mesh->texture);
 	assert(mesh->vertex_buffer);
-	assert(mesh->index_buffer);
 
 
-	direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
-	direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
-	direct3d.device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
+	//direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
+	//direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//
+	//UINT stride = sizeof(Vertex);
+	//UINT offset = 0;
+	//direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
+	//direct3d.device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
 
 	ID3DX11Effect *fx = NULL;
 	get_fx_shaders(&direct3d)->get("base", fx);
@@ -98,6 +131,10 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 
 	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, direct3d.device_context);
 
-	direct3d.device_context->DrawIndexed(mesh->index_count, 0, 0);
-	//RELEASE_COM(texture);
+	if (mesh->is_indexed) {
+		draw_indexed_mesh(mesh);
+	} else {
+		draw_not_indexed_mesh(mesh);
+	}
+
 }
