@@ -34,10 +34,7 @@ void Model::init_from_file(const char *file_name)
 	
 	char *file_extension = extract_file_extension(file_name);
 	if (!strcmp(file_extension, "fbx")) {
-		Fbx_Binary_File fbx_file;
-		fbx_file.read(file_name);
-		fbx_file.fill_out_mesh(&mesh);
-		fbx_file.get_texture_name();
+
 	} else {
 		printf("Model::init_from_file: %s is unkown model type, now only supports fbx file type\n", file_extension);
 		return;
@@ -76,6 +73,7 @@ static void split_obj_face_and_fill_out_vertex(char *face, Vertex *vertex, const
 	vertex->position = vertex_buffer->positions[vertex_index - 1];
 	vertex->uv = vertex_buffer->uvs[texture_index - 1];
 	vertex->normal = vertex_buffer->normals[normal_index - 1];
+	vertex->uv.y = 1 - vertex->uv.y;
 }
 
 static void fill_out_vertex(const Array<char *> &vertex_indices, Vertex *vertex, const Vertex_Buffer *vertex_buffer)

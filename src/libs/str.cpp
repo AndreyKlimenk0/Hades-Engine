@@ -176,7 +176,7 @@ char *to_string(double num)
 {
 	char *str = new char[64];
 	memset(str, 0, 64);
-	_sprintf_p(str, 64, "%F", num);
+	_sprintf_p(str, 64, "%lf", num);
 	return str;
 }
 

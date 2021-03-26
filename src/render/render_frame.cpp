@@ -34,30 +34,37 @@ void Render_World::init(Free_Camera *_camera)
 
 
 	Triangle_Mesh *box_mesh = new Triangle_Mesh();
-	Fbx_Binary_File box;
-	box.read("E:\\andrey\\dev\\hades\\data\\models\\cube.fbx");
-	box.fill_out_mesh(box_mesh);
-	create_default_buffer(box_mesh);
+	//Fbx_Binary_File box;
+	//box.read("E:\\andrey\\dev\\hades\\data\\models\\cube.fbx");
+	//box.fill_out_mesh(box_mesh);
+	//create_default_buffer(box_mesh);
 	//meshes.push(box_mesh);
 	
-	//Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
-	//Fbx_Binary_File mutant_fbx;
-	//mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\box.fbx");
-	//mutant_fbx.fill_out_mesh(mutant_mesh);
-	//create_default_buffer(mutant_mesh);
-	//meshes.push(mutant_mesh);
+	Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
+	/*Fbx_Binary_File mutant_fbx;
+	mutant_fbx.read("E:\\andrey\\dev\\hades\\data\\models\\solder.fbx");
+	mutant_fbx.fill_out_mesh(mutant_mesh);*/
+	//load_scene_from_fbx_file("E:\\andrey\\dev\\hades\\data\\models\\earth_golem.fbx", mutant_mesh);
+	//load_scene_from_fbx_file("E:\\andrey\\dev\\hades\\data\\models\\solder.fbx", mutant_mesh);
+	//load_scene_from_fbx_file("E:\\andrey\\dev\\hades\\data\\models\\vampire.fbx", mutant_mesh);
+	copy_fbx_mesh_to_triangle_mesh_from_file("E:\\andrey\\dev\\hades\\data\\models\\mutant.fbx", mutant_mesh);
+	create_default_buffer(mutant_mesh);
+	meshes.push(mutant_mesh);
 
-	Triangle_Mesh *earth_golem = new Triangle_Mesh();
+	//Triangle_Mesh *earth_golem = new Triangle_Mesh();
 	//load_model_from_obj_file("E:\\andrey\\dev\\hades\\data\\models\\Earth_Golem_OBJ.obj", earth_golem);
-	load_model_from_obj_file("E:\\andrey\\dev\\hades\\data\\models\\rocket2.obj", earth_golem);
-	create_default_buffer(earth_golem);
-	meshes.push(earth_golem);
+	//load_model_from_obj_file("E:\\andrey\\dev\\hades\\data\\models\\rocket2.obj", earth_golem);
+	//create_default_buffer(earth_golem);
+	//meshes.push(earth_golem);
 	
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &box_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\directx11_tutorial\\directx11_tutorial\\Textures\\WoodCrate01.dds", NULL, NULL, &mutant_mesh->texture, NULL));
 	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
-	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.jpg", NULL, NULL, &mutant_mesh->texture, NULL));
-	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &earth_golem->texture, NULL));
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\rocket2.png", NULL, NULL, &earth_golem->texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\mutant.png", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\solder.png", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\vampire.png", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem.png", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &mutant_mesh->texture, NULL));
+	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\rocket2.png", NULL, NULL, &earth_golem->texture, NULL));
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\box01.png", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
@@ -105,15 +112,6 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 	assert(mesh);
 	assert(mesh->texture);
 	assert(mesh->vertex_buffer);
-
-
-	//direct3d.device_context->IASetInputLayout(Input_Layout::vertex);
-	//direct3d.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//
-	//UINT stride = sizeof(Vertex);
-	//UINT offset = 0;
-	//direct3d.device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
-	//direct3d.device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
 
 	ID3DX11Effect *fx = NULL;
 	get_fx_shaders(&direct3d)->get("base", fx);
