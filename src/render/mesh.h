@@ -18,16 +18,16 @@ struct Triangle_Mesh {
 	ID3D11ShaderResourceView *texture = NULL;
 
 	Vertex *vertices = NULL;
-	
-	bool is_indexed = true;
-	
 	u32 *indices = NULL;
 	u32 vertex_count;
 	u32 index_count;
 
+	bool is_indexed = true;
+
 	~Triangle_Mesh();
 	void allocate_vertices(int number);
 	void allocate_indices(int number);
+	void copy_indices(u32 *source, int index_count);
 };
 
 inline void Triangle_Mesh::allocate_vertices(int number)
@@ -42,6 +42,12 @@ inline void Triangle_Mesh::allocate_indices(int number)
 	assert(indices == NULL);
 	indices = new u32[number];
 	index_count = number;
+}
+
+inline void Triangle_Mesh::copy_indices(u32 *source, int index_count)
+{
+	allocate_indices(index_count);
+	memcpy(indices, source, sizeof(u32) *index_count);
 }
 
 inline void create_default_buffer(Triangle_Mesh *mesh)
