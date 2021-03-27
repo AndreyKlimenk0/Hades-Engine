@@ -1,12 +1,35 @@
 #include <stdio.h>
+#include <string.h>
 #include <windows.h>
 
 #include "file.h"
 #include "../libs/str.h"
 #include "../sys/sys_local.h"
+#include "../libs/ds/hash_table.h"
+#include "../libs/str.h"
+
+
+const char DATA_DIR_NAME[] = "data";
 
 char *base_path = NULL;
 
+static char *build_full_path_for_data_dir(const char *dir_name, const char *file_name)
+{
+	assert(base_path);
+
+	char *full_path = format("{}\\{}\\{}\\{}", base_path, DATA_DIR_NAME, dir_name, file_name);
+	return full_path;
+}
+
+char *build_full_path_for_texture(const char *file_name)
+{
+	return build_full_path_for_data_dir("textures", file_name);
+}
+
+char *build_full_path_for_model(const char *file_name)
+{
+	return build_full_path_for_data_dir("models", file_name);
+}
 
 u8 read_u8(FILE *file)
 {

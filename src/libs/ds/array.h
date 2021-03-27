@@ -17,12 +17,13 @@ struct Array {
 
 	void resize();
 	bool is_empty();
-	T &operator[](int i);
 	const T &operator[](int i) const;
 	const T &at(int index) const;
 
 	T &pop();
 	T &at(int index);
+	T &last_item() { return items[count - 1]; }
+	T &operator[](int i);
 
 	void clear() 
 	{

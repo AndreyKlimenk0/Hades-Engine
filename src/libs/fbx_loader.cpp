@@ -1,9 +1,13 @@
+#include <D3DX11.h>
 #include <stdlib.h>
 
 #include "fbx_loader.h"
 #include "../sys/sys_local.h"
-#include "../libs/ds/array.h"
+#include "../framework/file.h"
+#include "../render/base.h" 
 #include "../render/vertex.h" 
+#include "../libs/str.h"
+#include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
 
 
@@ -99,25 +103,86 @@ static void read_normal_from_fbx_mesh(FbxMesh* fbx_mesh, int vertex_index, int v
 	}
 }
 
-
-void copy_fbx_mesh_to_triangle_mesh_from_scene(FbxScene *scene, Triangle_Mesh *mesh)
+FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 {
-	assert(mesh);
+	int count = mesh_node->GetSrcObjectCount<FbxSurfaceMaterial>();
+	for (int index = 0; index < count; index++) {
+		FbxSurfaceMaterial *material = (FbxSurfaceMaterial*)mesh_node->GetSrcObject<FbxSurfaceMaterial>(index);
+		if (material) {
+			FbxProperty prop = material->FindProperty(texture_type);
 
-	if (!scene) {
-		return;
+			int layered_texture_count = prop.GetSrcObjectCount<FbxLayeredTexture>();
+			if (layered_texture_count > 0) {
+				for (int j = 0; j < layered_texture_count; j++) {
+					FbxLayeredTexture* layered_texture = FbxCast<FbxLayeredTexture>(prop.GetSrcObject<FbxLayeredTexture>(j));
+					int lcount = layered_texture->GetSrcObjectCount<FbxTexture>();
+					for (int k = 0; k < lcount; k++) {
+						FbxTexture* texture = FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
+						return texture;
+					}
+				}
+			} else {
+				int texture_count = prop.GetSrcObjectCount<FbxTexture>();
+				for (int j = 0; j < texture_count; j++) {
+					FbxTexture* texture = FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
+					return texture;
+				}
+			}
+		}
 	}
+}
 
+const char *get_texture_file_name(FbxNode *mesh_node, const char *texture_type)
+{
+	FbxTexture *texture = find_texture(mesh_node, texture_type);
+	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(texture);
+	const char *full_texture_path = file_texture->GetFileName();
+
+	Array<char *> buffer;
+	split(full_texture_path, "/", &buffer);
+	return buffer.last_item();
+}
+
+inline const char *get_specular_texture_file_name(FbxNode *mesh_node)
+{
+	const char *file_name = get_texture_file_name(mesh_node, FbxSurfaceMaterial::sSpecular);
+	print(file_name);
+	return NULL;
+}
+
+inline const char *get_diffuse_texture_file_name(FbxNode *mesh_node)
+{
+	const char *file_name = get_texture_file_name(mesh_node, FbxSurfaceMaterial::sDiffuse);
+	print(file_name);
+	return file_name;
+}
+
+inline const char *get_normal_texture_file_name(FbxNode *mesh_node)
+{
+	const char *file_name = get_texture_file_name(mesh_node, FbxSurfaceMaterial::sNormalMap);
+	print(file_name);
+	return NULL;
+}
+
+FbxNode *find_fbx_mesh_node_from_scene(FbxScene *scene)
+{
 	FbxMesh *fbx_mesh = NULL;
 	FbxNode *root_node = scene->GetRootNode();
-	int child_count = root_node->GetChildCount();
 
+	int child_count = root_node->GetChildCount();
+	
 	for (int i = 0; i < child_count; i++) {
 		FbxNode *node = root_node->GetChild(i);
 		if (node->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eMesh) {
-			fbx_mesh = node->GetMesh();
+			return node;
 		}
 	}
+	return NULL;
+}
+
+void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
+{
+	assert(mesh);
 
 	if (!fbx_mesh) {
 		print("Fbx mesh was not found in the scene");
@@ -183,10 +248,26 @@ void copy_fbx_mesh_to_triangle_mesh_from_scene(FbxScene *scene, Triangle_Mesh *m
 	fbx_mesh->Destroy();
 }
 
-void copy_fbx_mesh_to_triangle_mesh_from_file(const char *file_path, Triangle_Mesh *mesh)
+void loat_fbx_model(const char *file_path, Triangle_Mesh *mesh)
 {
-	FbxScene *scene = load_scene_from_fbx_file(file_path, mesh);
-	copy_fbx_mesh_to_triangle_mesh_from_scene(scene, mesh);
+	char *p = build_full_path_for_model(file_path);
+
+	print(p);
+
+	FbxScene *scene = load_scene_from_fbx_file(p, mesh);
+	
+	FbxNode *mesh_node = find_fbx_mesh_node_from_scene(scene);
+
+	//get_specular_texture_file_name(mesh_node);
+	const char *name = get_diffuse_texture_file_name(mesh_node);
+	get_normal_texture_file_name(mesh_node);
+
+	char *path = build_full_path_for_texture(name);
+	print("Path", path);
+
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, path, NULL, NULL, &mesh->texture, NULL));
+
+	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), mesh);
 }
 
 FbxScene *load_scene_from_fbx_file(const char *file_path, Triangle_Mesh *mesh)

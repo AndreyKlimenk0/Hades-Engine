@@ -4,6 +4,7 @@
 #include "../libs/ds/array.h"
 #include "../win32/win_types.h"
 
+
 void init_base_path();
 
 bool get_file_names_from_dir(const char *full_path, Array<char *> *file_names);
@@ -26,6 +27,7 @@ char *read_entire_file(const char *name, const char *mode = "r", int *file_size 
 char *extract_file_name(const char *file_path);
 char *extract_file_extension(const char *file_path);
 char *build_full_path(const char *relative_path);
-
+char *build_full_path_for_texture(const char *file_name);
+char *build_full_path_for_model(const char *file_name);
 
 #endif
