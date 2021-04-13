@@ -4,11 +4,11 @@
 #include <string.h>
 #include <assert.h>
 
-#define FOR(data_struct, item_buffer) for (int _i = 0; (_i < data_struct.count ? item_buffer = data_struct[_i], true : false); _i++)
+#define FOR(data_struct, item_buffer) for (int _i = 0; (_i < data_struct.count ? item_buffer = &data_struct.items[_i], true : false); _i++)
 
 template <typename T>
 struct Array {
-	T *items;
+	T *items = NULL;
 	int count;
 	int size;
 
@@ -60,6 +60,7 @@ Array<T>::Array(int _size)
 	size = _size;
 	resize();
 }
+#include <stdlib.h>
 
 template <typename T>
 Array<T>::~Array()

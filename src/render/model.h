@@ -5,12 +5,15 @@
 #include <stdlib.h>
 
 #include "mesh.h"
-
+#include "../libs/str.h"
 
 struct Model {
-	char *name = NULL;
+	String name;
 	Triangle_Mesh mesh;
-	ID3D11ShaderResourceView *texture = NULL;
+	
+	ID3D11ShaderResourceView *normal_texture = NULL;
+	ID3D11ShaderResourceView *diffuse_texture = NULL;
+	ID3D11ShaderResourceView *specular_texture = NULL;
 
 	~Model();
 	void init_from_file(const char *file_name);

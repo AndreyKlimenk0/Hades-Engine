@@ -2,44 +2,47 @@
 #include "geometry_generator.h"
 #include "../render/vertex.h"
 
-void generate_grid(int x, int z, Triangle_Mesh *mesh)
+void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh)
 {
-	// x and z tell how many vertices need to be !!! not square
+	int vertex_count = m * n;
+	int index_count = (m - 1)*(n - 1) * 2;
 
-	float half_x = 0.5f * x;
-	float half_z = 0.5f * z;
+	float half_width = 0.5f*width;
+	float half_depth = 0.5f*depth;
 
-	if (mesh->vertices) delete[] mesh->vertices;
-	mesh->vertex_count = (x * z);
-	mesh->vertices = new Vertex[mesh->vertex_count];
-	for (int i = 0; i < z; i++) {
+	float dx = width / (n - 1);
+	float dz = depth / (m - 1);
 
-		float p1 = half_z - i;
-		for (int j = 0; j < x; j++) {
-			float p2 = -half_x + j;
+	float du = 1.0f / (n - 1);
+	float dv = 1.0f / (m - 1);
 
-			Vertex vertex;
-			vertex.position = Vector3(p2, 0.0f, p1);
-			vertex.uv = Vector2(i, j);
-			mesh->vertices[i * z + j] = vertex;
+	mesh->allocate_vertices(vertex_count);
+	for (int i = 0; i < m; ++i) {
+		float z = half_depth - i * dz;
+		for (int j = 0; j < n; ++j) {
+			float x = -half_width + j * dx;
+
+			mesh->vertices[i*n + j].position = Vector3(x, 0.0f, z);
+			mesh->vertices[i*n + j].normal = Vector3(0.0f, 1.0f, 0.0f);
+			mesh->vertices[i*n + j].uv.x = j;
+			mesh->vertices[i*n + j].uv.y = i;
 		}
 	}
 
-	if (mesh->indices) delete[] mesh->indices;
+	mesh->allocate_indices(index_count * 3);
 
-	mesh->index_count = (x * z) * 6;
-	mesh->indices = new u32[mesh->index_count];
 	int k = 0;
-	for (int i = 0; i < z - 1; i++) {
-		for (int j = 0; j < x - 1; j++) {
-			mesh->indices[k] = i * x + j;
-			mesh->indices[k + 1] = i * x + j + 1;
-			mesh->indices[k + 2] = (i + 1) * x + j;
-			mesh->indices[k + 3] = (i + 1) * x + j;
-			mesh->indices[k + 4] = i * x + j + 1;
-			mesh->indices[k + 5] = (i + 1) * x + j + 1;
+	for (int i = 0; i < m - 1; ++i) {
+		for (int j = 0; j < n - 1; ++j) {
+			mesh->indices[k] = i * n + j;
+			mesh->indices[k + 1] = i * n + j + 1;
+			mesh->indices[k + 2] = (i + 1)*n + j;
 
-			k += 6;
+			mesh->indices[k + 3] = (i + 1)*n + j;
+			mesh->indices[k + 4] = i * n + j + 1;
+			mesh->indices[k + 5] = (i + 1)*n + j + 1;
+
+			k += 6; // next quad
 		}
 	}
 }

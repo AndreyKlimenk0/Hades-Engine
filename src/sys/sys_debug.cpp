@@ -25,8 +25,20 @@ void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *ex
 	char *error_message = get_str_error_message_from_hresult_description(hr);
 	sprintf(buffer, "File: %s\nLine: %d\nFunction: %s\nMessage: %s\n", file, line, expr, error_message);
 	int button = MessageBox(NULL, buffer, "Error", MB_OKCANCEL | MB_ICONERROR | MB_APPLMODAL);
+	
+	DELETE_PTR(error_message);
+	
 	if (IDOK) {
 		ExitProcess(1);
 	}
+}
+
+void report_error(const char *error_message)
+{
+	int button = MessageBox(NULL, error_message, "Error", MB_OK | MB_ICONERROR | MB_APPLMODAL);
 	DELETE_PTR(error_message);
+
+	if (IDOK) {
+		ExitProcess(1);
+	}
 }
