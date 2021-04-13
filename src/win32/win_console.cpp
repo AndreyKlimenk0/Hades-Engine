@@ -116,7 +116,7 @@ void create_console()
 	if (!RegisterClass(&wc))
 		return;
 
-	win_console.window = CreateWindow(class_name, "Console", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32.hinstance, NULL);
+	win_console.window = CreateWindow(class_name, "Console", WS_OVERLAPPEDWINDOW, 10, 10, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32.hinstance, NULL);
 	if (!win_console.window)
 		return;
 
@@ -143,12 +143,6 @@ void create_console()
 	HFONT intput_line_font = create_font(11, "Consolas");
 	SendMessage(win_console.text_buffer, WM_SETFONT, (WPARAM)text_buffer_font, 0);
 	SendMessage(win_console.input_line_buffer, WM_SETFONT, (WPARAM)intput_line_font, 0);
-	
-	//const char *b = ":on a display or other device. The flags specify the relationship";
-	//
-	//SendMessage(win_console.input_line_buffer, EM_LINESCROLL, 0, 0xffff);
-	//SendMessage(win_console.input_line_buffer, EM_SCROLLCARET, 0, 0);
-	//SendMessage(win_console.input_line_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)b);
 }
 
 void append_text_to_text_buffer(const char *text)
@@ -171,9 +165,4 @@ void append_text_to_text_buffer(const char *text)
 	SendMessage(win_console.text_buffer, EM_LINESCROLL, 0, 0xffff);
 	SendMessage(win_console.text_buffer, EM_SCROLLCARET, 0, 0);
 	SendMessage(win_console.text_buffer, EM_REPLACESEL, 0, (LPARAM)(char *)buffer.items);
-}
-
-void print()
-{
-	
 }

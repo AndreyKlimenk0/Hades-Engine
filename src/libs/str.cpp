@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "str.h"
+#include "../sys/sys_local.h"
 
 
 #define MAX_DIGITS_IN_INT 12
@@ -25,7 +26,7 @@ void format_(Array<char *> *array) {}
 
 void split(const char *string, const char *characters, Array<char *> *array)
 {
-	// string copy is needed so that string char array don't point on the same memory location and don't free it 
+	// string copy is needed so that char array don't point on the same memory location and don't free it 
 	char *string_copy = _strdup(string);
 	char *next = NULL;
 	array->clear();
@@ -34,6 +35,23 @@ void split(const char *string, const char *characters, Array<char *> *array)
 	while (token != NULL) {
 		array->push(token);
 		token = strtok_s(NULL, characters, &next);
+	}
+}
+
+void split(String *string, const char *symbols, Array<String> *array)
+{
+	int curr_pos = 0;
+	int prev_pos = 0;
+	int	len = strlen(symbols);
+
+	while ((curr_pos = string->find_text(symbols, curr_pos)) != -1) {
+		array->push(String(string->data, prev_pos, curr_pos));
+		prev_pos = curr_pos + len;
+		curr_pos += len;
+	}
+	
+	if (prev_pos != string->len) {
+		array->push(String(*string, prev_pos, string->len));
 	}
 }
 
@@ -192,10 +210,27 @@ char *to_string(const char *string)
 	return const_cast<char *>(string);
 }
 
+char *to_string(char c)
+{
+	char *str = new char[2];
+	str[0] = c;
+	str[1] = '\0';
+	return str;
+}
+
+char *to_string(String &string)
+{
+	char *str = new char[string.len + 1];
+	memcpy(str, string.data, string.len + 1);
+	return str;
+}
+
 // Check the string has format braces if it has return number of braces 
 // if not return 0 and it means that this string is not format string 
 int is_format_string(const char *string)
 {
+	assert(string);
+
 	int count = 0;
 	const char *str = string;
 
@@ -206,4 +241,158 @@ int is_format_string(const char *string)
 		str++;
 	}
 	return count;
+}
+
+String::~String()
+{
+	DELETE_ARRAY(data);
+}
+
+String::String(const char *string)
+{
+	assert(string != NULL);
+	assert(string[0] != '\0');
+
+	if (string == data) {
+		return;
+	}
+
+	allocate_and_copy_string(string);
+}
+
+String::String(const char *string, int start, int end)
+{
+	int l = end - start;
+	const char *c = string;
+	c += start;
+
+	data = new char[l + 1];
+	memcpy(data, c, sizeof(char) * l);
+	data[l] = '\0';
+}
+
+String::String(const String &string, int start, int end)
+{
+	int l = end - start;
+	const char *c = string.data;
+	c += start;
+
+	data = new char[l + 1];
+	memcpy(data, c, sizeof(char) * l);
+	data[l] = '\0';
+}
+
+String::String(const String &string)
+{
+	DELETE_ARRAY(data);
+	allocate_and_copy_string(string.data);
+}
+
+String &String::operator=(const char *string)
+{
+	assert(string != NULL);
+	assert(string[0] != '\0');
+
+	if (string == data) {
+		return *this;
+	}
+	
+	DELETE_ARRAY(data);
+	allocate_and_copy_string(string);
+	return *this;
+}
+
+String &String::operator=(const String &string)
+{
+	if (this == &string) {
+		return *this;;
+	}
+	
+	DELETE_ARRAY(data);
+	allocate_and_copy_string(string.data);
+	return *this;
+}
+
+void String::free()
+{
+	DELETE_ARRAY(data);
+	len = 0;
+}
+
+void String::print()
+{
+	::print(data);
+}
+
+void String::to_lower()
+{
+	assert(len > 0);
+
+	for (int i = 0; i < len; i++) {
+		if (isupper(data[i])) {
+			data[i] += ('a' - 'A');
+		}
+	}
+}
+
+void String::append(const char *string)
+{
+	assert(string != NULL);
+	assert(string[0] != '\0');
+
+	if (!data) {
+		allocate_and_copy_string(string);
+		return;
+	}
+
+	int new_len = len + strlen(string);
+	char *new_string = new char[new_len + 1];
+	
+	memset(new_string, 0, sizeof(char) * new_len + 1);
+	strcat(new_string, data);
+	strcat(new_string, string);
+
+	DELETE_ARRAY(data);
+
+	data = new_string;
+	len = new_len;
+}
+
+void String::append(const String &string)
+{
+	append(string.data);
+}
+
+void String::allocate_and_copy_string(const char *string)
+{
+	assert(data == NULL);
+
+	int l = strlen(string);
+	len = l;
+	data = new char[l + 1];
+	memcpy(data, string, sizeof(char) * (l + 1));
+}
+
+int String::find_text(const char *text, int start)
+{
+	int result = -1;
+	int l = strlen(text);
+	int i = start > 0 ? start : 0;
+
+	for (; i < len; i++) {
+		if (data[i] == text[0]) {
+			result = i;
+			for (int j = ++i, k = 1; k < l && j < len; j++, k++) {
+				if (data[j] != text[k]) {
+					result = -1;
+					break;
+				}
+			}
+		
+			if (result >= 0) {
+				return result;
+			}
+		}
+	}
+	return result;
 }

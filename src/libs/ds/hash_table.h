@@ -1,19 +1,18 @@
 #ifndef HASH_TABLE_H
 #define HASH_TABLE_H
 
-#include <map>
-#include <string>
-
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../sys/sys_local.h"
+
 #define HT_PRIME_1 151
 #define HT_PRIME_2 163
 
+
 int hash(const char* string, const int factor, const int table_count);
 int double_hash(const char* string, const int table_count, const int attempt);
-
 
 template <typename _Key_, typename _Value_>
 struct Hash_Node {
@@ -33,21 +32,34 @@ struct Hash_Table {
 
 	void set(const _Key_ &key, const _Value_ &value);
 	bool get(const _Key_ &key, _Value_ &value);
+
+	_Value_ &operator[](const _Key_ &key);
+
 };
+
+template<typename _Key_, typename _Value_>
+_Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
+{
+	_Value_ value;
+	bool succeed = get(key, value);
+	
+	assert(succeed);
+	return value;
+}
 
 template <typename _Key_, typename _Value_>
 Hash_Table<_Key_, _Value_>::Hash_Table(int _size)
 {
 	size = _size;
 	count = 0;
-	nodes = new Hash_Node<_Key_, _Value_>*[size];
+	nodes = new Hash_Node<_Key_, _Value_> *[size];
 	memset(nodes, 0, sizeof(Hash_Node<_Key_, _Value_> *) * size);
 }
 
 template <typename _Key_, typename _Value_>
 Hash_Table<_Key_, _Value_>::~Hash_Table()
 {
-	delete nodes;
+	delete[] nodes;
 	nodes = NULL;
 }
 
@@ -60,7 +72,7 @@ inline void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &val
 	int i = 1;
 	while (node != NULL) {
 		index = double_hash(key, size, i);
-		node = &node[index];
+		node = nodes[index];
 		i++;
 	}
 	nodes[index] = new Hash_Node<_Key_, _Value_>(key, value);

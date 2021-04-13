@@ -3,6 +3,8 @@
 #include "../render/vertex.h"
 #include "../libs/math/matrix.h"
 #include "../sys/sys_local.h"
+#include "../libs/str.h"
+#include "../libs/ds/hash_table.h"
 
 
 void test()
@@ -13,4 +15,5 @@ void test()
 	//test3.inverse();
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
+
 }

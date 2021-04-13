@@ -15,17 +15,10 @@
 
 Model::~Model()
 {
-	DELETE_PTR(name);
-	RELEASE_COM(texture);
+	RELEASE_COM(diffuse_texture);
 }
 
-void load_texture(const char *name, ID3D11ShaderResourceView *texture)
-{
-	char texture_dir[] = "data\\texture\\";
-	char *texture_path = build_full_path(concatenate_c_str(texture_dir, name));
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, texture_path, NULL, NULL, &texture, NULL));
-	DELETE_PTR(texture_path);
-}
+
 
 void Model::init_from_file(const char *file_name)
 {

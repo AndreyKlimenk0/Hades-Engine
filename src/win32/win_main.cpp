@@ -49,13 +49,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	win32.hinstance = hInstance;
 	create_console();
 	
-	init_base_path();
 	create_and_show_window(nCmdShow);
-	
+
+	os_path.init();
+
+
 	direct3d.init(&win32);
 	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
+	test();
 	Input_Layout::init();
 
 	Free_Camera camera;
@@ -63,9 +66,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Render_World world;
 	world.init(&camera);
-	
 
-	test();
 	
 	while (1) {
 		pump_events();

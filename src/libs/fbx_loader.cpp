@@ -4,7 +4,7 @@
 #include "fbx_loader.h"
 #include "../sys/sys_local.h"
 #include "../framework/file.h"
-#include "../render/base.h" 
+#include "../render/base.h"
 #include "../render/vertex.h" 
 #include "../libs/str.h"
 #include "../libs/ds/array.h"
@@ -130,41 +130,43 @@ FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 			}
 		}
 	}
+	return NULL;
 }
 
-const char *get_texture_file_name(FbxNode *mesh_node, const char *texture_type)
+bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 {
 	FbxTexture *texture = find_texture(mesh_node, texture_type);
+	if (!texture) {
+		print("FbxTexture of type {} was not found", texture_type);
+		return false;
+	}
+
 	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(texture);
 	const char *full_texture_path = file_texture->GetFileName();
+	defer(free_string(full_texture_path));
 
 	Array<char *> buffer;
 	split(full_texture_path, "/", &buffer);
-	return buffer.last_item();
+	*file_name = buffer.last_item();
+	return true;
 }
 
-inline const char *get_specular_texture_file_name(FbxNode *mesh_node)
+inline bool get_specular_texture_file_name(FbxNode *mesh_node, String *file_name)
 {
-	const char *file_name = get_texture_file_name(mesh_node, FbxSurfaceMaterial::sSpecular);
-	print(file_name);
-	return NULL;
+	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sSpecular, file_name);
 }
 
-inline const char *get_diffuse_texture_file_name(FbxNode *mesh_node)
+inline bool get_diffuse_texture_file_name(FbxNode *mesh_node, String *file_name)
 {
-	const char *file_name = get_texture_file_name(mesh_node, FbxSurfaceMaterial::sDiffuse);
-	print(file_name);
-	return file_name;
+	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sDiffuse, file_name);
 }
 
-inline const char *get_normal_texture_file_name(FbxNode *mesh_node)
+inline bool get_normal_texture_file_name(FbxNode *mesh_node, String *file_name)
 {
-	const char *file_name = get_texture_file_name(mesh_node, FbxSurfaceMaterial::sNormalMap);
-	print(file_name);
-	return NULL;
+	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sNormalMap, file_name);
 }
 
-FbxNode *find_fbx_mesh_node_from_scene(FbxScene *scene)
+FbxNode *find_fbx_mesh_node_in_scene(FbxScene *scene)
 {
 	FbxMesh *fbx_mesh = NULL;
 	FbxNode *root_node = scene->GetRootNode();
@@ -248,29 +250,18 @@ void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 	fbx_mesh->Destroy();
 }
 
-void loat_fbx_model(const char *file_path, Triangle_Mesh *mesh)
+inline void load_texture(String *file_name, Triangle_Mesh *mesh)
 {
-	char *p = build_full_path_for_model(file_path);
+	if (file_name->len == 0)
+		return;
 
-	print(p);
-
-	FbxScene *scene = load_scene_from_fbx_file(p, mesh);
+	String *full_path_to_texture = os_path.build_full_path_to_texture_file(file_name);
+	defer(full_path_to_texture->free());
 	
-	FbxNode *mesh_node = find_fbx_mesh_node_from_scene(scene);
-
-	//get_specular_texture_file_name(mesh_node);
-	const char *name = get_diffuse_texture_file_name(mesh_node);
-	get_normal_texture_file_name(mesh_node);
-
-	char *path = build_full_path_for_texture(name);
-	print("Path", path);
-
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, path, NULL, NULL, &mesh->texture, NULL));
-
-	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), mesh);
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, (const char *)full_path_to_texture->data, NULL, NULL, &mesh->texture, NULL));
 }
 
-FbxScene *load_scene_from_fbx_file(const char *file_path, Triangle_Mesh *mesh)
+FbxScene *load_scene_from_fbx_file(String *file_path, Triangle_Mesh *mesh)
 {
 	assert(mesh);
 	assert(file_path);
@@ -284,13 +275,13 @@ FbxScene *load_scene_from_fbx_file(const char *file_path, Triangle_Mesh *mesh)
 
 	int file_format = -1;
 	FbxImporter* lImporter = FbxImporter::Create(fbx_manager, "");
-	if (!fbx_manager->GetIOPluginRegistry()->DetectReaderFileFormat(file_path, file_format)) {
+	if (!fbx_manager->GetIOPluginRegistry()->DetectReaderFileFormat(*file_path, file_format)) {
 		file_format = fbx_manager->GetIOPluginRegistry()->FindReaderIDByDescription("FBX binary (*.fbx)");
 	}
 
-	bool lImportStatus = lImporter->Initialize(file_path, file_format);
+	bool lImportStatus = lImporter->Initialize(*file_path, file_format);
 	if (!lImportStatus) {
-		print("Initializing Fbx Imported failed, file path {}", file_path);
+		print("Initializing Fbx Imported failed, file path {}", *file_path);
 		return NULL;
 	}
 
@@ -299,4 +290,28 @@ FbxScene *load_scene_from_fbx_file(const char *file_path, Triangle_Mesh *mesh)
 	lImporter->Destroy();
 
 	return scene;
+}
+
+void load_fbx_model(const char *file_name, Triangle_Mesh *mesh)
+{
+	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
+
+	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file, mesh);
+
+	if (!scene)
+		return;
+
+	FbxNode *mesh_node = find_fbx_mesh_node_in_scene(scene);
+
+	String normal_texture_name;
+	String diffuse_texture_name;
+	String specular_texture_name;
+
+	get_normal_texture_file_name(mesh_node, &normal_texture_name);
+	get_diffuse_texture_file_name(mesh_node, &diffuse_texture_name);
+	get_specular_texture_file_name(mesh_node, &specular_texture_name);
+
+	load_texture(&diffuse_texture_name, mesh);
+
+	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), mesh);
 }

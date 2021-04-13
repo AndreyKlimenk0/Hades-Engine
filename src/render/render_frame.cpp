@@ -23,13 +23,13 @@ void Render_World::init(Free_Camera *_camera)
 
 	Triangle_Mesh *grid = new Triangle_Mesh();
 
-	generate_grid(1000, 1000, grid);
+	generate_grid(5000.0f, 5000.0f, 50, 50, grid);
 	create_default_buffer(grid);
 	meshes.push(grid);
 
 	
 	Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
-	loat_fbx_model("mutant.fbx", mutant_mesh);
+	load_fbx_model("mutant.fbx", mutant_mesh);
 
 	create_default_buffer(mutant_mesh);
 	meshes.push(mutant_mesh);
