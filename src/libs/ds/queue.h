@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+
 template <typename T>
 struct Queue_Node {
 	const T &item;
@@ -21,7 +22,6 @@ struct Queue {
 	void push(const T &item);
 	bool is_empty();
 	const T &pop();
-	void display();
 };
 
 template<typename T>
@@ -71,14 +71,4 @@ const T &Queue<T>::pop()
 	}
 	return *item;
 }
-
-//template <typename T>
-//void Queue<T>::display()
-//{
-//	Queue_Node<T> *node = first;
-//	while (node) {
-//		printf("%d\n", node->item);
-//		node = node->next;
-//	}
-//}
 #endif

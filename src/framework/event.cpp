@@ -5,6 +5,7 @@
 #include "input.h"
 
 #include <stdio.h>
+
 Queue<Event> event_queue;
 
 void pump_events()
@@ -27,7 +28,6 @@ void push_event(Event_Type type, int first_value, int second_value)
 	event->second_value = second_value;
 	event_queue.push(*event);
 }
-
 
 void run_event_loop()
 {

@@ -182,9 +182,12 @@ struct Vector3 {
 	Vector3() {};
 	Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 	Vector3(const XMVECTOR &xm_vec);
+	
+	Vector3 &operator=(const XMFLOAT3 &vector);
 
 	float  &operator[](int i);
 	const float  &operator[](int i) const;
+	
 	Vector3 operator+(float scalar);
 	Vector3 operator+(const Vector3 &other);
 	Vector3 operator-(float scalar);
@@ -219,6 +222,14 @@ inline Vector3::Vector3(const XMVECTOR &xm_vec)
 	x = XMVectorGetX(xm_vec);
 	y = XMVectorGetY(xm_vec);
 	z = XMVectorGetZ(xm_vec);
+}
+
+inline Vector3 &Vector3::operator=(const XMFLOAT3 &vector)
+{
+	x = vector.x;
+	y = vector.y;
+	z = vector.z;
+	return *this;
 }
 
 inline float &Vector3::operator[](int i)
