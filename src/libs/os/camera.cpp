@@ -2,10 +2,10 @@
 
 #include "camera.h"
 #include "input.h"
-#include "../render/base.h"
-#include "../libs/math/vector.h"
-#include "../sys/sys_local.h"
-#include "../win32/win_local.h"
+#include "../math/vector.h"
+#include "../../sys/sys_local.h"
+#include "../../win32/win_local.h"
+#include "../../render/base.h"
 
 using namespace DirectX;
 

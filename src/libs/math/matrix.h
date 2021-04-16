@@ -239,6 +239,7 @@ struct Matrix4 {
 	Matrix4 &operator-=(const Matrix4 &other);
 
 	operator XMMATRIX();
+	operator float *();
 
 	Matrix4 transpose();
 	Matrix4 inverse();
@@ -366,6 +367,11 @@ inline Matrix4::operator XMMATRIX()
 		 matrix[1].x, matrix[1].y, matrix[1].z, matrix[1].w,
 		 matrix[2].x, matrix[2].y, matrix[2].z, matrix[2].w,
 		 matrix[3].x, matrix[3].y, matrix[3].z, matrix[3].w);
+}
+
+inline Matrix4::operator float *()
+{
+	return &matrix[0].x;
 }
 
 inline void Matrix4::indentity()

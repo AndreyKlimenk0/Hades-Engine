@@ -19,32 +19,57 @@ struct Hash_Node {
 	_Key_ key;
 	_Value_ value;
 	Hash_Node(const _Key_ &key, const _Value_ &value) : key(key), value(value) {}
+	bool compare(const _Key_ &key2) { return key == key2; }
+};
+
+template <typename _Value_>
+struct Hash_Node<const char *, _Value_> {
+	String key;
+	_Value_ value;
+	Hash_Node(const char *key, const _Value_ &value) : key(key), value(value) {}
+	bool compare(const String &key2) { return key == key2; }
+};
+
+template <typename _Value_>
+struct Hash_Node<String, _Value_> {
+	String key;
+	_Value_ value;
+	Hash_Node(const String &key, const _Value_ &value) : key(key), value(value) {}
+	bool compare(const String key2) { return key == key2; }
 };
 
 template <typename _Key_, typename _Value_>
 struct Hash_Table {
-	Hash_Node<_Key_, _Value_> **nodes;
-	int size;
-	int count;
-	
 	Hash_Table(int _size = 53);
 	~Hash_Table();
 
+	Hash_Node<_Key_, _Value_> **nodes;
+	int size;
+	int count;
+
 	void set(const _Key_ &key, const _Value_ &value);
 	bool get(const _Key_ &key, _Value_ &value);
+	bool get(const _Key_ &key, _Value_ *value);
 
 	_Value_ &operator[](const _Key_ &key);
-
 };
 
 template<typename _Key_, typename _Value_>
 _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
 {
-	_Value_ value;
-	bool succeed = get(key, value);
-	
-	assert(succeed);
-	return value;
+	int index = double_hash(key, size, 0);
+	Hash_Node<_Key_, _Value_> *node = nodes[index];
+	int i = 1;
+	while (node != NULL) {
+		if (node->compare(key)) {
+			return node->value;
+			
+		}
+		index = double_hash(key, size, i);
+		node = &node[index];
+		i++;
+	}
+	assert(false);
 }
 
 template <typename _Key_, typename _Value_>
@@ -86,8 +111,26 @@ inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
 	int i = 1;
 	while (node != NULL) {
-		if (!strcmp(key, node->key)) {
+		if (node->compare(key)) {
 			value = node->value;
+			return true;
+		}
+		index = double_hash(key, size, i);
+		node = &node[index];
+		i++;
+	}
+	return false;
+}
+
+template <typename _Key_, typename _Value_>
+inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ *value)
+{
+	int index = double_hash(key, size, 0);
+	Hash_Node<_Key_, _Value_> *node = nodes[index];
+	int i = 1;
+	while (node != NULL) {
+		if (node->compare(key)) {
+			*value = node->value;
 			return true;
 		}
 		index = double_hash(key, size, i);

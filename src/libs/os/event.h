@@ -1,7 +1,7 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#include "../libs/ds/queue.h"
+#include "../ds/queue.h"
 
 
 enum Event_Type {

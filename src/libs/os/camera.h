@@ -1,10 +1,10 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "../libs/math/vector.h"
-#include "../libs/math/matrix.h"
+#include "../math/vector.h"
+#include "../math/matrix.h"
 
-#include "../win32/win_local.h"
+#include "../../win32/win_local.h"
 
 struct Free_Camera {
 	//int camera_speed = 1.0;

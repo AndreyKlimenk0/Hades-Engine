@@ -365,6 +365,7 @@ void String::append(const String &string)
 
 void String::allocate_and_copy_string(const char *string)
 {
+	assert(string);
 	assert(data == NULL);
 
 	int l = strlen(string);
@@ -375,6 +376,8 @@ void String::allocate_and_copy_string(const char *string)
 
 int String::find_text(const char *text, int start)
 {
+	assert(text);
+
 	int result = -1;
 	int l = strlen(text);
 	int i = start > 0 ? start : 0;
@@ -395,4 +398,10 @@ int String::find_text(const char *text, int start)
 		}
 	}
 	return result;
+}
+
+String *String::copy()
+{
+	String *str = new String(*this);
+	return str;
 }

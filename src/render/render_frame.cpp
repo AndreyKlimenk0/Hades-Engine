@@ -84,21 +84,14 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 	assert(mesh->texture);
 	assert(mesh->vertex_buffer);
 
-	ID3DX11Effect *fx = NULL;
-	get_fx_shaders(&direct3d)->get("base", fx);
-	
-	D3DX11_PASS_DESC pass_desc;
-	D3DX11_TECHNIQUE_DESC tech_desc;
-	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&pass_desc);
-	fx->GetTechniqueByIndex(0)->GetDesc(&tech_desc);
 
-	ID3DX11EffectShaderResourceVariable *texture_map = fx->GetVariableByName("texture_map")->AsShaderResource();
-	ID3DX11EffectMatrixVariable *world_view_proejction = fx->GetVariableByName("world_view_projection")->AsMatrix();
+	Fx_Shader *base = fx_shader_manager.get_shader("base");
 
-	texture_map->SetResource(mesh->texture);
-	world_view_proejction->SetMatrix((const float *)&world_view_projection);
-
-	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, direct3d.device_context);
+	base->bind("texture_map", mesh->texture);
+	base->bind("texture_asdfasdf", mesh->texture);
+	base->bind("world_view_projection", &world_view_projection);
+	base->bind("slslls", &world_view_projection);
+	base->attach();
 
 	if (mesh->is_indexed) {
 		draw_indexed_mesh(mesh);

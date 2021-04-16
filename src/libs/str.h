@@ -79,6 +79,8 @@ struct String {
 	void allocate_and_copy_string(const char *string);
 
 	int find_text(const char *text, int start = 0);
+
+	String *copy();
 };
 
 inline String::operator const char*()
