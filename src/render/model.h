@@ -8,6 +8,8 @@
 #include "../libs/str.h"
 
 struct Model {
+	~Model();
+	
 	String name;
 	Triangle_Mesh mesh;
 	
@@ -15,7 +17,6 @@ struct Model {
 	ID3D11ShaderResourceView *diffuse_texture = NULL;
 	ID3D11ShaderResourceView *specular_texture = NULL;
 
-	~Model();
 	void init_from_file(const char *file_name);
 };
 

@@ -4,12 +4,13 @@
 #include "win_local.h"
 #include "../render/effect.h"
 #include "../render/render_frame.h"
-#include "../framework/input.h"
-#include "../framework/event.h"
-#include "../framework/camera.h"
-#include "../framework/file.h"
+#include "../libs/os/input.h"
+#include "../libs/os/event.h"
+#include "../libs/os/file.h"
+#include "../libs/os/path.h"
 
 #include "test.h"
+#include "../libs/os/camera.h"
 
 Win32_State win32;
 
@@ -48,7 +49,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 {
 	win32.hinstance = hInstance;
 	create_console();
-	
+
 	create_and_show_window(nCmdShow);
 
 	os_path.init();
@@ -66,6 +67,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Render_World world;
 	world.init(&camera);
+
+	fx_shader_manager.init();
+	print(fx_shader_manager.shaders->count);
+	
+	fx_shader_manager.shaders->count;
+	//Fx_Shader *temp  = fx_shader_manager->sh;
+	//fx_shader_manager.shaders->get("base", &temp);
+	//if (temp)
+		print("ALL Ok");
 
 	
 	while (1) {

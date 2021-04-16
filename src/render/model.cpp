@@ -4,10 +4,12 @@
 #include "base.h"
 #include "mesh.h"
 #include "model.h"
-#include "../framework/file.h"
+
 #include "../sys/sys_local.h"
-#include "../libs/fbx_loader.h"
+
 #include "../libs/str.h"
+#include "../libs/os/file.h"
+#include "../libs/fbx_loader.h"
 
 #include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
@@ -17,8 +19,6 @@ Model::~Model()
 {
 	RELEASE_COM(diffuse_texture);
 }
-
-
 
 void Model::init_from_file(const char *file_name)
 {
