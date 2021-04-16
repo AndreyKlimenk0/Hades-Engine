@@ -2,11 +2,14 @@
 #include <stdlib.h>
 
 #include "fbx_loader.h"
+
 #include "../sys/sys_local.h"
-#include "../framework/file.h"
+
 #include "../render/base.h"
 #include "../render/vertex.h" 
+
 #include "../libs/str.h"
+#include "../libs/os/path.h"
 #include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
 
@@ -143,7 +146,6 @@ bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String 
 
 	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(texture);
 	const char *full_texture_path = file_texture->GetFileName();
-	defer(free_string(full_texture_path));
 
 	Array<char *> buffer;
 	split(full_texture_path, "/", &buffer);

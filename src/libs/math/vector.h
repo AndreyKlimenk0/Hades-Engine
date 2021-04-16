@@ -416,6 +416,7 @@ struct Vector4 {
 	Vector4 &operator/=(const Vector4 &other);
 
 	operator XMVECTOR();
+	operator float *();
 
 	void normalize();
 	float   length();
@@ -555,6 +556,11 @@ inline Vector4 &Vector4::operator/=(const Vector4 &other)
 inline Vector4::operator XMVECTOR()
 {
 	return XMVectorSet(x, y, z, w);
+}
+
+inline Vector4::operator float *()
+{
+	return &x;
 }
 
 inline float Vector4::length()

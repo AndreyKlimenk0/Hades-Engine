@@ -147,16 +147,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\framework\camera.cpp" />
-    <ClCompile Include="src\framework\event.cpp" />
-    <ClCompile Include="src\framework\file.cpp" />
-    <ClCompile Include="src\framework\input.cpp" />
+    <ClCompile Include="src\game\world.cpp" />
+    <ClCompile Include="src\libs\os\camera.cpp" />
+    <ClCompile Include="src\libs\os\event.cpp" />
+    <ClCompile Include="src\libs\os\file.cpp" />
+    <ClCompile Include="src\libs\os\input.cpp" />
+    <ClCompile Include="src\game\entity.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\fbx_loader.cpp" />
     <ClCompile Include="src\libs\geometry_generator.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
+    <ClCompile Include="src\libs\os\path.cpp" />
     <ClCompile Include="src\render\base.cpp" />
     <ClCompile Include="src\render\effect.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
@@ -170,10 +173,12 @@
     <ClCompile Include="src\win32\win_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\framework\camera.h" />
-    <ClInclude Include="src\framework\event.h" />
-    <ClInclude Include="src\framework\file.h" />
-    <ClInclude Include="src\framework\input.h" />
+    <ClInclude Include="src\game\world.h" />
+    <ClInclude Include="src\libs\os\camera.h" />
+    <ClInclude Include="src\libs\os\event.h" />
+    <ClInclude Include="src\libs\os\file.h" />
+    <ClInclude Include="src\libs\os\input.h" />
+    <ClInclude Include="src\game\entity.h" />
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\hash_table.h" />
     <ClInclude Include="src\libs\ds\queue.h" />
@@ -183,6 +188,7 @@
     <ClInclude Include="src\libs\math\common.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
+    <ClInclude Include="src\libs\os\path.h" />
     <ClInclude Include="src\render\base.h" />
     <ClInclude Include="src\render\effect.h" />
     <ClInclude Include="src\render\mesh.h" />

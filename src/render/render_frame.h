@@ -5,8 +5,9 @@
 
 #include "base.h"
 #include "mesh.h"
-#include "../framework/camera.h"
+
 #include "../libs/ds/array.h"
+#include "../libs/os/camera.h"
 
 struct Render_World {
 	Free_Camera *camera  = NULL;
