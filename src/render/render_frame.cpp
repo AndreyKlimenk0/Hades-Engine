@@ -14,6 +14,8 @@
 #include "../libs/geometry_generator.h"
 
 #include "../libs/fbx_loader.h"
+#include "../game/entity.h"
+
 
 void Render_World::init(Free_Camera *_camera)
 {
@@ -99,4 +101,12 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 		draw_not_indexed_mesh(mesh);
 	}
 
+}
+
+void draw_entities(Entity_Manager *entity_manager)
+{
+	Entity *e = NULL;
+	FOR(entity_manager->entities, e) {
+
+	}
 }

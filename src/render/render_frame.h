@@ -9,9 +9,12 @@
 #include "../libs/ds/array.h"
 #include "../libs/os/camera.h"
 
+#include "../game/entity.h"
+
 struct Render_World {
 	Free_Camera *camera  = NULL;
 	Array<Triangle_Mesh *> meshes;
+	Array<Entity *> entities;
 
 	void init(Free_Camera *camera);
 	void render_world();
