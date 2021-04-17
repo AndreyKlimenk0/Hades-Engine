@@ -2,6 +2,8 @@
 
 
 const char DATA_DIR_NAME[] = "data";
+const char ENGINE_NAME[] = "hades";
+const char GITHUB_ENGINE_NAME[] = "hades-engine";
 
 Path os_path;
 
@@ -33,7 +35,7 @@ void Path::init_base_path()
 	split(&current_path, "\\", &dir_names);
 
 	dir_names.last_item().to_lower();
-	if (dir_names.last_item() != "hades" || dir_names.last_item() != "hades-engine") {
+	if (dir_names.last_item() != ENGINE_NAME || dir_names.last_item() != GITHUB_ENGINE_NAME) {
 		bool succeed = build_correct_base_path(&dir_names, &base_path);
 		if (!succeed) {
 			error("Base path can't be built correct");

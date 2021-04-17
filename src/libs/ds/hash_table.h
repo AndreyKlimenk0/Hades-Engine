@@ -63,7 +63,6 @@ _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
 	while (node != NULL) {
 		if (node->compare(key)) {
 			return node->value;
-			
 		}
 		index = double_hash(key, size, i);
 		node = &node[index];

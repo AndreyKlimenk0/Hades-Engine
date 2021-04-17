@@ -4,26 +4,32 @@
 #include <string.h>
 #include <assert.h>
 
-#define FOR(data_struct, item_buffer) for (int _i = 0; (_i < data_struct.count ? item_buffer = &data_struct.items[_i], true : false); _i++)
+
+#define FOR(array, ptr) for (int _i = 0; (_i < array.count ? array.set_pointer_to_item(&ptr, _i), true : false); _i++)
 
 template <typename T>
 struct Array {
+	Array(int _size = 8);
+	~Array();
+
 	T *items = NULL;
 	int count;
 	int size;
 
-	Array(int _size = 8);
-	~Array();
-
-	void resize();
 	bool is_empty();
+	void resize();
+	void shutdown();
+	void push(const T &item);
+	void set_pointer_to_item(T *ptr, int index);
+	void set_pointer_to_item(T **ptr, int index);
+
+	T &operator[](int i);
 	const T &operator[](int i) const;
-	const T &at(int index) const;
 
 	T &pop();
 	T &at(int index);
+	const T &at(int index) const;
 	T &last_item() { return items[count - 1]; }
-	T &operator[](int i);
 
 	void clear() 
 	{
@@ -35,9 +41,6 @@ struct Array {
 		size = 8;
 		resize();
 	}
-	void shutdown();
-	void push(const T &item);
-	
 };
 
 template <typename T>
@@ -133,5 +136,20 @@ template <typename T>
 bool Array<T>::is_empty()
 {
 	return items == 0;
+}
+
+template <typename T>
+void Array<T>::set_pointer_to_item(T *ptr, int index)
+{
+	assert(count > index);
+
+	*ptr = items[index];
+}
+
+template <typename T>
+void Array<T>::set_pointer_to_item(T **ptr, int index)
+{
+	assert(count > index);
+	*ptr = &items[index];
 }
 #endif

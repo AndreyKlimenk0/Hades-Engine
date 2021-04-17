@@ -69,14 +69,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	world.init(&camera);
 
 	fx_shader_manager.init();
-	print(fx_shader_manager.shaders->count);
-	
-	fx_shader_manager.shaders->count;
-	//Fx_Shader *temp  = fx_shader_manager->sh;
-	//fx_shader_manager.shaders->get("base", &temp);
-	//if (temp)
-		print("ALL Ok");
-
 	
 	while (1) {
 		pump_events();
