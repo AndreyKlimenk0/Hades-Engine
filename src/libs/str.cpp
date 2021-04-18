@@ -282,10 +282,16 @@ String::String(const String &string, int start, int end)
 	data[l] = '\0';
 }
 
-String::String(const String &string)
+String::String(const String *other)
 {
 	DELETE_ARRAY(data);
-	allocate_and_copy_string(string.data);
+	allocate_and_copy_string(other->data);
+}
+
+String::String(const String &other)
+{
+	DELETE_ARRAY(data);
+	allocate_and_copy_string(other.data);
 }
 
 String &String::operator=(const char *string)
@@ -302,14 +308,14 @@ String &String::operator=(const char *string)
 	return *this;
 }
 
-String &String::operator=(const String &string)
+String &String::operator=(const String &other)
 {
-	if (this == &string) {
+	if (this == &other) {
 		return *this;;
 	}
 	
 	DELETE_ARRAY(data);
-	allocate_and_copy_string(string.data);
+	allocate_and_copy_string(other.data);
 	return *this;
 }
 

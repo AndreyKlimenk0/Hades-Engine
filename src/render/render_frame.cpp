@@ -17,41 +17,58 @@
 #include "../game/entity.h"
 
 
-void Render_World::init(Free_Camera *_camera)
-{
-	camera = _camera;
-	camera->position = Vector3(5, 20, 20);
-
-
-	Triangle_Mesh *grid = new Triangle_Mesh();
-
-	generate_grid(5000.0f, 5000.0f, 50, 50, grid);
-	create_default_buffer(grid);
-	meshes.push(grid);
-
-	
-	Triangle_Mesh *mutant_mesh = new Triangle_Mesh();
-	load_fbx_model("mutant.fbx", mutant_mesh);
-
-	create_default_buffer(mutant_mesh);
-	meshes.push(mutant_mesh);
-
-
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\floor.jpg", NULL, NULL, &grid->texture, NULL));
-
-}
-
-void Render_World::render_world()
-{
-	direct3d.device_context->ClearRenderTargetView(direct3d.render_target_view, (float *)&LightSteelBlue);
-	direct3d.device_context->ClearDepthStencilView(direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	
-	Matrix4 wvp = camera->get_view_projection_matrix();
-	for (int i = 0; i < meshes.count; i++) {
-		draw_mesh(meshes.at(i), wvp);
-	}
-	HR(direct3d.swap_chain->Present(0, 0));
-}
+//void Render_World::init(Free_Camera *_camera)
+//{
+//	camera = _camera;
+//	camera->position = Vector3(5, 20, 20);
+//
+//
+//	Entity * mutant = new Mutant();
+//	mutant->position = Vector3(400, 0, 0);
+//	
+//	Model * m = new Model();
+//	m->init_from_file("mutant.fbx");
+//	m->mesh.allocate_static_buffer();
+//	mutant->model = m;
+//
+//	print(m->name);
+//	
+//	entities.push(mutant);
+//
+//
+//	Entity * soldier = new Soldier();
+//	soldier->position = Vector3(0, 0, 0);
+//
+//	Model *s = new Model();
+//	s->init_from_file("soldier.fbx");
+//	s->mesh.allocate_static_buffer();
+//	soldier->model = s;
+//
+//	entities.push(soldier);
+//
+//	Entity * mutant2 = new Mutant();
+//	mutant2->position = Vector3(-400, 0, 0);
+//	mutant2->model = m;
+//
+//	entities.push(mutant2);
+//
+//
+//	Entity * floor = new Floor();
+//	floor->position = Vector3(0, 0, 0);
+//	floor->model = generate_floor_model(5000.0f, 5000.0f, 50, 50);
+//	floor->model->mesh.allocate_static_buffer();
+//	entities.push(floor);
+//}
+//
+//void Render_World::render_world()
+//{
+//	direct3d.device_context->ClearRenderTargetView(direct3d.render_target_view, (float *)&LightSteelBlue);
+//	direct3d.device_context->ClearDepthStencilView(direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+//	
+//	Matrix4 wvp = camera->get_view_projection_matrix();
+//	draw_entities(&entities, &wvp);
+//	HR(direct3d.swap_chain->Present(0, 0));
+//}
 
 void draw_indexed_mesh(Triangle_Mesh *mesh)
 {
@@ -80,20 +97,10 @@ void draw_not_indexed_mesh(Triangle_Mesh *mesh)
 	direct3d.device_context->Draw(mesh->vertex_count, 0);
 }
 
-void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
+void draw_mesh(Triangle_Mesh *mesh)
 {
 	assert(mesh);
-	assert(mesh->texture);
 	assert(mesh->vertex_buffer);
-
-
-	Fx_Shader *base = fx_shader_manager.get_shader("base");
-
-	base->bind("texture_map", mesh->texture);
-	base->bind("texture_asdfasdf", mesh->texture);
-	base->bind("world_view_projection", &world_view_projection);
-	base->bind("slslls", &world_view_projection);
-	base->attach();
 
 	if (mesh->is_indexed) {
 		draw_indexed_mesh(mesh);
@@ -103,10 +110,27 @@ void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection)
 
 }
 
-void draw_entities(Entity_Manager *entity_manager)
+void bind_entity_vars_with_shader(Entity *entity, Matrix4 &view, Matrix4 &perspective)
 {
-	Entity *e = NULL;
-	FOR(entity_manager->entities, e) {
+	Matrix4 position;
+	position.indentity();
+	position.matrix[3] = Vector4(entity->position, 1.0f);
 
+	Fx_Shader *base = fx_shader_manager.get_shader("base");
+	
+	Matrix4 t = position * view * perspective;
+
+	base->bind("texture_map", entity->model->diffuse_texture);
+	base->bind("world_view_projection", &t);
+	base->attach();
+}
+
+
+void draw_entities(Entity_Manager *entity_manager, Matrix4 &view)
+{
+	Entity * entity = NULL;
+	FOR(entity_manager->entities, entity) {
+		bind_entity_vars_with_shader(entity, view, direct3d.perspective_matrix);
+		draw_mesh(&entity->model->mesh);
 	}
 }

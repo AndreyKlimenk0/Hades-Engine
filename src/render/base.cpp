@@ -184,7 +184,7 @@ void Direct3D::resize(const Win32_State *win32)
 
 	device_context->RSSetViewports(1, &mScreenViewport);
 
-	perspective_matrix = get_perspective_matrix(win32->window_width, win32->window_height, 1.0f, 1000.0f);
+	perspective_matrix = get_perspective_matrix(win32->window_width, win32->window_height, 1.0f, 10000.0f);
 }
 
 

@@ -8,6 +8,7 @@
 
 #include "../win32/win_local.h"
 #include "../libs/math/matrix.h"
+#include "../sys/sys_local.h"
 
 using namespace DirectX;
 
@@ -48,9 +49,13 @@ struct Direct3D {
 
 	Matrix4 perspective_matrix;
 
+
 	void init(const Win32_State *win32);
 	void shutdown();
 	void resize(const Win32_State *win32);
+
+	void begin_draw();
+	void end_draw();
 };
 
 extern Direct3D direct3d;
@@ -61,4 +66,16 @@ inline Matrix4 get_perspective_matrix(int window_width, int window_height, float
 	XMMATRIX m = XMMatrixPerspectiveFovLH(0.25f * Pi, (float)window_width / (float)window_height, near_z, far_z);
 	return Matrix4(m);
 }
+
+inline void Direct3D::begin_draw()
+{
+	device_context->ClearRenderTargetView(direct3d.render_target_view, (float *)&LightSteelBlue);
+	device_context->ClearDepthStencilView(direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+}
+
+inline void Direct3D::end_draw()
+{
+	HR(swap_chain->Present(0, 0));
+}
+
 #endif

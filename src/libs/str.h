@@ -60,6 +60,7 @@ struct String {
 	int len = 0;
 
 	String(const char *string);
+	String(const String *other);
 	String(const String &other);
 	String(const char *string, int start, int end);
 	String(const String &string, int start, int end);

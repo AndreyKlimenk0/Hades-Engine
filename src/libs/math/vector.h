@@ -394,6 +394,7 @@ struct Vector4 {
 
 	Vector4() {};
 	Vector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+	Vector4(Vector3 vec3, float _w) : x(vec3.x), y(vec3.y), z(vec3.z), w(_w) {}
 
 	float  &operator[](int i);
 	const float  &operator[](int i) const;

@@ -9,6 +9,7 @@
 
 
 enum Entity_Type {
+	ENTITY_TYPE_FLOOR,
 	ENTITY_TYPE_MUTANT,
 	ENTITY_TYPE_SOLDIER,
 	ENTITY_TYPE_DRAW_VERTEX
@@ -19,10 +20,14 @@ struct Entity {
 	Entity_Type type;
 	Vector3 position;
 
-	Model *model;
+	Model *model = NULL;
 };
 
-struct Mutant :  Entity {
+struct Floor : Entity {
+	Floor() { type = ENTITY_TYPE_FLOOR; }
+};
+
+struct Mutant : Entity {
 	Mutant() { type = ENTITY_TYPE_MUTANT; }
 };
 
@@ -35,10 +40,10 @@ struct Entity_Manager {
 	Array<Entity *> entities;
 
 	void add_entity(Entity *entity);
-	Entity *create_entity(Entity_Type type);
+	Entity *create_entity(Entity_Type type, Vector3 *position = NULL);
 };
 
-inline Entity *Entity_Manager::create_entity(Entity_Type type)
+inline Entity *Entity_Manager::create_entity(Entity_Type type, Vector3 *position)
 {
 	Entity *entity = NULL;
 
@@ -54,6 +59,10 @@ inline Entity *Entity_Manager::create_entity(Entity_Type type)
 	}
 
 	entity->id = id_count++;
+	
+	if (position) {
+		entity->position = *position;
+	}
 }
 
 inline void Entity_Manager::add_entity(Entity *entity)

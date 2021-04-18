@@ -5,7 +5,7 @@
 
 #include "../sys/sys_local.h"
 
-#include "../render/base.h"
+#include "../render/model.h"
 #include "../render/vertex.h" 
 
 #include "../libs/str.h"
@@ -252,20 +252,8 @@ void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 	fbx_mesh->Destroy();
 }
 
-inline void load_texture(String *file_name, Triangle_Mesh *mesh)
+FbxScene *load_scene_from_fbx_file(String *file_path)
 {
-	if (file_name->len == 0)
-		return;
-
-	String *full_path_to_texture = os_path.build_full_path_to_texture_file(file_name);
-	defer(full_path_to_texture->free());
-	
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, (const char *)full_path_to_texture->data, NULL, NULL, &mesh->texture, NULL));
-}
-
-FbxScene *load_scene_from_fbx_file(String *file_path, Triangle_Mesh *mesh)
-{
-	assert(mesh);
 	assert(file_path);
 
 	FbxManager* fbx_manager = FbxManager::Create();
@@ -294,11 +282,11 @@ FbxScene *load_scene_from_fbx_file(String *file_path, Triangle_Mesh *mesh)
 	return scene;
 }
 
-void load_fbx_model(const char *file_name, Triangle_Mesh *mesh)
+void load_fbx_model(const char *file_name, Model *model)
 {
 	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
 
-	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file, mesh);
+	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file);
 
 	if (!scene)
 		return;
@@ -313,7 +301,7 @@ void load_fbx_model(const char *file_name, Triangle_Mesh *mesh)
 	get_diffuse_texture_file_name(mesh_node, &diffuse_texture_name);
 	get_specular_texture_file_name(mesh_node, &specular_texture_name);
 
-	load_texture(&diffuse_texture_name, mesh);
+	load_texture(&diffuse_texture_name, &model->diffuse_texture);
 
-	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), mesh);
+	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), &model->mesh);
 }

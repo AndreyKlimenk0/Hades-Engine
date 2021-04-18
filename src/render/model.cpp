@@ -9,10 +9,12 @@
 
 #include "../libs/str.h"
 #include "../libs/os/file.h"
+#include "../libs/os/path.h"
 #include "../libs/fbx_loader.h"
 
 #include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
+#include "../libs/geometry_generator.h"
 
 
 Model::~Model()
@@ -23,13 +25,13 @@ Model::~Model()
 void Model::init_from_file(const char *file_name)
 {
 	assert(file_name != NULL);
-	name = extract_file_name(file_name);
+	name = extract_name_from_file(&String(file_name));
 	
 	char *file_extension = extract_file_extension(file_name);
 	if (!strcmp(file_extension, "fbx")) {
-
+		load_fbx_model(file_name, this);
 	} else {
-		printf("Model::init_from_file: %s is unkown model type, now only supports fbx file type\n", file_extension);
+		print("Model::init_from_file: {} is unkown model type, now only supports fbx file type", file_extension);
 		return;
 	}
 }
@@ -88,9 +90,6 @@ void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh)
 
 	Array<Vertex> vertices;
 	Array<u32> indices;
-	//Array<Vector3> positions;
-	//Array<Vector3> normals;
-	//Array<Vector2> uvs;
 	Vertex_Buffer vertex_buffer;
 
 	int line_count = 0;
@@ -163,54 +162,28 @@ void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh)
 			print("[line {}] This keyworld {} isn't supported\n", line_count, tokens[0]);
 		}
 	}
-	
+		
 	mesh->allocate_vertices(vertices.count);
-	Vertex v;
-	for (int i = 0; i < vertices.count; i++) {
-		mesh->vertices[i].position.x = vertices[i].position.x;
-		mesh->vertices[i].position.y = vertices[i].position.y;
-		mesh->vertices[i].position.z = vertices[i].position.z;
-		
-		mesh->vertices[i].normal.x = vertices[i].normal.x;
-		mesh->vertices[i].normal.y = vertices[i].normal.y;
-		mesh->vertices[i].normal.z = vertices[i].normal.z;
-		
-		mesh->vertices[i].uv.x = vertices[i].uv.x;
-		mesh->vertices[i].uv.y = vertices[i].uv.y;
-
-	}
-	
-	//mesh->allocate_vertices(vertices.count);
-	//memcpy(mesh->vertices, vertices.items, vertices.count);
-	//mesh->allocate_indices(indices.count);
-	//memcpy(mesh->indices, indices.items, indices.count);
+	memcpy(mesh->vertices, vertices.items, sizeof(Vertex) * vertices.count);
 	mesh->is_indexed = false;
 }
 
+void load_texture(String *file_name, ID3D11ShaderResourceView **texture)
+{
+	if (file_name->len == 0)
+		return;
 
-//for (int i = 1; i < tokens.count; i++) {
-//	Array<char *> vertex_indices;
-//	split(tokens[i], "/", &vertex_indices);
-//	int vertex_index = atoi(vertex_indices[0]);
-//	int texture_index = atoi(vertex_indices[1]);
-//	int normal_index = atoi(vertex_indices[2]);
+	String *full_path_to_texture = os_path.build_full_path_to_texture_file(file_name);
+	defer(full_path_to_texture->free());
 
-//	if (vertex_index > positions.count) {
-//		print("Vertex Index is more than position VI {} P {}", vertex_index, positions.count);
-//	}
+	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, (const char *)full_path_to_texture->data, NULL, NULL, texture, NULL));
+}
 
-//	if (texture_index > uvs.count) {
-//		print("Texture Index is more than uvs");
-//	}
-//	
-//	if (normal_index > normals.count) {
-//		print("Vertex Index is more than position");
-//	}
+Model *generate_floor_model(float width, float depth, int m, int n)
+{
+	Model *model = new Model();
+	generate_grid(width, depth, m, n, &model->mesh);
+	load_texture(&String("floor.jpg"), &model->diffuse_texture);
+	return model;
+}
 
-//	Vertex vertex;
-//	vertex.position = positions[vertex_index - 1];
-//	vertex.uv = uvs[texture_index - 1];
-//	vertex.normal = normals[normal_index - 1];
-
-//	vertices.push(vertex);
-//}
