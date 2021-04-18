@@ -21,4 +21,6 @@ struct Model {
 };
 
 void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh);
+void load_texture(String *file_name, ID3D11ShaderResourceView **texture);
+Model *generate_floor_model(float width, float depth, int m, int n);
 #endif
