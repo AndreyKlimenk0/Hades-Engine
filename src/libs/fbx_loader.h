@@ -3,8 +3,8 @@
 
 #include <fbxsdk.h>
 
-#include "../render/mesh.h"
+#include "../render/model.h"
 
-void load_fbx_model(const char *file_path, Triangle_Mesh *mesh);
+void load_fbx_model(const char *file_name, Model *model);
 
 #endif

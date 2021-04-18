@@ -3,7 +3,6 @@
 
 #include "win_local.h"
 #include "../render/effect.h"
-#include "../render/render_frame.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/os/file.h"
@@ -11,6 +10,7 @@
 
 #include "test.h"
 #include "../libs/os/camera.h"
+#include "../game/world.h"
 
 Win32_State win32;
 
@@ -65,7 +65,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	Free_Camera camera;
 	camera.init();
 
-	Render_World world;
+	World world;
 	world.init(&camera);
 
 	fx_shader_manager.init();
@@ -74,7 +74,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		pump_events();
 		run_event_loop();
 		camera.update();
-		world.render_world();
+		world.draw();
 	}
 
 	direct3d.shutdown();
