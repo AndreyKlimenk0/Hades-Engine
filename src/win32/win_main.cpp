@@ -68,14 +68,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	//Editor editor = Editor();
 	//editor.test();
+	Editor editor = Editor();
+	editor.init();
 
 	test();
 	
 	while (1) {
 		pump_events();
 		run_event_loop();
+		editor.handle_input();
 		camera.update();
-		world.render_world();
+		world.render_world(&editor);
 	}
 	return 0;
 }

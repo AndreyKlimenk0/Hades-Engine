@@ -3,7 +3,9 @@
 #include "../render/vertex.h"
 #include "../libs/math/matrix.h"
 #include "../sys/sys_local.h"
+#include "../ui/element.h"
 
+#include <d2d1.h>
 
 void test()
 {
@@ -13,4 +15,10 @@ void test()
 	//test3.inverse();
 	//Matrix4 result = test1 * test2;
 	//print_mat(result);
+	Rect rect;
+	rect.x = 20;
+	rect.y = 20;
+	rect.height = 20;
+	rect.width = 20;
+	print(rect.x, rect.width);
 }

@@ -27,7 +27,6 @@ struct Direct2D {
 
 struct Direct3D {
 	~Direct3D();
-	Direct2D direct2d;
 	ID3D11Device *device = NULL;
 	ID3D11DeviceContext *device_context = NULL;
 	IDXGISwapChain *swap_chain = NULL;
@@ -35,7 +34,6 @@ struct Direct3D {
 	ID3D11RenderTargetView *render_target_view = NULL;
 	ID3D11DepthStencilView *depth_stencil_view = NULL;
 	ID3D11Texture2D *depth_stencil_buffer = NULL;
-	ID3D11Texture2D* back_buffer = NULL;
 	
 	UINT quality_levels;
 
@@ -58,8 +56,9 @@ struct DirectX_Render {
 	
 	void fill_rect(int x, int y, int width, int height, const Color &background_color);
 	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, ID2D1StrokeStyle *stroke_style = NULL, float stroke_width = 2.0f);
-
-	ID2D1StrokeStyle *create_round_stroke_style();
+	void draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &background_color);
+	void draw_bitmap(const D2D1_RECT_F &rect, ID2D1Bitmap *bitmap, float scale = 1.0f);
+	void load_bitmap_from_file(const char *file_path, int dest_width, int dest_height, ID2D1Bitmap **bitmap);
 };
 
 extern DirectX_Render directx_render;

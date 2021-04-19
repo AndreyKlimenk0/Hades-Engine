@@ -41,11 +41,12 @@ cbuffer cbPerObject {
 Texture2D texture_map;
 
 SamplerState sampler_anisotropic {
-	Filter = ANISOTROPIC;
-	MaxAnisotropy = 4;
+	Filter = MIN_MAG_MIP_POINT;
+	//MaxAnisotropy = 4;
 
 	AddressU = WRAP;
 	AddressV = WRAP;
+	AddressW = WRAP;
 };
 
 struct VertexIn {

@@ -58,7 +58,7 @@ void Render_World::init(Free_Camera *_camera)
 	//HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, "E:\\andrey\\dev\\hades\\data\\textures\\earth_golem2.jpeg", NULL, NULL, &mutant_mesh->texture, NULL));
 }
 
-void Render_World::render_world()
+void Render_World::render_world(Editor *editor)
 {
 	directx_render.direct3d.device_context->ClearRenderTargetView(directx_render.direct3d.render_target_view, (float *)&Color::LightSteelBlue);
 	directx_render.direct3d.device_context->ClearDepthStencilView(directx_render.direct3d.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -67,9 +67,7 @@ void Render_World::render_world()
 	for (int i = 0; i < meshes.count; i++) {
 		draw_mesh(meshes.at(i), wvp);
 	}
-	Editor editor = Editor();
-	editor.init();
-	editor.draw();
+	editor->draw();
 	HR(directx_render.direct3d.swap_chain->Present(0, 0));
 }
 
