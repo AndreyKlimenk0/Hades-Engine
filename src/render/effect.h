@@ -5,10 +5,13 @@
 #include "../render/base.h"
 #include "../libs/ds/hash_table.h"
 #include "../win32//win_types.h"
+#include "../game/entity.h"
+#include "../libs/os/camera.h"
 
 
-Hash_Table<const char *, ID3DX11Effect *> *get_fx_shaders(const Direct3D *direct3d);
+struct Fx_Shader_Manager;
 
+extern Fx_Shader_Manager fx_shader_manager;
 
 struct Fx_Shader {
 	Fx_Shader(String *shader_name, ID3DX11Effect *fx_shader);
@@ -20,11 +23,17 @@ struct Fx_Shader {
 	ID3DX11Effect *shader = NULL;
 
 	void attach(u32 technique_index = 0, u32 pass_index = 0);
+	void attach(const char *technique_name, u32 pass_index = 0);
+	void bind(const char *var_name, int scalar);
 	void bind(const char *var_name, Vector4 *vector);
+	void bind(const char *var_name, Vector3 *vector);
 	void bind(const char *var_name, Matrix4 *matrix);
 	void bind(const char *var_name, ID3D11ShaderResourceView *texture);
+	void bind(const char *var_name, void *struct_ptr, u32 struct_size);
+	void bind_per_entity_vars(Entity *entity, Matrix4 &view, Matrix4 &perspective);
+	void bind_per_frame_vars(Free_Camera *camera);
 
-	bool was_var_not_found(const char *var_name);
+	bool is_var_in_not_found_vars_array(const char *var_name);
 };
 
 struct Fx_Shader_Manager {
@@ -36,6 +45,18 @@ struct Fx_Shader_Manager {
 	Fx_Shader *get_shader(const char *name);
 };
 
-extern Fx_Shader_Manager fx_shader_manager;
+struct Fx_Light {
+	Vector4 position;
+	Vector4 directon;
+	Vector4 color;
+
+	u32 light_type;
+	float radius;
+	float range;
+	float pad;
+
+};
+
+void bind_light_entities(Fx_Shader *forward_light_shader, Array<Light *> *lights);
 
 #endif

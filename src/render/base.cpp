@@ -7,16 +7,16 @@
 
 Direct3D direct3d;
 
-Vector4 White = { 1.0f, 1.0f, 1.0f, 1.0f };
-Vector4 Black = { 0.0f, 0.0f, 0.0f, 1.0f };
-Vector4 Red = { 1.0f, 0.0f, 0.0f, 1.0f };
-Vector4 Green = { 0.0f, 1.0f, 0.0f, 1.0f };
-Vector4 Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-Vector4 Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
-Vector4 Cyan = { 0.0f, 1.0f, 1.0f, 1.0f };
-Vector4 Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
-Vector4 Silver = { 0.75f, 0.75f, 0.75f, 1.0f };
-Vector4 LightSteelBlue = { 0.69f, 0.77f, 0.87f, 1.0f };
+Vector3 White = { 1.0f, 1.0f, 1.0f};
+Vector3 Black = { 0.0f, 0.0f, 0.0f};
+Vector3 Red = { 1.0f, 0.0f, 0.0f};
+Vector3 Green = { 0.0f, 1.0f, 0.0f};
+Vector3 Blue = { 0.0f, 0.0f, 1.0f};
+Vector3 Yellow = { 1.0f, 1.0f, 0.0f};
+Vector3 Cyan = { 0.0f, 1.0f, 1.0f};
+Vector3 Magenta = { 1.0f, 0.0f, 1.0f};
+Vector3 Silver = { 0.75f, 0.75f, 0.75f};
+Vector3 LightSteelBlue = { 0.69f, 0.77f, 0.87f};
 
 Direct2D::~Direct2D()
 {
@@ -186,5 +186,3 @@ void Direct3D::resize(const Win32_State *win32)
 
 	perspective_matrix = get_perspective_matrix(win32->window_width, win32->window_height, 1.0f, 10000.0f);
 }
-
-

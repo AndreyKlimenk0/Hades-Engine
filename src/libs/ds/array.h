@@ -135,7 +135,9 @@ void Array<T>::shutdown()
 template <typename T>
 bool Array<T>::is_empty()
 {
-	return items == 0;
+	assert(count >= 0);
+
+	return count == 0;
 }
 
 template <typename T>

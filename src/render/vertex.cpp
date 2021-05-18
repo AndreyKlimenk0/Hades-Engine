@@ -21,21 +21,23 @@ const D3D11_INPUT_ELEMENT_DESC Input_Layout::vertex_desc[3] = {
 
 Input_Layout::~Input_Layout()
 {
-	//RELEASE_COM(vertex);
+	RELEASE_COM(vertex);
 	RELEASE_COM(vertex_color);
 }
 
 void Input_Layout::init()
 {
-	ID3DX11Effect *fx = NULL;
-	if (!get_fx_shaders(&direct3d)->get("base", fx)) {
-		return;
-	}
+	ID3DX11Effect *fx = fx_shader_manager.get_shader("base")->shader;
+	ID3DX11Effect *color = fx_shader_manager.get_shader("color")->shader;
+
 
 	D3DX11_PASS_DESC pass_desc;
 	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&pass_desc);
 
-	//HR(direct3d.device->CreateInputLayout(vertex_col_desc, 2, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex_color));
+	D3DX11_PASS_DESC color_pass_desc;
+	color->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&color_pass_desc);
+
+	HR(direct3d.device->CreateInputLayout(vertex_col_desc, 2, color_pass_desc.pIAInputSignature, color_pass_desc.IAInputSignatureSize, &vertex_color));
 	HR(direct3d.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
 
 }

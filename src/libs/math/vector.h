@@ -208,6 +208,7 @@ struct Vector3 {
 
 	operator XMVECTOR();
 	operator Vector2();
+	operator float *();
 
 	void normalize();
 
@@ -363,6 +364,11 @@ inline Vector3::operator Vector2()
 	return Vector2(x, y);
 }
 
+inline Vector3::operator float *()
+{
+	return &x;
+}
+
 inline float Vector3::length()
 {
 	return (float)sqrt(x * x + y * y + z * z);
@@ -395,9 +401,13 @@ struct Vector4 {
 	Vector4() {};
 	Vector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
 	Vector4(Vector3 vec3, float _w) : x(vec3.x), y(vec3.y), z(vec3.z), w(_w) {}
+	
+	Vector4 &operator=(const Vector3 &vector3);
+	Vector4 &operator=(const Vector4 &vector4);
 
 	float  &operator[](int i);
 	const float  &operator[](int i) const;
+
 	Vector4 operator+(float scalar);
 	Vector4 operator+(const Vector4 &other);
 	Vector4 operator-(float scalar);
@@ -423,6 +433,24 @@ struct Vector4 {
 	float   length();
 	float dot(const Vector4 & other);
 };
+
+inline Vector4 &Vector4::operator=(const Vector3 &vector3)
+{
+	x = vector3.x;
+	y = vector3.y;
+	z = vector3.z;
+	w = 1.0f;
+	return *this;
+}
+
+inline Vector4 &Vector4::operator=(const Vector4 &vector4)
+{
+	x = vector4.x;
+	y = vector4.y;
+	z = vector4.z;
+	w = vector4.w;
+	return *this;
+}
 
 inline float &Vector4::operator[](int i)
 {
