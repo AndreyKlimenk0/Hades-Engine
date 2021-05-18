@@ -58,6 +58,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	direct3d.init(&win32);
 	ShowWindow(win32.window, nCmdShow);
 
+	fx_shader_manager.init();
+
+
 	Key_Input::init();
 	test();
 	Input_Layout::init();
@@ -68,7 +71,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	World world;
 	world.init(&camera);
 
-	fx_shader_manager.init();
 	
 	while (1) {
 		pump_events();

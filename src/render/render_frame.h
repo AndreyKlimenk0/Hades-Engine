@@ -11,22 +11,7 @@
 
 #include "../game/entity.h"
 
-struct Render_World {
-	Free_Camera *camera  = NULL;
-	Array<Triangle_Mesh *> meshes;
-	Array<Entity *> entities;
 
-	void init(Free_Camera *camera);
-	void render_world();
-};
-
-struct Render_Info {
-	Matrix4 perspective;
-	
-};
-
-void draw_mesh(Triangle_Mesh *mesh, Matrix4 world_view_projection);
-void draw_entities(Array<Entity *> *entities, Matrix4 *world_view);
-void draw_entities(Entity_Manager *entity_manager, Matrix4 &view);
+void draw_entities(Entity_Manager *entity_manager, Matrix4 &view, Free_Camera *camera);
 
 #endif
