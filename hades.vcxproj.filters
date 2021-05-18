@@ -170,6 +170,9 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="fx\base.fx" />
+    <FxCompile Include="fx\global.fx" />
+    <FxCompile Include="fx\forward_light.fx" />
+    <FxCompile Include="fx\color.fx" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="tasks.txt" />

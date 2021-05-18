@@ -6,11 +6,11 @@
 #include "../libs/math/vector.h"
 
 
-struct Vertex_Color {
+struct Vertex_XC {
 	Vector3 position;
 	Vector4 color;
-	Vertex_Color() {}
-	Vertex_Color(Vector3 position, Vector4 color) : position(position), color(color) {}
+	Vertex_XC() {}
+	Vertex_XC(const Vector3 &position, const Vector4 &color) : position(position), color(color) {}
 };
 
 struct Vertex {

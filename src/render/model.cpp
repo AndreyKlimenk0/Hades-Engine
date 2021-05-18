@@ -13,16 +13,18 @@
 #include "../libs/fbx_loader.h"
 
 #include "../libs/ds/array.h"
-#include "../libs/math/vector.h"
 #include "../libs/geometry_generator.h"
 
 
-Model::~Model()
+Render_Model::~Render_Model()
 {
+	DELETE_PTR(model_color);
+	RELEASE_COM(normal_texture);
 	RELEASE_COM(diffuse_texture);
+	RELEASE_COM(specular_texture);
 }
 
-void Model::init_from_file(const char *file_name)
+void Render_Model::init_from_file(const char *file_name)
 {
 	assert(file_name != NULL);
 	name = extract_name_from_file(&String(file_name));
@@ -179,11 +181,20 @@ void load_texture(String *file_name, ID3D11ShaderResourceView **texture)
 	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, (const char *)full_path_to_texture->data, NULL, NULL, texture, NULL));
 }
 
-Model *generate_floor_model(float width, float depth, int m, int n)
+//Render_Model *create_model_for_entity(Entity *entity)
+//{
+//
+//}
+
+Render_Model *generate_floor_model(float width, float depth, int m, int n)
 {
-	Model *model = new Model();
+	Render_Model *model = new Render_Model();
 	generate_grid(width, depth, m, n, &model->mesh);
 	load_texture(&String("floor.jpg"), &model->diffuse_texture);
+
+	model->material.ambient = Vector4(0.1f, 0.1f, 0.1f, 0.1f);
+	model->material.diffuse = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	model->material.specular = Vector4(0.1f, 0.1f, 0.1f, 8.0f);
 	return model;
 }
 

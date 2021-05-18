@@ -1,36 +1,31 @@
 #include "global.fx"
 
-
 struct Vertex_In {
 	float3 position : POSITION;
-	float3 normal : NORMAL;
-	float2 uv : TEXCOORD;
+	float4 color : COLOR;
 };
 
 struct Vertex_Out {
 	float4 position : SV_POSITION;
-	float3 normal : NORMAL;
-	float2 uv : TEXCOORD;
+	float4 color : COLOR;
 };
 
 Vertex_Out vs_main(Vertex_In vertex)
 {
 	Vertex_Out result;
 	result.position = mul(float4(vertex.position, 1.0f), world_view_projection);
-	result.normal = vertex.normal;
-	result.uv = vertex.uv;
+	result.color = vertex.color;
 	return result;
 }
 
-float4 ps_main(Vertex_Out pixel) : SV_Target
+float4 ps_main(Vertex_Out pixel) : SV_TARGET
 {
-	return texture_map.Sample(sampler_anisotropic, pixel.uv);
+	return pixel.color;
 }
 
-technique11 ColorTech {
+technique11 Color {
 	pass P0 {
 		SetVertexShader(CompileShader(vs_5_0, vs_main()));
 		SetPixelShader(CompileShader(ps_5_0, ps_main()));
 	}
 }
-

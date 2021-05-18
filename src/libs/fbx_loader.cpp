@@ -106,11 +106,12 @@ static void read_normal_from_fbx_mesh(FbxMesh* fbx_mesh, int vertex_index, int v
 	}
 }
 
-FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
+static FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 {
 	int count = mesh_node->GetSrcObjectCount<FbxSurfaceMaterial>();
+
 	for (int index = 0; index < count; index++) {
-		FbxSurfaceMaterial *material = (FbxSurfaceMaterial*)mesh_node->GetSrcObject<FbxSurfaceMaterial>(index);
+		FbxSurfaceMaterial *material = (FbxSurfaceMaterial *)mesh_node->GetSrcObject<FbxSurfaceMaterial>(index);
 		if (material) {
 			FbxProperty prop = material->FindProperty(texture_type);
 
@@ -136,7 +137,39 @@ FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 	return NULL;
 }
 
-bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
+static void find_and_copy_material(FbxNode *mesh_node, Render_Model *model)
+{
+	int count = mesh_node->GetMaterialCount();
+
+	if (count <= 0) {
+		print("There is no material in fbx file");
+		return;
+	}
+
+	FbxSurfaceMaterial *material = mesh_node->GetMaterial(0);
+	
+	FbxProperty ambient = material->FindProperty(FbxSurfaceMaterial::sAmbient);
+	FbxProperty diffuse = material->FindProperty(FbxSurfaceMaterial::sDiffuse);
+	FbxProperty specular = material->FindProperty(FbxSurfaceMaterial::sSpecular);
+	FbxProperty shininess = material->FindProperty(FbxSurfaceMaterial::sShininess);
+	
+	FbxColor ambient_color = ambient.Get<FbxColor>();
+	FbxColor diffuse_color = diffuse.Get<FbxColor>();
+	FbxColor specular_color = specular.Get<FbxColor>();
+	FbxDouble shininess_color = shininess.Get<FbxDouble>();
+
+	model->material.ambient = Vector4(ambient_color.mRed, ambient_color.mGreen, ambient_color.mBlue, ambient_color.mAlpha);
+	model->material.diffuse = Vector4(diffuse_color.mRed, diffuse_color.mGreen, diffuse_color.mBlue, diffuse_color.mAlpha);
+	model->material.specular = Vector4(specular_color.mRed, specular_color.mGreen, specular_color.mBlue, shininess_color);
+
+	//print(model->material.ambient.x, model->material.ambient.y, model->material.ambient.z, model->material.ambient.w);
+	//print(model->material.diffuse.x, model->material.diffuse.y, model->material.diffuse.z, model->material.diffuse.w);
+	//print(model->material.specular.x, model->material.specular.y, model->material.specular.z, model->material.specular.w);
+	//print(model->material.shininess);
+
+}
+
+static bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 {
 	FbxTexture *texture = find_texture(mesh_node, texture_type);
 	if (!texture) {
@@ -168,7 +201,7 @@ inline bool get_normal_texture_file_name(FbxNode *mesh_node, String *file_name)
 	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sNormalMap, file_name);
 }
 
-FbxNode *find_fbx_mesh_node_in_scene(FbxScene *scene)
+static FbxNode *find_fbx_mesh_node_in_scene(FbxScene *scene)
 {
 	FbxMesh *fbx_mesh = NULL;
 	FbxNode *root_node = scene->GetRootNode();
@@ -184,7 +217,7 @@ FbxNode *find_fbx_mesh_node_in_scene(FbxScene *scene)
 	return NULL;
 }
 
-void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
+static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 {
 	assert(mesh);
 
@@ -252,7 +285,7 @@ void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 	fbx_mesh->Destroy();
 }
 
-FbxScene *load_scene_from_fbx_file(String *file_path)
+static FbxScene *load_scene_from_fbx_file(String *file_path)
 {
 	assert(file_path);
 
@@ -282,7 +315,7 @@ FbxScene *load_scene_from_fbx_file(String *file_path)
 	return scene;
 }
 
-void load_fbx_model(const char *file_name, Model *model)
+void load_fbx_model(const char *file_name, Render_Model *model)
 {
 	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
 
@@ -302,6 +335,8 @@ void load_fbx_model(const char *file_name, Model *model)
 	get_specular_texture_file_name(mesh_node, &specular_texture_name);
 
 	load_texture(&diffuse_texture_name, &model->diffuse_texture);
+
+	find_and_copy_material(mesh_node, model);
 
 	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), &model->mesh);
 }

@@ -6,5 +6,6 @@
 
 void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh);
 void generate_box(float width, float height, float depth,  Triangle_Mesh *mesh);
+void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Mesh *mesh);
 
 #endif

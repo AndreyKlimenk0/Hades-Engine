@@ -65,7 +65,7 @@ _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
 			return node->value;
 		}
 		index = double_hash(key, size, i);
-		node = &node[index];
+		node = nodes[index];
 		i++;
 	}
 	assert(false);

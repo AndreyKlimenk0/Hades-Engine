@@ -5,9 +5,11 @@
 #include <string.h>
 #include <assert.h>
 #include <DirectXMath.h>
-using namespace DirectX;
 
 #include "vector.h"
+#include "../../sys/sys_local.h"
+
+using namespace DirectX;
 
 struct Matrix3 {
 	Vector3 matrix[3];
@@ -251,7 +253,7 @@ struct Matrix4 {
 	bool is_indentity();
 };
 
-extern Matrix4 mat4_indentity;
+extern Matrix4 matrix4_indentity;
 
 void print_mat(Matrix4 &mat);
 
@@ -376,7 +378,7 @@ inline Matrix4::operator float *()
 
 inline void Matrix4::indentity()
 {
-	*this = mat4_indentity;
+	*this = matrix4_indentity;
 }
 
 inline Matrix4 Matrix4::inverse()
@@ -429,10 +431,12 @@ inline Matrix4 Matrix4::inverse()
 	adjoin[3][1] =  m[0][0] * m[2][1] * m[3][2] + m[0][1] * m[2][2] * m[3][0] + m[0][2] * m[2][0] * m[3][1] - m[0][2] * m[2][1] * m[3][0] - m[0][1] * m[2][0] * m[3][2] - m[0][0] * m[2][2] * m[3][1];
 	adjoin[3][2] = -m[0][0] * m[1][1] * m[3][2] - m[0][1] * m[1][2] * m[3][0] - m[0][2] * m[2][0] * m[3][1] + m[0][2] * m[1][1] * m[3][0] + m[0][1] * m[1][0] * m[3][2] + m[0][0] * m[1][2] * m[3][1];
 	adjoin[3][3] =  m[0][0] * m[1][1] * m[2][2] + m[0][1] * m[1][2] * m[2][0] + m[0][2] * m[1][0] * m[2][1] - m[0][2] * m[1][1] * m[2][0] - m[0][1] * m[1][0] * m[2][2] - m[0][0] * m[1][2] * m[2][1];
-	printf("ADJOINT MARINX\n");
-	print_mat(adjoin);
+	
+	print("Determinant", determinant);
+	Matrix4 result = adjoin * (1 / determinant);
+	print_mat(result);
 
-	return Matrix4();
+	return result;
 }
 
 #endif

@@ -54,7 +54,7 @@ Hash_Table<const char *, ID3DX11Effect *> *get_fx_shaders(const Direct3D *direct
 
 #define VALID_VAR_NAME(var, var_name, var_type) { \
 	if (!var->IsValid()) { \
-		if (was_var_not_found(var_name)) { \
+		if (!is_var_in_not_found_vars_array(var_name)) { \
 			print("There is no the variable with name {} of type {} in {}.fx", var_name, var_type, name); \
 			not_found_vars.push(var_name); \
 		}  \
@@ -74,13 +74,36 @@ Fx_Shader::Fx_Shader(String *shader_name, ID3DX11Effect *fx_shader)
 
 void Fx_Shader::attach(u32 technique_index, u32 pass_index)
 {
+	assert(technique_count > technique_index);
+
 	shader->GetTechniqueByIndex(technique_index)->GetPassByIndex(pass_index)->Apply(0, direct3d.device_context);
+}
+
+void Fx_Shader::attach(const char *technique_name, u32 pass_index)
+{
+	assert(technique_name);
+
+	shader->GetTechniqueByName(technique_name)->GetPassByIndex(pass_index)->Apply(0, direct3d.device_context);
+}
+
+void Fx_Shader::bind(const char *var_name, int scalar)
+{
+	ID3DX11EffectScalarVariable * var = shader->GetVariableByName(var_name)->AsScalar();
+	VALID_VAR_NAME(var, var_name, "Scalar");
+	var->SetInt(scalar);
+}
+
+void Fx_Shader::bind(const char *var_name, Vector3 *vector)
+{
+	ID3DX11EffectVectorVariable *var = shader->GetVariableByName(var_name)->AsVector();
+	VALID_VAR_NAME(var, var_name, "Vector3");
+	var->SetRawValue(*vector, 0, sizeof(Vector3));
 }
 
 void Fx_Shader::bind(const char *var_name, Vector4 *vector)
 {
 	ID3DX11EffectVectorVariable * var = shader->GetVariableByName(var_name)->AsVector();
-	VALID_VAR_NAME(var, var_name, "Vector");
+	VALID_VAR_NAME(var, var_name, "Vector4");
 	var->SetFloatVector(*vector);
 }
 
@@ -98,15 +121,49 @@ void Fx_Shader::bind(const char *var_name, ID3D11ShaderResourceView *texture)
 	var->SetResource(texture);
 }
 
-bool Fx_Shader::was_var_not_found(const char *var_name)
+void Fx_Shader::bind(const char *var_name, void *struct_ptr, u32 struct_size)
+{
+	ID3DX11EffectVariable * var = shader->GetVariableByName(var_name);
+	VALID_VAR_NAME(var, var_name, "Struct");
+	var->SetRawValue(struct_ptr, 0, struct_size);
+}
+
+void Fx_Shader::bind_per_entity_vars(Entity * entity, Matrix4 & view, Matrix4 & perspective)
+{
+	Matrix4 world = entity->get_world_matrix();
+	Matrix4 wvp_projection = world * view * perspective;
+
+	if (entity->model->render_surface_use == RENDER_MODEL_SURFACE_USE_TEXTURE) {
+		bind("texture_map", entity->model->diffuse_texture);
+	} else {
+		if (!entity->model->model_color) {
+			Vector3 default_color = Vector3(1.0f, 0.2f, 1.0f);
+			bind("model_color", &default_color);
+			print("Color for model {} wasn't set, will be used default color");
+		} else {
+			bind("model_color", entity->model->model_color);
+		}
+	}
+	bind("world", &world);
+	bind("world_view_projection", &wvp_projection);
+	bind("material", (void *)&entity->model->material, sizeof(Material));
+}
+
+void Fx_Shader::bind_per_frame_vars(Free_Camera *camera)
+{
+	bind("camera_position", &camera->position);
+	bind("camera_direction", &camera->target);
+}
+
+bool Fx_Shader::is_var_in_not_found_vars_array(const char * var_name)
 {
 	String *var = NULL;
 	FOR(not_found_vars, var) {
 		if (*var == var_name) {
-			return false;
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 Fx_Shader::~Fx_Shader()
@@ -156,5 +213,51 @@ void Fx_Shader_Manager::init()
 
 Fx_Shader *Fx_Shader_Manager::get_shader(const char *name)
 {
-	return shaders->operator[](name);
+	return (*shaders)[name];
+}
+
+
+void bind_light_entities(Fx_Shader *forward_light_shader, Array<Light *> *lights)
+{
+	if (lights->is_empty())
+		return;
+
+	Array<Fx_Light> fx_lights;
+
+	Light *light = NULL;
+	FOR((*lights), light) {
+		switch (light->light_type) {
+			case DIRECTIONAL_LIGHT_TYPE: {
+				Fx_Light fx_light_struct;
+				fx_light_struct.position = light->position;
+				fx_light_struct.directon = light->direction;
+				fx_light_struct.color = light->color;
+				fx_light_struct.light_type = light->light_type;
+				fx_lights.push(fx_light_struct);
+				break;
+			}
+			case POINT_LIGHT_TYPE: {
+				Fx_Light fx_light_struct;
+				fx_light_struct.position = light->position;
+				fx_light_struct.color = light->color;
+				fx_light_struct.light_type = light->light_type;
+				fx_light_struct.range = light->range;
+				fx_lights.push(fx_light_struct);
+				break;
+			}
+			case SPOT_LIGHT_TYPE: {
+				Fx_Light fx_light_struct;
+				fx_light_struct.position = light->position;
+				fx_light_struct.directon = light->direction;
+				fx_light_struct.color = light->color;
+				fx_light_struct.light_type = light->light_type;
+				fx_light_struct.radius = light->radius;
+				fx_lights.push(fx_light_struct);
+				break;
+			}
+		}
+	}
+
+	forward_light_shader->bind("lights", (void *)&fx_lights.items[0], sizeof(Fx_Light) * fx_lights.count);
+	forward_light_shader->bind("light_count", fx_lights.count);
 }
