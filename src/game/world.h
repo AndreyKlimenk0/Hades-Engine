@@ -10,7 +10,6 @@ struct World {
 	Free_Camera *free_camera;
 
 	void init(Free_Camera *camera);
-	void draw();
 };
 
 #endif

@@ -1,7 +1,6 @@
 #include <string.h>
 #include <d3dx11.h>
 
-#include "base.h"
 #include "mesh.h"
 #include "model.h"
 
@@ -15,6 +14,7 @@
 #include "../libs/ds/array.h"
 #include "../libs/geometry_generator.h"
 
+#include "render_system.h"
 
 Render_Model::~Render_Model()
 {
@@ -178,7 +178,7 @@ void load_texture(String *file_name, ID3D11ShaderResourceView **texture)
 	String *full_path_to_texture = os_path.build_full_path_to_texture_file(file_name);
 	defer(full_path_to_texture->free());
 
-	HR(D3DX11CreateShaderResourceViewFromFile(direct3d.device, (const char *)full_path_to_texture->data, NULL, NULL, texture, NULL));
+	HR(D3DX11CreateShaderResourceViewFromFile(render_sys.get_directx11()->device, (const char *)full_path_to_texture->data, NULL, NULL, texture, NULL));
 }
 
 //Render_Model *create_model_for_entity(Entity *entity)

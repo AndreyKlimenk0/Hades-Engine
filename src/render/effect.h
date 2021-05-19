@@ -2,7 +2,6 @@
 #define EFFECT_H
 
 #include <d3dx11effect.h>
-#include "../render/base.h"
 #include "../libs/ds/hash_table.h"
 #include "../win32//win_types.h"
 #include "../game/entity.h"

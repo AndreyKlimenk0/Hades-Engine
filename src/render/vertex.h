@@ -2,7 +2,6 @@
 #define VERTEX_H
 
 #include <d3d11.h>
-#include "../render/base.h"
 #include "../libs/math/vector.h"
 
 
