@@ -5,7 +5,6 @@
 #include "../math/vector.h"
 #include "../../sys/sys_local.h"
 #include "../../win32/win_local.h"
-#include "../../render/base.h"
 
 using namespace DirectX;
 
@@ -77,14 +76,8 @@ void Free_Camera::update()
 	target = position + target;
 }
 
-
 Matrix4 Free_Camera::get_view_matrix()
 {
 	XMMATRIX view = XMMatrixLookAtLH(position, target, up);
 	return Matrix4(view);
-}
-
-Matrix4 Free_Camera::get_view_projection_matrix()
-{
-	return get_view_matrix() * get_perspective_matrix(window_width, window_hegith, near_z, far_z);
 }

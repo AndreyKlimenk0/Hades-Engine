@@ -9,6 +9,7 @@
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
 
+
 const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
 
 enum Entity_Type {
