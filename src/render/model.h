@@ -6,8 +6,8 @@
 
 #include "mesh.h"
 #include "../libs/str.h"
+#include "../libs/color.h"
 #include "../libs/math/vector.h"
-//#include "../game/entity.h"
 
 
 enum Render_Model_Surface {
@@ -37,12 +37,12 @@ struct Render_Model {
 	ID3D11ShaderResourceView *specular_texture = NULL;
 
 	void init_from_file(const char *file_name);
-	void set_model_color(const Vector3 &color);
+	void set_model_color(const Color &color);
 };
 
-inline void Render_Model::set_model_color(const Vector3 &color)
+inline void Render_Model::set_model_color(const Color &color)
 {
-	model_color = new Vector3(color);
+	model_color = new Vector3(color.color.x, color.color.y, color.color.z);
 	render_surface_use = RENDER_MODEL_SURFACE_USE_COLOR;
 }
 
