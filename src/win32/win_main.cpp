@@ -2,16 +2,19 @@
 #include <windowsx.h>
 
 #include "win_local.h"
-#include "../render/effect.h"
+
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/os/file.h"
 #include "../libs/os/path.h"
+
+#include "../render/effect.h"
+#include "../render/directx.h"
 #include "../render/render_system.h"
 
+#include "../editor/editor.h"
+
 #include "test.h"
-#include "../libs/os/camera.h"
-#include "../game/world.h"
 
 Win32_State win32;
 
@@ -55,41 +58,48 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	os_path.init();
 
+	directx11.init();
+	direct2d.init(directx11.swap_chain);
 
-	//direct3d.init(&win32);
 	ShowWindow(win32.window, nCmdShow);
 
+	fx_shader_manager.init();
 
+	Input_Layout::init();
 
 	Key_Input::init();
+	
 	test();
 
 	Free_Camera camera;
 	camera.init();
 
 	World world;
+	world.init(&camera);
 	
 	View_Info *view_info = make_view_info(1.0f, 10000.0f);
 	
-	render_sys.init(DIRECTX11, view_info);
+	render_sys.init(view_info);
 	render_sys.current_render_world = &world;
 	render_sys.free_camera = &camera;
-	
-	world.init(&camera);
-	
-	fx_shader_manager.init();
 
-	Input_Layout::init();
-	
+	Editor editor;
+	editor.init();
 
 	while (1) {
 		pump_events();
 		run_event_loop();
 		camera.update();
-		render_sys.render_frame();
+		editor.handle_input();
+
+		directx11.begin_draw();
+		
+		render_sys.render_frame();	
+		editor.draw();
+
+		directx11.end_draw();
 	}
 
-	//direct3d.shutdown();
 	return 0;
 }
 
@@ -112,7 +122,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			GetWindowRect(win32.window, &rect);
 			win32.window_height = rect.bottom - rect.top;
 			win32.window_width = rect.right - rect.left;
+			
+			directx11.resize(&direct2d);
 			render_sys.resize();
+			
 			return 0;
 		}
 		case WM_LBUTTONDOWN: {

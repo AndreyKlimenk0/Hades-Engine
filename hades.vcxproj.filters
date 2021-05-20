@@ -90,6 +90,9 @@
     <ClCompile Include="src\libs\color.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\editor\editor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\win32\win_local.h">
@@ -170,10 +173,10 @@
     <ClInclude Include="src\render\directx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\render.h">
+    <ClInclude Include="src\libs\color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\libs\color.h">
+    <ClInclude Include="src\editor\editor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

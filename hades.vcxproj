@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\editor\editor.cpp" />
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\os\camera.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="src\win32\win_main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\editor\editor.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\os\camera.h" />
@@ -195,7 +197,6 @@
     <ClInclude Include="src\render\effect.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
-    <ClInclude Include="src\render\render.h" />
     <ClInclude Include="src\render\render_system.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\sys\sys_local.h" />
