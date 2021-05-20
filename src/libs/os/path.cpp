@@ -40,6 +40,8 @@ void Path::init_base_path()
 		if (!succeed) {
 			error("Base path can't be built correct");
 		}
+	} else {
+		base_path = current_path;
 	}
 }
 
