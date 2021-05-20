@@ -2,13 +2,13 @@
 #include <string.h>
 
 #include "effect.h"
+#include "directx.h"
 
 #include "../sys/sys_local.h"
 
 #include "../libs/str.h"
 #include "../libs/os/file.h"
 #include "../libs/os/path.h"
-#include "../render/render_system.h"
 
 Fx_Shader_Manager fx_shader_manager;
 
@@ -37,14 +37,14 @@ void Fx_Shader::attach(u32 technique_index, u32 pass_index)
 {
 	assert(technique_count > technique_index);
 
-	shader->GetTechniqueByIndex(technique_index)->GetPassByIndex(pass_index)->Apply(0, render_sys.get_directx11()->device_context);
+	shader->GetTechniqueByIndex(technique_index)->GetPassByIndex(pass_index)->Apply(0, directx11.device_context);
 }
 
 void Fx_Shader::attach(const char *technique_name, u32 pass_index)
 {
 	assert(technique_name);
 
-	shader->GetTechniqueByName(technique_name)->GetPassByIndex(pass_index)->Apply(0, render_sys.get_directx11()->device_context);
+	shader->GetTechniqueByName(technique_name)->GetPassByIndex(pass_index)->Apply(0, directx11.device_context);
 }
 
 void Fx_Shader::bind(const char *var_name, int scalar)
@@ -160,7 +160,7 @@ void Fx_Shader_Manager::init()
 			continue;
 
 		ID3DX11Effect *fx = NULL;
-		HR(D3DX11CreateEffectFromMemory(compiled_shader, sizeof(char) * file_size, 0, render_sys.get_directx11()->device, &fx, NULL));
+		HR(D3DX11CreateEffectFromMemory(compiled_shader, sizeof(char) * file_size, 0, directx11.device, &fx, NULL));
 
 		String *name = extract_name_from_file(&file_names[i]);
 		defer(name->free());

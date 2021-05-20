@@ -1,6 +1,12 @@
+#include <wincodec.h>
+
 #include "directx.h"
 #include "../sys/sys_local.h"
 #include "../libs/color.h"
+
+
+Direct2D direct2d;
+DirectX11 directx11;
 
 
 Direct2D::~Direct2D()
@@ -114,7 +120,7 @@ void DirectX11::shutdown()
 	RELEASE_COM(depth_stencil_buffer);
 }
 
-void DirectX11::resize()
+void DirectX11::resize(Direct2D *direct2d)
 {
 	assert(device);
 	assert(device_context);
@@ -125,7 +131,7 @@ void DirectX11::resize()
 	RELEASE_COM(depth_stencil_view);
 	RELEASE_COM(depth_stencil_buffer);
 
-	direct2d.shutdown();
+	if (direct2d) { direct2d->shutdown(); }
 
 	// Resize the swap chain and recreate the render target view.
 
@@ -182,11 +188,8 @@ void DirectX11::resize()
 
 	device_context->RSSetViewports(1, &mScreenViewport);
 
-	direct2d.init(swap_chain);
+	if (direct2d) { direct2d->init(swap_chain); }
 }
-
-#define BEGIN_DRAW() (render_target->BeginDraw())
-#define END_DRAW() (render_target->EndDraw())
 
 void Direct2D::test_draw()
 {
@@ -204,7 +207,6 @@ void Direct2D::test_draw()
 
 void Direct2D::fill_rect(int x, int y, int width, int height, const Color &background_color)
 {
-	BEGIN_DRAW();
 	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
 	rect.left = x;
@@ -216,7 +218,6 @@ void Direct2D::fill_rect(int x, int y, int width, int height, const Color &backg
 	render_target->FillRectangle(rect, brush);
 
 	RELEASE_COM(brush);
-	END_DRAW();
 }
 
 void Direct2D::draw_rect(int x, int y, int width, int height, const Color &stroke_color, ID2D1StrokeStyle *stroke_style, float stroke_width)
@@ -228,10 +229,8 @@ void Direct2D::draw_rect(int x, int y, int width, int height, const Color &strok
 	rect.right = x + width;
 	rect.bottom = y + height;
 
-	BEGIN_DRAW();
 	render_target->CreateSolidColorBrush((Color)stroke_color, &brush);
 	render_target->DrawRectangle(rect, brush, stroke_width, stroke_style);
-	END_DRAW();
 
 	RELEASE_COM(brush);
 }
@@ -249,171 +248,52 @@ void Direct2D::draw_rounded_rect(int x, int y, int width, int height, float radi
 
 	D2D1_ROUNDED_RECT rounded_rect = D2D1::RoundedRect(rect, radius_x, radius_y);
 
-	BEGIN_DRAW();
 	//directx_render.direct2d.render_target->DrawRoundedRectangle(rounded_rect, brush);
 	render_target->FillRoundedRectangle(rounded_rect, brush);
-	END_DRAW();
 
 	RELEASE_COM(brush);
 }
 
 void Direct2D::draw_bitmap(const D2D1_RECT_F &rect, ID2D1Bitmap *bitmap, float scale)
 {
-	BEGIN_DRAW();
 	render_target->SetTransform(D2D1::Matrix3x2F::Scale(D2D1::Size(scale, scale), D2D1::Point2F(rect.left, rect.top)));
 	render_target->DrawBitmap(bitmap, rect);
 	render_target->SetTransform(D2D1::Matrix3x2F::Identity());
-	END_DRAW();
 }
 
-void DirectX11::draw_normals(Entity *entity, float line_len)
+void load_bitmap_from_file(const char *file_path, int dest_width, int dest_height, ID2D1Bitmap **bitmap)
 {
-	//Triangle_Mesh *mesh = &entity->model->mesh;
-	//Array<Vertex_XC> normals;
+	IWICImagingFactory2 *pIWICFactory = NULL;
+	IWICBitmapDecoder *pDecoder = NULL;
+	IWICBitmapFrameDecode *pSource = NULL;
+	IWICStream *pStream = NULL;
+	IWICFormatConverter *pConverter = NULL;
+	IWICBitmapScaler *pScaler = NULL;
 
-	//for (int i = 0; i < mesh->vertex_count; i++) {
-	//	Vertex_XC position1;
-	//	position1.position = mesh->vertices[i].position;
-	//	position1.color = Vector3(1.0f, 0.0f, 0.0f);
-	//	normals.push(position1);
+	HR(CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICFactory)));
 
-	//	Vertex_XC position2;
-	//	position2.position = (mesh->vertices[i].position) + (mesh->vertices[i].normal * Vector3(line_len, line_len, line_len));
-	//	position2.color = Vector3(1.0f, 0.0f, 0.0f);
-	//	normals.push(position2);
-	//}
+	wchar_t *f = (wchar_t *)file_path;
+	int len = strlen(file_path);
+	wchar_t *wfile_path = new wchar_t[len + 1];
 
-	//device_context->IASetInputLayout(Input_Layout::vertex_color);
-	//device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	size_t converted_chars = 0;
+	mbstowcs(wfile_path, file_path, len + 1);
 
-	//u32 stride = sizeof(Vertex_XC);
-	//u32 offset = 0;
+	wfile_path[len] = '\0';
+	HR(pIWICFactory->CreateDecoderFromFilename(wfile_path, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder));
 
-	//ID3D11Buffer *buffer = NULL;
-	//create_static_vertex_buffer(normals.count, stride, (void *)&normals.items[0], &buffer);
+	HR(pDecoder->GetFrame(0, &pSource));
 
-	//device_context->IASetVertexBuffers(0, 1, &buffer, &stride, &offset);
+	HR(pIWICFactory->CreateFormatConverter(&pConverter));
 
-	//device_context->Draw(normals.count, 0);
+	HR(pConverter->Initialize(pSource, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.f, WICBitmapPaletteTypeMedianCut));
 
-	//buffer->Release();
-}
+	HR(direct2d.render_target->CreateBitmapFromWicBitmap(pConverter, NULL, bitmap));
 
-
-void DirectX11::draw_indexed_mesh(Triangle_Mesh *mesh)
-{
-	assert(mesh->index_buffer);
-
-	device_context->IASetInputLayout(Input_Layout::vertex);
-	device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
-	device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
-
-	device_context->DrawIndexed(mesh->index_count, 0, 0);
-}
-
-void DirectX11::draw_not_indexed_mesh(Triangle_Mesh *mesh)
-{
-	device_context->IASetInputLayout(Input_Layout::vertex);
-	device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	device_context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
-
-	device_context->Draw(mesh->vertex_count, 0);
-}
-
-void DirectX11::draw_mesh(Triangle_Mesh *mesh)
-{
-	assert(mesh);
-	assert(mesh->vertex_buffer);
-
-	if (mesh->is_indexed) {
-		draw_indexed_mesh(mesh);
-	} else {
-		draw_not_indexed_mesh(mesh);
-	}
-
-}
-
-void DirectX11::draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective)
-{
-	if (entity->type == ENTITY_TYPE_FLOOR || entity->type == ENTITY_TYPE_LIGHT) {
-		return;
-	}
-
-	ID3D11BlendState* transparent = NULL;
-
-	D3D11_BLEND_DESC transparent_desc = { 0 };
-	transparent_desc.AlphaToCoverageEnable = false;
-	transparent_desc.IndependentBlendEnable = false;
-
-	transparent_desc.RenderTarget[0].BlendEnable = true;
-	transparent_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	transparent_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	transparent_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	transparent_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	transparent_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	transparent_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	transparent_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-	HR(device->CreateBlendState(&transparent_desc, &transparent));
-
-	ID3D11DepthStencilState* no_double_blending = NULL;
-
-	D3D11_DEPTH_STENCIL_DESC no_double_blending_desc;
-	no_double_blending_desc.DepthEnable = true;
-	no_double_blending_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	no_double_blending_desc.DepthFunc = D3D11_COMPARISON_LESS;
-	no_double_blending_desc.StencilEnable = true;
-	no_double_blending_desc.StencilReadMask = 0xff;
-	no_double_blending_desc.StencilWriteMask = 0xff;
-
-	no_double_blending_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
-	no_double_blending_desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-
-	no_double_blending_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
-	no_double_blending_desc.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-
-	HR(device->CreateDepthStencilState(&no_double_blending_desc, &no_double_blending));
-
-	Material shadow_material;
-	shadow_material.ambient = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-	shadow_material.diffuse = Vector4(0.0f, 0.0f, 0.0f, 0.5f);
-	shadow_material.specular = Vector4(0.0f, 0.0f, 0.0f, 16.0f);
-
-	XMVECTOR plane = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); // xz plane
-	XMVECTOR light_direction = -XMLoadFloat3((XMFLOAT3 *)&light->direction);
-	Matrix4 shadow_matrix = XMMatrixShadow(plane, light_direction);
-	Matrix4 offset = XMMatrixTranslation(0.0f, 1.0f, 0.0f);
-
-	Matrix4  world = entity->get_world_matrix();
-	Matrix4 shadow_plane = world * shadow_matrix * offset;
-	Matrix4 world_view_perspective = shadow_plane * view * perspective;
-
-	fx_shader_light->bind("world", (Matrix4 *)&shadow_plane);
-	fx_shader_light->bind("world_view_projection", (Matrix4 *)&world_view_perspective);
-	fx_shader_light->bind("material", (void *)&shadow_material, sizeof(Material));
-
-	device_context->OMSetDepthStencilState(no_double_blending, 0);
-	float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	device_context->OMSetBlendState(transparent, b, 0xffffffff);
-
-	if (entity->model->render_surface_use == RENDER_MODEL_SURFACE_USE_TEXTURE) {
-		fx_shader_light->attach();
-	} else {
-		fx_shader_light->attach(1);
-	}
-	draw_mesh(&entity->model->mesh);
-
-	device_context->OMSetBlendState(0, b, 0xffffffff);
-	device_context->OMSetDepthStencilState(0, 0);
+	RELEASE_COM(pIWICFactory)
+	RELEASE_COM(pDecoder);
+	RELEASE_COM(pSource);
+	RELEASE_COM(pStream);
+	RELEASE_COM(pConverter);
+	RELEASE_COM(pScaler);
 }

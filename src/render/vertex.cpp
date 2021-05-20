@@ -1,11 +1,10 @@
 #include <d3dx11effect.h>
+#include "directx.h"
 #include "vertex.h"
 #include "effect.h"
 #include "../libs/ds/hash_table.h"
 #include "../sys/sys_local.h"
 
-#include "../render/render_system.h"
-#include "../render/directx.h"
 
 ID3D11InputLayout *Input_Layout::vertex_color = NULL;
 ID3D11InputLayout *Input_Layout::vertex = NULL;
@@ -39,8 +38,7 @@ void Input_Layout::init()
 	D3DX11_PASS_DESC color_pass_desc;
 	color->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&color_pass_desc);
 
-	DirectX11 *d11 = (DirectX11 *)render_sys.render;
-	HR(d11->device->CreateInputLayout(vertex_col_desc, 2, color_pass_desc.pIAInputSignature, color_pass_desc.IAInputSignatureSize, &vertex_color));
-	HR(d11->device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
+	HR(directx11.device->CreateInputLayout(vertex_col_desc, 2, color_pass_desc.pIAInputSignature, color_pass_desc.IAInputSignatureSize, &vertex_color));
+	HR(directx11.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
 
 }

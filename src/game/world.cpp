@@ -2,11 +2,11 @@
 #include "../libs/color.h"
 #include "../libs/geometry_generator.h"
 
-#include "../render/render_system.h"
+#include "../render/directx.h"
+
 
 void World::init(Free_Camera *camera)
 {
-	DirectX11 *d11 = render_sys.get_directx11();
 
 	free_camera = camera;
 	free_camera->position = Vector3(0.0f, 200.0f, 100.0f);
@@ -15,8 +15,7 @@ void World::init(Free_Camera *camera)
 	floor->id = 4;
 	floor->position = Vector3(0, 0, 0);
 	floor->model = generate_floor_model(5000.0f, 5000.0f, 50, 50);
-	//floor->model->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&floor->model->mesh);
+	floor->model->mesh.allocate_static_buffer();
 	entity_manager.add_entity(floor);
 
 	Entity * mutant = new Mutant();
@@ -26,8 +25,7 @@ void World::init(Free_Camera *camera)
 	Render_Model * m = new Render_Model();
 	m->init_from_file("mutant.fbx");
 	//m->set_model_color(Blue);
-	//m->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&m->mesh);
+	m->mesh.allocate_static_buffer();
 	mutant->model = m;
 
 	entity_manager.add_entity(mutant);
@@ -40,8 +38,7 @@ void World::init(Free_Camera *camera)
 	Render_Model *s = new Render_Model();
 	s->init_from_file("vampire.fbx");
 	//s->set_model_color(Blue);
-	//s->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&s->mesh);
+	s->mesh.allocate_static_buffer();
 	soldier->model = s;
 
 	entity_manager.add_entity(soldier);
@@ -61,8 +58,7 @@ void World::init(Free_Camera *camera)
 	sphere->model->material = make_default_material();
 	
 	generate_sphere(50.0f, 5, 5, &sphere->model->mesh);
-	//sphere->model->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&sphere->model->mesh);
+	sphere->model->mesh.allocate_static_buffer();
 	entity_manager.add_entity(sphere);
 
 	Entity *box = new Entity();
@@ -73,9 +69,7 @@ void World::init(Free_Camera *camera)
 	box->model->material = make_default_material();
 	//generate_sphere(50.0f, 20, 20, &box->model->mesh);
 	generate_box(100, 100, 100, &box->model->mesh);
-	//box->model->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&box->model->mesh);
-
+	box->model->mesh.allocate_static_buffer();
 
 	entity_manager.add_entity(box);
 
@@ -87,8 +81,7 @@ void World::init(Free_Camera *camera)
 	sphere3->model->material = make_default_material();
 	//generate_sphere(50.0f, 20, 20, &box->model->mesh);
 	generate_sphere(50.0f, 20, 20, &sphere3->model->mesh);
-	//sphere3->model->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&sphere3->model->mesh);
+	sphere3->model->mesh.allocate_static_buffer();
 
 	entity_manager.add_entity(sphere3);
 
@@ -101,8 +94,7 @@ void World::init(Free_Camera *camera)
 	l->model = new Render_Model();
 	l->model->set_model_color(Color(1.0f, 1.0f, 1.0f));
 	generate_sphere(10.0f, 30, 30, &l->model->mesh);
-	//l->model->mesh.allocate_static_buffer();
-	d11->create_default_buffer(&l->model->mesh);
+	l->model->mesh.allocate_static_buffer();
 
 	//entity_manager.make_spot_light(Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, -1.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f), 10.0f);
 }

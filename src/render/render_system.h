@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <DirectXMath.h>
 
-#include "render.h"
+#include "directx.h"
+#include "effect.h"
 #include "../game/world.h"
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
 #include "../libs/os/camera.h"
-#include "../render/directx.h"
 
 
 struct View_Info;
@@ -18,7 +18,6 @@ struct View_Info;
 struct Render_System {
 	~Render_System();
 
-	Render *render = NULL;
 	World  *current_render_world = NULL;
 	
 	View_Info *view_info = NULL;
@@ -26,14 +25,17 @@ struct Render_System {
 
 	Matrix4 view_matrix;
 
-	void init(Render_API render_api, View_Info *_view_info);
+	void init(View_Info *_view_info);
 	void resize();
 	void shutdown();
 	
 	void render_frame();
 	void draw_world_entities(Entity_Manager *entity_manager);
-
-	DirectX11 *get_directx11() { return (DirectX11 *)render; }
+	void draw_mesh(Triangle_Mesh *mesh);
+	void draw_indexed_mesh(Triangle_Mesh *mesh);
+	void draw_not_indexed_mesh(Triangle_Mesh *mesh);
+	void draw_normals(Entity *entity, float line_len);
+	void draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective);
 };
 
 extern Render_System render_sys;
