@@ -75,8 +75,8 @@
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)dependencies\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)dependencies\lib\x86;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)dependencies\include;C:\Program Files\Autodesk\FBX\FBX SDK\2019.2\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)dependencies\lib\x86;C:\Program Files\Autodesk\FBX\FBX SDK\2019.2\lib\vs2015\x86\debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -88,7 +88,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;d2d1.lib;dxgi.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;libfbxsdk-md.lib;libfbxsdk.lib;zlib-md.lib;libxml2-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;d2d1.lib;dxgi.lib;dwrite.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;libfbxsdk-md.lib;libfbxsdk.lib;zlib-md.lib;libxml2-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -106,7 +106,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>d3dcompiler.lib;d3dx11d.lib;effects11d.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;d3dx11d.lib;effects11d.lib;zlib.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderType>Effect</ShaderType>

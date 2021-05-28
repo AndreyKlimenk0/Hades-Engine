@@ -69,6 +69,7 @@ _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
 		i++;
 	}
 	assert(false);
+	return node->value;
 }
 
 template <typename _Key_, typename _Value_>

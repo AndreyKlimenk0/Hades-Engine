@@ -25,8 +25,8 @@ static void read_uv_from_fbx_mesh(FbxMesh *fbx_mesh, int vertex_index, int uv_in
 				case FbxLayerElementUV::eDirect: {
 					FbxVector2 fbx_uv = uv_element->GetDirectArray().GetAt(vertex_index);
 
-					uv->x = fbx_uv.mData[0];
-					uv->y = fbx_uv.mData[1];
+					uv->x = static_cast<float>(fbx_uv.mData[0]);
+					uv->y = static_cast<float>(fbx_uv.mData[1]);
 
 					break;
 				}
@@ -34,8 +34,8 @@ static void read_uv_from_fbx_mesh(FbxMesh *fbx_mesh, int vertex_index, int uv_in
 					int uv_index = uv_element->GetIndexArray().GetAt(vertex_index);
 					FbxVector2 fbx_uv = uv_element->GetDirectArray().GetAt(uv_index);
 
-					uv->x = fbx_uv.mData[0];
-					uv->y = fbx_uv.mData[1];
+					uv->x = static_cast<float>(fbx_uv.mData[0]);
+					uv->y = static_cast<float>(fbx_uv.mData[1]);
 
 					break;
 				}
@@ -47,8 +47,8 @@ static void read_uv_from_fbx_mesh(FbxMesh *fbx_mesh, int vertex_index, int uv_in
 				case FbxLayerElementUV::eDirect:
 				case FbxLayerElementUV::eIndexToDirect: {
 
-					uv->x = uv_element->GetDirectArray().GetAt(uv_index).mData[0];
-					uv->y = uv_element->GetDirectArray().GetAt(uv_index).mData[1];
+					uv->x = static_cast<float>(uv_element->GetDirectArray().GetAt(uv_index).mData[0]);
+					uv->y = static_cast<float>(uv_element->GetDirectArray().GetAt(uv_index).mData[1]);
 
 					break;
 				}
@@ -66,16 +66,16 @@ static void read_normal_from_fbx_mesh(FbxMesh* fbx_mesh, int vertex_index, int v
 		case FbxGeometryElement::eByControlPoint: {
 			switch (fbx_normal->GetReferenceMode()) {
 				case FbxGeometryElement::eDirect: {
-					normal->x = fbx_normal->GetDirectArray().GetAt(vertex_index).mData[0];
-					normal->y = fbx_normal->GetDirectArray().GetAt(vertex_index).mData[1];
-					normal->z = fbx_normal->GetDirectArray().GetAt(vertex_index).mData[2];
+					normal->x = static_cast<float>(fbx_normal->GetDirectArray().GetAt(vertex_index).mData[0]);
+					normal->y = static_cast<float>(fbx_normal->GetDirectArray().GetAt(vertex_index).mData[1]);
+					normal->z = static_cast<float>(fbx_normal->GetDirectArray().GetAt(vertex_index).mData[2]);
 					break;
 				}
 				case FbxGeometryElement::eIndexToDirect: {
 					int index = fbx_normal->GetIndexArray().GetAt(vertex_index);
-					normal->x = fbx_normal->GetDirectArray().GetAt(index).mData[0];
-					normal->y = fbx_normal->GetDirectArray().GetAt(index).mData[1];
-					normal->z = fbx_normal->GetDirectArray().GetAt(index).mData[2];
+					normal->x = static_cast<float>(fbx_normal->GetDirectArray().GetAt(index).mData[0]);
+					normal->y = static_cast<float>(fbx_normal->GetDirectArray().GetAt(index).mData[1]);
+					normal->z = static_cast<float>(fbx_normal->GetDirectArray().GetAt(index).mData[2]);
 					break;
 				}
 				default:
@@ -86,16 +86,16 @@ static void read_normal_from_fbx_mesh(FbxMesh* fbx_mesh, int vertex_index, int v
 		case FbxGeometryElement::eByPolygonVertex: {
 			switch (fbx_normal->GetReferenceMode()) {
 				case FbxGeometryElement::eDirect: {
-					normal->x = fbx_normal->GetDirectArray().GetAt(vertex_count).mData[0];
-					normal->y = fbx_normal->GetDirectArray().GetAt(vertex_count).mData[1];
-					normal->z = fbx_normal->GetDirectArray().GetAt(vertex_count).mData[2];
+					normal->x = static_cast<float>(fbx_normal->GetDirectArray().GetAt(vertex_count).mData[0]);
+					normal->y = static_cast<float>(fbx_normal->GetDirectArray().GetAt(vertex_count).mData[1]);
+					normal->z = static_cast<float>(fbx_normal->GetDirectArray().GetAt(vertex_count).mData[2]);
 					break;
 				}
 				case FbxGeometryElement::eIndexToDirect: {
 					int index = fbx_normal->GetIndexArray().GetAt(vertex_count);
-					normal->x = fbx_normal->GetDirectArray().GetAt(index).mData[0];
-					normal->y = fbx_normal->GetDirectArray().GetAt(index).mData[1];
-					normal->z = fbx_normal->GetDirectArray().GetAt(index).mData[2];
+					normal->x = static_cast<float>(fbx_normal->GetDirectArray().GetAt(index).mData[0]);
+					normal->y = static_cast<float>(fbx_normal->GetDirectArray().GetAt(index).mData[1]);
+					normal->z = static_cast<float>(fbx_normal->GetDirectArray().GetAt(index).mData[2]);
 					break;	
 				}
 				default:
@@ -161,19 +161,13 @@ static void find_and_copy_material(FbxNode *mesh_node, Render_Model *model)
 	model->material.ambient = Vector4(ambient_color.mRed, ambient_color.mGreen, ambient_color.mBlue, ambient_color.mAlpha);
 	model->material.diffuse = Vector4(diffuse_color.mRed, diffuse_color.mGreen, diffuse_color.mBlue, diffuse_color.mAlpha);
 	model->material.specular = Vector4(specular_color.mRed, specular_color.mGreen, specular_color.mBlue, shininess_color);
-
-	//print(model->material.ambient.x, model->material.ambient.y, model->material.ambient.z, model->material.ambient.w);
-	//print(model->material.diffuse.x, model->material.diffuse.y, model->material.diffuse.z, model->material.diffuse.w);
-	//print(model->material.specular.x, model->material.specular.y, model->material.specular.z, model->material.specular.w);
-	//print(model->material.shininess);
-
 }
 
 static bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 {
 	FbxTexture *texture = find_texture(mesh_node, texture_type);
 	if (!texture) {
-		print("FbxTexture of type {} was not found", texture_type);
+		print("FbxTexture of type {} was not found in the file", texture_type, file_name);
 		return false;
 	}
 

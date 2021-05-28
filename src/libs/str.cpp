@@ -174,11 +174,19 @@ char *to_string(unsigned long number, int base)
 	return str;
 }
 
-char *to_string(long long number, int base)
+char *to_string(s64 number, int base)
 {
 	char *str = new char[21];
 	memset(str, 0, 21);
 	_i64toa_s(number, str, 21, base);
+	return str;
+}
+
+char *to_string(u64 number, int base)
+{
+	char *str = new char[21];
+	memset(str, 0, 21);
+	_ui64toa_s(number, str, 21, base);
 	return str;
 }
 
@@ -310,6 +318,10 @@ String &String::operator=(const char *string)
 
 String &String::operator=(const String &other)
 {
+	if (!other.data) {
+		return *this;
+	}
+
 	if (this == &other) {
 		return *this;;
 	}
