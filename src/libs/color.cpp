@@ -15,10 +15,10 @@ Color Color::LightSteelBlue = { 0.69f, 0.77f, 0.87f, 1.0f };
 
 Color::Color(int r, int g, int b, int a)
 {
-	assert(r < 256 && r > 0);
-	assert(g < 256 && g > 0);
-	assert(b < 256 && b > 0);
-	assert(a < 256 && a > 0);
+	assert(r <= 255 && r >= 0);
+	assert(g <= 255 && g >= 0);
+	assert(b <= 255 && b >= 0);
+	assert(a <= 255 && a >= 0);
 
 	color.x = r / 255.0f;
 	color.y = g / 255.0f;

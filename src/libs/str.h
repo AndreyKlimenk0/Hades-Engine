@@ -3,6 +3,8 @@
 
 #include "ds/array.h"
 #include "../win32/win_local.h"
+#include "../win32/win_types.h"
+
 
 struct String;
 
@@ -23,7 +25,8 @@ char *to_string(int number, int base = 10);
 char *to_string(unsigned int number, int base = 10);
 char *to_string(long number, int base = 10);
 char *to_string(unsigned long number, int base = 10);
-char *to_string(long long number, int base = 10);
+char *to_string(s64 number, int base = 10);
+char *to_string(u64 number, int base = 10);
 char *to_string(float number);
 char *to_string(double num);
 char *to_string(bool val);
@@ -80,6 +83,8 @@ struct String {
 	void allocate_and_copy_string(const char *string);
 
 	int find_text(const char *text, int start = 0);
+
+	bool is_empty() { return data == NULL && len == 0; }
 
 	String *copy();
 };

@@ -2,19 +2,39 @@
 #define DIRECTX_RENDER_H
 
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <d2d1.h>
 #include <d3d11.h>
+#include <dwrite.h>
 
 #include "../libs/math/matrix.h"
 #include "../libs/color.h"
 
+struct Direct_Write {
+	~Direct_Write();
+
+	wchar_t *font_name = NULL;
+	IDWriteFactory *write_factory = NULL;
+	IDWriteTextFormat *text_format = NULL;
+	IDWriteFontFace *font_face = NULL;
+	
+	int font_size;
+	Color text_color;
+
+	void init(const char *_font_name, int _font_size, const Color &color);
+	void shutdown();
+
+	D2D1_SIZE_F get_text_size_in_pixels(const char *text);
+};
+
+extern Direct_Write direct_write;
 
 struct Direct2D {
 	~Direct2D();
 
 	ID2D1Factory *factory = NULL;
 	ID2D1RenderTarget *render_target = NULL;
+	ID2D1SolidColorBrush *color = NULL;
 
 	void init(IDXGISwapChain *swap_chain);
 	void shutdown();
@@ -25,9 +45,10 @@ struct Direct2D {
 	void end_draw();
 
 	void fill_rect(int x, int y, int width, int height, const Color &background_color);
-	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, ID2D1StrokeStyle *stroke_style = NULL, float stroke_width = 2.0f);
+	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, float stroke_width = 2.0f);
 	void draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &background_color);
-	void draw_bitmap(const D2D1_RECT_F &rect, ID2D1Bitmap *bitmap, float scale = 1.0f);
+	void draw_bitmap(int x, int y, int width, int height, ID2D1Bitmap *bitmap, float scale = 1.0f);
+	void draw_text(int x, int y, const char *text);
 };
 
 inline void Direct2D::begin_draw()
@@ -37,7 +58,7 @@ inline void Direct2D::begin_draw()
 
 inline void Direct2D::end_draw()
 {
-	render_target->EndDraw();
+	HR(render_target->EndDraw());
 }
 
 extern Direct2D direct2d;

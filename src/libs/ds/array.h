@@ -4,7 +4,10 @@
 #include <string.h>
 #include <assert.h>
 
+#define DO_STRING_JOIN(arg1, arg2) arg1 ## arg2
+#define STRING_JOIN(arg1, arg2) DO_STRING_JOIN(arg1, arg2)
 
+//#define FOR(array, ptr) for (int STRING_JOIN(i, __LINE__) = 0; (STRING_JOIN(i, __LINE__) < array.count ? array.set_pointer_to_item(&ptr, STRING_JOIN(i, __LINE__)), true : false); STRING_JOIN(i, __LINE__)++)
 #define FOR(array, ptr) for (int _i = 0; (_i < array.count ? array.set_pointer_to_item(&ptr, _i), true : false); _i++)
 
 template <typename T>
