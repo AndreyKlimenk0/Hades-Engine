@@ -32,9 +32,11 @@ enum Keys {
 	Key_Z,
 };
 
+
 struct Mouse_Input {
 	static int x;
 	static int y;
+
 };
 
 struct Key_Input {
