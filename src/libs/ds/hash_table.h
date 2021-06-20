@@ -11,6 +11,9 @@
 #define HT_PRIME_2 163
 
 
+int hash(char c, const int factor, const int table_count);
+int double_hash(char c, const int table_count, const int attempt);
+
 int hash(const char* string, const int factor, const int table_count);
 int double_hash(const char* string, const int table_count, const int attempt);
 

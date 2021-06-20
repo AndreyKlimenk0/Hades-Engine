@@ -35,7 +35,7 @@ struct Direct2D {
 	ID2D1Factory *factory = NULL;
 	ID2D1RenderTarget *render_target = NULL;
 	ID2D1SolidColorBrush *color = NULL;
-
+	bool started_draw = false;
 	void init(IDXGISwapChain *swap_chain);
 	void shutdown();
 
@@ -44,9 +44,9 @@ struct Direct2D {
 	void begin_draw();
 	void end_draw();
 
-	void fill_rect(int x, int y, int width, int height, const Color &background_color);
+	void fill_rect(int x, int y, int width, int height, const Color &color);
 	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, float stroke_width = 2.0f);
-	void draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &background_color);
+	void draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &color);
 	void draw_bitmap(int x, int y, int width, int height, ID2D1Bitmap *bitmap, float scale = 1.0f);
 	void draw_text(int x, int y, const char *text);
 };
@@ -54,11 +54,15 @@ struct Direct2D {
 inline void Direct2D::begin_draw()
 {
 	render_target->BeginDraw();
+	started_draw = true;
 }
 
 inline void Direct2D::end_draw()
 {
-	HR(render_target->EndDraw());
+	if (started_draw) {
+		HR(render_target->EndDraw());
+		started_draw = false;
+	}
 }
 
 extern Direct2D direct2d;
