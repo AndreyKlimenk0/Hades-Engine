@@ -12,6 +12,12 @@ struct Vertex_XC {
 	Vertex_XC(const Vector3 &position, const Vector4 &color) : position(position), color(color) {}
 };
 
+struct Vertex_XUV {
+	Vector3 position;
+	Vector2 uv;
+	Vertex_XUV(const Vector3 &position, const Vector2 &uv) : position(position), uv(uv) {}
+};
+
 struct Vertex {
 	Vector3 position;
 	Vector3 normal;
@@ -26,7 +32,9 @@ struct Input_Layout {
 	
 	static ID3D11InputLayout *vertex_color;
 	static ID3D11InputLayout *vertex;
+	static ID3D11InputLayout *vertex_xuv;
 	static const D3D11_INPUT_ELEMENT_DESC vertex_col_desc[2];
+	static const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2];
 	static const D3D11_INPUT_ELEMENT_DESC vertex_desc[3];
 	
 	static void init();

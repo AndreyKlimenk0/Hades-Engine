@@ -8,7 +8,7 @@
 #define STRING_JOIN(arg1, arg2) DO_STRING_JOIN(arg1, arg2)
 
 //#define FOR(array, ptr) for (int STRING_JOIN(i, __LINE__) = 0; (STRING_JOIN(i, __LINE__) < array.count ? array.set_pointer_to_item(&ptr, STRING_JOIN(i, __LINE__)), true : false); STRING_JOIN(i, __LINE__)++)
-#define FOR(array, ptr) for (int _i = 0; (_i < array.count ? array.set_pointer_to_item(&ptr, _i), true : false); _i++)
+#define FOR(data_struct, ptr) for (int _i = 0; (_i < data_struct.count ? data_struct.set_pointer_to_item(&ptr, _i), true : false); _i++)
 
 template <typename T>
 struct Array {
@@ -99,10 +99,13 @@ void Array<T>::resize()
 		items = new T[size];
 		return;
 	}
-	
+
 	T *temp_array = items;
 	items = new T[size * 2];
-	memcpy(items, temp_array, sizeof(T) * size);
+	//memcpy(items, temp_array, sizeof(T) * size);
+	for (int i = 0; i < count; i++) {
+		items[i] = temp_array[i];
+	}
 	size = size * 2;
 	delete[] temp_array;
 }
@@ -110,7 +113,7 @@ void Array<T>::resize()
 template <typename T>
 void Array<T>::push(const T &item)
 {
-	if (count + 1 >= size) {
+	if (count >= size) {
 		resize();
 	}
 	items[count++] = item;
@@ -157,4 +160,5 @@ void Array<T>::set_pointer_to_item(T **ptr, int index)
 	assert(count > index);
 	*ptr = &items[index];
 }
+
 #endif

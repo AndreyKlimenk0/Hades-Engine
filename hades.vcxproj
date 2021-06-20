@@ -88,7 +88,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;d2d1.lib;dxgi.lib;dwrite.lib;effects11d.lib;DxErr.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;libfbxsdk-md.lib;libfbxsdk.lib;zlib-md.lib;libxml2-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;d2d1.lib;dxgi.lib;dwrite.lib;effects11d.lib;d3dcompiler.lib;legacy_stdio_definitions.lib;zlib.lib;libfbxsdk-md.lib;libfbxsdk.lib;freetype.lib;libxml2-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -164,6 +164,7 @@
     <ClCompile Include="src\libs\os\path.cpp" />
     <ClCompile Include="src\render\directx.cpp" />
     <ClCompile Include="src\render\effect.cpp" />
+    <ClCompile Include="src\render\font.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
@@ -173,11 +174,13 @@
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
+    <ClCompile Include="src\win32\win_time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\editor\editor.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\libs\color.h" />
+    <ClInclude Include="src\libs\ds\linked_list.h" />
     <ClInclude Include="src\libs\os\camera.h" />
     <ClInclude Include="src\libs\os\event.h" />
     <ClInclude Include="src\libs\os\file.h" />
@@ -195,6 +198,7 @@
     <ClInclude Include="src\libs\os\path.h" />
     <ClInclude Include="src\render\directx.h" />
     <ClInclude Include="src\render\effect.h" />
+    <ClInclude Include="src\render\font.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_system.h" />
@@ -207,6 +211,7 @@
   <ItemGroup>
     <FxCompile Include="fx\base.fx" />
     <FxCompile Include="fx\color.fx" />
+    <FxCompile Include="fx\font.fx" />
     <FxCompile Include="fx\forward_light.fx" />
     <FxCompile Include="fx\global.fx" />
   </ItemGroup>
