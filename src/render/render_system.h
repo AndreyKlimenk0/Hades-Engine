@@ -50,12 +50,16 @@ struct View_Info {
 	float far_plane;
 
 	Matrix4 perspective_matrix;
-	void get_perspective_matrix();
+	Matrix4 orthogonal_matrix;
+
+	void update_projection_matries();
 };
 
-View_Info *make_view_info(float near_plane, float far_plane);
-inline void View_Info::get_perspective_matrix()
+inline void View_Info::update_projection_matries()
 {
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, window_ratio, near_plane, far_plane);
+	orthogonal_matrix = XMMatrixOrthographicLH(window_width, window_height, near_plane, far_plane);
 }
+
+View_Info *make_view_info(float near_plane, float far_plane);
 #endif

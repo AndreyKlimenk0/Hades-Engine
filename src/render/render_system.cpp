@@ -30,7 +30,7 @@ void Render_System::shutdown()
 
 void Render_System::resize()
 {
-	if (view_info) { view_info->get_perspective_matrix(); }
+	if (view_info) { view_info->update_projection_matries(); }
 }
 
 void Render_System::render_frame()
@@ -84,7 +84,8 @@ View_Info *make_view_info(float near_plane, float far_plane)
 	view_info->fov_y_ratio = XMConvertToRadians(45);
 	view_info->near_plane = near_plane;
 	view_info->far_plane = far_plane;
-	view_info->get_perspective_matrix();
+	view_info->perspective_matrix = XMMatrixPerspectiveFovLH(view_info->fov_y_ratio, view_info->window_ratio, near_plane, far_plane);
+	view_info->orthogonal_matrix = XMMatrixOrthographicLH(view_info->window_width, view_info->window_height, near_plane, far_plane);
 	return view_info;
 }
 

@@ -432,10 +432,7 @@ inline Matrix4 Matrix4::inverse()
 	adjoin[3][2] = -m[0][0] * m[1][1] * m[3][2] - m[0][1] * m[1][2] * m[3][0] - m[0][2] * m[2][0] * m[3][1] + m[0][2] * m[1][1] * m[3][0] + m[0][1] * m[1][0] * m[3][2] + m[0][0] * m[1][2] * m[3][1];
 	adjoin[3][3] =  m[0][0] * m[1][1] * m[2][2] + m[0][1] * m[1][2] * m[2][0] + m[0][2] * m[1][0] * m[2][1] - m[0][2] * m[1][1] * m[2][0] - m[0][1] * m[1][0] * m[2][2] - m[0][0] * m[1][2] * m[2][1];
 	
-	print("Determinant", determinant);
 	Matrix4 result = adjoin * (1 / determinant);
-	print_mat(result);
-
 	return result;
 }
 

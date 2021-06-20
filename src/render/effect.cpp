@@ -147,7 +147,8 @@ void Fx_Shader_Manager::init()
 	bool success = get_file_names_from_dir(path_to_shader_dir + "\\", &file_names);
 	assert(success);
 
-	shaders = new Hash_Table<String, Fx_Shader *>(file_names.count);
+	//shaders = new Hash_Table<String, Fx_Shader *>(file_names.count);
+	shaders = new Hash_Table<String, Fx_Shader *>(20);
 
 	for (int i = 0; i < file_names.count; i++) {
 		int file_size;

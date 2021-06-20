@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <windowsx.h>
 
+#include "win_time.h"
 #include "win_local.h"
 #include "win_types.h"
 
@@ -10,6 +11,7 @@
 #include "../libs/os/file.h"
 #include "../libs/os/path.h"
 
+#include "../render/font.h"
 #include "../render/effect.h"
 #include "../render/directx.h"
 #include "../render/render_system.h"
@@ -21,41 +23,6 @@
 Win32_State win32;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-inline s64 cpu_ticks_counter()
-{
-	LARGE_INTEGER ticks;
-	if (!QueryPerformanceCounter(&ticks)) {
-		print("Can't get the information about tichs counter");
-		return 0;
-	}
-	return ticks.QuadPart;
-}
-
-inline s64 cpu_ticks_per_second()
-{
-	LARGE_INTEGER count_ticks_per_second;
-	if (!QueryPerformanceFrequency(&count_ticks_per_second)) {
-		print("Can't get the information about count ticks per second");
-		return 0;
-	}
-	return count_ticks_per_second.QuadPart;
-
-}
-
-inline u32 microseconds_counter()
-{
-	s64 ticks = cpu_ticks_counter();
-	s64 ticks_per_second = cpu_ticks_per_second();
-	return (1000 * 1000 * ticks) / ticks_per_second;
-}
-
-inline u32 milliseconds_counter()
-{
-	s64 ticks = cpu_ticks_counter();
-	s64 ticks_per_second = cpu_ticks_per_second();
-	return (1000 * ticks) / ticks_per_second;
-}
 
 void create_and_show_window(int nCmdShow)
 {
@@ -70,7 +37,7 @@ void create_and_show_window(int nCmdShow)
 	RegisterClass(&wc);
 
 	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
-		10, 10, 900, 850, NULL, NULL, win32.hinstance, NULL
+		10, 10, 1400, 800, NULL, NULL, win32.hinstance, NULL
 	);
 
 	if (hwnd == NULL) {
@@ -102,19 +69,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	os_path.init();
 
-	direct_write.init("Consolas", 12, Color::White);
+	
 	directx11.init();
+	
+	direct_write.init("Consolas", 12, Color::White);
+	
 	direct2d.init(directx11.swap_chain);
-
-	ShowWindow(win32.window, nCmdShow);
+	
+	font.init(50);
 
 	fx_shader_manager.init();
+
+
+	ShowWindow(win32.window, nCmdShow);
 
 	Input_Layout::init();
 
 	Key_Input::init();
-	
-	test();
 
 	Free_Camera camera;
 	camera.init();
@@ -131,13 +102,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	Editor editor;
 	editor.init();
 
+	// Test
+	test();
+
 	s64 count_per_s = cpu_ticks_per_second();
 
 
 	while (1) {
 		s64 t = cpu_ticks_counter();
-		u32 last = milliseconds_counter();
-		u32 l = microseconds_counter();
+		s64 last = milliseconds_counter();
+		s64 l = microseconds_counter();
 
 		pump_events();
 		run_event_loop();
@@ -153,12 +127,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 		editor.draw();
 
-		u32 result = milliseconds_counter() - last;
-		u32 r = microseconds_counter() - l;
+		//draw_text(100, 100, "AAAAAAAAAAAAAAAAAAAAAAAAAAA");
+		
+		s64 result = milliseconds_counter() - last;
+		s64 r = microseconds_counter() - l;
 		s64 x = cpu_ticks_counter() - t;
 		s64 fps = cpu_ticks_per_second() / x;
+		
 		display_text(700, 5, "Fps {} ms", fps);
-		display_text(700, 20, "Microseconds elapsed {} ms", r);
+		display_text(700, 30, "Microseconds elapsed {} ms", r);
+		display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
+		
 		
 		direct2d.end_draw();
 		directx11.end_draw();
@@ -182,10 +161,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		case WM_SIZE: {
-			RECT rect;
-			GetWindowRect(win32.window, &rect);
-			win32.window_height = rect.bottom - rect.top;
-			win32.window_width = rect.right - rect.left;
+			win32.window_width = LOWORD(lParam);
+			win32.window_height = HIWORD(lParam);
 			
 			directx11.resize(&direct2d);
 			render_sys.resize();

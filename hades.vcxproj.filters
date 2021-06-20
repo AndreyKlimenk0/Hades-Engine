@@ -93,6 +93,12 @@
     <ClCompile Include="src\editor\editor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\font.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\win32\win_time.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\win32\win_local.h">
@@ -179,12 +185,19 @@
     <ClInclude Include="src\editor\editor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\render\font.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\ds\linked_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="fx\base.fx" />
     <FxCompile Include="fx\global.fx" />
     <FxCompile Include="fx\forward_light.fx" />
     <FxCompile Include="fx\color.fx" />
+    <FxCompile Include="fx\font.fx" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="tasks.txt" />

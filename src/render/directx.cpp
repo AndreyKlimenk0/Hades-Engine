@@ -121,7 +121,7 @@ void Direct2D::init(IDXGISwapChain *swap_chain)
 	float dpi_y;
 	factory->GetDesktopDpi(&dpi_x, &dpi_y);
 
-	D2D1_RENDER_TARGET_PROPERTIES rtDesc = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_HARDWARE, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi_x, dpi_y);
+	D2D1_RENDER_TARGET_PROPERTIES rtDesc = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_HARDWARE, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi_x, dpi_y);
 
 	IDXGISurface *surface = NULL;
 	HR(swap_chain->GetBuffer(0, IID_PPV_ARGS(&surface)));
@@ -129,7 +129,6 @@ void Direct2D::init(IDXGISwapChain *swap_chain)
 	HR(factory->CreateDxgiSurfaceRenderTarget(surface, &rtDesc, &render_target));
 
 	RELEASE_COM(surface);
-
 
 	render_target->CreateSolidColorBrush(direct_write.text_color, &color);
 }
@@ -148,12 +147,9 @@ void Direct2D::draw_text(int x, int y, const char *text)
 
 	wchar_t *wtext = char_string_wchar(text);
 
-	render_target->SetTransform(D2D1::IdentityMatrix());
 	render_target->SetTransform(D2D1::Matrix3x2F::Translation(x, y));
-	//
-	//render_target->BeginDraw();
+
 	render_target->DrawText(wtext, wcslen(wtext), direct_write.text_format, D2D1::RectF(0.0f, 0.0f, render_target_size.width, render_target_size.height), (ID2D1Brush *)color);
-//	HR(render_target->EndDraw());
 
 	render_target->SetTransform(D2D1::IdentityMatrix());
 
@@ -246,16 +242,22 @@ void DirectX11::resize(Direct2D *direct2d)
 	assert(device_context);
 	assert(swap_chain);
 
+	if ((win32.window_width == 0) || (win32.window_height == 0)) {
+		return;
+	}
 
 	RELEASE_COM(render_target_view);
 	RELEASE_COM(depth_stencil_view);
 	RELEASE_COM(depth_stencil_buffer);
 
+
+	//if (direct2d && direct2d->started_draw) { direct2d->end_draw(); }
 	if (direct2d) { direct2d->shutdown(); }
 
 	// Resize the swap chain and recreate the render target view.
 
-	HR(swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
+	HR(swap_chain->ResizeBuffers(1, win32.window_width, win32.window_height, DXGI_FORMAT_B8G8R8A8_UNORM, 0));
+	//HR(swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
 
 	ID3D11Texture2D* back_buffer = NULL;
 	HR(swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer)));
@@ -313,21 +315,7 @@ void DirectX11::resize(Direct2D *direct2d)
 	
 }
 
-void Direct2D::test_draw()
-{
-	ID2D1SolidColorBrush *black_brush = NULL;
-	render_target->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &black_brush);
-
-	render_target->BeginDraw();
-	render_target->DrawRectangle(D2D1::RectF(10.0f, 10.0f, 200.0f, 200.0f), black_brush);
-
-	fill_rect(10, 320, 200, 200, Color::Black);
-	draw_rect(10, 320, 200, 200, Color::Red);
-
-	render_target->EndDraw();
-}
-
-void Direct2D::fill_rect(int x, int y, int width, int height, const Color &background_color)
+void Direct2D::fill_rect(int x, int y, int width, int height, const Color &color)
 {
 	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
@@ -336,7 +324,7 @@ void Direct2D::fill_rect(int x, int y, int width, int height, const Color &backg
 	rect.right = x + width;
 	rect.bottom = y + height;
 
-	render_target->CreateSolidColorBrush((Color)background_color, &brush);
+	render_target->CreateSolidColorBrush((Color)color, &brush);
 	render_target->FillRectangle(rect, brush);
 
 	RELEASE_COM(brush);
@@ -357,20 +345,20 @@ void Direct2D::draw_rect(int x, int y, int width, int height, const Color &strok
 	RELEASE_COM(brush);
 }
 
-void Direct2D::draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &background_color)
+void Direct2D::draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &color)
 {
 	D2D1_RECT_F rect;
-	rect.left = x;
-	rect.top = y;
-	rect.right = x + width;
-	rect.bottom = y + height;
+	rect.left = static_cast<float>(x);
+	rect.top = static_cast<float>(y);
+	rect.right = static_cast<float>(x + width);
+	rect.bottom = static_cast<float>(y + height);
 
 	ID2D1SolidColorBrush *brush = NULL;
-	render_target->CreateSolidColorBrush((Color)background_color, &brush);
+	render_target->CreateSolidColorBrush((Color)color, &brush);
 
 	D2D1_ROUNDED_RECT rounded_rect = D2D1::RoundedRect(rect, radius_x, radius_y);
 
-	//directx_render.direct2d.render_target->DrawRoundedRectangle(rounded_rect, brush);
+	//render_target->DrawRoundedRectangle(rounded_rect, brush);
 	render_target->FillRoundedRectangle(rounded_rect, brush);
 
 	RELEASE_COM(brush);
