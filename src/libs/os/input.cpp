@@ -6,7 +6,10 @@ int Mouse_Input::x = 0;
 int Mouse_Input::y = 0;
 
 
+
+bool Key_Input::was_char_key_input;
 bool Key_Input::keys[KEY_NUMBER];
+char Key_Input::inputed_char;
 
 void Key_Input::init()
 {

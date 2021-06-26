@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <windowsx.h>
 
 #include "win_time.h"
@@ -107,7 +108,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	s64 count_per_s = cpu_ticks_per_second();
 
-
 	while (1) {
 		s64 t = cpu_ticks_counter();
 		s64 last = milliseconds_counter();
@@ -126,8 +126,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		render_sys.render_frame();	
 
 		editor.draw();
-
-		//draw_text(100, 100, "AAAAAAAAAAAAAAAAAAAAAAAAAAA");
 		
 		s64 result = milliseconds_counter() - last;
 		s64 r = microseconds_counter() - l;
@@ -151,14 +149,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg) {
 		case WM_DESTROY: {
 			PostQuitMessage(0);
-			return 0;
+			break;
 		}
 		case WM_PAINT: {
 			PAINTSTRUCT ps;
 			HDC hdc = BeginPaint(hwnd, &ps);
 			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 			EndPaint(hwnd, &ps);
-			return 0;
+			break;
 		}
 		case WM_SIZE: {
 			win32.window_width = LOWORD(lParam);
@@ -167,49 +165,54 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			directx11.resize(&direct2d);
 			render_sys.resize();
 			
-			return 0;
+			break;
 		}
 		case WM_LBUTTONDOWN: {
 			SetCapture(win32.window);
 			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 1);
-			return 0;
+			break;
 		}
 		case WM_LBUTTONUP: {
 			ReleaseCapture();
 			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 0);
-			return 0;
+			break;
 		}
 		case WM_RBUTTONDOWN: {
 			SetCapture(win32.window);
 			push_event(EVENT_TYPE_KEY, VK_RBUTTON, 1);
-			return 0;
+			break;
 		}
 		case WM_RBUTTONUP: {
 			ReleaseCapture();
 			push_event(EVENT_TYPE_KEY, VK_RBUTTON, 0);
-			return 0;
+			break;
 		}
 		case WM_MOUSEMOVE: {
 			int x = GET_X_LPARAM(lParam);
 			int y = GET_Y_LPARAM(lParam);
 			push_event(EVENT_TYPE_MOUSE, x, y);
-			return 0;
+			break;
 		}
 		case WM_SYSKEYDOWN: {
 			push_event(EVENT_TYPE_KEY, wParam, 1);
-			return 0;
+			break;
 		}
 		case WM_SYSKEYUP: {
 			push_event(EVENT_TYPE_KEY, wParam, 0);
-			return 0;
+			break;
 		}
 		case WM_KEYDOWN: {
 			push_event(EVENT_TYPE_KEY, wParam, 1);
-			return 0;
+			break;
 		}
 		case WM_KEYUP:{
 			push_event(EVENT_TYPE_KEY, wParam, 0);
-			return 0;
+			break;
+		}
+		case WM_CHAR:{
+			char c;
+			wcstombs((char *)&c, (wchar_t *)&wParam, sizeof(char));
+			push_event(EVENT_TYPE_CHAR_KEY, c, 0);
 		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

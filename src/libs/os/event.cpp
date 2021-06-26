@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 
+#include "../../sys/sys_local.h"
+
 Queue<Event> event_queue;
 
 void pump_events()
@@ -42,6 +44,9 @@ void run_event_loop()
 		} else if (event.is_mouse_event()) {
 			Mouse_Input::x = event.first_value;
 			Mouse_Input::y = event.second_value;
+		} else if (event.is_char_key_event()) {
+			Key_Input::was_char_key_input = true;
+			Key_Input::inputed_char = event.first_value;
 		}
 	}
 }
