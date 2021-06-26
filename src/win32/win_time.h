@@ -44,6 +44,5 @@ inline s64 milliseconds_counter()
 
 #define START_PROFILE s64 _start_point = milliseconds_counter()
 #define END_PROFILE print("Profiler: File [{}]; Function [{}]; Time elapsed {} ms.", extract_file_name((const char *)__FILE__), (const char *)__FUNCTION__, milliseconds_counter() - _start_point)
-//#define END_PROFILE() print("AAAAAAAAAAAAAAAAALLLLLLLLLLLLLLLL")
 
 #endif

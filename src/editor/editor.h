@@ -10,25 +10,31 @@
 #include "../libs/ds/linked_list.h"
 
 
-struct Rect {
-	int x;
-	int y;
-	int width;
-	int height;
-	Rect() : x(0), y(0), width(0), height(0) {}
-	Rect(int x, int y) : x(x), y(y), width(0), height(0) {}
-	Rect(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
-};
-
 struct Callback;
 
 struct Button_Theme {
-	int border_about_text = 4;
+	int border_about_text = 6;
 	int text_shift = 0;
 	float rounded_border = 3.0f;
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
 	Color hover_color = Color(0, 60, 168);
+};
+
+struct List_Box_Theme {
+	int border_about_text = 0;
+	int list_box_shift = 2;
+	int header_width = 200;
+	int header_height = 20;
+	float rounded_border = 4.0f;
+	Color color = Color(74, 82, 90);
+};
+
+struct Input_Filed_Theme {
+	int width = 200;
+	int height = 20;
+	float rounded_border = 4.0f;
+	Color color = Color(74, 82, 90);
 };
 
 struct Window_Theme {
@@ -40,18 +46,11 @@ struct Window_Theme {
 	Color color = Color(36, 39, 43);
 };
 
-struct List_Box_Theme {
-	int border_about_text = 0;
-	int list_box_shift = 2;
-	int output_filed_width = 200;
-	int output_filed_height = 20;
-	float rounded_border = 4.0f;
-};
-
 enum Element_Type {
 	ELEMENT_TYPE_UNDEFINED,
 	ELEMENT_TYPE_BUTTON,
 	ELEMENT_TYPE_LIST_BOX,
+	ELEMENT_TYPE_INPUT_FIELD,
 	ELEMENT_TYPE_WINDOW,
 };
 
@@ -60,6 +59,7 @@ struct Element {
 	Element() : x(0), y(0), width(0), height(9) {}
 	Element(int x, int y) : x(x), y(y), width(0), height(9) {}
 	Element(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
+	
 	Element_Type type = ELEMENT_TYPE_UNDEFINED;
 	int x;
 	int y;
@@ -68,6 +68,17 @@ struct Element {
 
 	virtual void draw() = 0;
 	virtual void handle_event() = 0;
+};
+
+struct Caret : Element {
+	Caret() {};
+	Caret(int x, int y, int blink_time = 500) : Element(x, y, 1, direct_write.glyph_height), blink_time(blink_time) {} // blink time are a time in milliseconds
+
+	bool draw_caret = true;
+	int blink_time;
+	
+	void handle_event() {};
+	void draw();
 };
 
 enum Button_Place_Type {
@@ -89,12 +100,17 @@ struct Button : Element {
 	
 	bool cursor_on_button = false;
 	float scale;
+
+	Rect text_rect;
+	Rect button_rect;
+
 	String text;
 	Button_Theme theme;
 	//Button_Place_Type place_type = BUTTON_IS_PLASED_BY_ITSELF;
 
 	void draw();
 	void handle_event();
+	void calculate_rects();
 };
 
 enum List_Box_State {
@@ -104,7 +120,7 @@ enum List_Box_State {
 	LIST_BOX_IS_DROPPED,
 };
 
-struct List_Box: Element {
+struct List_Box : Element {
 	List_Box(int x, int y, Array<String> *items, const char *label);
 
 	List_Box_State list_state = LIST_BOX_IS_PICKED_UP;
@@ -122,10 +138,25 @@ struct List_Box: Element {
 	String *current_chosen_item_text = NULL;
 
 	void draw();
-	void update();
 	void handle_event() {};
 	void on_drop_button_click();
 	void on_item_list_click();
+};
+
+enum Input_Data_Type {
+	INPUT_DATA_INT,
+	INPUT_DATA_FLOAT,
+	INPUT_DATA_STRING,
+};
+
+struct Input_Filed : Element {
+	Input_Filed(int x, int y);
+
+	Input_Filed_Theme theme;
+	Caret caret;
+
+	void handle_event();
+	void draw();
 };
 
 struct Window : Element {

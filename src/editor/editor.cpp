@@ -1,17 +1,19 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <windows.h>
 
 #include "editor.h"
-#include "../sys/sys_local.h"
-#include "../win32/win_local.h"
 #include "../libs/color.h"
 #include "../libs/os/input.h"
+#include "../sys/sys_local.h"
+#include "../win32/win_time.h"
+#include "../win32/win_local.h"
 
 
 static Window_Theme window_theme;
 static Button_Theme button_theme;
 static List_Box_Theme list_box_theme;
-
+static Input_Filed_Theme input_filed_theme;
 
 struct Callback {
 	virtual void call() = 0;
@@ -35,6 +37,16 @@ struct Function_Callback : Callback {
 	void call() { (*callback)(); }
 };
 
+static int compare_list_boxies(const void *first, const void *second)
+{
+	assert(first);
+	assert(second);
+
+	const List_Box *first_list_box = static_cast<const List_Box *>(first);
+	const List_Box *second_list_box = static_cast<const List_Box *>(second);
+
+	return first_list_box->y > second_list_box->y;
+}
 
 static inline bool check_collision_between_element_and_mouse(Element *element)
 {
@@ -65,6 +77,45 @@ static inline u32 get_height_from_bitmap(const ID2D1Bitmap *bitmap)
 	return size.height;
 }
 
+
+void Caret::draw()
+{
+	if (!draw_caret) {
+		return;
+	}
+
+	static bool show = true;
+	static s32 show_time = blink_time;
+	static s32 hidding_time = blink_time;
+	static s32 show_time_accumulator = 0;
+	static s32 hidding_time_accumulator = 0;
+
+	static s64 current_time = 0;
+	static s64 last_time = 0;
+
+	current_time = milliseconds_counter();
+
+	s64 elapsed_time = current_time - last_time;
+
+	if (show) {
+		show_time_accumulator += elapsed_time;
+		if (show_time_accumulator < show_time) {
+			direct2d.fill_rect(x, y, width, height, Color::White);
+		} else {
+			show = false;
+			show_time_accumulator = 0;
+		}
+	} else {
+		hidding_time_accumulator += elapsed_time;
+		if (hidding_time_accumulator >= hidding_time) {
+			show = true;
+			hidding_time_accumulator = 0;
+		}
+	}
+
+	last_time = milliseconds_counter();
+}
+
 Button::Button(const char *text) : Element()
 {
 	this->text = text;
@@ -75,6 +126,7 @@ Button::Button(const char *text) : Element()
 	width = size.width;
 	height = size.height;
 	theme = button_theme;
+	calculate_rects();
 }
 
 Button::Button(int x, int y, const char *text) : Element(x, y)
@@ -86,6 +138,7 @@ Button::Button(int x, int y, const char *text) : Element(x, y)
 	//place_type = BUTTON_IS_PLASED_BY_ITSELF;
 	type = ELEMENT_TYPE_BUTTON;
 	theme = button_theme;
+	calculate_rects();
 }
 
 Button::Button(int x, int y, int width, int height, const char * text) : Element(x, y, width, height)
@@ -94,16 +147,21 @@ Button::Button(int x, int y, int width, int height, const char * text) : Element
 	//place_type = BUTTON_IS_PLASED_BY_ITSELF;
 	type = ELEMENT_TYPE_BUTTON;
 	theme = button_theme;
+	calculate_rects();
 }
 
 Button::Button(int x, int y, ID2D1Bitmap *image, float scale) : Element(x, y)
 {
 	assert(image);
 
+	D2D1_SIZE_U size = image->GetPixelSize();
+	this->width = size.width;
+	this->height = size.height;
 	this->image = image;
 	this->scale = scale;
 	type = ELEMENT_TYPE_BUTTON;
 	theme = button_theme;
+	calculate_rects();
 }
 
 Button::Button(int x, int y, int width, int height, ID2D1Bitmap *image, float scale) : Element(x, y, width, height)
@@ -114,6 +172,13 @@ Button::Button(int x, int y, int width, int height, ID2D1Bitmap *image, float sc
 	this->scale = scale;
 	type = ELEMENT_TYPE_BUTTON;
 	theme = button_theme;
+	calculate_rects();
+}
+
+void Button::calculate_rects()
+{
+	text_rect = Rect(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
+	button_rect = Rect(x, y, width + theme.border_about_text, height + theme.border_about_text);
 }
 
 void Button::draw()
@@ -125,13 +190,13 @@ void Button::draw()
 
 	if (cursor_on_button) {
 		cursor_on_button = false;
-		direct2d.draw_rounded_rect(x, y, width + theme.border_about_text, height + theme.border_about_text, theme.rounded_border, theme.rounded_border, theme.hover_color);
+		direct2d.draw_rounded_rect(&button_rect, theme.rounded_border, theme.hover_color);
 	} else {
-		direct2d.draw_rounded_rect(x, y, width + theme.border_about_text, height + theme.border_about_text, theme.rounded_border, theme.rounded_border, theme.color);
+		direct2d.draw_rounded_rect(&button_rect, theme.rounded_border, theme.color);
 	}
 
 	if (!text.is_empty()) {
-		direct2d.draw_text(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2), text);
+		direct2d.draw_text(text_rect.x, text_rect.y, text);
 	}
 }
 
@@ -152,7 +217,7 @@ void Button::handle_event()
 	}
 }
 
-List_Box::List_Box(int x, int y, Array<String> *items, const char *l) : Element(x, y, list_box_theme.output_filed_width, list_box_theme.output_filed_height)
+List_Box::List_Box(int x, int y, Array<String> *items, const char *l) : Element(x, y, list_box_theme.header_width, list_box_theme.header_height)
 {
 	assert(items);
 	assert(items->count > 1);
@@ -169,31 +234,27 @@ List_Box::List_Box(int x, int y, Array<String> *items, const char *l) : Element(
 	button_theme.color = Color(74, 82, 90);
 	button_theme.text_shift = 2;
 
-	
-	D2D1_SIZE_F text_size = direct_write.get_text_size_in_pixels(items->at(0));
-	button_height = text_size.height + button_theme.border_about_text;
-	list_box_size = text_size.height * items->count;
-
 	for (int i = 0; i < items->count; i++) {
-		Button b = Button(x, (y + 2 + height) + (button_height * i), width, button_height, items->at(i));
+		Button b = Button(x, (y + 2 + height) + (direct_write.glyph_height * i), width, direct_write.glyph_height, items->at(i));
 		b.theme = button_theme;
+		b.calculate_rects();
 		b.callback = new Member_Callback<List_Box>(this, &List_Box::on_item_list_click);
 		list_items.push(b);
 	}
 
+	list_box_size = direct_write.glyph_height * items->count;
 
 	ID2D1Bitmap *down_image = NULL;
 	load_bitmap_from_file("E:\\andrey\\dev\\hades\\data\\editor\\down.png", 1, 1, &down_image);
-	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 70);
+	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 100);
+	D2D1_SIZE_U size = down_image->GetPixelSize();
 
-
-	drop_button = Button(x + (width - 20), y, 20, height, down_image, 1.0f);
+	drop_button = Button(x + width - (size.width * cross_scale_factor), y, down_image, cross_scale_factor);
 	drop_button.callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
-
 	
-	text_y = y + ((height - text_size.height) / 2);
+	text_y = y + ((height - direct_write.glyph_height));
 	text_x = x + 2;
-
+	
 }
 
 
@@ -215,24 +276,55 @@ void List_Box::on_item_list_click()
 	}
 }
 
-void List_Box::update()
-{
-}
-
 void List_Box::draw()
 {
-
-	direct2d.draw_rounded_rect(x, y, width, height, 4.0f, 4.0f, Color(74, 82, 90));
-	D2D1_SIZE_F text_size = direct_write.get_text_size_in_pixels(label);
+	direct2d.draw_rounded_rect(x, y, width, height, theme.rounded_border, theme.rounded_border, theme.color);
 	direct2d.draw_text(text_x, text_y, *current_chosen_item_text);
 	drop_button.draw();
 	
 	if (list_state == LIST_BOX_IS_DROPPED) {
-		direct2d.draw_rounded_rect(x, y + 2 + height, width, list_box_size, 5.0f, 5.0f, Color(74, 82, 90));
+		direct2d.draw_rounded_rect(x, y + 2 + height, width, list_box_size, theme.rounded_border, theme.rounded_border, theme.color);
 		for (int i = 0; i < list_items.count; i++) {
 			list_items[i].draw();
 		}
 	}
+}
+
+Input_Filed::Input_Filed(int x, int y) : Element(x, y, input_filed_theme.width, 30)
+{
+	type = ELEMENT_TYPE_INPUT_FIELD;
+	theme = input_filed_theme;
+	caret = Caret(x, y);
+	caret.x += 2;
+	caret.y = (y + height / 2) - (caret.height / 2);
+	caret.draw_caret = false;
+}
+
+void Input_Filed::handle_event()
+{
+	static bool key_is_down = false;
+	if (Key_Input::is_key_down(VK_LBUTTON)) {
+		key_is_down = true;
+	} else {
+		if (key_is_down) {
+			key_is_down = false;
+
+			caret.draw_caret = true;
+		}
+	}
+
+	if (Key_Input::was_char_key_input) {
+		Key_Input::was_char_key_input = false;
+		char c = Key_Input::inputed_char;
+		print("Editor char", c);
+		direct2d.draw_text(x + 5, y, (char *)&c);
+	}
+}
+
+void Input_Filed::draw()
+{
+	direct2d.draw_rounded_rect(x, y, width, height, theme.rounded_border, theme.rounded_border, theme.color);
+	caret.draw();
 }
 
 Window::Window(int x, int y, int width, int height) : Element(x, y, width, height + window_theme.header_height)
@@ -253,18 +345,6 @@ Window::Window(int x, int y, int width, int height) : Element(x, y, width, heigh
 	close_button = Button(button_x, button_y, button_width, button_height, cross_image, cross_scale_factor);
 	close_button.callback = new Member_Callback<Window>(this, &Window::close);
 }
-
-static int compare_list_boxies(const void *first, const void *second) 
-{
-	assert(first);
-	assert(second);
-
-	const List_Box *first_list_box = static_cast<const List_Box *>(first);
-	const List_Box *second_list_box = static_cast<const List_Box *>(second);
-	
-	return first_list_box->y > second_list_box->y;
-}
-
 
 void Window::add_element(Element *element)
 {
@@ -411,8 +491,10 @@ void Editor::init()
 	//w->add_element(list3);
 	//w->add_element(list4);
 
-}
 
+	Input_Filed *input_filed = new Input_Filed(10, 350);
+	w->add_element(input_filed);
+}
 
 void Editor::handle_event()
 {

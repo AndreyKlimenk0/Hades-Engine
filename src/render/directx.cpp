@@ -51,6 +51,10 @@ void Direct_Write::init(const char * _font_name, int _font_size, const Color &co
 
 	HR(write_factory->CreateFontFace(DWRITE_FONT_FACE_TYPE_TRUETYPE, 1, &font_file, 0, DWRITE_FONT_SIMULATIONS_NONE, &font_face));
 	RELEASE_COM(font_file);
+
+	D2D1_SIZE_F size = get_text_size_in_pixels("a");
+	glyph_width = (int)size.width;
+	glyph_height = (int)size.height;
 }
 
 void Direct_Write::shutdown()
