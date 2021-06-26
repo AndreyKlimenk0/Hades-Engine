@@ -24,6 +24,5 @@ struct Free_Camera {
 	void update();
 
 	Matrix4 get_view_matrix();
-	Matrix4 get_view_projection_matrix();
 };
 #endif

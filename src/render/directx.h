@@ -18,8 +18,11 @@ struct Direct_Write {
 	IDWriteTextFormat *text_format = NULL;
 	IDWriteFontFace *font_face = NULL;
 	
+	int glyph_height;
+	int glyph_width;
 	int font_size;
 	Color text_color;
+
 
 	void init(const char *_font_name, int _font_size, const Color &color);
 	void shutdown();
@@ -28,6 +31,17 @@ struct Direct_Write {
 };
 
 extern Direct_Write direct_write;
+
+
+struct Rect {
+	int x;
+	int y;
+	int width;
+	int height;
+	Rect() : x(0), y(0), width(0), height(0) {}
+	Rect(int x, int y) : x(x), y(y), width(0), height(0) {}
+	Rect(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
+};
 
 struct Direct2D {
 	~Direct2D();
@@ -44,12 +58,24 @@ struct Direct2D {
 	void begin_draw();
 	void end_draw();
 
+	void fill_rect(Rect *rect, const Color &color);
 	void fill_rect(int x, int y, int width, int height, const Color &color);
 	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, float stroke_width = 2.0f);
+	void draw_rounded_rect(Rect *rect, float radius, const Color &color);
 	void draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &color);
 	void draw_bitmap(int x, int y, int width, int height, ID2D1Bitmap *bitmap, float scale = 1.0f);
 	void draw_text(int x, int y, const char *text);
 };
+
+inline void Direct2D::fill_rect(Rect *rect, const Color &color)
+{
+	fill_rect(rect->x, rect->y, rect->width, rect->height, color);
+}
+
+inline void Direct2D::draw_rounded_rect(Rect *rect, float radius, const Color &color)
+{
+	draw_rounded_rect(rect->x, rect->y, rect->width, rect->height, radius, radius, color);
+}
 
 inline void Direct2D::begin_draw()
 {

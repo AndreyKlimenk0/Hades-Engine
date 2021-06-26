@@ -3,6 +3,8 @@
 
 #define KEY_NUMBER 255
 
+#include "../ds/array.h"
+
 enum Keys {
 	Key_A = 0x41,
 	Key_B,
@@ -40,7 +42,9 @@ struct Mouse_Input {
 };
 
 struct Key_Input {
+	static bool was_char_key_input;
 	static bool keys[KEY_NUMBER];
+	static char inputed_char;
 	static void init();
 	static void key_down(int key);
 	static void key_up(int key);
