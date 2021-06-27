@@ -21,6 +21,12 @@
 
 #include "test.h"
 
+
+enum Engine_Mode {
+	GAME_MODE,
+	EDITOR_MODE,
+};
+
 Win32_State win32;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -63,6 +69,9 @@ void display_text(int x, int y, Args... args)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
+
+	Engine_Mode engine_mode = EDITOR_MODE;
+
 	win32.hinstance = hInstance;
 	create_console();
 
@@ -88,20 +97,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Key_Input::init();
 
-	Free_Camera camera;
-	camera.init();
+	editor.init();
 
 	World world;
-	world.init(&camera);
+	world.init();
 	
 	View_Info *view_info = make_view_info(1.0f, 10000.0f);
 	
 	render_sys.init(view_info);
 	render_sys.current_render_world = &world;
-	render_sys.free_camera = &camera;
-
-	Editor editor;
-	editor.init();
+	render_sys.free_camera = &editor.free_camera;
 
 	// Test
 	test();
@@ -115,9 +120,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 		pump_events();
 		run_event_loop();
-		editor.handle_event();
 		
-		camera.update();
 		editor.update();
 
 		directx11.begin_draw();
@@ -212,7 +215,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case WM_CHAR:{
 			char c;
 			wcstombs((char *)&c, (wchar_t *)&wParam, sizeof(char));
-			push_event(EVENT_TYPE_CHAR_KEY, c, 0);
+			push_event(EVENT_TYPE_CHAR, c, 0);
 		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

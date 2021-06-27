@@ -9,6 +9,7 @@
 #include "../win32/win_time.h"
 #include "../win32/win_local.h"
 
+Editor editor;
 
 static Window_Theme window_theme;
 static Button_Theme button_theme;
@@ -496,8 +497,10 @@ void Editor::init()
 	w->add_element(input_filed);
 }
 
-void Editor::handle_event()
+void Editor::handle_event(Event * event)
 {
+	free_camera.handle_event(event);
+
 	Window *window = NULL;
 	FOR(windows, window) {
 		if (check_collision_between_element_and_mouse(window)) {
@@ -507,6 +510,7 @@ void Editor::handle_event()
 		}
 	}
 }
+
 
 void Editor::update()
 {

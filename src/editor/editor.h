@@ -5,11 +5,12 @@
 #include <d2d1.h>
 
 #include "../render/directx.h"
-#include "../libs/ds/array.h"
 #include "../libs/str.h"
+#include "../libs/ds/array.h"
 #include "../libs/ds/linked_list.h"
+#include "../libs/os/camera.h"
 
-
+struct Event;
 struct Callback;
 
 struct Button_Theme {
@@ -177,13 +178,21 @@ struct Window : Element {
 };
 
 struct Editor {
+	Free_Camera free_camera;
 	Array<Window *> windows;
 
 	void init();
-	void handle_event();
+	void handle_event(Event *event);
 	void draw();
 	void update();
 	void add_window(Window *window);
 };
+
+extern Editor editor;
+
+inline void handle_event_for_editor(Event *event)
+{
+	editor.handle_event(event);
+}
 
 #endif
