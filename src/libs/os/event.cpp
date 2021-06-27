@@ -7,6 +7,8 @@
 #include <stdio.h>
 
 #include "../../sys/sys_local.h"
+#include "../../editor/editor.h"
+
 
 Queue<Event> event_queue;
 
@@ -26,8 +28,26 @@ void push_event(Event_Type type, int first_value, int second_value)
 {
 	Event *event = new Event();
 	event->type = type;
-	event->first_value = first_value;
-	event->second_value = second_value;
+
+	switch (type) {
+		case EVENT_TYPE_KEY: {
+			event->key_info.key = first_value;
+			event->key_info.is_pressed = second_value;
+			break;
+		}
+		case EVENT_TYPE_MOUSE: {
+			event->mouse_info.x = first_value;
+			event->mouse_info.y = second_value;
+			break;
+		}
+		case EVENT_TYPE_CHAR: {
+			//event->char_key = first_value;
+			event->key_info.key = first_value;
+			break;
+		}
+	}
+	//event->first_value = first_value;
+	//event->second_value = second_value;
 	event_queue.push(*event);
 }
 
@@ -35,18 +55,7 @@ void run_event_loop()
 {
 	while (!event_queue.is_empty()) {
 		Event event = event_queue.pop();
-		if (event.is_key_event()) {
-			if (event.is_key_down()) {
-				Key_Input::key_down(event.first_value);
-			} else {
-				Key_Input::key_up(event.first_value);
-			}
-		} else if (event.is_mouse_event()) {
-			Mouse_Input::x = event.first_value;
-			Mouse_Input::y = event.second_value;
-		} else if (event.is_char_key_event()) {
-			Key_Input::was_char_key_input = true;
-			Key_Input::inputed_char = event.first_value;
-		}
+		
+		handle_event_for_editor(&event);
 	}
 }

@@ -9,52 +9,57 @@
 using namespace DirectX;
 
 
-void Free_Camera::init(float _near_z, float _far_z)
+void Free_Camera::handle_event(Event *event)
 {
-	window_width = win32.window_width;
-	window_hegith = win32.window_height;
-	near_z = _near_z;
-	far_z = _far_z;
-}
-
-void Free_Camera::update()
-{
-	static float camera_speed = 1.0f;
-	//static float camera_speed = 0.02f;
+	static float camera_speed = 10.0f;
 	static int last_mouse_x = 0.0f;
 	static int last_mouse_y = 0.0f;
+	
 	static float pitch = 0.0f;
 	static float yam = 0.0f;
 
 	float move_by_z = 0.0f;
 	float move_by_x = 0.0f;
-	
-	if (Key_Input::is_key_down(VK_LBUTTON)) {
-		float delta_x = XMConvertToRadians(0.50f*static_cast<float>(Mouse_Input::x - last_mouse_x));
-		float delta_y = XMConvertToRadians(0.50f*static_cast<float>(Mouse_Input::y - last_mouse_y));
 
-		yam += delta_x;
-		pitch += delta_y;
+	static bool is_left_mouse_button_down = false;
+
+	if (event->is_mouse_event()) {
+
+		if (is_left_mouse_button_down) {
+			yam = XMConvertToRadians(static_cast<float>(event->mouse_info.x % 360));
+			pitch = XMConvertToRadians(static_cast<float>(event->mouse_info.y % 360));
+		}
+		
+		last_mouse_x = event->mouse_info.x;
+		last_mouse_y = event->mouse_info.y;
 	}
 
-	last_mouse_x = Mouse_Input::x;
-	last_mouse_y = Mouse_Input::y;
+	if (event->is_key_event()) {
+		if (event->is_key_down(VK_LBUTTON)) {
+			is_left_mouse_button_down = true;
+		}
 
-	if (Key_Input::is_key_down(Key_W)) {
-		move_by_z += camera_speed;
+		if (event->key_info.key == VK_LBUTTON && (!event->key_info.is_pressed)) {
+			is_left_mouse_button_down = false;
+		}
+
+		if (event->is_key_down(Key_W)) {
+			move_by_z += camera_speed;
+		}
+
+		if (event->is_key_down(Key_S)) {
+			move_by_z -= camera_speed;
+		}
+
+		if (event->is_key_down(Key_A)) {
+			move_by_x -= camera_speed;
+		}
+
+		if (event->is_key_down(Key_D)) {
+			move_by_x += camera_speed;
+		}
 	}
 
-	if (Key_Input::is_key_down(Key_S)) {
-		move_by_z -= camera_speed;
-	}
-
-	if (Key_Input::is_key_down(Key_A)) {
-		move_by_x -= camera_speed;
-	}
-
-	if (Key_Input::is_key_down(Key_D)) {
-		move_by_x += camera_speed;
-	}
 
 	Matrix4 rotation = XMMatrixRotationRollPitchYaw(pitch, yam, 0);
 	target = XMVector3TransformCoord(base_z_vec, rotation);
