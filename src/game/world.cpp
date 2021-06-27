@@ -5,12 +5,8 @@
 #include "../render/directx.h"
 
 
-void World::init(Free_Camera *camera)
+void World::init()
 {
-
-	free_camera = camera;
-	free_camera->position = Vector3(0.0f, 200.0f, 100.0f);
-
 	Entity * floor = new Floor();
 	floor->id = 4;
 	floor->position = Vector3(0, 0, 0);
