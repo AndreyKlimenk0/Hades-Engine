@@ -9,22 +9,31 @@
 
 #include "../libs/math/matrix.h"
 #include "../libs/color.h"
+#include "../libs/ds/hash_table.h"
+
+struct Direct_Character {
+	float width;
+	float height;
+};
 
 struct Direct_Write {
+	Direct_Write() : characters(128) {}
 	~Direct_Write();
 
 	wchar_t *font_name = NULL;
 	IDWriteFactory *write_factory = NULL;
 	IDWriteTextFormat *text_format = NULL;
 	IDWriteFontFace *font_face = NULL;
-	
+
 	int glyph_height;
 	int glyph_width;
 	int font_size;
 	Color text_color;
 
+	Hash_Table<char, Direct_Character> characters;
 
 	void init(const char *_font_name, int _font_size, const Color &color);
+	void init_characters();
 	void shutdown();
 
 	D2D1_SIZE_F get_text_size_in_pixels(const char *text);
@@ -54,12 +63,13 @@ struct Direct2D {
 	void shutdown();
 
 	void test_draw();
-	
+
 	void begin_draw();
 	void end_draw();
 
 	void fill_rect(Rect *rect, const Color &color);
 	void fill_rect(int x, int y, int width, int height, const Color &color);
+	void fill_rect(float x, float y, float width, float height, const Color &color);
 	void draw_rect(int x, int y, int width, int height, const Color &stroke_color, float stroke_width = 2.0f);
 	void draw_rounded_rect(Rect *rect, float radius, const Color &color);
 	void draw_rounded_rect(int x, int y, int width, int height, float radius_x, float radius_y, const Color &color);

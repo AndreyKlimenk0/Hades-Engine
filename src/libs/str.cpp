@@ -49,7 +49,7 @@ void split(String *string, const char *symbols, Array<String> *array)
 		prev_pos = curr_pos + len;
 		curr_pos += len;
 	}
-	
+
 	if (prev_pos != string->len) {
 		array->push(String(*string, prev_pos, string->len));
 	}
@@ -72,7 +72,8 @@ static void format_string(const char *format_string, Array<char> *formatting_str
 		if (*f_string == '{') {
 			COPY_STRING_TO_CHAR_ARRAY(vars->items[var_index], formatting_string);
 			var_index++;
-		} else {
+		}
+		else {
 			formatting_string->push(*f_string);
 		}
 		f_string++;
@@ -96,7 +97,8 @@ char * __do_formatting(Array<char *> *strings)
 			format_string(string, &formatting_string, &vars_buffer);
 			vars_buffer.clear();
 			formatting_string.push(' ');
-		} else {
+		}
+		else {
 			// Append string in buffer without needs for formatting
 			COPY_STRING_TO_CHAR_ARRAY(string, ((Array<char> *)&formatting_string));
 			formatting_string.push(' ');
@@ -310,7 +312,7 @@ String &String::operator=(const char *string)
 	if (string == data) {
 		return *this;
 	}
-	
+
 	DELETE_ARRAY(data);
 	allocate_and_copy_string(string);
 	return *this;
@@ -325,7 +327,7 @@ String &String::operator=(const String &other)
 	if (this == &other) {
 		return *this;;
 	}
-	
+
 	DELETE_ARRAY(data);
 	allocate_and_copy_string(other.data);
 	return *this;
@@ -353,6 +355,82 @@ void String::to_lower()
 	}
 }
 
+void String::pop_char()
+{
+	if (data[0] == '\0')
+		return;
+
+	String *other_str = copy();
+	other_str->data[other_str->len - 1] = '\0';
+
+	other_str->print();
+	*this = *other_str;
+	DELETE_PTR(other_str);
+}
+
+void String::insert(int index, char c)
+{
+	assert(len >= index);
+
+	String *copied_str = copy();
+
+	DELETE_PTR(data);
+
+	data = new char[len + 2];
+
+	char *first_part_dest_str = data;
+	char *first_part_src_str = copied_str->data;
+
+	memcpy(first_part_dest_str, first_part_src_str, sizeof(char) * index);
+
+	data[index] = c;
+
+	char *second_part_dest_str = &data[index + 1];
+	char *second_part_src_str = &copied_str->data[index];
+
+	memcpy(second_part_dest_str, second_part_src_str, sizeof(char) * (len - index));
+
+	len += 1;
+	data[len] = '\0';
+
+	DELETE_PTR(copied_str);
+}
+
+void String::remove(int index)
+{
+	assert(len > index);
+
+	String *copied_str = copy();
+
+	DELETE_PTR(data);
+
+	data = new char[len]; //decrease len of string on 1
+
+	char *first_part_dest_str = data;
+	char *first_part_src_str = copied_str->data;
+
+	memcpy(first_part_dest_str, first_part_src_str, sizeof(char) * index);
+
+	char *second_part_dest_str = &data[index];
+	char *second_part_src_str = &copied_str->data[index + 1];
+
+	memcpy(second_part_dest_str, second_part_src_str, sizeof(char) * (len - index - 1));
+
+	len -= 1;
+	data[len] = '\0';
+
+	DELETE_PTR(copied_str);
+}
+
+void String::append(char c)
+{
+	char *s = new char[2];
+	s[0] = c;
+	s[1] = '\0';
+	append(s);
+	DELETE_PTR(s);
+}
+
 void String::append(const char *string)
 {
 	assert(string != NULL);
@@ -365,7 +443,7 @@ void String::append(const char *string)
 
 	int new_len = len + strlen(string);
 	char *new_string = new char[new_len + 1];
-	
+
 	memset(new_string, 0, sizeof(char) * new_len + 1);
 	strcat(new_string, data);
 	strcat(new_string, string);
@@ -409,7 +487,7 @@ int String::find_text(const char *text, int start)
 					break;
 				}
 			}
-		
+
 			if (result >= 0) {
 				return result;
 			}

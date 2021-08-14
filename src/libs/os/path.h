@@ -18,6 +18,7 @@ struct Path {
 	String *build_full_path_to_texture_file(const String *file_name);
 	String *build_full_path_to_model_file(const String *file_name);
 	String *build_full_path_to_shader_file(const String *file_name);
+	String *build_full_path_to_editor_file(const char *file_name);
 };
 
 extern Path os_path;
@@ -40,6 +41,13 @@ inline String *Path::build_full_path_to_shader_file(const String *file_name)
 {
 	String &value = data_dir_paths["shader"];
 	String *result = new String(value + "\\" + *file_name);
+	return result;
+}
+
+inline String *Path::build_full_path_to_editor_file(const char *file_name)
+{
+	String &value = data_dir_paths["editor"];
+	String *result = new String(value + "\\" + file_name);
 	return result;
 }
 #endif

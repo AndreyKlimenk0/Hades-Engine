@@ -10,8 +10,10 @@
 #include "../libs/ds/linked_list.h"
 #include "../libs/os/camera.h"
 
+
 struct Event;
 struct Callback;
+
 
 struct Button_Theme {
 	int border_about_text = 6;
@@ -34,6 +36,8 @@ struct List_Box_Theme {
 struct Input_Filed_Theme {
 	int width = 200;
 	int height = 20;
+	int shift_caret_from_left = 3;
+	float caret_height_in_percents = 80.0f;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
 };
@@ -55,30 +59,36 @@ enum Element_Type {
 	ELEMENT_TYPE_WINDOW,
 };
 
+const int ELEMENT_HOVER = 0x1;
+const int ELEMENT_FOCUSED = 0x2;
 
 struct Element {
 	Element() : x(0), y(0), width(0), height(9) {}
 	Element(int x, int y) : x(x), y(y), width(0), height(9) {}
 	Element(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
-	
+
 	Element_Type type = ELEMENT_TYPE_UNDEFINED;
+	int flags = 0;
 	int x;
 	int y;
 	int width;
 	int height;
 
 	virtual void draw() = 0;
-	virtual void handle_event() = 0;
+	virtual void handle_event(Event *event) = 0;
 };
 
 struct Caret : Element {
 	Caret() {};
 	Caret(int x, int y, int blink_time = 500) : Element(x, y, 1, direct_write.glyph_height), blink_time(blink_time) {} // blink time are a time in milliseconds
 
-	bool draw_caret = true;
 	int blink_time;
-	
-	void handle_event() {};
+	float fx;
+	float fy;
+	float fwidth = 1;
+	float fheight;
+
+	void handle_event(Event *event) {};
 	void draw();
 };
 
@@ -98,7 +108,7 @@ struct Button : Element {
 	ID2D1Bitmap *image = NULL;
 	Callback *callback = NULL;
 
-	
+
 	bool cursor_on_button = false;
 	float scale;
 
@@ -110,7 +120,8 @@ struct Button : Element {
 	//Button_Place_Type place_type = BUTTON_IS_PLASED_BY_ITSELF;
 
 	void draw();
-	void handle_event();
+	void handle_event(Event *event);
+	//void handle_event(Event *event) {};
 	void calculate_rects();
 };
 
@@ -129,17 +140,17 @@ struct List_Box : Element {
 	int button_height;
 	int text_x;
 	int text_y;
-	
+
 	List_Box_Theme theme;
 	String label;
 	Button drop_button;
 	Array<Button> list_items;
-	
+
 	Button *button = NULL;
 	String *current_chosen_item_text = NULL;
 
 	void draw();
-	void handle_event() {};
+	void handle_event(Event *event) {};
 	void on_drop_button_click();
 	void on_item_list_click();
 };
@@ -153,16 +164,21 @@ enum Input_Data_Type {
 struct Input_Filed : Element {
 	Input_Filed(int x, int y);
 
+	int max_text_width;
+	int text_width;
+	int caret_index_in_text;
+
 	Input_Filed_Theme theme;
 	Caret caret;
-
-	void handle_event();
+	String text;
+	//Array<char> text_buffer;
+	void handle_event(Event *event);
 	void draw();
 };
 
 struct Window : Element {
 	Window(int x, int y, int width, int height);
-	
+
 	Button close_button;
 
 	Array<Element *> elements;
@@ -170,7 +186,8 @@ struct Window : Element {
 
 	bool close_window = false;
 	void draw();
-	void handle_event();
+	void handle_event(Event *event);
+	void handle_event() {};
 	void update();
 	void add_button(Button *button);
 	void add_element(Element *element);

@@ -126,7 +126,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		directx11.begin_draw();
 		direct2d.begin_draw();
 		
-		render_sys.render_frame();	
+		//render_sys.render_frame();	
 
 		editor.draw();
 		
