@@ -6,9 +6,13 @@
 #include "../libs/color.h"
 
 
+static const int MAX_CHARS = 128;
+
+
 Direct_Write direct_write;
 Direct2D direct2d;
 DirectX11 directx11;
+
 
 inline wchar_t *char_string_wchar(const char *str)
 {
@@ -57,6 +61,55 @@ void Direct_Write::init(const char * _font_name, int _font_size, const Color &co
 	glyph_height = (int)size.height;
 }
 
+void Direct_Write::init_characters()
+{
+	char chars[MAX_CHARS];
+
+	for (unsigned char c = 0; c < MAX_CHARS; c++) {
+		chars[c] = c;
+	}
+
+	wchar_t *wstring = char_string_wchar((const char *)&chars[0]);
+
+	UINT32 *code_points = new UINT32[MAX_CHARS];
+	ZeroMemory(code_points, sizeof(UINT32) * MAX_CHARS);
+
+	UINT16 *glyph_indices = new UINT16[MAX_CHARS];
+	ZeroMemory(glyph_indices, sizeof(UINT16) * MAX_CHARS);
+
+	for (unsigned char c = 0; c < MAX_CHARS; c++) {
+		code_points[c] = wstring[c];
+	}
+
+	HR(font_face->GetGlyphIndices(code_points, MAX_CHARS, glyph_indices));
+
+	DWRITE_GLYPH_METRICS *glyph_metrics = new DWRITE_GLYPH_METRICS[MAX_CHARS];
+	HR(font_face->GetDesignGlyphMetrics(glyph_indices, MAX_CHARS, glyph_metrics));
+
+	DWRITE_FONT_METRICS font_metrics;
+	font_face->GetMetrics(&font_metrics);
+
+	float ratio = (float)font_size / font_metrics.designUnitsPerEm;
+
+	for (unsigned char c = 0; c < MAX_CHARS; c++) {
+		float height = glyph_metrics[c].advanceHeight + glyph_metrics[c].topSideBearing + glyph_metrics[c].bottomSideBearing;
+		float width = glyph_metrics[c].advanceWidth;
+
+		width *= ratio;
+		height *= ratio;
+
+		Direct_Character character;
+		character.width = width;
+		character.height = height;
+
+		characters.set(c, character);
+
+	}
+	DELETE_ARRAY(glyph_metrics);
+	DELETE_ARRAY(code_points);
+	DELETE_ARRAY(glyph_indices);
+}
+
 void Direct_Write::shutdown()
 {
 	DELETE_ARRAY(font_name);
@@ -91,14 +144,12 @@ D2D1_SIZE_F Direct_Write::get_text_size_in_pixels(const char *text)
 	DWRITE_FONT_METRICS font_metrics;
 	font_face->GetMetrics(&font_metrics);
 
+	float ratio = (float)font_size / font_metrics.designUnitsPerEm;
 	int width = 0;
 	int height = glyph_metrics[0].advanceHeight + glyph_metrics[0].topSideBearing + glyph_metrics[0].bottomSideBearing;
 	for (int i = 0; i < text_len; i++) {
 		width += glyph_metrics[i].advanceWidth;
 	}
-	DELETE_ARRAY(glyph_metrics);
-
-	float ratio = (float)font_size / font_metrics.designUnitsPerEm;
 
 	width *= ratio;
 	height *= ratio;
@@ -106,6 +157,11 @@ D2D1_SIZE_F Direct_Write::get_text_size_in_pixels(const char *text)
 	D2D1_SIZE_F size;
 	size.width = width;
 	size.height = height;
+
+	DELETE_ARRAY(glyph_metrics);
+	DELETE_ARRAY(code_points);
+	DELETE_ARRAY(glyph_indices);
+
 	return size;
 }
 
@@ -174,8 +230,8 @@ void DirectX11::init()
 #endif
 
 	D3D_FEATURE_LEVEL feature_level;
-	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, create_device_flag, 0, 0, D3D11_SDK_VERSION,
-		&device, &feature_level, &device_context);
+
+	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_REFERENCE, 0, create_device_flag, 0, 0, D3D11_SDK_VERSION, &device, &feature_level, &device_context);
 
 	if (FAILED(hr)) {
 		error("D3D11CreateDevice Failed.");
@@ -199,7 +255,8 @@ void DirectX11::init()
 	if (true) {
 		sd.SampleDesc.Count = 4;
 		sd.SampleDesc.Quality = quality_levels - 1;
-	} else {
+	}
+	else {
 		sd.SampleDesc.Count = 1;
 		sd.SampleDesc.Quality = 0;
 	}
@@ -283,7 +340,8 @@ void DirectX11::resize(Direct2D *direct2d)
 	if (true) {
 		depth_stencil_desc.SampleDesc.Count = 4;
 		depth_stencil_desc.SampleDesc.Quality = quality_levels - 1;
-	} else {
+	}
+	else {
 		depth_stencil_desc.SampleDesc.Count = 1;
 		depth_stencil_desc.SampleDesc.Quality = 0;
 	}
@@ -316,10 +374,25 @@ void DirectX11::resize(Direct2D *direct2d)
 
 	if (direct2d) { direct2d->init(swap_chain); }
 	//if (direct2d) { direct2d->render_target->Resize(); }
-	
+
 }
 
 void Direct2D::fill_rect(int x, int y, int width, int height, const Color &color)
+{
+	ID2D1SolidColorBrush *brush = NULL;
+	D2D1_RECT_F rect;
+	rect.left = x;
+	rect.top = y;
+	rect.right = x + width;
+	rect.bottom = y + height;
+
+	render_target->CreateSolidColorBrush((Color)color, &brush);
+	render_target->FillRectangle(rect, brush);
+
+	RELEASE_COM(brush);
+}
+
+void Direct2D::fill_rect(float x, float y, float width, float height, const Color &color)
 {
 	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
@@ -401,7 +474,7 @@ void load_bitmap_from_file(const char *file_path, int dest_width, int dest_heigh
 
 	wfile_path[len] = '\0';
 	HR(pIWICFactory->CreateDecoderFromFilename(wfile_path, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder));
-	
+
 	delete[] wfile_path;
 
 	HR(pDecoder->GetFrame(0, &pSource));
@@ -413,7 +486,7 @@ void load_bitmap_from_file(const char *file_path, int dest_width, int dest_heigh
 	HR(direct2d.render_target->CreateBitmapFromWicBitmap(pConverter, NULL, bitmap));
 
 	RELEASE_COM(pIWICFactory)
-	RELEASE_COM(pDecoder);
+		RELEASE_COM(pDecoder);
 	RELEASE_COM(pSource);
 	RELEASE_COM(pStream);
 	RELEASE_COM(pConverter);

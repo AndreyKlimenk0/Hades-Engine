@@ -15,6 +15,7 @@ void split(String *string, const char *characters, Array<String> *array);
 inline void free_string(const char *string)
 {
 	delete[] string;
+	string = NULL;
 }
 
 
@@ -58,7 +59,7 @@ char *format(Args... args)
 struct String {
 	String() {}
 	~String();
-	
+
 	char *data = NULL;
 	int len = 0;
 
@@ -77,6 +78,10 @@ struct String {
 	void free();
 	void print();
 	void to_lower();
+	void pop_char();
+	void insert(int index, char c);
+	void remove(int index);
+	void append(char c);
 	void append(const char *string);
 	void append(const String &string);
 	void append(const String *string);
