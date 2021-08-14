@@ -27,16 +27,16 @@ struct Event {
 	int first_value;
 	int second_value;
 
-	//char char_key;
+	char char_key;
 	Key_Info key_info;
 	Mouse_Info    mouse_info;
 
 	bool is_key_event() { return type == EVENT_TYPE_KEY; }
 	bool is_mouse_event() { return type == EVENT_TYPE_MOUSE; }
-	bool is_text_input() { return type == EVENT_TYPE_CHAR; }
+	bool is_char_event() { return type == EVENT_TYPE_CHAR; }
 	bool is_key_down() { return second_value != 0; }
 	bool is_key_down(u8 key) { return (key_info.key == key) && key_info.is_pressed; }
-	
+
 	int get_x_coord() { return first_value; }
 	int get_y_coord() { return second_value; }
 };
@@ -44,4 +44,6 @@ struct Event {
 void pump_events();
 void push_event(Event_Type type, int first_value, int second_value);
 void run_event_loop();
+
+bool was_click_by_left_mouse_button();
 #endif
