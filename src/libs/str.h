@@ -87,10 +87,12 @@ struct String {
 	void append(const String *string);
 	void allocate_and_copy_string(const char *string);
 
+	bool is_empty() { return data == NULL && len == 0; }
+	
 	int find_text(const char *text, int start = 0);
 
-	bool is_empty() { return data == NULL && len == 0; }
-
+	const char *to_str() { return data; }
+	
 	String *copy();
 };
 

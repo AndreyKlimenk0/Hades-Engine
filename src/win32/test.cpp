@@ -1,4 +1,5 @@
 #include "test.h"
+#include <string.h>
 
 #include "win_local.h"
 #include "win_time.h"
@@ -10,7 +11,34 @@
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/linked_list.h"
 #include "../libs/ds/array.h"
+#include "../game/entity.h"
 
+
+String *enum_string_to_common(const char *str)
+{
+	String string = str;
+	Array<String> buffer;
+	
+	split(&string, "_", &buffer);
+
+	String *ptr_str = NULL;
+	FOR(buffer, ptr_str) {
+		ptr_str->to_lower();
+	}
+
+	char d = ('a' - 'A');
+	buffer[0].data[0] -= d;
+
+	String *new_str = new String();
+	FOR(buffer, ptr_str) {
+		new_str->append(ptr_str);
+		new_str->append(" ");
+	}
+	new_str->data[new_str->len - 1] = '\0';
+	return new_str;
+}
+
+#define ENUM_TO_STRING(e) print("Enum {}", enum_string_to_common(#e)->to_str());
 
 struct Demo {
 	Demo() {};
@@ -22,120 +50,5 @@ struct Demo {
 
 void test()
 {
-	//Linked_List<int> list;
-	//list.append(11);
-	//list.append(22);
-	//list.append(33);
-	//list.append(44);
-	//list.append(55);
-	//list.print();
-	//
-	//int *ptr = NULL;
-	//START_PROFILE;
-	//FOR(list, ptr) {
-	//	print("linked list item", *ptr);
-	//}
-	//int x;
-	//list.remove(33, x);
-	//print("X ", x);
-	//list.remove(44, x);
-	//print("X ", x);
-	//list.remove(11, x);
-	//print("X ", x);
-
-	//list.print();
-	//int &temp = list.find(33);
-	//int &one = list.find((u32)1);
-	//print("temp", temp);
-	//print("one", one);
-
-	//END_PROFILE;
-
-	//list.set_pointer_to_item(&buffer, 4);
-	//print("buffer", *buffer);
-
-	//Demo *demo = new Demo(11);
-	//Demo *demo1 = new Demo(22);
-	//Demo *demo2 = new Demo(33);
-
-
-	//Linked_List<Demo *> ptr_list;
-	//ptr_list.append(demo);
-	//ptr_list.append(demo1);
-	//ptr_list.append(demo2);
-
-	//if (ptr_list.first_node->item == demo) {
-	//	print("The same");
-	//} else {
-	//	print("diffrent");
-	//}
-
-
-
-	//Linked_List<int> int_list;
-	//int_list.append(1);
-	//int_list.append(2);
-	//int_list.append(3);
-	//int_list.append(4);
-
-
-	//int *ptr = NULL;
-	//FOR(int_list, ptr) {
-	//	print("linked list item", *ptr);
-	//}
-
-	//Node<int> *temp = NULL;
-	//int_list.remove_node(3, &temp);
-	//int_list.append(temp);
-	//int_list.remove_node(2, &temp);
-	//int_list.append(temp);
-	//int_list.remove_node(1, &temp);
-	//int_list.append(temp);
-
-	//print("--------------------------");
-	//FOR(int_list, ptr) {
-	//	print("linked list item", *ptr);
-	//}
-	//
-	//print("Ptr list");
-	//
-	//int *int1 = new int;
-	//*int1 = 11;
-	//
-	//int *int2 = new int;
-	//*int2 = 22;
-	//
-	//int *int3 = new int;
-	//*int3 = 33;
-	//
-	//int *int4 = new int;
-	//*int4 = 44;
-	//
-	//Linked_List<int *> ptr_list;
-	//ptr_list.append(int1);
-	//ptr_list.append(int2);
-	//ptr_list.append(int3);
-	//ptr_list.append(int4);
-	//
-	//int *p = NULL;
-	//FOR(ptr_list, p) {
-	//	print(*p);
-	//}
-
-	//Node<int *> *n = NULL;
-	//ptr_list.remove_node(int1, &n);
-	//ptr_list.append(n);
-	//ptr_list.remove_node(int3, &n);
-	//ptr_list.append(n);
-	//ptr_list.remove_node(int2, &n);
-	//ptr_list.append(n);
-	//ptr_list.remove_node(int1, &n);
-	//ptr_list.append(n);
-	//print("node", *n->item);
-
-	//print("----------------------------");
-	//FOR(ptr_list, p) {
-	//	print(*p);
-	//}
-
+	ENUM_TO_STRING(ENTITY_TYPE_MUTANT);
 }
