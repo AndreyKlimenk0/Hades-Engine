@@ -37,7 +37,14 @@ struct Direct_Write {
 	void shutdown();
 
 	D2D1_SIZE_F get_text_size_in_pixels(const char *text);
+	int get_text_width(const char *text);
 };
+
+inline int Direct_Write::get_text_width(const char *text)
+{
+	D2D1_SIZE_F size = get_text_size_in_pixels(text);
+	return size.width;
+}
 
 extern Direct_Write direct_write;
 

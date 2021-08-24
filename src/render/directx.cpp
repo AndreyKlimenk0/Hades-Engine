@@ -231,7 +231,7 @@ void DirectX11::init()
 
 	D3D_FEATURE_LEVEL feature_level;
 
-	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_REFERENCE, 0, create_device_flag, 0, 0, D3D11_SDK_VERSION, &device, &feature_level, &device_context);
+	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, create_device_flag, 0, 0, D3D11_SDK_VERSION, &device, &feature_level, &device_context);
 
 	if (FAILED(hr)) {
 		error("D3D11CreateDevice Failed.");
@@ -443,11 +443,12 @@ void Direct2D::draw_rounded_rect(int x, int y, int width, int height, float radi
 
 void Direct2D::draw_bitmap(int x, int y, int width, int height, ID2D1Bitmap *bitmap, float scale)
 {
+	D2D1_SIZE_U size = bitmap->GetPixelSize();
 	D2D1_RECT_F rect;
 	rect.left = x;
 	rect.top = y;
-	rect.right = x + width;
-	rect.bottom = y + height;
+	rect.right = x + size.width;
+	rect.bottom = y + size.height;
 
 	render_target->SetTransform(D2D1::Matrix3x2F::Scale(D2D1::Size(scale, scale), D2D1::Point2F(rect.left, rect.top)));
 	render_target->DrawBitmap(bitmap, rect);
