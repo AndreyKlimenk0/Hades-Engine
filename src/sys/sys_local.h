@@ -65,4 +65,9 @@ void error(Args... args)
 	char *formatted_string = format(args...);
 	report_error(formatted_string);
 }
+
+#define DELETE_COPING(class_name) \
+	class_name(const class_name &other) = delete; \
+	void operator=(const class_name &other) = delete; \
+
 #endif

@@ -9,6 +9,7 @@
 #include "../libs/ds/array.h"
 #include "../libs/ds/linked_list.h"
 #include "../libs/os/camera.h"
+#include "../sys/sys_local.h"
 
 
 struct Event;
@@ -27,24 +28,28 @@ struct Button_Theme {
 struct List_Box_Theme {
 	int border_about_text = 0;
 	int list_box_shift = 2;
-	int header_width = 200;
+	int header_width = 150;
 	int header_height = 20;
+	int list_box_shift_from_text = 4;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
 };
 
 struct Input_Filed_Theme {
-	int width = 200;
+	int width = 150;
 	int height = 20;
-	int shift_caret_from_left = 3;
+	int shift_caret_from_left = 4;
+	int field_shift_from_text = 4;
 	float caret_height_in_percents = 80.0f;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
 };
 
 struct Window_Theme {
-	int   header_height = 20;
-	int   shift_cross_button_from_left_on = 5;
+	int place_between_elements = 20;
+	int shift_element_from_left = 15;
+	int header_height = 20;
+	int shift_cross_button_from_left_on = 5;
 	float window_rounded_factor = 6.0f;
 	float header_botton_height_in_percents = 50;
 	Color header_color = Color(10, 7, 7);
@@ -56,11 +61,26 @@ enum Element_Type {
 	ELEMENT_TYPE_BUTTON,
 	ELEMENT_TYPE_LIST_BOX,
 	ELEMENT_TYPE_INPUT_FIELD,
+	ELEMENT_TYPE_EDIT_FIELD,
 	ELEMENT_TYPE_WINDOW,
 };
 
-const int ELEMENT_HOVER = 0x1;
+const int ELEMENT_HOVER   = 0x1;
 const int ELEMENT_FOCUSED = 0x2;
+
+const int WINDOW_FULL_HEIGHT = 0x4;
+const int WINDOW_FULL_WIDTH  = 0x8;
+const int WINDOW_LEFT   = 0x10;
+const int WINDOW_RIGHT  = 0x20;
+const int WINDOW_CENTER = 0x40;
+const int WINDOW_AUTO_WIDTH = 0x80;	
+
+struct Point {
+	Point() : x(0), y(0) {}
+	Point(int x, int y) : x(x), y(y) {}
+	int x;
+	int y;
+};
 
 struct Element {
 	Element() : x(0), y(0), width(0), height(9) {}
@@ -80,9 +100,12 @@ struct Element {
 
 struct Caret : Element {
 	Caret() {};
-	Caret(int x, int y, int blink_time = 500) : Element(x, y, 1, direct_write.glyph_height), blink_time(blink_time) {} // blink time are a time in milliseconds
+	Caret(int x, int y) : Element(x, y, 1, direct_write.glyph_height) {} // blink time are a time in milliseconds
+	Caret(float x, float y, float height);
 
-	int blink_time;
+	bool use_float_rect = false;
+	
+	int blink_time = 500;
 	float fx;
 	float fy;
 	float fwidth = 1;
@@ -99,30 +122,51 @@ enum Button_Place_Type {
 
 struct Button : Element {
 	Button() { type = ELEMENT_TYPE_BUTTON; }
-	Button(const char *text);
-	Button(int x, int y, const char *_text);
-	Button(int _x, int _y, int _width, int _height, const char *_text);
-	Button(int x, int y, ID2D1Bitmap *image, float _scale = 1.0f);
-	Button(int x, int y, int width, int height, ID2D1Bitmap *image, float _scale = 1.0f);
+	Button(const char *_text, int _x = 0, int _y = 0, int _width = 0, int _height = 0, Button_Theme *_button_theme = NULL);
+	Button(int _x, int _y, ID2D1Bitmap *_image, float _scale = 1.0f);
+	~Button();
 
 	ID2D1Bitmap *image = NULL;
 	Callback *callback = NULL;
 
-
 	bool cursor_on_button = false;
 	float scale;
 
-	Rect text_rect;
-	Rect button_rect;
+	Point text_position;
 
 	String text;
 	Button_Theme theme;
-	//Button_Place_Type place_type = BUTTON_IS_PLASED_BY_ITSELF;
 
 	void draw();
 	void handle_event(Event *event);
-	//void handle_event(Event *event) {};
-	void calculate_rects();
+
+	DELETE_COPING(Button);
+};
+
+enum Label_Side {
+	LABEL_ON_UP_SIDE,
+	LABEL_ON_LEFT_SIDE,
+	LABEL_ON_RIGHT_SIDE,
+};
+
+struct Label : Element {
+	Label() {}
+	Label(int _x, int _y, const char *_text);
+
+	Label_Side label_side;
+	String text;
+
+	void handle_event(Event *event) {};
+	void draw();
+};
+
+struct Input_Field : Element {
+	Input_Field() { type = ELEMENT_TYPE_INPUT_FIELD; }
+	Input_Field(int x, int y, int width, int height) : Element(x, y, width, height) {};
+	Label label;
+
+	void handle_event(Event *event) {}
+	void draw() {}
 };
 
 enum List_Box_State {
@@ -132,65 +176,79 @@ enum List_Box_State {
 	LIST_BOX_IS_DROPPED,
 };
 
-struct List_Box : Element {
+struct List_Box : Input_Field {
+	List_Box(int _x, int _y, const char *_label);
 	List_Box(int x, int y, Array<String> *items, const char *label);
+	~List_Box();
 
+	Button *button = NULL;
+	Button *drop_button = NULL;
+	String *current_chosen_item_text = NULL;
+	
 	List_Box_State list_state = LIST_BOX_IS_PICKED_UP;
+	
 	int list_box_size;
 	int button_height;
 	int text_x;
 	int text_y;
 
 	List_Box_Theme theme;
-	String label;
-	Button drop_button;
-	Array<Button> list_items;
-
-	Button *button = NULL;
-	String *current_chosen_item_text = NULL;
+	Button_Theme button_theme;
+	
+	Array<Button *> list_items;
 
 	void draw();
-	void handle_event(Event *event) {};
+	void on_list_item_click();
 	void on_drop_button_click();
-	void on_item_list_click();
+	void push_item(const char *item_text);
+	void handle_event(Event *event);
 };
 
-enum Input_Data_Type {
-	INPUT_DATA_INT,
-	INPUT_DATA_FLOAT,
-	INPUT_DATA_STRING,
+enum Edit_Data_Type {
+	EDIT_DATA_INT,
+	EDIT_DATA_FLOAT,
+	EDIT_DATA_STRING,
 };
 
-struct Input_Filed : Element {
-	Input_Filed(int x, int y);
+struct Edit_Field : Input_Field {
+	Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _edit_data_type);
 
 	int max_text_width;
 	int text_width;
 	int caret_index_in_text;
+	
+	Edit_Data_Type edit_data_type;
 
 	Input_Filed_Theme theme;
 	Caret caret;
 	String text;
-	//Array<char> text_buffer;
+
 	void handle_event(Event *event);
 	void draw();
 };
 
 struct Window : Element {
+	Window();
 	Window(int x, int y, int width, int height);
+	~Window();
 
-	Button close_button;
+	Point next_place;
+
+	Button *close_button = NULL;
 
 	Array<Element *> elements;
+	Array<Input_Field *> input_fields;
 	Array<List_Box *> list_boxies;
 
 	bool close_window = false;
+
 	void draw();
-	void handle_event(Event *event);
-	void handle_event() {};
 	void update();
-	void add_button(Button *button);
+	void make_header();
+	void handle_event(Event *event);
 	void add_element(Element *element);
+	void go_next_element_place(Element * element);
+	void aligning_input_fields();
 	void close() { close_window = true; };
 };
 
@@ -198,11 +256,23 @@ struct Editor {
 	Free_Camera free_camera;
 	Array<Window *> windows;
 
+	Window *current_window = NULL;
+	Button *current_button = NULL;
+	List_Box *current_list_box = NULL;
+	Edit_Field *current_edit_field = NULL;
+
 	void init();
 	void handle_event(Event *event);
 	void draw();
 	void update();
 	void add_window(Window *window);
+
+	void make_button(const char *text, Callback *callback = NULL);
+	void make_list_box(const char *text);
+	void make_edit_field(const char *label);
+	void make_window(int flags);
+
+	void add_item(const char *item_text);
 };
 
 extern Editor editor;

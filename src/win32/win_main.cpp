@@ -44,7 +44,7 @@ void create_and_show_window(int nCmdShow)
 	RegisterClass(&wc);
 
 	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
-		10, 10, 1400, 800, NULL, NULL, win32.hinstance, NULL
+		10, 10, 1700, 980, NULL, NULL, win32.hinstance, NULL
 	);
 
 	if (hwnd == NULL) {
@@ -82,7 +82,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	
 	directx11.init();
 	
-	direct_write.init("Consolas", 12, Color::White);
+	direct_write.init("Consolas", 11, Color::White);
+	direct_write.init_characters();
 	
 	direct2d.init(directx11.swap_chain);
 	
@@ -126,7 +127,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		directx11.begin_draw();
 		direct2d.begin_draw();
 		
-		//render_sys.render_frame();	
+		render_sys.render_frame();	
 
 		editor.draw();
 		
