@@ -12,6 +12,7 @@
 #include "../libs/ds/linked_list.h"
 #include "../libs/ds/array.h"
 #include "../game/entity.h"
+#include "../libs/ds/dict.h"
 
 
 String *enum_string_to_common(const char *str)
@@ -50,5 +51,22 @@ struct Demo {
 
 void test()
 {
-	ENUM_TO_STRING(ENTITY_TYPE_MUTANT);
+	Vector3 vec = Vector3(11, 22, 33);
+
+	Args args;
+	args.set("first", 1);
+	args.set("second", 2);
+	args.set("thrid", &vec);
+
+	int f;
+	float s;
+	Vector3 t;
+
+	args.get("first", &f);
+	args.get("second",&s);
+	args.get("thrid", &t);
+
+	print("F", f);
+	print("F", s);
+	print("F", &t);
 }

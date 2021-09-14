@@ -235,6 +235,11 @@ char *to_string(String &string)
 	return str;
 }
 
+char *to_string(Vector3 *vector)
+{
+	return format("{} {} {}", vector->x, vector->y, vector->z);
+}
+
 // Check the string has format braces if it has return number of braces 
 // if not return 0 and it means that this string is not format string 
 int is_format_string(const char *string)
@@ -420,6 +425,15 @@ void String::remove(int index)
 	data[len] = '\0';
 
 	DELETE_PTR(copied_str);
+}
+
+void String::replace(char from, char on)
+{
+	for (int i = 0; i < len; i++) {
+		if (data[i] == from) {
+			data[i] = on;
+		}
+	}
 }
 
 void String::append(char c)

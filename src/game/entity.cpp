@@ -5,25 +5,30 @@ Entity *Entity_Manager::make_entity(Entity_Type type, const Vector3 &position)
 	Entity *entity = NULL;
 
 	switch (type) {
-	case ENTITY_TYPE_MUTANT:
-	{
-		entity = new Mutant();
-		break;
-	}
-	case ENTITY_TYPE_SOLDIER:
-	{
-		entity = new Soldier();
-		break;
-	}
-	case ENTITY_TYPE_LIGHT:
-	{
-		entity = new Light();
-		break;
-	}
+		case ENTITY_TYPE_MUTANT: {
+			entity = new Mutant();
+			Render_Model * m = new Render_Model();
+			m->init_from_file("mutant.fbx");
+			m->mesh.allocate_static_buffer();
+			entity->model = m;
+			
+			break;
+		}
+		case ENTITY_TYPE_SOLDIER: {
+			entity = new Soldier();
+			break;
+		}
+		case ENTITY_TYPE_LIGHT: {
+			entity = new Light();
+			break;
+		}
 	}
 
 	entity->id = id_count++;
 	entity->position = position;
+
+	add_entity(entity);
+
 	return entity;
 }
 

@@ -11,12 +11,16 @@
 #include "../win32/win_local.h"
 #include "../render/font.h"
 
+#include "../game/entity.h"
+#include "../game/world.h"
+
 Editor editor;
 
 static Window_Theme window_theme;
 static Button_Theme button_theme;
 static List_Box_Theme list_box_theme;
 static Input_Filed_Theme edit_field_theme;
+
 
 struct Callback {
 	virtual void call() = 0;
@@ -33,12 +37,31 @@ struct Member_Callback : Callback {
 };
 
 struct Function_Callback : Callback {
-
 	Function_Callback(void(*callback)()) : callback(callback) {}
 	void(*callback)();
 
 	void call() { (*callback)(); }
 };
+
+struct Function_Callback_With_Arg : Callback {
+	Function_Callback_With_Arg(void(*callback)(Args *args)) : callback(callback) {}
+	void(*callback)(Args *args);
+	//Args *args;
+
+	void call() {}
+	void call(Args *args) { (*callback)(args); }
+};
+
+void editor_make_entity(Args *args)
+{
+	Entity_Type entity_type;
+	args->get("entity_type", (int *)&entity_type);
+
+	Vector3 vec3;
+	args->get("position", &vec3);
+	
+	world.entity_manager.make_entity(entity_type, vec3);
+}
 
 template <typename T>
 inline Callback *make_callback(T *object, void (T::*callback)())
@@ -178,6 +201,7 @@ Button::Button(const char *_text, int _x, int _y, int _width, int _height, Butto
 
 	text_position = Point(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
 	
+	
 	width += theme.border_about_text;
 	height += theme.border_about_text;
 }
@@ -218,6 +242,13 @@ void Button::handle_event(Event *event)
 	}
 }
 
+void Button::set_position(int _x, int _y)
+{
+	x = _x;
+	y = _y;
+	text_position = Point(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
+}
+
 void Button::draw()
 {
 	if (image) {
@@ -236,7 +267,7 @@ void Button::draw()
 	}
 }
 
-List_Box::List_Box(int _x, int _y, const char *_label) : Input_Field(_x, _y, list_box_theme.header_width, list_box_theme.header_height)
+List_Box::List_Box(const char *_label, int _x, int _y)
 {
 	type = ELEMENT_TYPE_LIST_BOX;
 	theme = list_box_theme;
@@ -259,103 +290,26 @@ List_Box::List_Box(int _x, int _y, const char *_label) : Input_Field(_x, _y, lis
 	load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\down.png", 1, 1, &down_image);
 	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 100);
 	D2D1_SIZE_U size = down_image->GetPixelSize();
+	
+	drop_button_image_width = (size.width * cross_scale_factor);
 
-	drop_button = new Button(x + width - (size.width * cross_scale_factor), y, down_image, cross_scale_factor);
-	drop_button->callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
-
-	text_y = place_in_middle(this, direct_write.glyph_height);
-	text_x = x + 2;
-}
-
-List_Box::List_Box(int x, int y, Array<String> *items, const char *l) : Input_Field(x, y, list_box_theme.header_width, list_box_theme.header_height)
-{
-	assert(items);
-	assert(items->count > 1);
-
-	theme = list_box_theme;
-
-	type = ELEMENT_TYPE_LIST_BOX;
-
-	button_theme.rounded_border = 2.0f;
-	button_theme.border_about_text = 0;
-	button_theme.color = Color(74, 82, 90);
-	button_theme.text_shift = 2;
-
-	for (int i = 0; i < items->count; i++) {
-		Button *button = new Button(items->at(i), x, (y + 2 + height) + (direct_write.glyph_height * i), width, direct_write.glyph_height, &button_theme);
-		button->callback = new Member_Callback<List_Box>(this, &List_Box::on_list_item_click);
-		list_items.push(button);
-	}
-
-	current_chosen_item_text = &list_items[0]->text;
-
-	list_box_size = direct_write.glyph_height * items->count;
-
-	ID2D1Bitmap *down_image = NULL;
-
-	load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\down.png", 1, 1, &down_image);
-	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 100);
-	D2D1_SIZE_U size = down_image->GetPixelSize();
-
-	drop_button = new Button(x + width - (size.width * cross_scale_factor), y, down_image, cross_scale_factor);
+	drop_button = new Button(x + width - drop_button_image_width, y, down_image, cross_scale_factor);
 	drop_button->callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
 
 	text_y = place_in_middle(this, direct_write.glyph_height);
 	text_x = x + 2;
 
+	total_width = direct_write.get_text_width(_label) + theme.list_box_shift_from_text + theme.header_width;
 }
+
 
 List_Box::~List_Box()
 {
 	DELETE_PTR(drop_button);
 	
 	Button *button = NULL;
-	FOR(list_items, button) {
+	FOR(item_list, button) {
 		delete button;
-	}
-}
-
-void List_Box::push_item(const char *item_text)
-{
-	Button *button = new Button(item_text, x, (y + 2 + height) + (direct_write.glyph_height * list_items.count), width, direct_write.glyph_height, &button_theme);
-	button->callback = new Member_Callback<List_Box>(this, &List_Box::on_list_item_click);
-	list_items.push(button);
-
-	list_box_size += direct_write.glyph_height;
-
-	if (list_items.count == 1) {
-		current_chosen_item_text = &list_items[0]->text;
-	}
-}
-
-void List_Box::handle_event(Event *event)
-{
-	drop_button->handle_event(event);
-
-	if (list_state == LIST_BOX_IS_DROPPED) {
-		Button *b = NULL;
-		FOR(list_items, b) {
-			button = b;
-			b->handle_event(event);
-		}
-	}
-}
-
-void List_Box::on_drop_button_click()
-{
-	if (list_state == LIST_BOX_IS_PICKED_UP) {
-		list_state = LIST_BOX_IS_DROPPED;
-	} else if (list_state == LIST_BOX_IS_DROPPED) {
-		list_state = LIST_BOX_IS_PICKED_UP;
-	}
-}
-
-void List_Box::on_list_item_click()
-{
-	if (button) {
-		button->flags &= ~ELEMENT_HOVER;
-		list_state = LIST_BOX_IS_PICKED_UP;
-		current_chosen_item_text = &button->text;
 	}
 }
 
@@ -374,10 +328,140 @@ void List_Box::draw()
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
 		direct2d.draw_rounded_rect(x, y + 2 + height, width, list_box_size, theme.rounded_border, theme.rounded_border, theme.color);
-		for (int i = 0; i < list_items.count; i++) {
-			list_items[i]->draw();
+		for (int i = 0; i < item_list.count; i++) {
+			item_list[i]->draw();
 		}
 	}
+}
+
+void List_Box::on_list_item_click()
+{
+	if (button) {
+		button->flags &= ~ELEMENT_HOVER;
+		list_state = LIST_BOX_IS_PICKED_UP;
+		current_chosen_item_text = &button->text;
+	}
+}
+
+void List_Box::on_drop_button_click()
+{
+	if (list_state == LIST_BOX_IS_PICKED_UP) {
+		list_state = LIST_BOX_IS_DROPPED;
+	} else if (list_state == LIST_BOX_IS_DROPPED) {
+		list_state = LIST_BOX_IS_PICKED_UP;
+	}
+}
+
+void List_Box::handle_event(Event *event)
+{
+	drop_button->handle_event(event);
+
+	if (list_state == LIST_BOX_IS_DROPPED) {
+		Button *b = NULL;
+		FOR(item_list, b) {
+			button = b;
+			b->handle_event(event);
+		}
+	}
+}
+
+void List_Box::add_item(const char *item_text)
+{
+	Button *button = new Button(item_text, x, (y + 2 + height) + (direct_write.glyph_height * item_list.count), width, direct_write.glyph_height, &button_theme);
+	button->callback = new Member_Callback<List_Box>(this, &List_Box::on_list_item_click);
+	item_list.push(button);
+
+	list_box_size += direct_write.glyph_height;
+
+	if (item_list.count == 1) {
+		current_chosen_item_text = &item_list[0]->text;
+	}
+}
+
+void List_Box::add_item(const char * string, int enum_value)
+{
+	string_enum_pairs.set(string, enum_value);
+	add_item(string);
+}
+
+int List_Box::get_current_chosen_enum_value()
+{
+	return string_enum_pairs[*current_chosen_item_text];
+}
+
+String *List_Box::get_current_chosen_item_string()
+{
+	return current_chosen_item_text;
+}
+
+
+void List_Box::set_position(int _x, int _y)
+{
+	x = _x + direct_write.get_text_width(label.text) + theme.list_box_shift_from_text;
+	y = _y;
+
+	drop_button->set_position(x + width - drop_button_image_width, _y);
+
+	label.set_position(_x, place_in_middle(this, direct_write.glyph_height));
+
+	text_y = place_in_middle(this, direct_write.glyph_height);
+	text_x = x + 2;
+}
+
+List_Box_Form::List_Box_Form(int _x, int _y, const char *_label) : List_Box(_label, _x, _y) 
+{
+}
+
+void List_Box_Form::on_list_item_click()
+{
+	List_Box::on_list_item_click();
+
+	Draw_Panel *current_chosen_form = string_form_pairs[current_chosen_item_text];
+	current_chosen_form->draw_panel = true;
+
+	last_panel->draw_panel = false;
+	last_panel = current_chosen_form;
+}
+
+void List_Box_Form::add_item(const char *string, int enum_value, Draw_Panel *draw_panel)
+{
+	List_Box::add_item(string, enum_value);
+
+	string_form_pairs.set(string, draw_panel);
+
+	if (item_list.is_empty()) {
+		last_panel = draw_panel;
+		last_panel->draw_panel = true;
+	}
+}
+
+void Draw_Panel::draw()
+{
+	if (!draw_panel) {
+		return;
+	}
+
+	Input_Field *input_field = NULL;
+	FOR(input_fields, input_field) {
+		input_field->draw();
+	}
+}
+
+void Draw_Panel::handle_event(Event * event)
+{
+	if (!draw_panel) {
+		return;
+	}
+
+	Input_Field *input_field = NULL;
+	FOR(input_fields, input_field) {
+		input_field->handle_event(event);
+	}
+}
+
+void Draw_Panel::add_field(Input_Field * input_field)
+{
+	input_fields.push(input_field);
 }
 
 Edit_Field::Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _edit_data_type)
@@ -391,6 +475,8 @@ Edit_Field::Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _
 	width = edit_field_theme.width;
 	height = edit_field_theme.height;
 
+	edit_itself_data = true;
+
 	max_text_width = (width - edit_field_theme.shift_caret_from_left * 3);
 
 	edit_data_type = _edit_data_type;
@@ -398,7 +484,6 @@ Edit_Field::Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _
 	label = Label(_x, place_in_middle(this, direct_write.glyph_height), _label_text);
 
 	theme = edit_field_theme;
-
 
 	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
 
@@ -411,6 +496,9 @@ Edit_Field::Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _
 
 		caret_index_in_text += 1;
 		text_width = character.width;
+
+		edit_data.itself_data.int_value = 0;
+
 	} else if (edit_data_type == EDIT_DATA_FLOAT) {
 		text.append('0');
 		text.append('.');
@@ -422,6 +510,7 @@ Edit_Field::Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _
 		caret_index_in_text += 3;
 		text_width = size.height;
 
+		edit_data.itself_data.float_value = 0.0f;
 	}
 }
 
@@ -482,6 +571,26 @@ void Edit_Field::handle_event(Event *event)
 				D2D1_SIZE_F size = direct_write.get_text_size_in_pixels(text);
 				text_width = size.width;
 				caret.fx = x + theme.shift_caret_from_left + size.width + caret.fwidth;
+
+				if (edit_itself_data) {
+					if (edit_data_type == EDIT_DATA_INT) {
+						
+						edit_data.itself_data.int_value = atoi(text);
+
+					} else if (edit_data_type == EDIT_DATA_FLOAT) {
+						
+						edit_data.itself_data.float_value = atof(text);
+					}
+				} else {
+					if (edit_data_type == EDIT_DATA_INT) {
+
+						*edit_data.not_itself_data.int_value = atoi(text);
+
+					} else if (edit_data_type == EDIT_DATA_FLOAT) {
+						
+						*edit_data.not_itself_data.float_value = atof(text);
+					}
+				}
 			}
 		}
 	}
@@ -501,11 +610,122 @@ void Edit_Field::draw()
 	}
 }
 
+Vector3_Edit_Field::Vector3_Edit_Field(int _x, int _y)
+{
+	type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD;
+
+	label = Label(0, 0, "Position");
+
+	x = Edit_Field(_x, _y, "x", EDIT_DATA_FLOAT);
+	editor.current_window->go_next_element_place(&x);
+	
+	_x = editor.current_window->get_element_x_place();
+	_y = editor.current_window->get_element_y_place();
+
+	y = Edit_Field(_x, _y, "y", EDIT_DATA_FLOAT);
+	editor.current_window->go_next_element_place(&y);
+
+	_x = editor.current_window->get_element_x_place();
+	_y = editor.current_window->get_element_y_place();
+	
+	z = Edit_Field(_x, _y, "z", EDIT_DATA_FLOAT);
+	editor.current_window->go_next_element_place(&z);
+}
+
+void Vector3_Edit_Field::draw()
+{
+	x.draw();
+	y.draw();
+	z.draw();
+}
+
+void Vector3_Edit_Field::handle_event(Event * event)
+{
+	x.handle_event(event);
+	y.handle_event(event);
+	z.handle_event(event);
+}
+
+Form::Form()
+{
+	type = ELEMENT_TYPE_FORM;
+	submit = new Button("Submit");
+}
+
+//Form::~Form()
+//{
+//	Input_Field *input_field = NULL;
+//	FOR(input_fields, input_field) {
+//		delete input_field;
+//	}
+//}
+
+void Form::draw()
+{
+	submit->draw();
+
+	//Input_Field *input_field = NULL;
+	//FOR(input_fields, input_field) {
+	//	input_field->draw();
+
+	//}
+}
+
+void Form::add_field(Input_Field *input_field)
+{
+	input_fields.push(input_field);
+		
+	int x = editor.current_window->x + editor.current_window->next_place.x;
+	int y = editor.current_window->y + editor.current_window->next_place.y;
+
+	submit->set_position(50, 300);
+}
+
+void Form::on_submit()
+{
+	Args args;
+
+	Input_Field *input_field = NULL;
+	FOR(input_fields, input_field) {
+		String str = input_field->label.text;
+		str.to_lower();
+		str.replace(' ', '_');
+
+		if (input_field->type == ELEMENT_TYPE_LIST_BOX) {
+		
+			List_Box *list_box = static_cast<List_Box *>(input_field);
+			args.set(str, list_box->get_current_chosen_enum_value());
+		
+		} else if (input_field->type == ELEMENT_TYPE_VECTOR3_EDIT_FIELD) {
+			
+			Vector3_Edit_Field *vec3_edit_field = static_cast<Vector3_Edit_Field *>(input_field);
+			Vector3 vec3 = Vector3(vec3_edit_field->x.edit_data.itself_data.float_value, vec3_edit_field->y.edit_data.itself_data.float_value, vec3_edit_field->z.edit_data.itself_data.float_value);
+			args.set(str, &vec3);
+		}
+	}
+
+	if (callback) {
+		Function_Callback_With_Arg *args_callback = static_cast<Function_Callback_With_Arg *>(callback);
+		args_callback->call(&args);
+	}
+}
+
+void Form::handle_event(Event * event)
+{
+	submit->handle_event(event);
+
+	//Input_Field *input_field = NULL;
+	//FOR(input_fields, input_field) {
+	//	input_field->handle_event(event);
+	//}
+}
+
 Window::Window()
 {
 	type = ELEMENT_TYPE_WINDOW;
 	next_place.x = window_theme.shift_element_from_left;
 	next_place.y = window_theme.header_height + 20;
+	theme = window_theme;
 }
 
 Window::Window(int x, int y, int width, int height) : Element(x, y, width, height + window_theme.header_height)
@@ -531,11 +751,22 @@ Window::~Window()
 
 void Window::add_element(Element *element)
 {
-	go_next_element_place(element);
+	set_element_position(element);
+
+	if ((element->type != ELEMENT_TYPE_FORM) || (element->type != ELEMENT_TYPE_VECTOR3_EDIT_FIELD)) {
+		//go_next_element_place(element);
+	}
 
 	if ((element->type == ELEMENT_TYPE_LIST_BOX) || (element->type == ELEMENT_TYPE_EDIT_FIELD)) {
 		Input_Field *input_field = static_cast<Input_Field *>(element);
 		input_fields.push(input_field);
+	}
+
+	if (element->type == ELEMENT_TYPE_VECTOR3_EDIT_FIELD) {
+		Vector3_Edit_Field *vec3 = static_cast<Vector3_Edit_Field *>(element);
+		input_fields.push(&vec3->x);
+		input_fields.push(&vec3->y);
+		input_fields.push(&vec3->z);
 	}
 
 	if (element->type == ELEMENT_TYPE_LIST_BOX) {
@@ -546,6 +777,11 @@ void Window::add_element(Element *element)
 			qsort(list_boxies.items, list_boxies.count, sizeof(list_boxies[0]), compare_list_boxies);
 		}
 		return;
+	}
+
+	if (element->type == ELEMENT_TYPE_FORM) {
+		Form *form = static_cast<Form *>(element);
+		forms.push(form);
 	}
 
 	elements.push(element);
@@ -572,9 +808,23 @@ void Window::go_next_element_place(Element *element)
 	next_place.y += element->height + window_theme.place_between_elements;
 }
 
+void Window::set_element_position(Element * element)
+{
+	//int y = element->height + window_theme.place_between_elements;
+	int xx;
+
+	if (element->type == ELEMENT_TYPE_LIST_BOX) {
+		List_Box *list_box = static_cast<List_Box *>(element);
+		xx = x + width - list_box->total_width - theme.shift_element_from_left_side;
+	}
+
+	element->set_position(xx, 50);
+}
+
 void Window::aligning_input_fields()
 {
 	static int max_text_width = 0;
+	static int shift_from_left_side = 20;
 
 	Input_Field *input_field = NULL;
 	FOR(input_fields, input_field) {
@@ -593,6 +843,17 @@ void Window::aligning_input_fields()
 			edit_field->caret.fx += d;
 		}
 	}
+
+
+	//FOR(input_fields, input_field) {
+	//	input_field->x = x + width - input_field->width - shift_from_left_side;
+	//	input_field->label.x = x + width - input_field->width - shift_from_left_side - (input_field->x - input_field->label.x);
+
+	//	if (input_field->type == ELEMENT_TYPE_EDIT_FIELD) {
+	//		Edit_Field *edit_field = static_cast<Edit_Field *>(input_field);
+	//		edit_field->caret.fx += d;
+	//	}
+	//}
 }
 
 void Window::handle_event(Event *event)
@@ -627,16 +888,44 @@ void Window::draw()
 
 
 	Element *element = NULL;
-	FOR(elements, element)
-	{
+	FOR(elements, element) {
 		element->draw();
 	}
 
-	List_Box *list_box = NULL;
-	FOR(list_boxies, list_box)
-	{
-		list_box->draw();
+	for (int i = 0; i < list_boxies.count; i++) {
+		list_boxies[i]->draw();
 	}
+
+	//List_Box *list_box = NULL;
+	//FOR(list_boxies, list_box) {
+	//	list_box->draw();
+	//}
+}
+
+List_Box *Window::find_list_box(const char *label)
+{
+	List_Box *list_box = NULL;
+	FOR(list_boxies, list_box) {
+		if (list_box->label.text == label) {
+			return list_box;
+		}
+	}
+	return NULL;
+}
+
+Form *Window::find_form(const char *label)
+{
+	Form *form = NULL;
+	FOR(forms, form) {
+		if (form->label.is_empty()) {
+			continue;
+		}
+
+		if (form->label == label) {
+			return form;
+		}
+	}
+	return NULL;
 }
 
 void Editor::add_window(Window *window)
@@ -648,61 +937,140 @@ void Editor::init()
 {
 	make_window(WINDOW_LEFT | WINDOW_FULL_HEIGHT | WINDOW_AUTO_WIDTH);
 
-	make_list_box("Entity Type");
-	add_item("Text 1");
-	add_item("Text 2");
-	add_item("Text 3");
-	add_item("Text 4");
-	add_item("Text 5");
-	add_item("Text 6");
+	make_list_box("Test");
+	add_item("Item 1", 0);
+	add_item("Item 2", 0);
+	add_item("Item 3", 0);
 
-	make_list_box("Entity Type");
-	add_item("Text 01");
-	add_item("Text 02");
-	add_item("Text 03");
-	add_item("Text 04");
-	add_item("Text 05");
-	add_item("Text 06");
+	//make_list_box_form("Light Type");
+	//
+	//make_draw_panel();
+	////make_list_box("Test1");
+	//
+	////add_item("Item 1", 0);
+	////add_item("Item 2", 0);
+	////add_item("Item 3", 0);
+	//
+	//end_draw_panel();
 
-	make_edit_field("Position");
-	make_edit_field("X");
-	make_edit_field("Y");
-	make_edit_field("Z");
+	//add_draw_panel("Directional Light", DIRECTIONAL_LIGHT_TYPE);
 
-	make_button("Button 1");
-	make_button("Button 2");
-	make_button("Button 3");
+	//make_draw_panel();
+	//
+	////make_list_box("Test2");
+	////add_item("Item 21", 0);
+	////add_item("Item 22", 0);
+	////add_item("Item 23", 0);
+	//
+	//end_draw_panel();
+
+	//add_draw_panel("Point Light", POINT_LIGHT_TYPE);
+
+
+
+	//make_form();
+	//set_form_label("Test2");
+	//make_list_box("Test2");
+	//add_item("Item 21", 0);
+	//add_item("Item 22", 0);
+	//add_item("Item 23", 0);
+	//
+	//end_form();
+
+	//make_form();
+	//set_form_label("Test3");
+	//make_list_box("Test3");
+	//add_item("Item 31", 0);
+	//add_item("Item 32", 0);
+	//add_item("Item 33", 0);
+	//
+	//end_form();
+
+	
+	
+	//make_form();
+	//make_list_box("Entity Type");
+	//add_item("Default", ENTITY_TYPE_UNKNOWN);
+	//add_item("Floor",  ENTITY_TYPE_FLOOR);
+	//add_item("Light",  ENTITY_TYPE_LIGHT);
+	//add_item("Mutant", ENTITY_TYPE_MUTANT);
+	//add_item("Sodier", ENTITY_TYPE_SOLDIER);
+
+	//end_form();
+
+	//set_form_label("Mutant");
+	//not_draw_form();
+	
+	//make_vector3_edit_field();
+
+	//end_form();
+
+	//make_form();
+	//set_form_label("Light");
+	//not_draw_form();
+
+	//make_list_box("Position");
+	//add_item("Form 1", ENTITY_TYPE_UNKNOWN);
+	//add_item("Form 2", ENTITY_TYPE_FLOOR);
+	//add_item("Form 3", ENTITY_TYPE_LIGHT);
+	//add_item("Form 4", ENTITY_TYPE_MUTANT);
+	//add_item("Form 5", ENTITY_TYPE_SOLDIER);
+
+	//make_list_box("Position");
+	//add_item("Form 1", ENTITY_TYPE_UNKNOWN);
+	//add_item("Form 2", ENTITY_TYPE_FLOOR);
+	//add_item("Form 3", ENTITY_TYPE_LIGHT);
+	//add_item("Form 4", ENTITY_TYPE_MUTANT);
+	//add_item("Form 5", ENTITY_TYPE_SOLDIER);
+
+	//end_form();
+
+
+
+	//make_list_box("Entity Type");
+	//add_item("Text 1", ENTITY_TYPE_UNKNOWN);
+	//add_item("Text 2", ENTITY_TYPE_FLOOR);
+	//add_item("Text 3", ENTITY_TYPE_LIGHT);
+	//add_item("Text 4", ENTITY_TYPE_MUTANT);
+	//add_item("Text 5", ENTITY_TYPE_SOLDIER);
+
+	//make_edit_field("Position");
+	//make_edit_field("X");
+	//make_edit_field("Y");
+	//make_edit_field("Z");
+
+	//make_button("Button 1");
+	//make_button("Button 2");
+	//make_button("Button 3");
 	
 	current_window->aligning_input_fields();
 	
 	make_window(WINDOW_RIGHT | WINDOW_FULL_HEIGHT | WINDOW_AUTO_WIDTH);
 
-	make_list_box("Position");
-	add_item("Text 11");
-	add_item("Text 22");
-	add_item("Text 33");
-	add_item("Text 44");
-	add_item("Text 55");
-	add_item("Text 66");
+	//make_list_box("Position");
+	//add_item("Text 1", ENTITY_TYPE_UNKNOWN);
+	//add_item("Text 2", ENTITY_TYPE_FLOOR);
+	//add_item("Text 3", ENTITY_TYPE_LIGHT);
+	//add_item("Text 4", ENTITY_TYPE_MUTANT);
+	//add_item("Text 5", ENTITY_TYPE_SOLDIER);
 
-	make_list_box("Position");
-	add_item("Text 011");
-	add_item("Text 022");
-	add_item("Text 033");
-	add_item("Text 044");
-	add_item("Text 055");
-	add_item("Text 066");
+	//make_list_box("Position");
+	//add_item("Text 1", ENTITY_TYPE_UNKNOWN);
+	//add_item("Text 2", ENTITY_TYPE_FLOOR);
+	//add_item("Text 3", ENTITY_TYPE_LIGHT);
+	//add_item("Text 4", ENTITY_TYPE_MUTANT);
+	//add_item("Text 5", ENTITY_TYPE_SOLDIER);
 
-	make_edit_field("Position");
-	make_edit_field("X");
-	make_edit_field("Y");
-	make_edit_field("Z");
+	//make_edit_field("Position");
+	//make_edit_field("X");
+	//make_edit_field("Y");
+	//make_edit_field("Z");
 	
-	make_button("Button 11");
-	make_button("Button 12");
-	make_button("Button 13");
+	//make_button("Button 11");
+	//make_button("Button 12");
+	//make_button("Button 13");
 
-	current_window->aligning_input_fields();
+	//current_window->aligning_input_fields();
 }
 
 void Editor::handle_event(Event * event)
@@ -774,42 +1142,136 @@ void Editor::make_button(const char * text, Callback * callback)
 {
 	assert(current_window != NULL);
 	
-	int x = current_window->x + current_window->next_place.x;
-	int y = current_window->y + current_window->next_place.y;
-	
-	current_button = new Button(text, x, y);
+	current_button = new Button(text);
 	current_button->callback = callback;
 
 	current_window->add_element(current_button);
 }
 
-void Editor::make_list_box(const char *text)
+void Editor::make_list_box(const char *label)
 {
 	assert(current_window != NULL);
 
-	int x = current_window->x + current_window->next_place.x;
-	int y = current_window->y + current_window->next_place.y;
 	
-	current_list_box = new List_Box(x, y, text);
+	current_list_box = new List_Box(label);
 
 	current_window->add_element(current_list_box);
+
+	if (current_draw_panel) {
+		current_draw_panel->add_field(current_list_box);
+	
+	} else if (current_form) {
+		current_form->add_field(current_list_box);
+	}
 }
 
-void Editor::make_edit_field(const char *label)
+void Editor::make_list_box_form(const char * label)
+{
+	assert(current_window != NULL);
+
+	int x = current_window->get_element_x_place();
+	int y = current_window->get_element_y_place();
+
+	current_list_box_form = new List_Box_Form(x, y, label);
+
+	current_window->add_element(current_list_box_form);
+
+	if (current_form) {
+		current_form->add_field(current_list_box_form);
+	}
+
+}
+
+void Editor::make_draw_panel()
+{
+	assert(current_window != NULL);
+
+	current_draw_panel = new Draw_Panel();
+}
+
+void Editor::end_draw_panel()
+{
+	assert(current_window != NULL);
+	assert(current_draw_panel != NULL);
+
+	current_window->add_element(current_draw_panel);
+}
+
+void Editor::make_edit_field(const char * label, int value)
+{
+}
+
+void Editor::make_edit_field(const char * label, float value)
+{
+}
+
+void Editor::make_vector3_edit_field()
+{
+	assert(current_window != NULL);
+
+	int x = current_window->get_element_x_place();
+	int y = current_window->get_element_y_place();
+
+	Vector3_Edit_Field *vec3 = new Vector3_Edit_Field(x, y);
+
+	current_window->add_element(vec3);
+	
+	if (current_form) {
+		current_form->add_field(vec3);
+	}
+}
+
+void Editor::make_edit_field(const char *label, Edit_Data_Type edit_data_type)
 {
 	assert(current_window != NULL);
 
 	int x = current_window->x + current_window->next_place.x;
 	int y = current_window->y + current_window->next_place.y;
 
-	current_edit_field = new Edit_Field(x, y, label, EDIT_DATA_FLOAT);
+	current_edit_field = new Edit_Field(x, y, label, edit_data_type);
 
 	current_window->add_element(current_edit_field);
+	
+	if (current_form) {
+		current_form->add_field(current_edit_field);
+	} 
 }
 
-void Editor::add_item(const char * item_text)
+void Editor::make_form()
+{
+	current_form = new Form();
+	current_form->submit->callback = new Member_Callback<Form>(current_form, &Form::on_submit);
+	current_form->callback = new Function_Callback_With_Arg(&editor_make_entity);
+	
+	current_window->add_element(current_form);
+}
+
+void Editor::end_form()
+{
+	current_form = NULL;
+}
+
+void Editor::not_draw_form()
+{
+	current_form->draw_form = false;
+}
+
+void Editor::set_form_label(const char * label)
+{
+	assert(current_form != NULL);
+
+	current_form->label = label;
+}
+
+void Editor::add_item(const char * item_text, int enum_value)
 {
 	assert(current_list_box != NULL);
 
-	current_list_box->push_item(item_text);
+	current_list_box->add_item(item_text, enum_value);
 }
+
+void Editor::add_draw_panel(const char * item_text, int enum_value)
+{
+	current_list_box_form->add_item(item_text, enum_value, current_draw_panel);
+}
+

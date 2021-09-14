@@ -6,14 +6,18 @@
 
 #include "../render/directx.h"
 #include "../libs/str.h"
-#include "../libs/ds/array.h"
-#include "../libs/ds/linked_list.h"
 #include "../libs/os/camera.h"
+#include "../libs/ds/array.h"
+#include "../libs/ds/dict.h"
+#include "../libs/ds/linked_list.h"
+#include "../libs/ds/hash_table.h"
 #include "../sys/sys_local.h"
 
 
 struct Event;
 struct Callback;
+struct Form;
+struct Draw_Panel;
 
 
 struct Button_Theme {
@@ -28,7 +32,7 @@ struct Button_Theme {
 struct List_Box_Theme {
 	int border_about_text = 0;
 	int list_box_shift = 2;
-	int header_width = 150;
+	int header_width = 200;
 	int header_height = 20;
 	int list_box_shift_from_text = 4;
 	float rounded_border = 4.0f;
@@ -46,6 +50,7 @@ struct Input_Filed_Theme {
 };
 
 struct Window_Theme {
+	int shift_element_from_left_side = 20;
 	int place_between_elements = 20;
 	int shift_element_from_left = 15;
 	int header_height = 20;
@@ -62,6 +67,9 @@ enum Element_Type {
 	ELEMENT_TYPE_LIST_BOX,
 	ELEMENT_TYPE_INPUT_FIELD,
 	ELEMENT_TYPE_EDIT_FIELD,
+	ELEMENT_TYPE_VECTOR3_EDIT_FIELD,
+	ELEMENT_TYPE_DRAW_PANEL,
+	ELEMENT_TYPE_FORM,
 	ELEMENT_TYPE_WINDOW,
 };
 
@@ -70,10 +78,10 @@ const int ELEMENT_FOCUSED = 0x2;
 
 const int WINDOW_FULL_HEIGHT = 0x4;
 const int WINDOW_FULL_WIDTH  = 0x8;
-const int WINDOW_LEFT   = 0x10;
-const int WINDOW_RIGHT  = 0x20;
-const int WINDOW_CENTER = 0x40;
-const int WINDOW_AUTO_WIDTH = 0x80;	
+const int WINDOW_LEFT        = 0x10;
+const int WINDOW_RIGHT       = 0x20;
+const int WINDOW_CENTER      = 0x40;
+const int WINDOW_AUTO_WIDTH  = 0x80;	
 
 struct Point {
 	Point() : x(0), y(0) {}
@@ -96,6 +104,7 @@ struct Element {
 
 	virtual void draw() = 0;
 	virtual void handle_event(Event *event) = 0;
+	virtual void set_position(int _x, int y_) = 0;
 };
 
 struct Caret : Element {
@@ -111,8 +120,9 @@ struct Caret : Element {
 	float fwidth = 1;
 	float fheight;
 
-	void handle_event(Event *event) {};
 	void draw();
+	void handle_event(Event *event) {};
+	void set_position(int _x, int _y) { assert(false); }
 };
 
 enum Button_Place_Type {
@@ -139,6 +149,7 @@ struct Button : Element {
 
 	void draw();
 	void handle_event(Event *event);
+	void set_position(int _x, int _y);
 
 	DELETE_COPING(Button);
 };
@@ -156,8 +167,9 @@ struct Label : Element {
 	Label_Side label_side;
 	String text;
 
-	void handle_event(Event *event) {};
 	void draw();
+	void handle_event(Event *event) {};
+	void set_position(int _x, int _y) { x = _x, y = _y; }
 };
 
 struct Input_Field : Element {
@@ -165,8 +177,9 @@ struct Input_Field : Element {
 	Input_Field(int x, int y, int width, int height) : Element(x, y, width, height) {};
 	Label label;
 
-	void handle_event(Event *event) {}
 	void draw() {}
+	void handle_event(Event *event) {}
+	void set_position(int _x, int _y) { assert(false); }
 };
 
 enum List_Box_State {
@@ -177,8 +190,8 @@ enum List_Box_State {
 };
 
 struct List_Box : Input_Field {
-	List_Box(int _x, int _y, const char *_label);
-	List_Box(int x, int y, Array<String> *items, const char *label);
+	
+	List_Box(const char *_label, int _x = 0, int _y = 0);
 	~List_Box();
 
 	Button *button = NULL;
@@ -187,31 +200,71 @@ struct List_Box : Input_Field {
 	
 	List_Box_State list_state = LIST_BOX_IS_PICKED_UP;
 	
-	int list_box_size;
-	int button_height;
 	int text_x;
 	int text_y;
+	int list_box_size;
+	int button_height;
+	int drop_button_image_width;
+	int total_width;
 
 	List_Box_Theme theme;
 	Button_Theme button_theme;
 	
-	Array<Button *> list_items;
+	Array<Button *> item_list;
+	Hash_Table<String, int> string_enum_pairs;
 
 	void draw();
 	void on_list_item_click();
 	void on_drop_button_click();
-	void push_item(const char *item_text);
 	void handle_event(Event *event);
+	void add_item(const char *item_text);
+	void add_item(const char *string, int enum_value);
+	
+	int get_current_chosen_enum_value();
+	String *get_current_chosen_item_string();
+	
+	void set_position(int _x, int _y);
+};
+
+struct List_Box_Form : List_Box {
+	List_Box_Form(int _x, int _y, const char *_label);
+
+	Draw_Panel *last_panel = NULL;
+
+	Hash_Table<String, Draw_Panel *> string_form_pairs;
+
+	void on_list_item_click();
+	void add_item(const char *string, int enum_value, Draw_Panel *form);
+};
+
+struct Draw_Panel : Element {
+	Draw_Panel() { type = ELEMENT_TYPE_DRAW_PANEL; }
+
+	bool draw_panel = false;
+
+	Array<Input_Field *> input_fields;
+
+	void draw();
+	void handle_event(Event *event);
+	void add_field(Input_Field *input_field);
+	void set_position(int _x, int _y) { assert(false); }
 };
 
 enum Edit_Data_Type {
 	EDIT_DATA_INT,
 	EDIT_DATA_FLOAT,
 	EDIT_DATA_STRING,
+	EDIT_DATA_VECTOR3
 };
 
 struct Edit_Field : Input_Field {
+	Edit_Field() { type = ELEMENT_TYPE_EDIT_FIELD; }
 	Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _edit_data_type);
+	//Edit_Field(int _x, int _y, const char *_label_text, int *int_value);
+	//Edit_Field(int _x, int _y, const char *_label_text, float *float_value);
+	//Edit_Field(int _x, int _y, const char *_label_text, String *string_value);
+
+	bool edit_itself_data;
 
 	int max_text_width;
 	int text_width;
@@ -220,11 +273,59 @@ struct Edit_Field : Input_Field {
 	Edit_Data_Type edit_data_type;
 
 	Input_Filed_Theme theme;
+
+	union {
+		union {
+			int *int_value;
+			float *float_value;
+		} not_itself_data;
+
+		union {
+			int int_value;
+			float float_value;
+		} itself_data;
+	} edit_data;
+
 	Caret caret;
 	String text;
 
-	void handle_event(Event *event);
 	void draw();
+	void handle_event(Event *event);
+	void set_position(int _x, int _y) { assert(false); }
+};
+
+struct Vector3_Edit_Field : Input_Field {
+	Vector3_Edit_Field() { type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD; }
+	Vector3_Edit_Field(int _x, int _y);
+	~Vector3_Edit_Field() {};
+
+	Edit_Field x;
+	Edit_Field y;
+	Edit_Field z;
+
+	void draw();
+	void handle_event(Event *event);
+	void set_position(int _x, int _y) { assert(false); }
+	//Vector3 &get_vector() { return Vector3(1, 2, 3); }
+};
+
+struct Form : Element {
+	Form();
+	//~Form();
+
+	bool draw_form = true;
+
+	String label;
+
+	Button *submit = NULL;
+	Callback *callback = NULL;
+	Array<Input_Field *> input_fields;
+	
+	void draw();
+	void on_submit();
+	void handle_event(Event *event);
+	void add_field(Input_Field *input_field);
+	void set_position(int _x, int _y) { assert(false); }
 };
 
 struct Window : Element {
@@ -236,9 +337,12 @@ struct Window : Element {
 
 	Button *close_button = NULL;
 
+	Window_Theme theme;
+
 	Array<Element *> elements;
 	Array<Input_Field *> input_fields;
 	Array<List_Box *> list_boxies;
+	Array<Form *> forms;
 
 	bool close_window = false;
 
@@ -250,16 +354,29 @@ struct Window : Element {
 	void go_next_element_place(Element * element);
 	void aligning_input_fields();
 	void close() { close_window = true; };
+
+	void set_position(int _x, int _y) { assert(false); }
+	void set_element_position(Element *element);
+	
+	int get_element_x_place() { return x + next_place.x;}
+	int get_element_y_place() { return y + next_place.y;}
+	
+	Form *find_form(const char *label);
+	List_Box *find_list_box(const char *label);
+
 };
 
 struct Editor {
 	Free_Camera free_camera;
 	Array<Window *> windows;
 
+	Form *current_form = NULL;
 	Window *current_window = NULL;
 	Button *current_button = NULL;
 	List_Box *current_list_box = NULL;
+	Draw_Panel *current_draw_panel = NULL;
 	Edit_Field *current_edit_field = NULL;
+	List_Box_Form *current_list_box_form = NULL;
 
 	void init();
 	void handle_event(Event *event);
@@ -267,12 +384,25 @@ struct Editor {
 	void update();
 	void add_window(Window *window);
 
+	void make_window(int flags);
 	void make_button(const char *text, Callback *callback = NULL);
 	void make_list_box(const char *text);
-	void make_edit_field(const char *label);
-	void make_window(int flags);
+	void make_list_box_form(const char *text);
+	void make_draw_panel();
+	void end_draw_panel();
+	void make_edit_field(const char *label, Edit_Data_Type edit_data_type);
+	void make_edit_field(const char *label, int value);
+	void make_edit_field(const char *label, float value);
+	void make_vector3_edit_field();
+	void make_form();
+	void end_form();
+	void not_draw_form();
 
-	void add_item(const char *item_text);
+	void set_form_label(const char *label);
+
+	void add_item(const char *item_text, int enum_value);
+	void add_draw_panel(const char *item_text, int enum_value);
+	void add_form(const char *item_text, int enum_value);
 };
 
 extern Editor editor;

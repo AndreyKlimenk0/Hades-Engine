@@ -4,6 +4,7 @@
 
 #include "../render/directx.h"
 
+World world;
 
 void World::init()
 {
