@@ -11,4 +11,5 @@ struct World {
 	void init();
 };
 
+extern World world;
 #endif

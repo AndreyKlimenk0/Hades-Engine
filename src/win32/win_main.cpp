@@ -100,7 +100,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	editor.init();
 
-	World world;
+	//World world;
 	world.init();
 	
 	View_Info *view_info = make_view_info(1.0f, 10000.0f);

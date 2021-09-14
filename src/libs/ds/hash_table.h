@@ -43,12 +43,14 @@ struct Hash_Node<String, _Value_> {
 
 template <typename _Key_, typename _Value_>
 struct Hash_Table {
-	Hash_Table(int _size = 53);
+	Hash_Table(int _size = 8);
 	~Hash_Table();
 
 	Hash_Node<_Key_, _Value_> **nodes;
 	int size;
 	int count;
+
+	void resize();
 
 	void set(const _Key_ &key, const _Value_ &value);
 	bool get(const _Key_ &key, _Value_ &value);
@@ -91,10 +93,27 @@ Hash_Table<_Key_, _Value_>::~Hash_Table()
 	nodes = NULL;
 }
 
+template <typename _Key_, typename _Value_>
+void Hash_Table<_Key_, _Value_>::resize()
+{
+	Hash_Node<_Key_, _Value_> **temp_nodes = nodes;
+	
+	size *= 2;
+	nodes = new Hash_Node<_Key_, _Value_> *[size];
+	
+	memset(nodes, 0, sizeof(Hash_Node<_Key_, _Value_> *) * size);
+	memcpy(nodes, temp_nodes, sizeof(Hash_Node<_Key_, _Value_> *) * count);
+
+	delete[] temp_nodes;
+}
 
 template <typename _Key_, typename _Value_>
 inline void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
 {
+	if (size == count) {
+		resize();
+	}
+
 	int index = double_hash(key, size, 0);
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
 	int i = 1;

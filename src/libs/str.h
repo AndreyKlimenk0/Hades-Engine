@@ -2,6 +2,7 @@
 #define STRING_H
 
 #include "ds/array.h"
+#include "math/vector.h"
 #include "../win32/win_local.h"
 #include "../win32/win_types.h"
 
@@ -34,6 +35,7 @@ char *to_string(bool val);
 char *to_string(const char *string);
 char *to_string(char c);
 char *to_string(String &string);
+char *to_string(Vector3 *vector);
 
 int is_format_string(const char *string);
 
@@ -81,6 +83,7 @@ struct String {
 	void pop_char();
 	void insert(int index, char c);
 	void remove(int index);
+	void replace(char from, char on);
 	void append(char c);
 	void append(const char *string);
 	void append(const String &string);
@@ -181,6 +184,5 @@ inline void String::append(const String *string)
 {
 	append(string->data);
 }
-
 #endif
 
