@@ -1326,4 +1326,3 @@ void Editor::add_draw_panel(const char * item_text, int enum_value)
 {
 	current_list_box_form->add_item(item_text, enum_value, current_draw_panel);
 }
-
