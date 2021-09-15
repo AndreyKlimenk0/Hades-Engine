@@ -32,15 +32,15 @@ struct Button_Theme {
 struct List_Box_Theme {
 	int border_about_text = 0;
 	int list_box_shift = 2;
-	int header_width = 200;
+	int header_width = 180;
 	int header_height = 20;
 	int list_box_shift_from_text = 4;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
 };
 
-struct Input_Filed_Theme {
-	int width = 150;
+struct Edit_Field_Theme {
+	int width = 180;
 	int height = 20;
 	int shift_caret_from_left = 4;
 	int field_shift_from_text = 4;
@@ -122,7 +122,7 @@ struct Caret : Element {
 
 	void draw();
 	void handle_event(Event *event) {};
-	void set_position(int _x, int _y) { assert(false); }
+	void set_position(int _x, int _y);
 };
 
 enum Button_Place_Type {
@@ -202,10 +202,10 @@ struct List_Box : Input_Field {
 	
 	int text_x;
 	int text_y;
+	int header_width;
 	int list_box_size;
 	int button_height;
 	int drop_button_image_width;
-	int total_width;
 
 	List_Box_Theme theme;
 	Button_Theme button_theme;
@@ -247,7 +247,7 @@ struct Draw_Panel : Element {
 	void draw();
 	void handle_event(Event *event);
 	void add_field(Input_Field *input_field);
-	void set_position(int _x, int _y) { assert(false); }
+	void set_position(int _x, int _y);
 };
 
 enum Edit_Data_Type {
@@ -259,7 +259,7 @@ enum Edit_Data_Type {
 
 struct Edit_Field : Input_Field {
 	Edit_Field() { type = ELEMENT_TYPE_EDIT_FIELD; }
-	Edit_Field(int _x, int _y, const char *_label_text, Edit_Data_Type _edit_data_type);
+	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, int _x = 0, int _y = 0);
 	//Edit_Field(int _x, int _y, const char *_label_text, int *int_value);
 	//Edit_Field(int _x, int _y, const char *_label_text, float *float_value);
 	//Edit_Field(int _x, int _y, const char *_label_text, String *string_value);
@@ -269,10 +269,11 @@ struct Edit_Field : Input_Field {
 	int max_text_width;
 	int text_width;
 	int caret_index_in_text;
+	int field_width;
 	
 	Edit_Data_Type edit_data_type;
 
-	Input_Filed_Theme theme;
+	Edit_Field_Theme theme;
 
 	union {
 		union {
@@ -291,7 +292,7 @@ struct Edit_Field : Input_Field {
 
 	void draw();
 	void handle_event(Event *event);
-	void set_position(int _x, int _y) { assert(false); }
+	void set_position(int _x, int _y);
 };
 
 struct Vector3_Edit_Field : Input_Field {
