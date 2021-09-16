@@ -229,20 +229,23 @@ struct List_Box : Input_Field {
 struct Picked_Panel_List_Box : List_Box {
 	Picked_Panel_List_Box(int _x, int _y, const char *_label);
 
-	Picked_Panel *last_panel = NULL;
+	Picked_Panel *last_picked_panel = NULL;
 
 	Hash_Table<String, Picked_Panel *> string_picked_panel_pairs;
 
 	void on_list_item_click();
 	void add_item(const char *string, int enum_value, Picked_Panel *form);
+	Picked_Panel *get_picked_panel();
 };
 
 struct Picked_Panel : Element {
 	Picked_Panel() { type = ELEMENT_TYPE_PICKED_PANEL; }
+	~Picked_Panel();
 
 	bool draw_panel = false;
 
 	Array<Input_Field *> input_fields;
+	Array<List_Box *> list_boxies;
 
 	void draw();
 	void handle_event(Event *event);
