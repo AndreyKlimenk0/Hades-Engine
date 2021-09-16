@@ -53,7 +53,7 @@ bool Path::build_correct_base_path(Array<String> *splited_wrong_path, String *ba
 	assert(base_path->data == NULL);
 
 	String *dir = NULL;
-	FOR((*splited_wrong_path), dir) {
+	For((*splited_wrong_path), dir) {
 		dir->to_lower();
 		if (*dir == "hades" || *dir == "hades-engine") {
 			base_path->append(dir);

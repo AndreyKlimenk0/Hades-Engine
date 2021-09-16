@@ -119,7 +119,7 @@ void Fx_Shader::bind_per_frame_vars(Free_Camera *camera)
 bool Fx_Shader::is_var_in_not_found_vars_array(const char * var_name)
 {
 	String *var = NULL;
-	FOR(not_found_vars, var) {
+	For(not_found_vars, var) {
 		if (*var == var_name) {
 			return true;
 		}
@@ -187,7 +187,7 @@ void bind_light_entities(Fx_Shader *forward_light_shader, Array<Light *> *lights
 	Array<Fx_Light> fx_lights;
 
 	Light *light = NULL;
-	FOR((*lights), light) {
+	For((*lights), light) {
 		switch (light->light_type) {
 			case DIRECTIONAL_LIGHT_TYPE: {
 				Fx_Light fx_light_struct;
