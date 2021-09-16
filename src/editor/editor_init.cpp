@@ -55,6 +55,10 @@ void Editor::init()
 	end_picked_panel();
 
 
+	//make_list_box("AAAA");
+	//add_item("Item A1", 0);
+	//add_item("Item A2", 0);
+	//add_item("Item A3", 0);
 
 
 	//make_form();

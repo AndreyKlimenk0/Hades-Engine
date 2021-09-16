@@ -413,6 +413,10 @@ void List_Box::set_position(int _x, int _y)
 
 	text_y = place_in_middle(this, direct_write.glyph_height);
 	text_x = x + 2;
+
+	for (int i = 0; i < item_list.count; i++) {
+		item_list[i]->set_position(x, (y + 2 + height) + (direct_write.glyph_height * i));
+	}
 }
 
 Picked_Panel_List_Box::Picked_Panel_List_Box(int _x, int _y, const char *_label) : List_Box(_label, _x, _y) 
@@ -424,21 +428,21 @@ void Picked_Panel_List_Box::on_list_item_click()
 	List_Box::on_list_item_click();
 
 	Picked_Panel *current_picked_panel = string_picked_panel_pairs[current_chosen_item_text];
-	if (current_picked_panel == last_panel) {
+	if (current_picked_panel == last_picked_panel) {
 		return;
 	}
 	current_picked_panel->draw_panel = true;
-	last_panel->draw_panel = false;
-	last_panel = current_picked_panel;
+	last_picked_panel->draw_panel = false;
+	last_picked_panel = current_picked_panel;
 }
 
-void Picked_Panel_List_Box::add_item(const char *string, int enum_value, Picked_Panel *draw_panel)
+void Picked_Panel_List_Box::add_item(const char *string, int enum_value, Picked_Panel *picked_panel)
 {
-	assert(draw_panel);
+	assert(picked_panel);
 
 	if (item_list.is_empty()) {
-		last_panel = draw_panel;
-		last_panel->draw_panel = true;
+		last_picked_panel = picked_panel;
+		last_picked_panel->draw_panel = true;
 	}
 	
 	List_Box::add_item(string, enum_value);
@@ -447,7 +451,20 @@ void Picked_Panel_List_Box::add_item(const char *string, int enum_value, Picked_
 	delete button->callback;
 	button->callback = new Member_Callback<Picked_Panel_List_Box>(this, &Picked_Panel_List_Box::on_list_item_click);
 
-	string_picked_panel_pairs.set(string, draw_panel);
+	string_picked_panel_pairs.set(string, picked_panel);
+}
+
+Picked_Panel::~Picked_Panel()
+{
+	Input_Field *input_field = NULL;
+	For(input_fields, input_field) {
+		delete input_field;
+	}
+}
+
+Picked_Panel *Picked_Panel_List_Box::get_picked_panel()
+{
+	return string_picked_panel_pairs[current_chosen_item_text];
 }
 
 void Picked_Panel::draw()
@@ -458,7 +475,15 @@ void Picked_Panel::draw()
 
 	Input_Field *input_field = NULL;
 	For(input_fields, input_field) {
+		if (input_field->type == ELEMENT_TYPE_LIST_BOX) {
+			continue;
+		}
 		input_field->draw();
+	}
+
+	List_Box *list_box = NULL;
+	For(list_boxies, list_box) {
+		list_box->draw();
 	}
 }
 
@@ -474,8 +499,11 @@ void Picked_Panel::handle_event(Event * event)
 	}
 }
 
-void Picked_Panel::add_field(Input_Field * input_field)
+void Picked_Panel::add_field(Input_Field *input_field)
 {
+	if (input_field->type == ELEMENT_TYPE_LIST_BOX) {
+		list_boxies.push(static_cast<List_Box *>(input_field));
+	}
 	input_fields.push(input_field);
 }
 
@@ -878,17 +906,6 @@ void Window::aligning_input_fields()
 			edit_field->caret.fx += d;
 		}
 	}
-
-
-	//FOR(input_fields, input_field) {
-	//	input_field->x = x + width - input_field->width - shift_from_left_side;
-	//	input_field->label.x = x + width - input_field->width - shift_from_left_side - (input_field->x - input_field->label.x);
-
-	//	if (input_field->type == ELEMENT_TYPE_EDIT_FIELD) {
-	//		Edit_Field *edit_field = static_cast<Edit_Field *>(input_field);
-	//		edit_field->caret.fx += d;
-	//	}
-	//}
 }
 
 void Window::handle_event(Event *event)
@@ -933,14 +950,10 @@ void Window::draw()
 		element->draw();
 	}
 
-	for (int i = 0; i < list_boxies.count; i++) {
-		list_boxies[i]->draw();
+	List_Box *list_box = NULL;
+	For(list_boxies, list_box) {
+		list_box->draw();
 	}
-
-	//List_Box *list_box = NULL;
-	//FOR(list_boxies, list_box) {
-	//	list_box->draw();
-	//}
 }
 
 List_Box *Window::find_list_box(const char *label)
