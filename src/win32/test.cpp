@@ -23,7 +23,7 @@ String *enum_string_to_common(const char *str)
 	split(&string, "_", &buffer);
 
 	String *ptr_str = NULL;
-	FOR(buffer, ptr_str) {
+	For(buffer, ptr_str) {
 		ptr_str->to_lower();
 	}
 
@@ -31,7 +31,7 @@ String *enum_string_to_common(const char *str)
 	buffer[0].data[0] -= d;
 
 	String *new_str = new String();
-	FOR(buffer, ptr_str) {
+	For(buffer, ptr_str) {
 		new_str->append(ptr_str);
 		new_str->append(" ");
 	}

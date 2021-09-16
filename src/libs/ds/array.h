@@ -7,7 +7,7 @@
 #define DO_STRING_JOIN(arg1, arg2) arg1 ## arg2
 #define STRING_JOIN(arg1, arg2) DO_STRING_JOIN(arg1, arg2)
 
-#define FOR(data_struct, ptr) for (int _i = 0; (_i < data_struct.count ? data_struct.set_pointer_to_item(&ptr, _i), true : false); _i++)
+#define For(data_struct, ptr) for (int _i = 0; (_i < data_struct.count ? data_struct.set_pointer_to_item(&ptr, _i), true : false); _i++)
 
 template <typename T>
 struct Array {

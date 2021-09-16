@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\editor\editor.cpp" />
+    <ClCompile Include="src\editor\editor_init.cpp" />
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\ds\dict.cpp" />
