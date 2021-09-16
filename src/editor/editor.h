@@ -17,7 +17,7 @@
 struct Event;
 struct Callback;
 struct Form;
-struct Draw_Panel;
+struct Picked_Panel;
 
 
 struct Button_Theme {
@@ -51,7 +51,7 @@ struct Edit_Field_Theme {
 
 struct Window_Theme {
 	int shift_element_from_left_side = 20;
-	int place_between_elements = 20;
+	int place_between_elements = 15;
 	int shift_element_from_left = 15;
 	int header_height = 20;
 	int shift_cross_button_from_left_on = 5;
@@ -68,7 +68,7 @@ enum Element_Type {
 	ELEMENT_TYPE_INPUT_FIELD,
 	ELEMENT_TYPE_EDIT_FIELD,
 	ELEMENT_TYPE_VECTOR3_EDIT_FIELD,
-	ELEMENT_TYPE_DRAW_PANEL,
+	ELEMENT_TYPE_PICKED_PANEL,
 	ELEMENT_TYPE_FORM,
 	ELEMENT_TYPE_WINDOW,
 };
@@ -226,19 +226,19 @@ struct List_Box : Input_Field {
 	void set_position(int _x, int _y);
 };
 
-struct List_Box_Form : List_Box {
-	List_Box_Form(int _x, int _y, const char *_label);
+struct Picked_Panel_List_Box : List_Box {
+	Picked_Panel_List_Box(int _x, int _y, const char *_label);
 
-	Draw_Panel *last_panel = NULL;
+	Picked_Panel *last_panel = NULL;
 
-	Hash_Table<String, Draw_Panel *> string_form_pairs;
+	Hash_Table<String, Picked_Panel *> string_picked_panel_pairs;
 
 	void on_list_item_click();
-	void add_item(const char *string, int enum_value, Draw_Panel *form);
+	void add_item(const char *string, int enum_value, Picked_Panel *form);
 };
 
-struct Draw_Panel : Element {
-	Draw_Panel() { type = ELEMENT_TYPE_DRAW_PANEL; }
+struct Picked_Panel : Element {
+	Picked_Panel() { type = ELEMENT_TYPE_PICKED_PANEL; }
 
 	bool draw_panel = false;
 
@@ -375,9 +375,9 @@ struct Editor {
 	Window *current_window = NULL;
 	Button *current_button = NULL;
 	List_Box *current_list_box = NULL;
-	Draw_Panel *current_draw_panel = NULL;
+	Picked_Panel *current_picked_panel = NULL;
 	Edit_Field *current_edit_field = NULL;
-	List_Box_Form *current_list_box_form = NULL;
+	Picked_Panel_List_Box *current_picked_panel_list_box = NULL;
 
 	void init();
 	void handle_event(Event *event);
@@ -388,9 +388,9 @@ struct Editor {
 	void make_window(int flags);
 	void make_button(const char *text, Callback *callback = NULL);
 	void make_list_box(const char *text);
-	void make_list_box_form(const char *text);
-	void make_draw_panel();
-	void end_draw_panel();
+	void make_picked_list_box(const char *text);
+	void make_picked_panel();
+	void end_picked_panel();
 	void make_edit_field(const char *label, Edit_Data_Type edit_data_type);
 	void make_edit_field(const char *label, int value);
 	void make_edit_field(const char *label, float value);
@@ -402,7 +402,7 @@ struct Editor {
 	void set_form_label(const char *label);
 
 	void add_item(const char *item_text, int enum_value);
-	void add_draw_panel(const char *item_text, int enum_value);
+	void add_picked_panel(const char *item_text, int enum_value);
 	void add_form(const char *item_text, int enum_value);
 };
 

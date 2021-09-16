@@ -50,7 +50,7 @@ void Render_System::draw_world_entities(Entity_Manager *entity_manager)
 	light->bind_per_frame_vars(free_camera);
 
 	Entity * entity = NULL;
-	FOR(entity_manager->entities, entity) {
+	For(entity_manager->entities, entity) {
 		light->bind_per_entity_vars(entity, view_matrix, view_info->perspective_matrix);
 
 		if (entity->type == ENTITY_TYPE_LIGHT) {
