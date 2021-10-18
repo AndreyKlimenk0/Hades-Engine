@@ -29,8 +29,8 @@ struct Fx_Shader {
 	void bind(const char *var_name, Matrix4 *matrix);
 	void bind(const char *var_name, ID3D11ShaderResourceView *texture);
 	void bind(const char *var_name, void *struct_ptr, u32 struct_size);
-	void bind_per_entity_vars(Entity *entity, Matrix4 &view, Matrix4 &perspective);
-	void bind_per_frame_vars(Free_Camera *camera);
+	void bind_entity(Entity *entity, Matrix4 &view, Matrix4 &perspective, Render_Mesh *r);
+	void bind_per_frame_info(Free_Camera *camera);
 
 	bool is_var_in_not_found_vars_array(const char *var_name);
 };

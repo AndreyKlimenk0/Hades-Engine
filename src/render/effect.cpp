@@ -44,7 +44,7 @@ void Fx_Shader::attach(const char *technique_name, u32 pass_index)
 {
 	assert(technique_name);
 
-	shader->GetTechniqueByName(technique_name)->GetPassByIndex(pass_index)->Apply(0, directx11.device_context);
+	HR(shader->GetTechniqueByName(technique_name)->GetPassByIndex(pass_index)->Apply(0, directx11.device_context));
 }
 
 void Fx_Shader::bind(const char *var_name, int scalar)
@@ -72,45 +72,41 @@ void Fx_Shader::bind(const char *var_name, Matrix4 *matrix)
 {
 	ID3DX11EffectMatrixVariable *var = shader->GetVariableByName(var_name)->AsMatrix();
 	VALID_VAR_NAME(var, var_name, "Matrix");
-	var->SetMatrix(*matrix);
+	HR(var->SetMatrix(*matrix));
 }
 
 void Fx_Shader::bind(const char *var_name, ID3D11ShaderResourceView *texture)
 {
 	ID3DX11EffectShaderResourceVariable * var = shader->GetVariableByName(var_name)->AsShaderResource();
 	VALID_VAR_NAME(var, var_name, "ShaderResource");
-	var->SetResource(texture);
+	HR(var->SetResource(texture));
 }
 
 void Fx_Shader::bind(const char *var_name, void *struct_ptr, u32 struct_size)
 {
 	ID3DX11EffectVariable * var = shader->GetVariableByName(var_name);
 	VALID_VAR_NAME(var, var_name, "Struct");
-	var->SetRawValue(struct_ptr, 0, struct_size);
+	HR(var->SetRawValue(struct_ptr, 0, struct_size));
 }
 
-void Fx_Shader::bind_per_entity_vars(Entity * entity, Matrix4 & view, Matrix4 & perspective)
+void Fx_Shader::bind_entity(Entity * entity, Matrix4 &view, Matrix4 &perspective, Render_Mesh *r)
 {
-	Matrix4 world = entity->get_world_matrix();
+	//Matrix4 world = entity->get_world_matrix();
+	Matrix4 world = r->position * r->orientation * r->scale;
 	Matrix4 wvp_projection = world * view * perspective;
-
-	if (entity->model->render_surface_use == RENDER_MODEL_SURFACE_USE_TEXTURE) {
-		bind("texture_map", entity->model->diffuse_texture);
-	} else {
-		if (!entity->model->model_color) {
-			Vector3 default_color = Vector3(1.0f, 0.2f, 1.0f);
-			bind("model_color", &default_color);
-			print("Color for model {} wasn't set, will be used default color");
-		} else {
-			bind("model_color", entity->model->model_color);
-		}
-	}
-	bind("world", &world);
+	Matrix4 w;
+	//bind("world", &r->transform);
+	bind("world", &w);
 	bind("world_view_projection", &wvp_projection);
-	bind("material", (void *)&entity->model->material, sizeof(Material));
+
+	if (entity->type != ENTITY_TYPE_LIGHT) {
+		bind("texture_map", r->diffuse_texture->shader_resource);
+		bind("material", (void *)&r->material, sizeof(Material));
+
+	}
 }
 
-void Fx_Shader::bind_per_frame_vars(Free_Camera *camera)
+void Fx_Shader::bind_per_frame_info(Free_Camera *camera)
 {
 	bind("camera_position", &camera->position);
 	bind("camera_direction", &camera->target);

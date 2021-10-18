@@ -15,6 +15,7 @@ struct Path {
 	void init_base_path();
 	bool build_correct_base_path(Array<String> *splitted_wrong_path, String *base_path);
 
+	void build_full_path_to_texture_file(const char *file_name, String &full_path);
 	String *build_full_path_to_texture_file(const String *file_name);
 	String *build_full_path_to_model_file(const String *file_name);
 	String *build_full_path_to_shader_file(const String *file_name);
@@ -22,6 +23,12 @@ struct Path {
 };
 
 extern Path os_path;
+
+inline void Path::build_full_path_to_texture_file(const char *file_name, String &full_path)
+{
+	String &value = data_dir_paths["texture"];
+	full_path = value + "\\" + file_name;
+}
 
 inline String *Path::build_full_path_to_texture_file(const String *file_name)
 {

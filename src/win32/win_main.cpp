@@ -15,17 +15,13 @@
 #include "../render/font.h"
 #include "../render/effect.h"
 #include "../render/directx.h"
+#include "../render/texture.h"
 #include "../render/render_system.h"
 
 #include "../editor/editor.h"
 
 #include "test.h"
 
-
-enum Engine_Mode {
-	GAME_MODE,
-	EDITOR_MODE,
-};
 
 Win32_State win32;
 
@@ -69,11 +65,9 @@ void display_text(int x, int y, Args... args)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-
-	Engine_Mode engine_mode = EDITOR_MODE;
-
 	win32.hinstance = hInstance;
 	create_console();
+
 
 	create_and_show_window(nCmdShow);
 
@@ -90,6 +84,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	font.init(50);
 
 	fx_shader_manager.init();
+
+	texture_manager.init();
 
 
 	ShowWindow(win32.window, nCmdShow);

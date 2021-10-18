@@ -1,4 +1,5 @@
 #include "hash_table.h"
+#include "../../libs/str.h"
 
 
 int hash(char c, const int factor, const int table_count)
@@ -34,4 +35,12 @@ int double_hash(const char* string, const int table_count, const int attempt)
 	const int hash_a = hash(string, HT_PRIME_1, table_count);
 	const int hash_b = hash(string, HT_PRIME_2, table_count);
 	return (hash_a + (attempt * (hash_b + 1))) % table_count;
+}
+
+int double_hash(int number, const int table_count, const int attempt)
+{
+	char *str = to_string(number);
+	int hash = double_hash(str, table_count, attempt);
+	free_string(str);
+	return hash;
 }

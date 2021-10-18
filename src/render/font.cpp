@@ -88,70 +88,70 @@ void draw_text(int x, int y, const char *text)
 	//HR(directx11.device->CreateDepthStencilState(&depth_test_desc, &state));
 	//directx11.device_context->OMSetDepthStencilState(state, 0);
 
-	ID3D11BlendState* transparent = NULL;
+	//ID3D11BlendState* transparent = NULL;
 
-	D3D11_BLEND_DESC transparent_desc = { 0 };
-	transparent_desc.AlphaToCoverageEnable = false;
-	transparent_desc.IndependentBlendEnable = false;
+	//D3D11_BLEND_DESC transparent_desc = { 0 };
+	//transparent_desc.AlphaToCoverageEnable = false;
+	//transparent_desc.IndependentBlendEnable = false;
 
-	transparent_desc.RenderTarget[0].BlendEnable = true;
-	transparent_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	transparent_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	transparent_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	transparent_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	transparent_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	transparent_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	transparent_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	//transparent_desc.RenderTarget[0].BlendEnable = true;
+	//transparent_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	//transparent_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	//transparent_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	//transparent_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	//transparent_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	//transparent_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	//transparent_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-	HR(directx11.device->CreateBlendState(&transparent_desc, &transparent));
+	//HR(directx11.device->CreateBlendState(&transparent_desc, &transparent));
 
-	Fx_Shader *font_shader = fx_shader_manager.get_shader("font");
+	//Fx_Shader *font_shader = fx_shader_manager.get_shader("font");
 
-	directx11.device_context->IASetInputLayout(Input_Layout::vertex_xuv);
-	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//directx11.device_context->IASetInputLayout(Input_Layout::vertex_xuv);
+	//directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//directx11.device_context->OMSetBlendState(transparent, b, 0xffffffff);
+	//float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	////directx11.device_context->OMSetBlendState(transparent, b, 0xffffffff);
 
-	const char *symbol = text;
-	while (*symbol) {
+	//const char *symbol = text;
+	//while (*symbol) {
 
-		Character *character = font.characters[*symbol];
+	//	Character *character = font.characters[*symbol];
 
-		float xpos = x + character->bearing.x;
-		float ypos = y - (character->size.y - character->bearing.y);
+	//	float xpos = x + character->bearing.x;
+	//	float ypos = y - (character->size.y - character->bearing.y);
 
-		float width = character->size.x;
-		float height = character->size.y;
+	//	float width = character->size.x;
+	//	float height = character->size.y;
 
-		Vertex_XUV vertices[6] = {
-			Vertex_XUV(Vector3(xpos, ypos + height, 1.0f), Vector2(0.0f, 0.0f)),
-			Vertex_XUV(Vector3(xpos, ypos, 1.0f),          Vector2(0.0f, 1.0f)),
-			Vertex_XUV(Vector3(xpos + width, ypos, 1.0f),  Vector2(1.0f, 1.0f)),
+	//	Vertex_XUV vertices[6] = {
+	//		Vertex_XUV(Vector3(xpos, ypos + height, 1.0f), Vector2(0.0f, 0.0f)),
+	//		Vertex_XUV(Vector3(xpos, ypos, 1.0f),          Vector2(0.0f, 1.0f)),
+	//		Vertex_XUV(Vector3(xpos + width, ypos, 1.0f),  Vector2(1.0f, 1.0f)),
 
-			Vertex_XUV(Vector3(xpos, ypos + height, 1.0f), Vector2(0.0f, 0.0f)),
-			Vertex_XUV(Vector3(xpos + width, ypos, 1.0f),  Vector2(1.0f, 1.0f)),
-			Vertex_XUV(Vector3(xpos + width, ypos + height, 1.0f), Vector2(1.0f, 0.0f))
-		};
+	//		Vertex_XUV(Vector3(xpos, ypos + height, 1.0f), Vector2(0.0f, 0.0f)),
+	//		Vertex_XUV(Vector3(xpos + width, ypos, 1.0f),  Vector2(1.0f, 1.0f)),
+	//		Vertex_XUV(Vector3(xpos + width, ypos + height, 1.0f), Vector2(1.0f, 0.0f))
+	//	};
 
-		ID3D11Buffer *vertex_buffer = NULL;
-		create_static_vertex_buffer(6, sizeof(Vertex_XUV), (void *)&vertices[0], &vertex_buffer);
+	//	ID3D11Buffer *vertex_buffer = NULL;
+	//	create_static_vertex_buffer(6, sizeof(Vertex_XUV), (void *)&vertices[0], &vertex_buffer);
 
-		font_shader->bind("projection_matrix", &render_sys.view_info->perspective_matrix);
-		font_shader->bind("orthogonal_matrix", &render_sys.view_info->orthogonal_matrix);
-		font_shader->bind("texture_map", character->texture);
-		font_shader->attach();
+	//	font_shader->bind("projection_matrix", &render_sys.view_info->perspective_matrix);
+	//	font_shader->bind("orthogonal_matrix", &render_sys.view_info->orthogonal_matrix);
+	//	font_shader->bind("texture_map", character->texture);
+	//	font_shader->attach();
 
-		u32 stride = sizeof(Vertex_XUV);
-		u32 offset = 0;
-		directx11.device_context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
+	//	u32 stride = sizeof(Vertex_XUV);
+	//	u32 offset = 0;
+	//	directx11.device_context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
 
-		directx11.device_context->Draw(6, 0);
+	//	directx11.device_context->Draw(6, 0);
 
-		x += (character->advance >> 6);
-		symbol++;
-		RELEASE_COM(vertex_buffer);
-	}
-	directx11.device_context->OMSetBlendState(0, b, 0xffffffff);
+	//	x += (character->advance >> 6);
+	//	symbol++;
+	//	RELEASE_COM(vertex_buffer);
+	//}
+	//directx11.device_context->OMSetBlendState(0, b, 0xffffffff);
 	//directx11.device_context->OMSetDepthStencilState(0, 0);
 }

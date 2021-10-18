@@ -35,6 +35,7 @@ char *to_string(bool val);
 char *to_string(const char *string);
 char *to_string(char c);
 char *to_string(String &string);
+char *to_string(String *string);
 char *to_string(Vector3 *vector);
 
 int is_format_string(const char *string);

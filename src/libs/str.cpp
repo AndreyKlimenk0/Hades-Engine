@@ -15,7 +15,7 @@
 #define COPY_STRING_TO_CHAR_ARRAY(string, char_array) {\
 	int s_len = strlen(string); \
 	while ((char_array->size - char_array->count) < s_len) { \
-		char_array->resize();\
+		char_array->resize(char_array->size * 2);\
 	} \
 	char *symbol = &char_array->at(char_array->count); \
 	memcpy(symbol, string, bytes_of(char, s_len));\
@@ -232,6 +232,15 @@ char *to_string(String &string)
 {
 	char *str = new char[string.len + 1];
 	memcpy(str, string.data, string.len + 1);
+	return str;
+}
+
+char *to_string(String *string)
+{
+	assert(string->len != 0);
+
+	char *str = new char[string->len + 1];
+	memcpy(str, string->data, string->len + 1);
 	return str;
 }
 

@@ -12,6 +12,7 @@
 
 
 struct Triangle_Mesh {
+	Triangle_Mesh();
 	~Triangle_Mesh();
 
 	ID3D11Buffer *vertex_buffer = NULL;
@@ -20,8 +21,8 @@ struct Triangle_Mesh {
 	Vertex *vertices = NULL;
 	u32 *indices = NULL;
 	
-	u32 vertex_count;
-	u32 index_count;
+	u32 vertex_count = 0;
+	u32 index_count = 0;
 
 	bool is_indexed = true;
 
@@ -30,11 +31,14 @@ struct Triangle_Mesh {
 	void allocate_indices(int number);
 	void copy_vertices(Vertex *source, int vertex_count);
 	void copy_indices(u32 *source, int index_count);
+
+	DELETE_COPING(Triangle_Mesh);
 };
 
 inline void Triangle_Mesh::allocate_vertices(int number)
 {
 	assert(vertices == NULL);
+
 	vertices = new Vertex[number];
 	vertex_count = number;
 }
@@ -42,12 +46,16 @@ inline void Triangle_Mesh::allocate_vertices(int number)
 inline void Triangle_Mesh::allocate_indices(int number)
 {
 	assert(indices == NULL);
+
 	indices = new u32[number];
 	index_count = number;
 }
 
 inline void Triangle_Mesh::copy_vertices(Vertex *source, int vertex_count)
 {
+	if (vertices != NULL) {
+		print("FFF");
+	}
 	allocate_vertices(vertex_count);
 	memcpy(vertices, source, sizeof(Vertex) * vertex_count);
 }

@@ -8,6 +8,7 @@
 
 #include "vector.h"
 #include "../../sys/sys_local.h"
+#include <fbxsdk.h>
 
 using namespace DirectX;
 
@@ -226,6 +227,8 @@ struct Matrix4 {
 	Matrix4(const XMMATRIX &xmatrix);
 	Matrix4(const Vector4 &first_row, const Vector4 &second_row, const Vector4 &third_row, const Vector4 &four_row);
 
+	void operator=(const FbxAMatrix &fbx_matrix);
+
 	Vector4 &operator[](int index);
 	const Vector4 &operator[](int index) const;
 
@@ -273,6 +276,15 @@ inline Matrix4::Matrix4(const Vector4 &first_row, const Vector4 &second_row, con
 	matrix[1] = second_row;
 	matrix[2] = thrid_row;
 	matrix[3] = four_row;
+}
+
+inline void Matrix4::operator=(const FbxAMatrix &fbx_matrix)
+{
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			matrix[i][j] = static_cast<float>(fbx_matrix.Get(i, j));
+		}
+	}
 }
 
 inline Vector4 &Matrix4::operator[](int index)
