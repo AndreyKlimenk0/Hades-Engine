@@ -6,6 +6,7 @@
 #define POINT_LIGHT_TYPE 1
 #define DIRECTIONAL_LIGHT_TYPE 2
 
+
 struct Light {
 	float4 position;
 	float4 direction;
@@ -172,11 +173,11 @@ Vertex_Out vs_main(Vertex_In vertex)
 float4 ps_main(Vertex_Out pixel, uniform bool use_texture) : SV_Target
 {
 	float4 texture_color;
-	if (use_texture) {
+	//if (use_texture) {
 		texture_color = texture_map.Sample(sampler_anisotropic, pixel.uv);
-	} else {
-		texture_color = float4(model_color, 1.0f);
-	}
+	//} else {
+	//	texture_color = float4(model_color, 1.0f);
+	//}
 
 	float4 final_color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	for (int i = 0; i < light_count; i++) {
@@ -210,16 +211,16 @@ technique11 render_model_use_texture {
 	}
 }
 
-technique11 render_model_use_color {
-	pass P0 {
-		SetVertexShader(CompileShader(vs_5_0, vs_main()));
-		SetPixelShader(CompileShader(ps_5_0, ps_main(false)));
-	}
-}
-
-technique11 render_light_model {
-	pass P0 {
-		SetVertexShader(CompileShader(vs_5_0, vs_main()));
-		SetPixelShader(CompileShader(ps_5_0, ps_render_light_model()));
-	}
-}
+//technique11 render_model_use_color {
+//	pass P0 {
+//		SetVertexShader(CompileShader(vs_5_0, vs_main()));
+//		SetPixelShader(CompileShader(ps_5_0, ps_main(false)));
+//	}
+//}
+//
+//technique11 render_light_model {
+//	pass P0 {
+//		SetVertexShader(CompileShader(vs_5_0, vs_main()));
+//		SetPixelShader(CompileShader(ps_5_0, ps_render_light_model()));
+//	}
+//}

@@ -141,10 +141,10 @@ Caret::Caret(float x, float y, float height)
 void Caret::draw()
 {
 	static bool show = true;
-	static s32 show_time = blink_time;
-	static s32 hidding_time = blink_time;
-	static s32 show_time_accumulator = 0;
-	static s32 hidding_time_accumulator = 0;
+	static s64 show_time = blink_time;
+	static s64 hidding_time = blink_time;
+	static s64 show_time_accumulator = 0;
+	static s64 hidding_time_accumulator = 0;
 
 	static s64 current_time = 0;
 	static s64 last_time = 0;
@@ -315,7 +315,7 @@ List_Box::~List_Box()
 	
 	Button *button = NULL;
 	For(item_list, button) {
-		delete button;
+		DELETE_PTR(button);
 	}
 }
 
@@ -421,6 +421,7 @@ void List_Box::set_position(int _x, int _y)
 
 Picked_Panel_List_Box::Picked_Panel_List_Box(int _x, int _y, const char *_label) : List_Box(_label, _x, _y) 
 {
+	type = ELEMENT_TYPE_PICKED_PANEL_LIST_BOX;
 }
 
 void Picked_Panel_List_Box::on_list_item_click()
@@ -448,7 +449,7 @@ void Picked_Panel_List_Box::add_item(const char *string, int enum_value, Picked_
 	List_Box::add_item(string, enum_value);
 	
 	Button *button = item_list.last_item();
-	delete button->callback;
+	DELETE_PTR(button->callback);
 	button->callback = new Member_Callback<Picked_Panel_List_Box>(this, &Picked_Panel_List_Box::on_list_item_click);
 
 	string_picked_panel_pairs.set(string, picked_panel);
@@ -458,7 +459,7 @@ Picked_Panel::~Picked_Panel()
 {
 	Input_Field *input_field = NULL;
 	For(input_fields, input_field) {
-		delete input_field;
+		DELETE_PTR(input_field);
 	}
 }
 
@@ -814,7 +815,7 @@ void Window::add_element(Element *element)
 		input_fields.push(&vec3->z);
 	}
 
-	if (element->type == ELEMENT_TYPE_LIST_BOX) {
+	if ((element->type == ELEMENT_TYPE_LIST_BOX) || (element->type == ELEMENT_TYPE_PICKED_PANEL_LIST_BOX)) {
 		List_Box *list_box = static_cast<List_Box *>(element);
 		list_boxies.push(list_box);
 
@@ -870,14 +871,6 @@ void Window::set_element_position(Element *element)
 		}
 		
 		next_place.y = temp_storage;
-		//Input_Field *input_field = NULL;
-		//For(draw_panel->input_fields, input_field) {
-		//	_x = CALCULATE_PLACE_BY_X(input_field);
-		//	input_field->set_position(_x, next_place.y);
-		//	go_next_element_place(element);
-		//}
-		//
-		//next_place.y = temp_storage;
 	} else {
 		element->set_position(_x, next_place.y);
 		go_next_element_place(element);

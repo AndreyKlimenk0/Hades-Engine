@@ -5,9 +5,14 @@
 #include <stdlib.h>
 
 #include "mesh.h"
+#include "texture.h"
 #include "../libs/str.h"
 #include "../libs/color.h"
 #include "../libs/math/vector.h"
+#include "../libs/math/matrix.h"
+#include "../libs/ds/hash_table.h"
+
+#include "../sys/sys_local.h"
 
 
 enum Render_Model_Surface {
@@ -21,30 +26,91 @@ struct Material {
 	Vector4 specular;
 };
 
-struct Render_Model {
-	~Render_Model();
+struct Render_Mesh {
+	Render_Mesh() {}
+	~Render_Mesh() {};
 	
-	String name;
+	Texture *normal_texture = NULL;
+	Texture *diffuse_texture = NULL;
+	Texture *specular_texture = NULL;
+
+	Matrix4 position;
+	Matrix4 orientation;
+	Matrix4 scale;
+	Matrix4 transform;
+
 	Material material;
 	Triangle_Mesh mesh;
 
-	Vector3 *model_color = NULL;
-	
-	Render_Model_Surface render_surface_use = RENDER_MODEL_SURFACE_USE_TEXTURE;
-	
-	ID3D11ShaderResourceView *normal_texture = NULL;
-	ID3D11ShaderResourceView *diffuse_texture = NULL;
-	ID3D11ShaderResourceView *specular_texture = NULL;
 
-	void init_from_file(const char *file_name);
-	void set_model_color(const Color &color);
+	void operator=(const Render_Mesh &other);
 };
 
-inline void Render_Model::set_model_color(const Color &color)
+inline void Render_Mesh::operator=(const Render_Mesh &other)
 {
-	model_color = new Vector3(color.color.x, color.color.y, color.color.z);
-	render_surface_use = RENDER_MODEL_SURFACE_USE_COLOR;
+	//static int i = 0;
+	//print("Call copy render mesh = {}", i++);
+
+	normal_texture = NULL;
+	diffuse_texture = NULL;
+	specular_texture = NULL;
+
+	mesh.vertex_buffer = NULL;
+	mesh.index_buffer = NULL;
+	mesh.vertices = NULL;
+	mesh.indices = NULL;
+	mesh.vertex_count = 0;
+	mesh.index_count = 0;
+
+	//other.normal_texture->Release();
+	//other.diffuse_texture->Release();
+	//other.specular_texture->Release();
+
+	//position = other.position;
+	//orientation = other.orientation;
+	//scale = other.scale;
+
+	//material = other.material;
+
+	//if (other.mesh.vertices) {
+	//	mesh.copy_vertices(other.mesh.vertices, other.mesh.vertex_count);
+	//}
+
+	//if (other.mesh.indices) {
+	//	mesh.copy_indices(other.mesh.indices, other.mesh.index_count);
+	//}
 }
+
+
+
+struct Render_Model {
+	Render_Model();
+	~Render_Model();
+
+	String name;
+	Array<Render_Mesh> render_meshes;
+
+	void init_from_file(const char *file_name);
+	bool is_single_mesh_model();
+	Render_Mesh *get_render_mesh(int index = 0);
+	Triangle_Mesh *get_triangle_mesh(int index = 0);
+};
+
+inline bool Render_Model::is_single_mesh_model()
+{
+	return render_meshes.count == 1;
+}
+
+inline Triangle_Mesh *Render_Model::get_triangle_mesh(int index)
+{
+	return &render_meshes[index].mesh;
+}
+
+inline Render_Mesh *Render_Model::get_render_mesh(int index)
+{
+	return &render_meshes[index];
+}
+
 
 inline Material make_default_material()
 {
@@ -62,4 +128,4 @@ void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh);
 //Render_Model *create_model_for_entity(Entity *entity);
 Render_Model *generate_floor_model(float width, float depth, int m, int n);
 
-#endif
+#endif 

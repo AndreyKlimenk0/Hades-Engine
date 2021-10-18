@@ -29,6 +29,7 @@ struct Entity {
 	Render_Model *model = NULL;
 
 	Matrix4 get_world_matrix();
+	void get_world_matrix(Matrix4 &matrix);
 };
 
 inline Matrix4 Entity::get_world_matrix()
@@ -36,6 +37,12 @@ inline Matrix4 Entity::get_world_matrix()
 	Matrix4 matrix = matrix4_indentity;
 	matrix[3] = Vector4(position, 1.0f);
 	return matrix;
+}
+
+inline void Entity::get_world_matrix(Matrix4 &matrix)
+{
+	matrix.indentity();
+	matrix[3] = Vector4(position, 1.0f);
 }
 
 struct Floor : Entity {
@@ -88,11 +95,11 @@ inline void Entity_Manager::add_entity(Entity *entity)
 
 inline void Entity_Manager::add_light(Light *light)
 {
-	if (lights.count >= MAX_NUMBER_LIGHT_IN_WORLD) {
-		print("In the world already there is max number of lights, this light will not add to the world");
-	} else {
+	if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
 		lights.push(light);
 		entities.push(light);
+	} else {
+		print("In the world already there is max number of lights, this light will not add to the world");
 	}
 }
 #endif

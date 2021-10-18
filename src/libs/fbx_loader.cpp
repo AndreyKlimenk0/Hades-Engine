@@ -11,8 +11,10 @@
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/ds/array.h"
+#include "../libs/ds/hash_table.h"
 #include "../libs/math/vector.h"
 
+static String fbx_file_name;
 
 static void read_uv_from_fbx_mesh(FbxMesh *fbx_mesh, int vertex_index, int uv_index, Vector2 *uv) 
 {
@@ -137,7 +139,7 @@ static FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 	return NULL;
 }
 
-static void find_and_copy_material(FbxNode *mesh_node, Render_Model *model)
+static void find_and_copy_material(FbxNode *mesh_node, Render_Mesh *sub_model)
 {
 	int count = mesh_node->GetMaterialCount();
 
@@ -158,25 +160,31 @@ static void find_and_copy_material(FbxNode *mesh_node, Render_Model *model)
 	FbxColor specular_color = specular.Get<FbxColor>();
 	FbxDouble shininess_color = shininess.Get<FbxDouble>();
 
-	model->material.ambient = Vector4(ambient_color.mRed, ambient_color.mGreen, ambient_color.mBlue, ambient_color.mAlpha);
-	model->material.diffuse = Vector4(diffuse_color.mRed, diffuse_color.mGreen, diffuse_color.mBlue, diffuse_color.mAlpha);
-	model->material.specular = Vector4(specular_color.mRed, specular_color.mGreen, specular_color.mBlue, shininess_color);
+	sub_model->material.ambient  = Vector4(ambient_color.mRed, ambient_color.mGreen, ambient_color.mBlue, ambient_color.mAlpha);
+	sub_model->material.diffuse  = Vector4(diffuse_color.mRed, diffuse_color.mGreen, diffuse_color.mBlue, diffuse_color.mAlpha);
+	sub_model->material.specular = Vector4(specular_color.mRed, specular_color.mGreen, specular_color.mBlue, shininess_color);
 }
 
 static bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 {
 	FbxTexture *texture = find_texture(mesh_node, texture_type);
 	if (!texture) {
-		print("FbxTexture of type {} was not found in the file", texture_type, file_name);
+		print("FbxTexture of type {} was not found in the file", texture_type, fbx_file_name);
 		return false;
 	}
 
 	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(texture);
-	const char *full_texture_path = file_texture->GetFileName();
+	String file_texture_name = file_texture->GetRelativeFileName();
 
-	Array<char *> buffer;
-	split(full_texture_path, "/", &buffer);
+	Array<String> buffer;
+
+	if (file_texture_name.find_text("/") > -1) {
+		split(&file_texture_name, "/", &buffer);
+	} else {
+		split(&file_texture_name, "\\", &buffer);
+	}
 	*file_name = buffer.last_item();
+
 	return true;
 }
 
@@ -195,7 +203,7 @@ inline bool get_normal_texture_file_name(FbxNode *mesh_node, String *file_name)
 	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sNormalMap, file_name);
 }
 
-static FbxNode *find_fbx_mesh_node_in_scene(FbxScene *scene)
+static bool find_fbx_mesh_nodes_in_scene(FbxScene *scene, Array<FbxNode *> *fbx_nodes)
 {
 	FbxMesh *fbx_mesh = NULL;
 	FbxNode *root_node = scene->GetRootNode();
@@ -205,14 +213,15 @@ static FbxNode *find_fbx_mesh_node_in_scene(FbxScene *scene)
 	for (int i = 0; i < child_count; i++) {
 		FbxNode *node = root_node->GetChild(i);
 		if (node->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eMesh) {
-			return node;
+			fbx_nodes->push(node);
 		}
 	}
-	return NULL;
+	return fbx_nodes->count > 0;
 }
 
 static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 {
+	static int m_count = 0;
 	assert(mesh);
 
 	if (!fbx_mesh) {
@@ -221,6 +230,11 @@ static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mes
 	}
 
 	int position_count = fbx_mesh->GetControlPointsCount();
+
+	if (position_count == 0) {
+		print("copy_fbx_mesh_to_triangle_mesh: there is no vertices in fbx mesh");
+		return;
+	}
 
 	mesh->allocate_vertices(position_count);
 
@@ -249,7 +263,7 @@ static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mes
 			read_uv_from_fbx_mesh(fbx_mesh, vertex_index, fbx_mesh->GetTextureUVIndex(i, j), &uv);
 
 			mesh->vertices[vertex_index].uv.x = uv.x;
-			mesh->vertices[vertex_index].uv.y = 1.0f  - uv.y;
+			mesh->vertices[vertex_index].uv.y = 1.0f - uv.y;
 
 			Vector3 normal;
 			read_normal_from_fbx_mesh(fbx_mesh, vertex_index, vertex_count, &normal);
@@ -277,6 +291,7 @@ static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mes
 	mesh->copy_indices(indices.items, indices.count);
 
 	fbx_mesh->Destroy();
+	m_count++;
 }
 
 static FbxScene *load_scene_from_fbx_file(String *file_path)
@@ -309,28 +324,95 @@ static FbxScene *load_scene_from_fbx_file(String *file_path)
 	return scene;
 }
 
+FbxVector4 multT(FbxNode *node, FbxVector4 &vector){
+
+	FbxAMatrix matrixGeo;
+	matrixGeo.SetIdentity();
+	if (node->GetNodeAttribute())
+	{
+		const FbxVector4 lT = node->GetGeometricTranslation(FbxNode::eSourcePivot);
+		const FbxVector4 lR = node->GetGeometricRotation(FbxNode::eSourcePivot);
+		const FbxVector4 lS = node->GetGeometricScaling(FbxNode::eSourcePivot);
+		matrixGeo.SetT(lT);
+		matrixGeo.SetR(lR);
+		matrixGeo.SetS(lS);
+	}
+	FbxAMatrix globalMatrix = node->EvaluateLocalTransform();
+
+	FbxAMatrix matrix = globalMatrix*matrixGeo;
+	FbxVector4 result = matrix.MultT(vector);
+return result;}
+
+static void get_position_rotation_scale_matrix(FbxNode *fbx_node, Render_Mesh *render_mesh)
+{
+	FbxAMatrix matrix;
+	FbxAMatrix local_matrix = fbx_node->EvaluateLocalTransform();
+	FbxAMatrix l = fbx_node->EvaluateGlobalTransform();
+	FbxVector4 w;
+	multT(fbx_node, w);
+
+	matrix.SetIdentity();
+	matrix.SetT(fbx_node->GetGeometricTranslation(FbxNode::eSourcePivot));
+	
+	render_mesh->position = local_matrix * matrix;
+
+	matrix.SetIdentity();
+	matrix.SetR(fbx_node->GetGeometricRotation(FbxNode::eSourcePivot));
+
+	render_mesh->orientation = local_matrix * matrix;
+
+	matrix.SetIdentity();
+	matrix.SetS(fbx_node->GetGeometricScaling(FbxNode::eSourcePivot));
+
+	render_mesh->scale = local_matrix * matrix;
+
+	render_mesh->transform = fbx_node->EvaluateLocalTransform();
+}
+
 void load_fbx_model(const char *file_name, Render_Model *model)
 {
 	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
 
 	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file);
 
-	if (!scene)
+	fbx_file_name = file_name;
+
+	if (!scene) {
+		print("The scene was not found in file {}", file_name);
 		return;
+	}
 
-	FbxNode *mesh_node = find_fbx_mesh_node_in_scene(scene);
+	Array<FbxNode *> fbx_mesh_nodes;
+	bool result = find_fbx_mesh_nodes_in_scene(scene, &fbx_mesh_nodes);
+	assert(result);
 
-	String normal_texture_name;
-	String diffuse_texture_name;
-	String specular_texture_name;
+	model->render_meshes.set_count(fbx_mesh_nodes.count);
 
-	get_normal_texture_file_name(mesh_node, &normal_texture_name);
-	get_diffuse_texture_file_name(mesh_node, &diffuse_texture_name);
-	get_specular_texture_file_name(mesh_node, &specular_texture_name);
+	
+	int index = 0;
+	FbxNode *fbx_mesh_node = NULL;
+	For(fbx_mesh_nodes, fbx_mesh_node) {
+		Render_Mesh *render_mesh = &model->render_meshes[index++];
+		print(index);
 
-	load_texture(&diffuse_texture_name, &model->diffuse_texture);
+		String normal_texture_name;
+		String diffuse_texture_name;
+		String specular_texture_name;
 
-	find_and_copy_material(mesh_node, model);
+		get_normal_texture_file_name(fbx_mesh_node, &normal_texture_name);
+		get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
+		get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
 
-	copy_fbx_mesh_to_triangle_mesh(mesh_node->GetMesh(), &model->mesh);
+		if (index == 250) {
+			print("sss");
+		}
+
+		render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
+
+		find_and_copy_material(fbx_mesh_node, render_mesh);
+
+		copy_fbx_mesh_to_triangle_mesh(fbx_mesh_node->GetMesh(), &render_mesh->mesh);
+
+		get_position_rotation_scale_matrix(fbx_mesh_node, render_mesh);
+	}
 }

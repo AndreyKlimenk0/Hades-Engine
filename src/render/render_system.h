@@ -30,12 +30,6 @@ struct Render_System {
 	void shutdown();
 	
 	void render_frame();
-	void draw_world_entities(Entity_Manager *entity_manager);
-	void draw_mesh(Triangle_Mesh *mesh);
-	void draw_indexed_mesh(Triangle_Mesh *mesh);
-	void draw_not_indexed_mesh(Triangle_Mesh *mesh);
-	void draw_normals(Entity *entity, float line_len);
-	void draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective);
 };
 
 extern Render_System render_sys;
@@ -62,4 +56,12 @@ inline void View_Info::update_projection_matries()
 }
 
 View_Info *make_view_info(float near_plane, float far_plane);
+
+
+void draw_world_entities(Entity_Manager *entity_manager);
+void draw_mesh(Triangle_Mesh *mesh);
+void draw_indexed_mesh(Triangle_Mesh *mesh);
+void draw_not_indexed_mesh(Triangle_Mesh *mesh);
+void draw_normals(Entity *entity, float line_len);
+void draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective);
 #endif
