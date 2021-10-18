@@ -48,8 +48,8 @@ Deffer<F> defer_func(F f)
 #define defer(code) auto DEFER_3(_defer_) = defer_func([&](){code;})
 
 #define RELEASE_COM(x) { if(x){ x->Release(); x = 0; } }
-#define DELETE_PTR(x) if (x) delete x, x = NULL;
-#define DELETE_ARRAY(x) if (x) delete[] x, x = NULL;
+#define DELETE_PTR(x) {if (x) delete x, x = NULL;}
+#define DELETE_ARRAY(x) {if (x) delete[] x, x = NULL;}
 
 template <typename... Args>
 void print(Args... args)

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 
+
 #define DO_STRING_JOIN(arg1, arg2) arg1 ## arg2
 #define STRING_JOIN(arg1, arg2) DO_STRING_JOIN(arg1, arg2)
 
@@ -19,7 +20,8 @@ struct Array {
 	int size;
 
 	bool is_empty();
-	void resize();
+	void resize(int _size);
+	void set_count(int _count);
 	void shutdown();
 	void push(const T &item);
 	void set_pointer_to_item(T *ptr, int index);
@@ -41,9 +43,16 @@ struct Array {
 		}
 		count = 0;
 		size = 8;
-		resize();
+		resize(size);
 	}
 };
+
+template <typename T>
+void Array<T>::set_count(int _count)
+{
+	resize(_count);
+	count = _count;
+}
 
 template <typename T>
 T &Array<T>::at(int index)
@@ -63,7 +72,7 @@ Array<T>::Array(int _size)
 	items = NULL;
 	count = 0;
 	size = _size;
-	resize();
+	resize(_size);
 }
 #include <stdlib.h>
 
@@ -79,33 +88,35 @@ Array<T>::~Array()
 template <typename T>
 T &Array<T>::operator[](int i)
 {
-	assert(count > i);
+	assert(size > i);
 	return items[i];
 }
 
 template <typename T>
 const T &Array<T>::operator[](int i) const
 {
-	assert(count > i);
+	assert(size > i);
 	return items[i];
 }
 
 
 template <typename T>
-void Array<T>::resize()
+void Array<T>::resize(int new_size)
 {
 	if (!items) {
-		items = new T[size];
+		items = new T[new_size];
 		return;
 	}
 
 	T *temp_array = items;
-	items = new T[size * 2];
-	//memcpy(items, temp_array, sizeof(T) * size);
+	items = new T[new_size];
+
+
 	for (int i = 0; i < count; i++) {
 		items[i] = temp_array[i];
 	}
-	size = size * 2;
+
+	size = new_size;
 	delete[] temp_array;
 }
 
@@ -113,7 +124,7 @@ template <typename T>
 void Array<T>::push(const T &item)
 {
 	if (count >= size) {
-		resize();
+		resize(size * 2);
 	}
 	items[count++] = item;
 }

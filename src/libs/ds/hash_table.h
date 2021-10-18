@@ -17,6 +17,8 @@ int double_hash(char c, const int table_count, const int attempt);
 int hash(const char* string, const int factor, const int table_count);
 int double_hash(const char* string, const int table_count, const int attempt);
 
+int double_hash(int number, const int table_count, const int attempt);
+
 template <typename _Key_, typename _Value_>
 struct Hash_Node {
 	_Key_ key;
@@ -138,7 +140,7 @@ inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
 			return true;
 		}
 		index = double_hash(key, size, i);
-		node = &node[index];
+		node = nodes[index];
 		i++;
 	}
 	return false;
@@ -150,14 +152,16 @@ inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ *value)
 	int index = double_hash(key, size, 0);
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
 	int i = 1;
-	while (node != NULL) {
+	int c = 0;
+	while ((node != NULL) && (c < count)) {
 		if (node->compare(key)) {
 			*value = node->value;
 			return true;
 		}
 		index = double_hash(key, size, i);
-		node = &node[index];
+		node = nodes[index];
 		i++;
+		c++;
 	}
 	return false;
 }

@@ -159,6 +159,7 @@
     <ClCompile Include="src\libs\os\input.cpp" />
     <ClCompile Include="src\game\entity.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
+    <ClCompile Include="src\libs\spng.c" />
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\fbx_loader.cpp" />
     <ClCompile Include="src\libs\geometry_generator.cpp" />
@@ -171,6 +172,7 @@
     <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
+    <ClCompile Include="src\render\texture.cpp" />
     <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\sys\sys_debug.cpp" />
     <ClCompile Include="src\sys\sys_output_info.cpp" />
@@ -180,6 +182,7 @@
     <ClCompile Include="src\win32\win_time.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="C:\Users\aklymenk\Downloads\libspng-0.7.0\libspng-0.7.0\spng\spng.h" />
     <ClInclude Include="src\editor\editor.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\libs\color.h" />
@@ -193,6 +196,7 @@
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\hash_table.h" />
     <ClInclude Include="src\libs\ds\queue.h" />
+    <ClInclude Include="src\libs\spng.h" />
     <ClInclude Include="src\libs\str.h" />
     <ClInclude Include="src\libs\fbx_loader.h" />
     <ClInclude Include="src\libs\geometry_generator.h" />
@@ -206,7 +210,9 @@
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_system.h" />
+    <ClInclude Include="src\render\texture.h" />
     <ClInclude Include="src\render\vertex.h" />
+    <ClInclude Include="src\sys\sys_engine.h" />
     <ClInclude Include="src\sys\sys_local.h" />
     <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_local.h" />

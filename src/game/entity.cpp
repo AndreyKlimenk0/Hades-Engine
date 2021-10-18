@@ -7,11 +7,11 @@ Entity *Entity_Manager::make_entity(Entity_Type type, const Vector3 &position)
 	switch (type) {
 		case ENTITY_TYPE_MUTANT: {
 			entity = new Mutant();
-			Render_Model * m = new Render_Model();
-			m->init_from_file("mutant.fbx");
-			m->mesh.allocate_static_buffer();
-			entity->model = m;
-			
+			//Render_Model * m = new Render_Model();
+			//m->init_from_file("mutant.fbx");
+			//m->mesh.allocate_static_buffer();
+			//entity->model = m;
+			//
 			break;
 		}
 		case ENTITY_TYPE_SOLDIER: {
@@ -20,6 +20,18 @@ Entity *Entity_Manager::make_entity(Entity_Type type, const Vector3 &position)
 		}
 		case ENTITY_TYPE_LIGHT: {
 			entity = new Light();
+			
+			if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
+				lights.push((Light *)entity);
+			} else {
+				print("In the world already there is max number of lights, this light will not add to the world");
+				return NULL;
+			}
+			
+			break;
+		}
+		case ENTITY_TYPE_UNKNOWN: {
+			entity = new Entity();
 			break;
 		}
 	}
@@ -39,8 +51,6 @@ Light *Entity_Manager::make_light(const Vector3 &position, const Vector3 directi
 	light->color = color;
 	light->light_type = light_type;
 
-	add_light(light);
-
 	return light;
 }
 
@@ -50,8 +60,6 @@ Light *Entity_Manager::make_point_light(const Vector3 &position, const Vector3 &
 	light->color = color;
 	light->light_type = POINT_LIGHT_TYPE;
 	light->range = range;
-
-	add_light(light);
 	
 	return light;
 }
@@ -63,8 +71,6 @@ Light  *Entity_Manager::make_spot_light(const Vector3 &position, const Vector3 &
 	light->color = color;
 	light->light_type = SPOT_LIGHT_TYPE;
 	light->radius = radius;
-
-	add_light(light);
 
 	return light;
 }

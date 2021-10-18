@@ -41,36 +41,115 @@ void Render_System::render_frame()
 	draw_world_entities(&current_render_world->entity_manager);
 }
 
-void Render_System::draw_world_entities(Entity_Manager *entity_manager)
+void draw_meshes(Render_Model *render_model, Fx_Shader *light)
 {
+	//Fx_Shader *light = fx_shader_manager.get_shader("forward_light");
+	Render_Mesh *render_mesh = NULL;
+	
+	if (render_model->is_single_mesh_model()) {
+		render_mesh = render_model->get_render_mesh();
+		light->bind("texture_map", render_mesh->diffuse_texture->shader_resource);
+		light->bind("material", (void *)&render_mesh->material, sizeof(Material));
+		draw_mesh(render_model->get_triangle_mesh());
+	} else {
+		For(render_model->render_meshes, render_mesh) {
+			render_mesh->material.specular = Vector4(1, 1, 1, render_mesh->material.specular.w);
+			light->bind("texture_map", render_mesh->diffuse_texture->shader_resource);
+			light->bind("material", (void *)&render_mesh->material, sizeof(Material));
+			draw_mesh(&render_mesh->mesh);
+		}
+	}
+}
+
+void make_world_view_perspective_matrix_for_entity(Entity *entity, Matrix4 &result)
+{
+	Matrix4 world;
+	entity->get_world_matrix(world);
+	result = world * render_sys.view_matrix * render_sys.view_info->perspective_matrix;
+}
+
+void draw_world_entities(Entity_Manager *entity_manager)
+{
+	//Fx_Shader *light = fx_shader_manager.get_shader("forward_light");
+
+	//bind_light_entities(light, &entity_manager->lights);
+
+	//light->bind_per_frame_info(render_sys.free_camera);
+
+	//Entity * entity = NULL;
+	//For(entity_manager->entities, entity) {
+	//	light->bind_entity(entity, render_sys.view_matrix, render_sys.view_info->perspective_matrix);
+
+	//	if (entity->type == ENTITY_TYPE_LIGHT) {
+	//		int light_model_index = 0;
+	//		if (!entity->model) {
+	//			continue;
+	//		}
+	//		//light->bind("light_model_index", light_model_index++);
+	//		//light->attach("render_light_model");
+	//		//draw_meshes(entity->model);
+	//		//draw_mesh(&entity->model->mesh);
+	//		continue;
+	//	}
+
+	//	draw_meshes(entity->model, light);
+	//	light->attach("render_model_use_texture");
+	//	//draw_shadow(entity, light, entity_manager->lights[0], view_matrix, view_info->perspective_matrix);
+	//}
+
 	Fx_Shader *light = fx_shader_manager.get_shader("forward_light");
 
 	bind_light_entities(light, &entity_manager->lights);
 
-	light->bind_per_frame_vars(free_camera);
+	light->bind_per_frame_info(render_sys.free_camera);
 
 	Entity * entity = NULL;
 	For(entity_manager->entities, entity) {
-		light->bind_per_entity_vars(entity, view_matrix, view_info->perspective_matrix);
 
 		if (entity->type == ENTITY_TYPE_LIGHT) {
-			int light_model_index = 0;
-			if (!entity->model) {
+				int light_model_index = 0;
+				if (!entity->model) {
+					continue;
+				}
+				light->bind("light_model_index", light_model_index++);
+				light->attach("render_light_model");
+				draw_mesh(entity->model->get_triangle_mesh());
 				continue;
 			}
-			light->bind("light_model_index", light_model_index++);
-			light->attach("render_light_model");
-			draw_mesh(&entity->model->mesh);
-			continue;
+
+		Render_Mesh *render_mesh = NULL;
+		For(entity->model->render_meshes, render_mesh) {
+
+			light->bind_entity(entity, render_sys.view_matrix, render_sys.view_info->perspective_matrix, render_mesh);
+
+			if (1) {
+				light->attach("render_model_use_texture");
+			} else {
+				//light->attach("render_model_use_color");
+			}
+			draw_mesh(&render_mesh->mesh);
 		}
 
-		if (entity->model->render_surface_use == RENDER_MODEL_SURFACE_USE_TEXTURE) {
-			light->attach("render_model_use_texture");
-		} else {
-			light->attach("render_model_use_color");
-		}
-		draw_mesh(&entity->model->mesh);
-		draw_shadow(entity, light, entity_manager->lights[0], view_matrix, view_info->perspective_matrix);
+		//light->bind_entity(entity, render_sys.view_matrix, render_sys.view_info->perspective_matrix);
+
+		//if (entity->type == ENTITY_TYPE_LIGHT) {
+		//	int light_model_index = 0;
+		//	if (!entity->model) {
+		//		continue;
+		//	}
+		//	light->bind("light_model_index", light_model_index++);
+		//	light->attach("render_light_model");
+		//	draw_mesh(entity->model->get_triangle_mesh());
+		//	continue;
+		//}
+
+		//if (1) {
+		//	light->attach("render_model_use_texture");
+		//} else {
+		//	//light->attach("render_model_use_color");
+		//}
+		//draw_mesh(entity->model->get_triangle_mesh());
+		//draw_shadow(entity, light, entity_manager->lights[0], render_sys.view_matrix, render_sys.view_info->perspective_matrix);
 	}
 }
 
@@ -90,9 +169,9 @@ View_Info *make_view_info(float near_plane, float far_plane)
 }
 
 
-void Render_System::draw_normals(Entity *entity, float line_len)
+void draw_normals(Entity *entity, float line_len)
 {
-	Triangle_Mesh *mesh = &entity->model->mesh;
+	Triangle_Mesh *mesh = entity->model->get_triangle_mesh();
 	Array<Vertex_XC> normals;
 
 	for (int i = 0; i < mesh->vertex_count; i++) {
@@ -124,9 +203,10 @@ void Render_System::draw_normals(Entity *entity, float line_len)
 }
 
 
-void Render_System::draw_indexed_mesh(Triangle_Mesh *mesh)
+void draw_indexed_mesh(Triangle_Mesh *mesh)
 {
 	assert(mesh->index_buffer);
+	assert(mesh->vertex_buffer);
 
 	directx11.device_context->IASetInputLayout(Input_Layout::vertex);
 	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -139,7 +219,7 @@ void Render_System::draw_indexed_mesh(Triangle_Mesh *mesh)
 	directx11.device_context->DrawIndexed(mesh->index_count, 0, 0);
 }
 
-void Render_System::draw_not_indexed_mesh(Triangle_Mesh *mesh)
+void draw_not_indexed_mesh(Triangle_Mesh *mesh)
 {
 	directx11.device_context->IASetInputLayout(Input_Layout::vertex);
 	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -151,7 +231,7 @@ void Render_System::draw_not_indexed_mesh(Triangle_Mesh *mesh)
 	directx11.device_context->Draw(mesh->vertex_count, 0);
 }
 
-void Render_System::draw_mesh(Triangle_Mesh *mesh)
+void draw_mesh(Triangle_Mesh *mesh)
 {
 	assert(mesh);
 	assert(mesh->vertex_buffer);
@@ -164,80 +244,80 @@ void Render_System::draw_mesh(Triangle_Mesh *mesh)
 
 }
 
-void Render_System::draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective)
+void draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective)
 {
-	if (entity->type == ENTITY_TYPE_FLOOR || entity->type == ENTITY_TYPE_LIGHT) {
-		return;
-	}
+	//if (entity->type == ENTITY_TYPE_FLOOR || entity->type == ENTITY_TYPE_LIGHT) {
+	//	return;
+	//}
 
-	ID3D11BlendState* transparent = NULL;
+	//ID3D11BlendState* transparent = NULL;
 
-	D3D11_BLEND_DESC transparent_desc = { 0 };
-	transparent_desc.AlphaToCoverageEnable = false;
-	transparent_desc.IndependentBlendEnable = false;
+	//D3D11_BLEND_DESC transparent_desc = { 0 };
+	//transparent_desc.AlphaToCoverageEnable = false;
+	//transparent_desc.IndependentBlendEnable = false;
 
-	transparent_desc.RenderTarget[0].BlendEnable = true;
-	transparent_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	transparent_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	transparent_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	transparent_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	transparent_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	transparent_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	transparent_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	//transparent_desc.RenderTarget[0].BlendEnable = true;
+	//transparent_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	//transparent_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	//transparent_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	//transparent_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	//transparent_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	//transparent_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	//transparent_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-	HR(directx11.device->CreateBlendState(&transparent_desc, &transparent));
+	//HR(directx11.device->CreateBlendState(&transparent_desc, &transparent));
 
-	ID3D11DepthStencilState* no_double_blending = NULL;
+	//ID3D11DepthStencilState* no_double_blending = NULL;
 
-	D3D11_DEPTH_STENCIL_DESC no_double_blending_desc;
-	no_double_blending_desc.DepthEnable = true;
-	no_double_blending_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	no_double_blending_desc.DepthFunc = D3D11_COMPARISON_LESS;
-	no_double_blending_desc.StencilEnable = true;
-	no_double_blending_desc.StencilReadMask = 0xff;
-	no_double_blending_desc.StencilWriteMask = 0xff;
+	//D3D11_DEPTH_STENCIL_DESC no_double_blending_desc;
+	//no_double_blending_desc.DepthEnable = true;
+	//no_double_blending_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	//no_double_blending_desc.DepthFunc = D3D11_COMPARISON_LESS;
+	//no_double_blending_desc.StencilEnable = true;
+	//no_double_blending_desc.StencilReadMask = 0xff;
+	//no_double_blending_desc.StencilWriteMask = 0xff;
 
-	no_double_blending_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
-	no_double_blending_desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+	//no_double_blending_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	//no_double_blending_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	//no_double_blending_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
+	//no_double_blending_desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
 
-	no_double_blending_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	no_double_blending_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
-	no_double_blending_desc.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+	//no_double_blending_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	//no_double_blending_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	//no_double_blending_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
+	//no_double_blending_desc.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
 
-	HR(directx11.device->CreateDepthStencilState(&no_double_blending_desc, &no_double_blending));
+	//HR(directx11.device->CreateDepthStencilState(&no_double_blending_desc, &no_double_blending));
 
-	Material shadow_material;
-	shadow_material.ambient = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-	shadow_material.diffuse = Vector4(0.0f, 0.0f, 0.0f, 0.5f);
-	shadow_material.specular = Vector4(0.0f, 0.0f, 0.0f, 16.0f);
+	//Material shadow_material;
+	//shadow_material.ambient = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+	//shadow_material.diffuse = Vector4(0.0f, 0.0f, 0.0f, 0.5f);
+	//shadow_material.specular = Vector4(0.0f, 0.0f, 0.0f, 16.0f);
 
-	XMVECTOR plane = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); // xz plane
-	XMVECTOR light_direction = -XMLoadFloat3((XMFLOAT3 *)&light->direction);
-	Matrix4 shadow_matrix = XMMatrixShadow(plane, light_direction);
-	Matrix4 offset = XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+	//XMVECTOR plane = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); // xz plane
+	//XMVECTOR light_direction = -XMLoadFloat3((XMFLOAT3 *)&light->direction);
+	//Matrix4 shadow_matrix = XMMatrixShadow(plane, light_direction);
+	//Matrix4 offset = XMMatrixTranslation(0.0f, 1.0f, 0.0f);
 
-	Matrix4  world = entity->get_world_matrix();
-	Matrix4 shadow_plane = world * shadow_matrix * offset;
-	Matrix4 world_view_perspective = shadow_plane * view * perspective;
+	//Matrix4  world = entity->get_world_matrix();
+	//Matrix4 shadow_plane = world * shadow_matrix * offset;
+	//Matrix4 world_view_perspective = shadow_plane * view * perspective;
 
-	fx_shader_light->bind("world", (Matrix4 *)&shadow_plane);
-	fx_shader_light->bind("world_view_projection", (Matrix4 *)&world_view_perspective);
-	fx_shader_light->bind("material", (void *)&shadow_material, sizeof(Material));
+	//fx_shader_light->bind("world", (Matrix4 *)&shadow_plane);
+	//fx_shader_light->bind("world_view_projection", (Matrix4 *)&world_view_perspective);
+	//fx_shader_light->bind("material", (void *)&shadow_material, sizeof(Material));
 
-	directx11.device_context->OMSetDepthStencilState(no_double_blending, 0);
-	float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	directx11.device_context->OMSetBlendState(transparent, b, 0xffffffff);
+	//directx11.device_context->OMSetDepthStencilState(no_double_blending, 0);
+	//float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	//directx11.device_context->OMSetBlendState(transparent, b, 0xffffffff);
 
-	if (entity->model->render_surface_use == RENDER_MODEL_SURFACE_USE_TEXTURE) {
-		fx_shader_light->attach();
-	} else {
-		fx_shader_light->attach(1);
-	}
-	draw_mesh(&entity->model->mesh);
+	////if (entity->model->render_surface_use == RENDER_MODEL_SURFACE_USE_TEXTURE) {
+	////	fx_shader_light->attach();
+	////} else {
+	//	fx_shader_light->attach();
+	////}
+	////draw_mesh(&entity->model->get_triangle_mesh());
 
-	directx11.device_context->OMSetBlendState(0, b, 0xffffffff);
-	directx11.device_context->OMSetDepthStencilState(0, 0);
+	//directx11.device_context->OMSetBlendState(0, b, 0xffffffff);
+	//directx11.device_context->OMSetDepthStencilState(0, 0);
 }
