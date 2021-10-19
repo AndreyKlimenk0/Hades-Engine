@@ -109,6 +109,6 @@ void World::init()
 
 	Entity *sponza3 = entity_manager.make_entity(ENTITY_TYPE_UNKNOWN, Vector3(-0.5, -1.0, 0.0));
 	sponza3->model = new Render_Model();
-	//sponza2->model->init_from_file("mutant.fbx");
-	sponza3->model->init_from_file("sponza.fbx");
+	sponza3->model->init_from_file("mutant.fbx");
+	//sponza3->model->init_from_file("sponza.fbx");
 }

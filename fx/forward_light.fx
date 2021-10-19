@@ -173,11 +173,11 @@ Vertex_Out vs_main(Vertex_In vertex)
 float4 ps_main(Vertex_Out pixel, uniform bool use_texture) : SV_Target
 {
 	float4 texture_color;
-	//if (use_texture) {
-		texture_color = texture_map.Sample(sampler_anisotropic, pixel.uv);
-	//} else {
-	//	texture_color = float4(model_color, 1.0f);
-	//}
+	texture_color = texture_map.Sample(sampler_anisotropic, pixel.uv);
+
+	if (light_count == 0) {
+		return texture_color;
+	}
 
 	float4 final_color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	for (int i = 0; i < light_count; i++) {
