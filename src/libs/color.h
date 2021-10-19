@@ -18,17 +18,17 @@ struct Color {
 	static Color Silver;
 	static Color LightSteelBlue;
 
-	Vector4 color;
+	Vector4 value;
 
 	Color() {};
 	Color(int r, int g, int b, int a = 255);
-	Color(float r, float g, float b, float a = 1.0f) : color(r, g, b, a) {}
+	Color(float r, float g, float b, float a = 1.0f) : value(r, g, b, a) {}
 
 	operator D2D1_COLOR_F();
 };
 
 inline Color::operator D2D1_COLOR_F()
 {
-	return D2D1::ColorF(D2D1::ColorF(color.x, color.y, color.z, color.w));
+	return D2D1::ColorF(D2D1::ColorF(value.x, value.y, value.z, value.w));
 }
 #endif
