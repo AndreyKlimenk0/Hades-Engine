@@ -20,8 +20,8 @@ Color::Color(int r, int g, int b, int a)
 	assert(b <= 255 && b >= 0);
 	assert(a <= 255 && a >= 0);
 
-	color.x = r / 255.0f;
-	color.y = g / 255.0f;
-	color.z = b / 255.0f;
-	color.w = a / 255.0f;
+	value.x = r / 255.0f;
+	value.y = g / 255.0f;
+	value.z = b / 255.0f;
+	value.w = a / 255.0f;
 }

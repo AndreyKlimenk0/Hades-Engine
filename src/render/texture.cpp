@@ -69,7 +69,7 @@ static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *
 	return true;
 }
 
-static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void *data = NULL, u32 mip_levels = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
+static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void *data = NULL, u32 mip_levels = 0,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 {
 	texture->width = width;
 	texture->height = height;
@@ -82,7 +82,7 @@ static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void 
 	texture_2d_desc.ArraySize = 1;
 	texture_2d_desc.Format = format;
 	texture_2d_desc.SampleDesc.Count = 1;
-	texture_2d_desc.Usage = D3D11_USAGE_DEFAULT;
+	texture_2d_desc.Usage = usage;
 	texture_2d_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	texture_2d_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
@@ -122,15 +122,14 @@ static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void 
 		directx11.device_context->GenerateMips(texture->shader_resource);
 	}
 
-
 	return texture;
 }
 
-static Texture *create_texture_2d(u32 width, u32 height, void *data, u32 mip_levels = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
+static Texture *create_texture_2d(u32 width, u32 height, void *data, u32 mip_levels = 0,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 {
 	Texture *texture = new Texture();
 	texture->type = TEXTURE2D;
-	return create_texture_2d(texture, width, height, data, mip_levels, format);
+	return create_texture_2d(texture, width, height, data, mip_levels, usage, format);
 }
 
 #include <d3dx11.h>
@@ -169,23 +168,27 @@ void Texture::init(u32 width, u32 height)
 void Texture::set_color(const Color &color)
 {
 	u32 *data = new u32[width * height];
-	for (int column = 0; column < height; column++) {
-		for (int row = 0; row < width; row++) {
-			u32 *pitch = &data[column];
-			u8 * c = (u8 *)&pitch[row];
-			c[0] = 115;
-			c[1] = 115;
-			c[2] = 115;
-			c[3] = 255;
+	
+	u8* pixels = (u8*)data;
+	for( UINT row = 0; row < height; row++ )
+	{
+		UINT rowStart = row * (width * sizeof(u32));
+		for( UINT col = 0; col < width; col++ )
+		{
+			UINT colStart = col * 4;
+			pixels[rowStart + colStart + 0] = u8(color.value.x * 255);
+			pixels[rowStart + colStart + 1] = u8(color.value.y * 255);
+			pixels[rowStart + colStart + 2] = u8(color.value.z * 255);
+			pixels[rowStart + colStart + 3] = u8(color.value.w * 255);
 		}
 	}
+
 	D3D11_MAPPED_SUBRESOURCE mapped_subresource;
+	ZeroMemory(&mapped_subresource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 	mapped_subresource.pData = data;
-	mapped_subresource.RowPitch = width;
-	mapped_subresource.DepthPitch = width;
-	
-	directx11.device_context->Map(texture, 0, D3D11_MAP_WRITE, 0, &mapped_subresource);
-	directx11.device_context->Unmap(texture, 0);
+	mapped_subresource.RowPitch = width * sizeof(u32);
+
+	directx11.device_context->UpdateSubresource(texture, 0, NULL, data, width * sizeof(u32), 0);
 }
 
 Texture::operator ID3D11ShaderResourceView*()
@@ -206,11 +209,12 @@ Texture_Manager::~Texture_Manager()
 void Texture_Manager::init()
 {
 	default_texture.init(128, 128);
-	default_texture.set_color(Color::Green);
+	default_texture.set_color(Color(85, 85, 85));
 }
 
 Texture *Texture_Manager::get_texture(const char *texture_name)
 {
+	return &default_texture;
 	if (texture_name == NULL) {
 		return &default_texture;
 	}
