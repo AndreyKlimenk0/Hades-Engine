@@ -66,6 +66,8 @@ struct String {
 	char *data = NULL;
 	int len = 0;
 
+	explicit String(int number);
+	explicit String(float number);
 	String(const char *string);
 	String(const String *other);
 	String(const String &other);

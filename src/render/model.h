@@ -48,9 +48,6 @@ struct Render_Mesh {
 
 inline void Render_Mesh::operator=(const Render_Mesh &other)
 {
-	//static int i = 0;
-	//print("Call copy render mesh = {}", i++);
-
 	normal_texture = NULL;
 	diffuse_texture = NULL;
 	specular_texture = NULL;
@@ -61,27 +58,7 @@ inline void Render_Mesh::operator=(const Render_Mesh &other)
 	mesh.indices = NULL;
 	mesh.vertex_count = 0;
 	mesh.index_count = 0;
-
-	//other.normal_texture->Release();
-	//other.diffuse_texture->Release();
-	//other.specular_texture->Release();
-
-	//position = other.position;
-	//orientation = other.orientation;
-	//scale = other.scale;
-
-	//material = other.material;
-
-	//if (other.mesh.vertices) {
-	//	mesh.copy_vertices(other.mesh.vertices, other.mesh.vertex_count);
-	//}
-
-	//if (other.mesh.indices) {
-	//	mesh.copy_indices(other.mesh.indices, other.mesh.index_count);
-	//}
 }
-
-
 
 struct Render_Model {
 	Render_Model();
@@ -90,7 +67,9 @@ struct Render_Model {
 	String name;
 	Array<Render_Mesh> render_meshes;
 
+	void init(const char *render_model_name, u32 render_mesh_count = 1);
 	void init_from_file(const char *file_name);
+	void load_fbx_model(const char *file_name);
 	bool is_single_mesh_model();
 	Render_Mesh *get_render_mesh(int index = 0);
 	Triangle_Mesh *get_triangle_mesh(int index = 0);
@@ -121,11 +100,15 @@ inline Material make_default_material()
 	return material;
 }
 
+struct Render_Model_Manager {
+	Render_Model_Manager() {}
+	~Render_Model_Manager() {}
+	
+	Hash_Table<String, Render_Model *> render_models;
 
-void load_texture(String *file_name, ID3D11ShaderResourceView **texture);
-void load_model_from_obj_file(const char *file_name, Triangle_Mesh *mesh);
+	Render_Model *make_render_model(const char *name);
+	Render_Model *get_render_model(const char *name);
+};
 
-//Render_Model *create_model_for_entity(Entity *entity);
-Render_Model *generate_floor_model(float width, float depth, int m, int n);
-
+extern Render_Model_Manager model_manager;
 #endif 
