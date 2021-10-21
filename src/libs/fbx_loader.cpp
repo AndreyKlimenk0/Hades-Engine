@@ -16,6 +16,11 @@
 
 static String fbx_file_name;
 
+void set_fbx_file_name(const char *file_name)
+{
+	fbx_file_name = file_name;
+}
+
 static void read_uv_from_fbx_mesh(FbxMesh *fbx_mesh, int vertex_index, int uv_index, Vector2 *uv) 
 {
 	FbxLayerElementUV *uv_element = fbx_mesh->GetLayer(0)->GetUVs();
@@ -139,7 +144,7 @@ static FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 	return NULL;
 }
 
-static void find_and_copy_material(FbxNode *mesh_node, Render_Mesh *sub_model)
+void find_and_copy_material(FbxNode *mesh_node, Render_Mesh *sub_model)
 {
 	int count = mesh_node->GetMaterialCount();
 
@@ -165,7 +170,7 @@ static void find_and_copy_material(FbxNode *mesh_node, Render_Mesh *sub_model)
 	sub_model->material.specular = Vector4(specular_color.mRed, specular_color.mGreen, specular_color.mBlue, shininess_color);
 }
 
-static bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
+bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 {
 	FbxTexture *texture = find_texture(mesh_node, texture_type);
 	if (!texture) {
@@ -188,22 +193,7 @@ static bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, 
 	return true;
 }
 
-inline bool get_specular_texture_file_name(FbxNode *mesh_node, String *file_name)
-{
-	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sSpecular, file_name);
-}
-
-inline bool get_diffuse_texture_file_name(FbxNode *mesh_node, String *file_name)
-{
-	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sDiffuse, file_name);
-}
-
-inline bool get_normal_texture_file_name(FbxNode *mesh_node, String *file_name)
-{
-	return get_texture_file_name(mesh_node, FbxSurfaceMaterial::sNormalMap, file_name);
-}
-
-static bool find_fbx_mesh_nodes_in_scene(FbxScene *scene, Array<FbxNode *> *fbx_nodes)
+bool find_fbx_mesh_nodes_in_scene(FbxScene *scene, Array<FbxNode *> *fbx_nodes)
 {
 	FbxMesh *fbx_mesh = NULL;
 	FbxNode *root_node = scene->GetRootNode();
@@ -219,7 +209,7 @@ static bool find_fbx_mesh_nodes_in_scene(FbxScene *scene, Array<FbxNode *> *fbx_
 	return fbx_nodes->count > 0;
 }
 
-static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
+void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 {
 	static int m_count = 0;
 	assert(mesh);
@@ -294,7 +284,7 @@ static void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mes
 	m_count++;
 }
 
-static FbxScene *load_scene_from_fbx_file(String *file_path)
+FbxScene *load_scene_from_fbx_file(String *file_path)
 {
 	assert(file_path);
 
@@ -343,7 +333,7 @@ FbxVector4 multT(FbxNode *node, FbxVector4 &vector){
 	FbxVector4 result = matrix.MultT(vector);
 return result;}
 
-static void get_position_rotation_scale_matrix(FbxNode *fbx_node, Render_Mesh *render_mesh)
+void get_position_rotation_scale_matrix(FbxNode *fbx_node, Render_Mesh *render_mesh)
 {
 	FbxAMatrix matrix;
 	FbxAMatrix local_matrix = fbx_node->EvaluateLocalTransform();
@@ -412,7 +402,5 @@ void load_fbx_model(const char *file_name, Render_Model *model)
 		find_and_copy_material(fbx_mesh_node, render_mesh);
 
 		copy_fbx_mesh_to_triangle_mesh(fbx_mesh_node->GetMesh(), &render_mesh->mesh);
-
-		get_position_rotation_scale_matrix(fbx_mesh_node, render_mesh);
 	}
 }

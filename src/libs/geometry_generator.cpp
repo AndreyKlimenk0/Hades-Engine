@@ -47,6 +47,8 @@ void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh)
 			k += 6; // next quad
 		}
 	}
+
+	mesh->allocate_static_buffer();
 }
 
 void generate_box(float width, float height, float depth, Triangle_Mesh *mesh)
