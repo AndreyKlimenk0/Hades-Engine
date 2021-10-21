@@ -12,21 +12,29 @@
 #include "../libs/os/path.h"
 #include "../libs/fbx_loader.h"
 
-#include "../libs/ds/array.h"
-#include "../libs/geometry_generator.h"
+
+Render_Model_Manager model_manager;
 
 
 Render_Model::Render_Model()
-{
-	//meshes = Array<Render_Mesh>(1);
-}
+{}
 
 Render_Model::~Render_Model()
+{}
+
+void Render_Model::init(const char *render_model_name, u32 render_mesh_count)
 {
-	//DELETE_PTR(model_color);
-	//RELEASE_COM(normal_texture);
-	//RELEASE_COM(diffuse_texture);
-	//RELEASE_COM(specular_texture);
+	name = render_model_name;
+	render_meshes.set_count(render_mesh_count);
+	
+	Render_Mesh *render_mesh = NULL;
+	For(render_meshes, render_mesh) {
+		render_mesh->position.indentity();
+		render_mesh->scale.indentity();
+		render_mesh->orientation.indentity();
+		render_mesh->material = make_default_material();
+		render_mesh->diffuse_texture = &texture_manager.default_texture;
+	}
 }
 
 void Render_Model::init_from_file(const char *file_name)
@@ -36,51 +44,74 @@ void Render_Model::init_from_file(const char *file_name)
 	
 	char *file_extension = extract_file_extension(file_name);
 	if (!strcmp(file_extension, "fbx")) {
-		load_fbx_model(file_name, this);
+		load_fbx_model(file_name);
 	} else {
 		print("Model::init_from_file: {} is unkown model type, now only supports fbx file type", file_extension);
 		return;
 	}
+}
 
-	Render_Mesh *render_mesh = NULL;
-	For(render_meshes, render_mesh) {
+
+void Render_Model::load_fbx_model(const char *file_name)
+{
+	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
+	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file);
+
+	if (!scene) {
+		print("The scene was not found in file {}", file_name);
+		return;
+	}
+
+	set_fbx_file_name(file_name);
+
+	Array<FbxNode *> fbx_mesh_nodes;
+	bool result = find_fbx_mesh_nodes_in_scene(scene, &fbx_mesh_nodes);
+	assert(result);
+
+	render_meshes.set_count(fbx_mesh_nodes.count);
+	
+	int index = 0;
+	FbxNode *fbx_mesh_node = NULL;
+	For(fbx_mesh_nodes, fbx_mesh_node) {
+		Render_Mesh *render_mesh = &render_meshes[index++];
+
+		String normal_texture_name;
+		String diffuse_texture_name;
+		String specular_texture_name;
+
+		get_normal_texture_file_name(fbx_mesh_node, &normal_texture_name);
+		get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
+		get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
+
+		render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
+
+		find_and_copy_material(fbx_mesh_node, render_mesh);
+
+		copy_fbx_mesh_to_triangle_mesh(fbx_mesh_node->GetMesh(), &render_mesh->mesh);
+		
+		get_position_rotation_scale_matrix(fbx_mesh_node, render_mesh);
+		
 		render_mesh->mesh.allocate_static_buffer();
 	}
 }
 
-#include <windows.h>
-
-void load_texture(String *file_name, ID3D11ShaderResourceView **texture)
+Render_Model *Render_Model_Manager::make_render_model(const char *name)
 {
-	if (file_name->len == 0)
-		return;
-
-	String *full_path_to_texture = os_path.build_full_path_to_texture_file(file_name);
-	defer(full_path_to_texture->free());
-
-	HR(D3DX11CreateShaderResourceViewFromFile(directx11.device, (const char *)full_path_to_texture->data, NULL, NULL, texture, NULL));
+	Render_Model *render_model = new Render_Model();
+	render_model->init(name);
+	render_models.set(name, render_model);
+	return render_model;
 }
 
-//Render_Model *create_model_for_entity(Entity *entity)
-//{
-//
-//}
-
-Render_Model *generate_floor_model(float width, float depth, int m, int n)
+Render_Model *Render_Model_Manager::get_render_model(const char *name)
 {
-	Render_Model *model = new Render_Model();
-	Render_Mesh mm;
-	model->render_meshes.push(mm);
-	model->name = "floor";
-	generate_grid(width, depth, m, n, model->get_triangle_mesh());
-	load_texture(&String("floor.jpg"), &model->get_render_mesh()->diffuse_texture->shader_resource);
+	Render_Model *render_model = NULL;
+	if (!render_models.get(name , &render_model)) {
+		Render_Model *new_render_model = new Render_Model();
+		new_render_model->init_from_file(name);
 
-	model->get_render_mesh()->material.ambient = Vector4(0.1f, 0.1f, 0.1f, 0.1f);
-	model->get_render_mesh()->material.diffuse = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-	model->get_render_mesh()->material.specular = Vector4(0.1f, 0.1f, 0.1f, 8.0f);
-	//model->render_meshes.count += 1;
-	Triangle_Mesh *mesh = model->get_triangle_mesh();
-	mesh->allocate_static_buffer();
-	return model;
+		render_models.set(name, render_model);
+		return new_render_model;
+	}
+	return render_model;
 }
-

@@ -82,8 +82,14 @@ struct Entity_Manager {
 
 	void add_light(Light *light);
 	void add_entity(Entity *entity);
+
+
+	Entity *make_grid(const Vector3 &position, float width, float depth, int m, int n);
+	Entity *make_box(const Vector3 &position, float width, float height, float depth);
+	Entity *make_sphere(const Vector3 &position, float radius, UINT sliceCount, UINT stackCount);
+	
 	Entity *make_entity(Entity_Type type, const Vector3 &position);
-	Light  *make_light(const Vector3 &position, const Vector3 direction, const Vector3 &color, Light_Type light_type);
+	Light  *make_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, Light_Type light_type);
 	Light  *make_point_light(const Vector3 &position, const Vector3 &color, float range);
 	Light  *make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
 };

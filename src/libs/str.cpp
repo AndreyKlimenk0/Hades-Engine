@@ -272,6 +272,20 @@ String::~String()
 	DELETE_ARRAY(data);
 }
 
+String::String(int number)
+{
+	char *num = to_string(number);
+	*this = num;
+	DELETE_PTR(num);
+}
+
+String::String(float number)
+{
+	char *num = to_string(number);
+	*this = num;
+	DELETE_PTR(num);
+}
+
 String::String(const char *string)
 {
 	assert(string != NULL);

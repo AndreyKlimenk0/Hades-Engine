@@ -29,6 +29,8 @@ struct Triangle_Mesh {
 	void allocate_static_buffer();
 	void allocate_vertices(int number);
 	void allocate_indices(int number);
+	void free_vertices();
+	void free_indices();
 	void copy_vertices(Vertex *source, int vertex_count);
 	void copy_indices(u32 *source, int index_count);
 
@@ -49,6 +51,18 @@ inline void Triangle_Mesh::allocate_indices(int number)
 
 	indices = new u32[number];
 	index_count = number;
+}
+
+inline void Triangle_Mesh::free_vertices()
+{
+	DELETE_PTR(vertices);
+	vertex_count = 0;
+}
+
+inline void Triangle_Mesh::free_indices()
+{
+	DELETE_PTR(indices);
+	index_count = 0;
 }
 
 inline void Triangle_Mesh::copy_vertices(Vertex *source, int vertex_count)
