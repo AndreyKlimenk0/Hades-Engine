@@ -13,7 +13,9 @@ static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *
 {
 	FILE *png_file = fopen(path_to_file, "rb");
 	if (!png_file) {
-		print("Can not open PNG file with name {}", extract_file_name(path_to_file));
+		String file_name;
+		extract_file_name(path_to_file, file_name);
+		print("Can not open PNG file with name {}", file_name);
 		return false;
 	}
 
@@ -136,6 +138,14 @@ static Texture *create_texture_2d(u32 width, u32 height, void *data, u32 mip_lev
 
 Texture *create_texture_from_file(const char *file_name)
 {
+	String file_extension;
+	extract_file_extension(file_name, file_extension);
+
+	if (file_extension != "png") {
+		print("create_texture_from_file: the fucntion supports only png file");
+		return NULL;
+	}
+
 	String texture_path;
 	os_path.build_full_path_to_texture_file(file_name, texture_path);
 
@@ -209,12 +219,11 @@ Texture_Manager::~Texture_Manager()
 void Texture_Manager::init()
 {
 	default_texture.init(128, 128);
-	default_texture.set_color(Color(85, 85, 85));
+	default_texture.set_color(Color(150, 150, 150));
 }
 
 Texture *Texture_Manager::get_texture(const char *texture_name)
 {
-	return &default_texture;
 	if (texture_name == NULL) {
 		return &default_texture;
 	}

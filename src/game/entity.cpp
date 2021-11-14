@@ -1,9 +1,28 @@
 #include "entity.h"
 #include "../render/model.h"
+#include "../render/texture.h"
 #include "../libs/geometry_generator.h"
 
 
-Entity *Entity_Manager::make_entity(Entity_Type type, const Vector3 &position)
+
+void Entity_Manager::add_entity(Entity *entity)
+{
+	entity->id = id_count++;
+	entities.push(entity);
+	
+	if (entity->type == ENTITY_TYPE_LIGHT) {
+		Light *light = static_cast<Light *>(entity);
+		
+		if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
+			lights.push(light);
+			entities.push(light);
+		} else {
+			print("In the world already there is max number of lights, this light will not add to the world");
+		}
+	}
+}
+
+Entity *Entity_Manager::make_entity(Entity_Type type)
 {
 	Entity *entity = NULL;
 
@@ -19,14 +38,6 @@ Entity *Entity_Manager::make_entity(Entity_Type type, const Vector3 &position)
 		}
 		case ENTITY_TYPE_LIGHT: {
 			entity = new Light();
-			
-			if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
-				lights.push((Light *)entity);
-			} else {
-				print("In the world already there is max number of lights, this light will not add to the world");
-				return NULL;
-			}
-			
 			break;
 		}
 		case ENTITY_TYPE_UNKNOWN: {
@@ -34,21 +45,24 @@ Entity *Entity_Manager::make_entity(Entity_Type type, const Vector3 &position)
 			break;
 		}
 	}
-
-	entity->id = id_count++;
-	entity->position = position;
-
+	
 	add_entity(entity);
-
 	return entity;
 }
 
-Light *Entity_Manager::make_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, Light_Type light_type)
+Entity *Entity_Manager::make_entity(Entity_Type entity_type, const Vector3 &position)
 {
-	Light *light = (Light *)make_entity(ENTITY_TYPE_LIGHT, position);
+	Entity *entity = make_entity(entity_type);
+	entity->position = position;
+	return entity;
+}
+
+Light *Entity_Manager::make_direction_light(const Vector3 &direction, const Vector3 &color)
+{
+	Light *light = (Light *)make_entity(ENTITY_TYPE_LIGHT);
 	light->direction = direction;
 	light->color = color;
-	light->light_type = light_type;
+	light->light_type = DIRECTIONAL_LIGHT_TYPE;
 
 	return light;
 }
@@ -78,6 +92,9 @@ Entity *Entity_Manager::make_grid(const Vector3 &position, float width, float de
 {
 	String model_name = String("grid_") + String((int)width) + String((int)depth) + String(m) + String(n);
 	Render_Model *render_model = model_manager.make_render_model(model_name);
+	Render_Mesh *render_mesh = render_model->get_render_mesh();
+	render_mesh->material.specular = Vector4(0.1f, 0.1f, 0.1f, 4.0f);
+	render_mesh->diffuse_texture = texture_manager.get_texture("floor.png");
 
 	generate_grid(width, depth, m, n, render_model->get_triangle_mesh());
 
@@ -91,7 +108,14 @@ Entity *Entity_Manager::make_box(const Vector3 &position, float width, float hei
 	return NULL;
 }
 
-Entity *Entity_Manager::make_sphere(const Vector3 &position, float radius, UINT sliceCount, UINT stackCount)
+Entity *Entity_Manager::make_sphere(const Vector3 &position, float radius, u32 slice_count, u32 stack_count)
 {
-	return NULL;
+	String model_name = String("sphere_") + String((int)radius) + String((int)slice_count) + String((int)stack_count);
+	Render_Model *render_model = model_manager.make_render_model(model_name);
+
+	generate_sphere(radius, slice_count, stack_count, render_model->get_triangle_mesh());
+
+	Entity *entity = make_entity(ENTITY_TYPE_UNKNOWN, position);
+	entity->model = render_model;
+	return entity;
 }

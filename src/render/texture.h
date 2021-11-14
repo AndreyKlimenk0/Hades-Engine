@@ -46,7 +46,4 @@ struct Texture_Manager {
 };
 
 extern Texture_Manager texture_manager;
-
-Texture *create_texture_from_file(const char *path_to_file);
-
 #endif
