@@ -51,7 +51,7 @@ struct Edit_Field_Theme {
 
 struct Window_Theme {
 	int shift_element_from_left_side = 20;
-	int place_between_elements = 15;
+	int place_between_elements = 10;
 	int shift_element_from_left = 15;
 	int header_height = 20;
 	int shift_cross_button_from_left_on = 5;
@@ -64,7 +64,7 @@ struct Window_Theme {
 enum Element_Type {
 	ELEMENT_TYPE_UNDEFINED,
 	ELEMENT_TYPE_BUTTON,
-	ELEMENT_TYPE_PICKED_PANEL_LIST_BOX,
+	ELEMENT_TYPE_PANEL_LIST_BOX,
 	ELEMENT_TYPE_LIST_BOX,
 	ELEMENT_TYPE_INPUT_FIELD,
 	ELEMENT_TYPE_EDIT_FIELD,
@@ -221,14 +221,14 @@ struct List_Box : Input_Field {
 	void add_item(const char *item_text);
 	void add_item(const char *string, int enum_value);
 	
-	int get_current_chosen_enum_value();
-	String *get_current_chosen_item_string();
+	int get_chosen_enum_value();
+	String *get_chosen_item_string();
 	
 	void set_position(int _x, int _y);
 };
 
-struct Picked_Panel_List_Box : List_Box {
-	Picked_Panel_List_Box(int _x, int _y, const char *_label);
+struct Panel_List_Box : List_Box {
+	Panel_List_Box(int _x, int _y, const char *_label);
 
 	Picked_Panel *last_picked_panel = NULL;
 
@@ -258,12 +258,11 @@ enum Edit_Data_Type {
 	EDIT_DATA_INT,
 	EDIT_DATA_FLOAT,
 	EDIT_DATA_STRING,
-	EDIT_DATA_VECTOR3
 };
 
 struct Edit_Field : Input_Field {
 	Edit_Field() { type = ELEMENT_TYPE_EDIT_FIELD; }
-	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, int _x = 0, int _y = 0);
+	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
 	//Edit_Field(int _x, int _y, const char *_label_text, int *int_value);
 	//Edit_Field(int _x, int _y, const char *_label_text, float *float_value);
 	//Edit_Field(int _x, int _y, const char *_label_text, String *string_value);
@@ -272,7 +271,8 @@ struct Edit_Field : Input_Field {
 
 	int max_text_width;
 	int text_width;
-	int caret_index_in_text;
+	int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
+	int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
 	int field_width;
 	
 	Edit_Data_Type edit_data_type;
@@ -297,11 +297,15 @@ struct Edit_Field : Input_Field {
 	void draw();
 	void handle_event(Event *event);
 	void set_position(int _x, int _y);
+	void set_caret_position_on_mouse_click(int mouse_x, int mouse_y);
+
+	int get_int_value();
+	float get_float_value();
 };
 
 struct Vector3_Edit_Field : Input_Field {
 	Vector3_Edit_Field() { type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD; }
-	Vector3_Edit_Field(int _x, int _y);
+	Vector3_Edit_Field(const char *_label, int _x = 0, int _y = 0);
 	~Vector3_Edit_Field() {};
 
 	Edit_Field x;
@@ -310,15 +314,12 @@ struct Vector3_Edit_Field : Input_Field {
 
 	void draw();
 	void handle_event(Event *event);
-	void set_position(int _x, int _y) { assert(false); }
-	//Vector3 &get_vector() { return Vector3(1, 2, 3); }
+	void set_position(int _x, int _y);
+	void get_vector(Vector3 *vector);
 };
 
 struct Form : Element {
 	Form();
-	//~Form();
-
-	bool draw_form = true;
 
 	String label;
 
@@ -328,9 +329,10 @@ struct Form : Element {
 	
 	void draw();
 	void on_submit();
+	void fill_args(Args *args, Array<Input_Field *> *fields);
 	void handle_event(Event *event);
 	void add_field(Input_Field *input_field);
-	void set_position(int _x, int _y) { assert(false); }
+	void set_position(int _x, int _y);
 };
 
 struct Window : Element {
@@ -347,7 +349,6 @@ struct Window : Element {
 	Array<Element *> elements;
 	Array<Input_Field *> input_fields;
 	Array<List_Box *> list_boxies;
-	Array<Form *> forms;
 
 	bool close_window = false;
 
@@ -363,12 +364,9 @@ struct Window : Element {
 	void set_position(int _x, int _y) { assert(false); }
 	void set_element_position(Element *element);
 	
+	int calculate_place_by_x(Element *element);
 	int get_element_x_place() { return x + next_place.x;}
 	int get_element_y_place() { return y + next_place.y;}
-	
-	Form *find_form(const char *label);
-	List_Box *find_list_box(const char *label);
-
 };
 
 struct Editor {
@@ -381,7 +379,7 @@ struct Editor {
 	List_Box *current_list_box = NULL;
 	Picked_Panel *current_picked_panel = NULL;
 	Edit_Field *current_edit_field = NULL;
-	Picked_Panel_List_Box *current_picked_panel_list_box = NULL;
+	Panel_List_Box *current_panel_list_box = NULL;
 
 	void init();
 	void handle_event(Event *event);
@@ -393,15 +391,15 @@ struct Editor {
 	void make_button(const char *text, Callback *callback = NULL);
 	void make_list_box(const char *text);
 	void make_picked_list_box(const char *text);
+	void make_end_picked_list_box();
 	void make_picked_panel();
 	void end_picked_panel();
 	void make_edit_field(const char *label, Edit_Data_Type edit_data_type);
 	void make_edit_field(const char *label, int value);
 	void make_edit_field(const char *label, float value);
-	void make_vector3_edit_field();
+	void make_vector3_edit_field(const char *label);
 	void make_form();
 	void end_form();
-	void not_draw_form();
 
 	void set_form_label(const char *label);
 

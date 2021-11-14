@@ -13,5 +13,4 @@ struct Engine_Info {
 
 	Camera *get_camera();
 };
-
 #endif

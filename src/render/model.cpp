@@ -40,9 +40,11 @@ void Render_Model::init(const char *render_model_name, u32 render_mesh_count)
 void Render_Model::init_from_file(const char *file_name)
 {
 	assert(file_name != NULL);
-	name = extract_name_from_file(&String(file_name));
+	extract_file_name(file_name, name);
 	
-	char *file_extension = extract_file_extension(file_name);
+	String file_extension;
+	extract_file_extension(file_name, file_extension);
+
 	if (!strcmp(file_extension, "fbx")) {
 		load_fbx_model(file_name);
 	} else {

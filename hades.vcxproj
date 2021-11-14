@@ -182,7 +182,6 @@
     <ClCompile Include="src\win32\win_time.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="C:\Users\aklymenk\Downloads\libspng-0.7.0\libspng-0.7.0\spng\spng.h" />
     <ClInclude Include="src\editor\editor.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\libs\color.h" />

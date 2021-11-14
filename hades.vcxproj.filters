@@ -212,9 +212,6 @@
     <ClInclude Include="src\render\texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\Users\aklymenk\Downloads\libspng-0.7.0\libspng-0.7.0\spng\spng.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\libs\spng.h">
       <Filter>Header Files</Filter>
     </ClInclude>

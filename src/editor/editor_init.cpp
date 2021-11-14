@@ -7,52 +7,90 @@ void Editor::init()
 {
 	make_window(WINDOW_LEFT | WINDOW_FULL_HEIGHT | WINDOW_AUTO_WIDTH);
 
-	//make_list_box("Test");
-	//add_item("Item 1", 0);
-	//add_item("Item 2", 0);
-	//add_item("Item 3", 0);
-
 	//make_edit_field("Test", EDIT_DATA_FLOAT);
+	//make_vector3_edit_field("Position");
+	//make_button("Ttss");
+	
+	make_form();
+	
+	make_picked_list_box("Entity Type");
 
-	//make_list_box("Test2");
+	make_vector3_edit_field("Position");
+	
+	make_picked_panel();
+	
+	make_edit_field("radius", EDIT_DATA_INT);
+	
+	make_edit_field("stack slice", EDIT_DATA_INT);
+	make_edit_field("stack count", EDIT_DATA_INT);
+	
+	add_picked_panel("Sphere", ENTITY_TYPE_SPHERE);
+	end_picked_panel();
+
+	make_picked_panel();
+
+	make_edit_field("width", EDIT_DATA_FLOAT);
+	make_edit_field("depth", EDIT_DATA_FLOAT);
+	make_edit_field("cell width", EDIT_DATA_INT);
+	make_edit_field("cell depth", EDIT_DATA_INT);
+	
+	add_picked_panel("Grid", ENTITY_TYPE_GRID); 
+	end_picked_panel();
+
+	make_picked_panel();
+
+	make_list_box("Light Type");
+	
+	add_item("Spot", SPOT_LIGHT_TYPE);
+	add_item("Point", POINT_LIGHT_TYPE);
+	add_item("Directional", DIRECTIONAL_LIGHT_TYPE);
+
+	make_edit_field("range", EDIT_DATA_FLOAT);
+	make_edit_field("radius", EDIT_DATA_FLOAT);
+
+	make_vector3_edit_field("Color");
+	make_vector3_edit_field("Direction");
+
+	add_picked_panel("Light", ENTITY_TYPE_LIGHT);
+	end_picked_panel();
+
+	make_end_picked_list_box();
+	
+	end_form();
+
+
+	//make_picked_list_box("Light Type");
+	//
+	//make_picked_panel();
+	//
+	//make_list_box("Test1");
 	//add_item("Item 1", 0);
 	//add_item("Item 2", 0);
 	//add_item("Item 3", 0);
 
-	//make_edit_field("Test2", EDIT_DATA_FLOAT);
-
-	make_picked_list_box("Light Type");
-	
-	make_picked_panel();
-	
-	make_list_box("Test1");
-	add_item("Item 1", 0);
-	add_item("Item 2", 0);
-	add_item("Item 3", 0);
-
-	make_edit_field("Field1", EDIT_DATA_FLOAT);
-	make_edit_field("Field2", EDIT_DATA_FLOAT);
-	make_edit_field("Field3", EDIT_DATA_FLOAT);
-	
-	add_picked_panel("Directional Light", DIRECTIONAL_LIGHT_TYPE);
-	
-	end_picked_panel();
+	//make_edit_field("Field1", EDIT_DATA_FLOAT);
+	//make_edit_field("Field2", EDIT_DATA_FLOAT);
+	//make_edit_field("Field3", EDIT_DATA_FLOAT);
+	//
+	//add_picked_panel("Sphere", ENTI);
+	//
+	//end_picked_panel();
 
 
-	make_picked_panel();
-	
-	make_list_box("Test2");
-	add_item("Item 21", 0);
-	add_item("Item 22", 0);
-	add_item("Item 23", 0);
+	//make_picked_panel();
+	//
+	//make_list_box("Test2");
+	//add_item("Item 21", 0);
+	//add_item("Item 22", 0);
+	//add_item("Item 23", 0);
 
-	make_edit_field("Field21", EDIT_DATA_FLOAT);
-	make_edit_field("Field22", EDIT_DATA_FLOAT);
-	make_edit_field("Field32", EDIT_DATA_FLOAT);
-	
-	add_picked_panel("Point Light", POINT_LIGHT_TYPE);
-	
-	end_picked_panel();
+	//make_edit_field("Field21", EDIT_DATA_FLOAT);
+	//make_edit_field("Field22", EDIT_DATA_FLOAT);
+	//make_edit_field("Field32", EDIT_DATA_FLOAT);
+	//
+	//add_picked_panel("Point Light", POINT_LIGHT_TYPE);
+	//
+	//end_picked_panel();
 
 
 	//make_list_box("AAAA");

@@ -8,6 +8,9 @@
 #include "../ds/array.h"
 
 
+void extract_file_name(const char *file_name, String &result);
+void extract_file_extension(const char *file_name, String &result);
+
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names);
 
 u8  read_u8(FILE *file);
@@ -25,8 +28,4 @@ double read_real64(FILE *file);
 
 char *read_string(FILE *file, int len);
 char *read_entire_file(const char *name, const char *mode = "r", int *file_size = NULL);
-char *extract_file_name(const char *file_path);
-char *extract_file_extension(const char *file_path);
-
-String *extract_name_from_file(String *file_name);
 #endif

@@ -14,6 +14,9 @@ const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
 
 enum Entity_Type {
 	ENTITY_TYPE_UNKNOWN,
+	ENTITY_TYPE_GRID,
+	ENTITY_TYPE_BOX,
+	ENTITY_TYPE_SPHERE,
 	ENTITY_TYPE_FLOOR,
 	ENTITY_TYPE_MUTANT,
 	ENTITY_TYPE_SOLDIER,
@@ -80,32 +83,17 @@ struct Entity_Manager {
 	Array<Light *> lights;
 	Array<Entity *> entities;
 
-	void add_light(Light *light);
 	void add_entity(Entity *entity);
-
+	
+	Entity *make_entity(Entity_Type type);
+	Entity *make_entity(Entity_Type type, const Vector3 &position);
 
 	Entity *make_grid(const Vector3 &position, float width, float depth, int m, int n);
 	Entity *make_box(const Vector3 &position, float width, float height, float depth);
-	Entity *make_sphere(const Vector3 &position, float radius, UINT sliceCount, UINT stackCount);
+	Entity *make_sphere(const Vector3 &position, float radius, u32 slice_count, u32 stack_count);
 	
-	Entity *make_entity(Entity_Type type, const Vector3 &position);
-	Light  *make_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, Light_Type light_type);
-	Light  *make_point_light(const Vector3 &position, const Vector3 &color, float range);
 	Light  *make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
+	Light  *make_point_light(const Vector3 &position, const Vector3 &color, float range);
+	Light  *make_direction_light(const Vector3 &direction, const Vector3 &color);
 };
-
-inline void Entity_Manager::add_entity(Entity *entity)
-{
-	entities.push(entity);
-}
-
-inline void Entity_Manager::add_light(Light *light)
-{
-	if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
-		lights.push(light);
-		entities.push(light);
-	} else {
-		print("In the world already there is max number of lights, this light will not add to the world");
-	}
-}
 #endif

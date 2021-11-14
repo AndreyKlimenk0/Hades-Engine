@@ -28,6 +28,11 @@ struct Direct_Write {
 	int glyph_height;
 	int glyph_width;
 	int font_size;
+	
+	float max_glyph_height = 0.0f;
+	float max_glyph_width = 0.0f;
+	float avarage_glyph_height = 0.0f;
+	
 	Color text_color;
 
 	Hash_Table<char, Direct_Character> characters;

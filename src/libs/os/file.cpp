@@ -127,23 +127,18 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 	return buffer;
 }
 
-char *extract_file_extension(const char *file_path)
-{
-	Array<char *> buffer;
-	split(const_cast<char *>(file_path), ".", &buffer);
-	return _strdup(buffer[buffer.count - 1]);
-}
-
-char *extract_file_name(const char *file_path)
-{
-	Array<char *> buffer;
-	split(const_cast<char *>(file_path), "\\", &buffer);
-	return _strdup(buffer[buffer.count -1]);
-}
-
-String *extract_name_from_file(String *file_name)
+void extract_file_extension(const char *file_name, String &result)
 {
 	Array<String> buffer;
-	split(file_name, ".", &buffer);
-	return buffer[0].copy();
+	String str = file_name;
+	split(&str, ".", &buffer);
+	result = buffer.last_item();
+}
+
+void extract_file_name(const char *file_name, String &result)
+{
+	Array<String> buffer;
+	String str = file_name;
+	split(&str, ".", &buffer);
+	result = buffer.items[0];
 }
