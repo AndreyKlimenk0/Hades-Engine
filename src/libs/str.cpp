@@ -404,7 +404,7 @@ void String::insert(int index, char c)
 
 	DELETE_PTR(data);
 
-	data = new char[len + 2];
+	data = new char[len + 2]; // allocate place for new char and \0
 
 	char *first_part_dest_str = data;
 	char *first_part_src_str = copied_str->data;

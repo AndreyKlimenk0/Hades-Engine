@@ -216,4 +216,5 @@ void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Me
 
 	mesh->copy_vertices(vertices.items, vertices.count);
 	mesh->copy_indices(indices.items, indices.count);
+	mesh->allocate_static_buffer();
 }

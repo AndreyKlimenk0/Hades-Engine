@@ -7,8 +7,11 @@
 
 #include "../../sys/sys_local.h"
 
-#define HT_PRIME_1 151
-#define HT_PRIME_2 163
+//#define HT_PRIME_1 151
+#define HT_PRIME_1 1007887
+//#define HT_PRIME_2 163
+//#define HT_PRIME_2 1007957
+#define HT_PRIME_2 2008393
 
 
 int hash(char c, const int factor, const int table_count);
@@ -49,8 +52,8 @@ struct Hash_Table {
 	~Hash_Table();
 
 	Hash_Node<_Key_, _Value_> **nodes;
-	int size;
-	int count;
+	u32 size;
+	u32 count;
 
 	void resize();
 
@@ -59,7 +62,49 @@ struct Hash_Table {
 	bool get(const _Key_ &key, _Value_ *value);
 
 	_Value_ &operator[](const _Key_ &key);
+	_Value_ &operator[](u32 index);
+
+	Hash_Node<_Key_, _Value_> *get_node(u32 index);
 };
+
+template<typename _Key_, typename _Value_>
+_Value_ &Hash_Table<_Key_, _Value_>::operator[](u32 index)
+{
+	assert(count > index);
+
+	u32 node_count = 0;
+	for (int i = 0; i < size; i++) {
+		Hash_Node<_Key_, _Value_> *node = nodes[i];
+		if ((node != NULL) && (node_count == index)) {
+			return node->value;
+		} else {
+			if (node != NULL) {
+				node_count += 1;
+			}
+		}
+	}
+	assert(false);
+}
+
+template<typename _Key_, typename _Value_>
+inline Hash_Node<_Key_, _Value_>* Hash_Table<_Key_, _Value_>::get_node(u32 index)
+{
+	assert(count > index);
+
+	u32 node_count = 0;
+	for (int i = 0; i < size; i++) {
+		Hash_Node<_Key_, _Value_> *node = nodes[i];
+		if ((node != NULL) && (node_count == index)) {
+			return node;
+		} else {
+			if (node != NULL) {
+				node_count += 1;
+			}
+		}
+	}
+	assert(false);
+	return NULL;
+}
 
 template<typename _Key_, typename _Value_>
 _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
@@ -151,8 +196,8 @@ inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ *value)
 {
 	int index = double_hash(key, size, 0);
 	Hash_Node<_Key_, _Value_> *node = nodes[index];
-	int i = 1;
-	int c = 0;
+	u32 i = 1;
+	u32 c = 0;
 	while ((node != NULL) && (c < count)) {
 		if (node->compare(key)) {
 			*value = node->value;

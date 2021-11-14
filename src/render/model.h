@@ -111,4 +111,5 @@ struct Render_Model_Manager {
 };
 
 extern Render_Model_Manager model_manager;
+
 #endif 

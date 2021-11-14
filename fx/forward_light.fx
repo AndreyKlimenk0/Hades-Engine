@@ -136,7 +136,7 @@ float4 calculate_directional_light(Light light, Material material, float3 normal
 	if (diffuse_factor > 0.0f) {
 		diffuse = diffuse_factor * material.diffuse * light.color;
 
-		float3 reflect_dir = normalize(reflect(light.direction, normal));
+		float3 reflect_dir = normalize(reflect(-light.direction, normal));
 
 		float3 dir_to_camera = normalize(camera_position - world_position);
 		float specular_factor = pow(max(dot(reflect_dir, dir_to_camera), 0.0f), shininess);

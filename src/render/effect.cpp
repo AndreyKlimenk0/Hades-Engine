@@ -91,12 +91,12 @@ void Fx_Shader::bind(const char *var_name, void *struct_ptr, u32 struct_size)
 
 void Fx_Shader::bind_entity(Entity * entity, Matrix4 &view, Matrix4 &perspective, Render_Mesh *r)
 {
-	//Matrix4 world = entity->get_world_matrix();
-	Matrix4 world = r->position * r->orientation * r->scale;
+	Matrix4 world = entity->get_world_matrix();
+	//Matrix4 world = r->position * r->orientation * r->scale;
 	Matrix4 wvp_projection = world * view * perspective;
-	Matrix4 w;
+	//Matrix4 w;
 	//bind("world", &r->transform);
-	bind("world", &w);
+	bind("world", &world);
 	bind("world_view_projection", &wvp_projection);
 
 	if (entity->type != ENTITY_TYPE_LIGHT) {
@@ -159,11 +159,11 @@ void Fx_Shader_Manager::init()
 		ID3DX11Effect *fx = NULL;
 		HR(D3DX11CreateEffectFromMemory(compiled_shader, sizeof(char) * file_size, 0, directx11.device, &fx, NULL));
 
-		String *name = extract_name_from_file(&file_names[i]);
-		defer(name->free());
+		String name;
+		extract_file_name(file_names[i].to_str(), name);
 		
-		Fx_Shader *fx_shader = new Fx_Shader(name, fx);
-		shaders->set(*name, fx_shader);
+		Fx_Shader *fx_shader = new Fx_Shader(&name, fx);
+		shaders->set(name, fx_shader);
 
 		DELETE_PTR(compiled_shader);
 	}

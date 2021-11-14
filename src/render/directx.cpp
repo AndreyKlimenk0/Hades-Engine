@@ -102,9 +102,22 @@ void Direct_Write::init_characters()
 		character.width = width;
 		character.height = height;
 
+		if (max_glyph_height > height) {
+			max_glyph_height = height;
+		}
+
+		if (max_glyph_width > width) {
+			max_glyph_width = width;
+		}
+
+		avarage_glyph_height += height;
+
 		characters.set(c, character);
 
 	}
+
+	avarage_glyph_height /= 128;
+
 	DELETE_ARRAY(glyph_metrics);
 	DELETE_ARRAY(code_points);
 	DELETE_ARRAY(glyph_indices);
@@ -165,7 +178,6 @@ D2D1_SIZE_F Direct_Write::get_text_size_in_pixels(const char *text)
 	return size;
 }
 
-
 Direct2D::~Direct2D()
 {
 	shutdown();
@@ -198,7 +210,6 @@ void Direct2D::shutdown()
 	RELEASE_COM(factory);
 	RELEASE_COM(render_target);
 }
-
 
 void Direct2D::draw_text(int x, int y, const char *text)
 {
@@ -285,7 +296,6 @@ void DirectX11::init()
 
 	resize();
 }
-
 
 void DirectX11::shutdown()
 {
