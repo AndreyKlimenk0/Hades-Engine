@@ -264,7 +264,7 @@ struct Edit_Field : Input_Field {
 	Edit_Field() { type = ELEMENT_TYPE_EDIT_FIELD; }
 	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
 	//Edit_Field(int _x, int _y, const char *_label_text, int *int_value);
-	//Edit_Field(int _x, int _y, const char *_label_text, float *float_value);
+	Edit_Field(const char *_label_text, float *float_value, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
 	//Edit_Field(int _x, int _y, const char *_label_text, String *string_value);
 
 	bool edit_itself_data;
@@ -298,6 +298,8 @@ struct Edit_Field : Input_Field {
 	void handle_event(Event *event);
 	void set_position(int _x, int _y);
 	void set_caret_position_on_mouse_click(int mouse_x, int mouse_y);
+	void set_text(const char *_text);
+	void update_edit_data(const char *text);
 
 	int get_int_value();
 	float get_float_value();
@@ -306,6 +308,7 @@ struct Edit_Field : Input_Field {
 struct Vector3_Edit_Field : Input_Field {
 	Vector3_Edit_Field() { type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD; }
 	Vector3_Edit_Field(const char *_label, int _x = 0, int _y = 0);
+	Vector3_Edit_Field(const char *_label, Vector3 *vec3, int _x = 0, int _y = 0);
 	~Vector3_Edit_Field() {};
 
 	Edit_Field x;
@@ -396,8 +399,9 @@ struct Editor {
 	void end_picked_panel();
 	void make_edit_field(const char *label, Edit_Data_Type edit_data_type);
 	void make_edit_field(const char *label, int value);
-	void make_edit_field(const char *label, float value);
+	void make_edit_field(const char *label, float *value);
 	void make_vector3_edit_field(const char *label);
+	void make_vector3_edit_field(const char *label, Vector3 *vec3);
 	void make_form();
 	void end_form();
 

@@ -6,7 +6,7 @@
 #include "../libs/os/file.h"
 #include <string.h>
 #include <stdlib.h>
-#include "../game/entity.h"
+#include "../game/world.h"
 #include <tuple>
 
 #define TO_STRING(x) (#x)

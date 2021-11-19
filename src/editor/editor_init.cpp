@@ -1,6 +1,5 @@
 #include "editor.h"
 
-#include "../game/entity.h"
 #include "../game/world.h"
 
 void Editor::init()
@@ -57,6 +56,20 @@ void Editor::init()
 	make_end_picked_list_box();
 	
 	end_form();
+
+	make_window(WINDOW_RIGHT | WINDOW_FULL_HEIGHT | WINDOW_AUTO_WIDTH);
+
+	//make_edit_field("Test", EDIT_DATA_FLOAT);
+
+	make_edit_field("x", &free_camera.position.x);
+	make_edit_field("y", &free_camera.position.y);
+	make_edit_field("z", &free_camera.position.z);
+
+	make_vector3_edit_field("Position", &free_camera.position);
+
+	//make_edit_field("x", &free_camera.forward.x);
+	//make_edit_field("y", &free_camera.forward.y);
+	//make_edit_field("z", &free_camera.forward.z);
 
 
 	//make_picked_list_box("Light Type");
@@ -176,7 +189,7 @@ void Editor::init()
 	
 	//current_window->aligning_input_fields();
 	
-	make_window(WINDOW_RIGHT | WINDOW_FULL_HEIGHT | WINDOW_AUTO_WIDTH);
+	//make_window(WINDOW_RIGHT | WINDOW_FULL_HEIGHT | WINDOW_AUTO_WIDTH);
 
 	//make_list_box("Position");
 	//add_item("Text 1", ENTITY_TYPE_UNKNOWN);
