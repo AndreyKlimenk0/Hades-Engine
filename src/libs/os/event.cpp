@@ -57,6 +57,8 @@ void push_event(Event_Type type, int first_value, int second_value)
 	case EVENT_TYPE_MOUSE: {
 		event->mouse_info.x = first_value;
 		event->mouse_info.y = second_value;
+		Mouse_Input::x = first_value;
+		Mouse_Input::y = second_value;
 		break;
 	}
 	case EVENT_TYPE_CHAR: {

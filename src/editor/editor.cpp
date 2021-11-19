@@ -11,7 +11,6 @@
 #include "../win32/win_local.h"
 #include "../render/font.h"
 
-#include "../game/entity.h"
 #include "../game/world.h"
 
 Editor editor;
@@ -573,7 +572,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	edit_itself_data = true;
 
-	max_text_width = (field_width - theme.shift_caret_from_left * 3);
+	max_text_width = (field_width - theme.shift_caret_from_left * 3 -10);
 
 	edit_data_type = _edit_data_type;
 
@@ -601,14 +600,68 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 		caret_index_for_inserting = 3;
 		caret_index_in_text = 2;
-		text_width = size.height;
+		text_width = size.width;
 
 		edit_data.itself_data.float_value = 0.0f;
 	}
 }
 
+Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_Theme * edit_theme, int _x, int _y)
+{
+	if (edit_theme) {
+		theme = *edit_theme;
+	} else {
+		theme = edit_field_theme;
+	}
+	
+	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
+	
+	type = ELEMENT_TYPE_EDIT_FIELD;
+
+	x = _x + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;
+	y = _y;
+	width = theme.width + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;;
+	height = theme.height;
+
+	field_width = theme.width;
+
+	edit_itself_data = false;
+
+	max_text_width = (field_width - theme.shift_caret_from_left * 3);
+
+	edit_data_type = EDIT_DATA_FLOAT;
+
+	label = Label(_x, place_in_middle(this, direct_write.glyph_height), _label_text);
+
+	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
+
+	edit_data.not_itself_data.float_value = float_value;
+	
+	char *float_str = to_string(*float_value);
+
+	set_text(float_str);
+
+	free_string(float_str);
+}
+
 void Edit_Field::handle_event(Event *event)
 {
+
+	if (!edit_itself_data) {
+		char *str_value = NULL;
+		
+		if (edit_data_type == EDIT_DATA_INT) {
+			str_value = to_string(*edit_data.not_itself_data.int_value);
+		} else if (edit_data_type == EDIT_DATA_FLOAT) {
+			str_value = to_string(*edit_data.not_itself_data.float_value);
+		}
+		
+		if (text != str_value) {
+			set_text(str_value);
+		}
+		free_string(str_value);
+	}
+
 	static int last_mouse_x;
 	static int last_mouse_y;
 
@@ -646,6 +699,8 @@ void Edit_Field::handle_event(Event *event)
 					
 					caret_index_in_text -= 1;
 					caret_index_for_inserting -= 1;
+
+					update_edit_data(text);
 				}
 
 			} else if (event->is_key_down(VK_LEFT)) {
@@ -688,25 +743,8 @@ void Edit_Field::handle_event(Event *event)
 				caret.fx += character.width;
 				text_width += character.width;
 
-				if (edit_itself_data) {
-					if (edit_data_type == EDIT_DATA_INT) {
-						
-						edit_data.itself_data.int_value = atoi(text);
+				update_edit_data(text);
 
-					} else if (edit_data_type == EDIT_DATA_FLOAT) {
-						
-						edit_data.itself_data.float_value = atof(text);
-					}
-				} else {
-					if (edit_data_type == EDIT_DATA_INT) {
-
-						*edit_data.not_itself_data.int_value = atoi(text);
-
-					} else if (edit_data_type == EDIT_DATA_FLOAT) {
-						
-						*edit_data.not_itself_data.float_value = atof(text);
-					}
-				}
 			}
 		}
 	}
@@ -769,12 +807,52 @@ void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 			}
 			
 			caret.fx = x + theme.shift_caret_from_left + characters_width;
-			caret_index_in_text = i - 1;
 			caret_index_for_inserting = i;
+			caret_index_in_text = i - 1;
 			break;
 		}
 		characters_width += character.width;
 		caret.fx = caret_temp_x;
+	}
+}
+
+void Edit_Field::set_text(const char * _text)
+{
+	if (!text.is_empty()) {
+		int width_current_text = direct_write.get_text_width(text);
+		caret.fx -= width_current_text;
+	}
+	
+	text = String(_text, 0, 7);
+
+	int _width = direct_write.get_text_width(text);
+	caret.fx += _width;
+
+	caret_index_for_inserting = text.len;
+	caret_index_in_text = text.len - 1;
+	text_width = _width;
+}
+
+void Edit_Field::update_edit_data(const char *text)
+{
+	if (edit_itself_data) {
+		if (edit_data_type == EDIT_DATA_INT) {
+
+			edit_data.itself_data.int_value = atoi(text);
+
+		} else if (edit_data_type == EDIT_DATA_FLOAT) {
+
+			edit_data.itself_data.float_value = atof(text);
+		}
+	} else {
+		if (edit_data_type == EDIT_DATA_INT) {
+
+			*edit_data.not_itself_data.int_value = atoi(text);
+
+		} else if (edit_data_type == EDIT_DATA_FLOAT) {
+
+			*edit_data.not_itself_data.float_value = atof(text);
+		}
 	}
 }
 
@@ -801,11 +879,28 @@ Vector3_Edit_Field::Vector3_Edit_Field(const char *_label, int _x, int _y)
 	label = Label(0, 0, _label);
 
 	Edit_Field_Theme theme;
-	theme.width = 50;
+	theme.width = 60;
 
 	x = Edit_Field("x", EDIT_DATA_FLOAT, &theme);
 	y = Edit_Field("y", EDIT_DATA_FLOAT, &theme);
 	z = Edit_Field("z", EDIT_DATA_FLOAT, &theme);
+
+	width = x.width; // made for Window::calculate_place_by_x
+	height = x.height; // made for Window::go_to_next_element_place
+}
+
+Vector3_Edit_Field::Vector3_Edit_Field(const char * _label, Vector3 * vec3, int _x, int _y)
+{
+	type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD;
+
+	label = Label(0, 0, _label);
+
+	Edit_Field_Theme theme;
+	theme.width = 50;
+
+	x = Edit_Field("x", &vec3->x, &theme);
+	y = Edit_Field("y", &vec3->y, &theme);
+	z = Edit_Field("z", &vec3->z, &theme);
 
 	width = x.width; // made for Window::calculate_place_by_x
 	height = x.height; // made for Window::go_to_next_element_place
@@ -1150,7 +1245,7 @@ void Editor::update()
 {
 	Window *window = NULL;
 	For(windows, window) {
-		window->update();
+		//window->update();
 	}
 }
 
@@ -1238,7 +1333,6 @@ void Editor::make_picked_list_box(const char * label)
 	if (current_form) {
 		current_form->add_field(current_panel_list_box);
 	}
-
 }
 
 void Editor::make_end_picked_list_box()
@@ -1272,6 +1366,23 @@ void Editor::make_vector3_edit_field(const char *label)
 
 	Vector3_Edit_Field *vec3 = new Vector3_Edit_Field(label);
 
+	// @TODO
+	if (current_picked_panel) {
+		current_picked_panel->add_field(vec3);
+		return;
+	} else if (current_form) {
+		current_form->add_field(vec3);
+	}
+	current_window->add_element(vec3);
+}
+
+void Editor::make_vector3_edit_field(const char * label, Vector3 *data)
+{
+	assert(current_window != NULL);
+
+	Vector3_Edit_Field *vec3 = new Vector3_Edit_Field(label, data);
+
+	// @TODO
 	if (current_picked_panel) {
 		current_picked_panel->add_field(vec3);
 		return;
@@ -1302,8 +1413,21 @@ void Editor::make_edit_field(const char * label, int value)
 {
 }
 
-void Editor::make_edit_field(const char * label, float value)
+void Editor::make_edit_field(const char * label, float *value)
 {
+	assert(current_window != NULL);
+
+	current_edit_field = new Edit_Field(label, value);
+
+	if (current_picked_panel) {
+		current_picked_panel->add_field(current_edit_field);
+	} else if (current_form) {
+		current_form->add_field(current_edit_field);
+	}
+
+	if ((!current_picked_panel) && (!current_form)) {
+		current_window->add_element(current_edit_field);
+	}
 }
 
 void Editor::make_form()
