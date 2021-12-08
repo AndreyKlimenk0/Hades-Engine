@@ -43,12 +43,28 @@ struct Direct_Write {
 
 	D2D1_SIZE_F get_text_size_in_pixels(const char *text);
 	int get_text_width(const char *text);
+	int get_max_glyph_height(const char *text);
 };
 
 inline int Direct_Write::get_text_width(const char *text)
 {
 	D2D1_SIZE_F size = get_text_size_in_pixels(text);
 	return static_cast<int>(size.width);
+}
+
+inline int Direct_Write::get_max_glyph_height(const char *text)
+{
+	int max_glyph_height = 0;
+	int str_len = strlen(text);
+	
+	for (int i = 0; i < str_len; i++) {
+		Direct_Character c = characters[text[i]];
+		if (c.height > max_glyph_height) {
+			max_glyph_height = c.height;
+		}
+	}
+
+	return max_glyph_height;
 }
 
 extern Direct_Write direct_write;
@@ -117,6 +133,7 @@ extern Direct2D direct2d;
 
 void load_bitmap_from_file(const char *file_path, int dest_width, int dest_height, ID2D1Bitmap **bitmap);
 
+
 struct DirectX11 {
 	~DirectX11();
 
@@ -138,6 +155,8 @@ struct DirectX11 {
 	void end_draw();
 };
 
+extern DirectX11 directx11;
+
 inline void DirectX11::begin_draw()
 {
 	assert(render_target_view);
@@ -152,6 +171,50 @@ inline void DirectX11::end_draw()
 	HR(swap_chain->Present(0, 0));
 }
 
-extern DirectX11 directx11;
+typedef ID3D11DepthStencilState Stencil_Test;
 
+inline Stencil_Test *make_stecil_test(D3D11_STENCIL_OP stencil_failed, D3D11_STENCIL_OP depth_failed, D3D11_STENCIL_OP pass, D3D11_COMPARISON_FUNC compare_func, u32 write_mask = 0xff, u32 read_mask = 0xff, bool enable_depth_test = true)
+{
+	ID3D11DepthStencilState *stencil_state = NULL;
+
+	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
+	ZeroMemory(&depth_stencil_desc, sizeof(D3D11_DEPTH_STENCILOP_DESC));
+
+	if (enable_depth_test) {
+		depth_stencil_desc.DepthEnable = true;
+		depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
+	} else {
+		depth_stencil_desc.DepthEnable = false;
+		depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		depth_stencil_desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+	}
+
+	depth_stencil_desc.StencilEnable = true;
+	depth_stencil_desc.StencilReadMask = read_mask;
+	depth_stencil_desc.StencilWriteMask = write_mask;
+
+	depth_stencil_desc.FrontFace.StencilFailOp = stencil_failed;
+	depth_stencil_desc.FrontFace.StencilDepthFailOp = depth_failed;
+	depth_stencil_desc.FrontFace.StencilPassOp = pass;
+	depth_stencil_desc.FrontFace.StencilFunc = compare_func;
+
+	depth_stencil_desc.BackFace.StencilFailOp = stencil_failed;
+	depth_stencil_desc.BackFace.StencilDepthFailOp = depth_failed;
+	depth_stencil_desc.BackFace.StencilPassOp = pass;
+	depth_stencil_desc.BackFace.StencilFunc = compare_func;
+
+	HR(directx11.device->CreateDepthStencilState(&depth_stencil_desc, &stencil_state));
+	return stencil_state;
+}
+
+inline void enable_stencil_test(Stencil_Test *stencil_test, u32 ref_value)
+{
+	directx11.device_context->OMSetDepthStencilState(stencil_test, ref_value);
+}
+
+inline void disable_stencil_test()
+{
+	directx11.device_context->OMSetDepthStencilState(NULL, 0);
+}
 #endif
