@@ -67,9 +67,6 @@ inline void Triangle_Mesh::free_indices()
 
 inline void Triangle_Mesh::copy_vertices(Vertex *source, int vertex_count)
 {
-	if (vertices != NULL) {
-		print("FFF");
-	}
 	allocate_vertices(vertex_count);
 	memcpy(vertices, source, sizeof(Vertex) * vertex_count);
 }

@@ -17,75 +17,44 @@ void Entity_Manager::add_entity(Entity *entity)
 		
 		if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
 			lights.push(light);
-			entities.push(light);
 		} else {
 			print("In the world already there is max number of lights, this light will not add to the world");
 		}
 	}
 }
 
-Entity *Entity_Manager::make_entity(Entity_Type type)
-{
-	Entity *entity = NULL;
-
-	switch (type) {
-		case ENTITY_TYPE_MUTANT: {
-			entity = new Mutant();
-			entity->model = model_manager.get_render_model("mutant.fbx");
-			break;
-		}
-		case ENTITY_TYPE_SOLDIER: {
-			entity = new Soldier();
-			break;
-		}
-		case ENTITY_TYPE_LIGHT: {
-			entity = new Light();
-			break;
-		}
-		case ENTITY_TYPE_UNKNOWN: {
-			entity = new Entity();
-			break;
-		}
-	}
-	
-	add_entity(entity);
-	return entity;
-}
-
-Entity *Entity_Manager::make_entity(Entity_Type entity_type, const Vector3 &position)
-{
-	Entity *entity = make_entity(entity_type);
-	entity->position = position;
-	return entity;
-}
-
 Light *Entity_Manager::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
-	Light *light = (Light *)make_entity(ENTITY_TYPE_LIGHT);
+	Light *light = new Light;
 	light->direction = direction;
 	light->color = color;
 	light->light_type = DIRECTIONAL_LIGHT_TYPE;
+	add_entity(light);
 
 	return light;
 }
 
 Light *Entity_Manager::make_point_light(const Vector3 &position, const Vector3 &color, float range)
 {
-	Light *light = (Light *)make_entity(ENTITY_TYPE_LIGHT, position);
+	Light *light = new Light;
+	light->position = position;
 	light->color = color;
 	light->light_type = POINT_LIGHT_TYPE;
 	light->range = range;
+	add_entity(light);
 	
 	return light;
 }
 
 Light  *Entity_Manager::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
 {
-	Light *light = (Light *)make_entity(ENTITY_TYPE_LIGHT, position);
+	Light *light = new Light;
+	light->position = position;
 	light->direction = direction;
 	light->color = color;
 	light->light_type = SPOT_LIGHT_TYPE;
 	light->radius = radius;
+	add_entity(light);
 
 	return light;
 }
@@ -100,8 +69,10 @@ Entity *Entity_Manager::make_grid(const Vector3 &position, float width, float de
 
 	generate_grid(width, depth, m, n, render_model->get_triangle_mesh());
 
-	Entity *entity = make_entity(ENTITY_TYPE_UNKNOWN, position);
-	entity->model = render_model;
+	Entity *entity = new Entity;
+	entity->position = position;
+	add_entity(entity);
+	make_render_entity(entity, render_model);
 	return entity;
 }
 
@@ -117,9 +88,38 @@ Entity *Entity_Manager::make_sphere(const Vector3 &position, float radius, u32 s
 
 	generate_sphere(radius, slice_count, stack_count, render_model->get_triangle_mesh());
 
-	Entity *entity = make_entity(ENTITY_TYPE_UNKNOWN, position);
-	entity->model = render_model;
+	Entity *entity = new Entity;
+	entity->position = position;
+	add_entity(entity);
+	make_render_entity(entity, render_model);
 	return entity;
+}
+
+Mutant *Entity_Manager::make_mutant(const Vector3 &position)
+{
+	Mutant *mutant = new Mutant();
+	mutant->position = position;
+	add_entity(mutant);
+	make_render_entity(mutant, "mutant.fbx");
+	return mutant;
+}
+
+void make_render_entity(Entity *entity, const char *model_name)
+{
+	Render_Entity *render_entity = new Render_Entity();
+	render_entity->entity = entity;
+	render_entity->render_model = model_manager.get_render_model(model_name);
+
+	world.render_entities.push(render_entity);
+}
+
+void make_render_entity(Entity *entity, Render_Model *render_model)
+{
+	Render_Entity *render_entity = new Render_Entity();
+	render_entity->entity = entity;
+	render_entity->render_model = render_model;
+
+	world.render_entities.push(render_entity);
 }
 
 void World::init()
@@ -127,10 +127,12 @@ void World::init()
 
 	//entity_manager.make_light(Vector3(0.0f, 200.0f, 100.0f), Vector3(1.0f, 1.0f, 1.0f), Vector3(1.0f, 1.0f, 1.0f), DIRECTIONAL_LIGHT_TYPE);
 	//entity_manager.make_light(Vector3(0.0f, 200.0f, 100.0f), Vector3(0.57735f, -0.57735f, 0.57735f), Vector3(1.0f, 1.0f, 1.0f), DIRECTIONAL_LIGHT_TYPE);
-	entity_manager.make_point_light(Vector3(0.0, 100.0f, 0.0f), Vector3(0.1, 0.4, 0.1), 1000.0f);
+	//entity_manager.make_point_light(Vector3(0.0, 100.0f, 0.0f), Vector3(0.1, 0.4, 0.1), 1000.0f);
+	entity_manager.make_direction_light(Vector3(0.0f, -1.0f, -0.5f), Vector3(1.0f, 1.0f, 1.0f));
 
-	entity_manager.make_entity(ENTITY_TYPE_MUTANT, Vector3(-0.5, -1.0, 0.0));
+	entity_manager.make_mutant(Vector3(-0.5, -1.0, 0.0));
 
+	entity_manager.make_sphere(Vector3(400, 100.0, 0.0), 100.0f, 100, 100);
 	entity_manager.make_grid(Vector3(0.0, 0.0, 0.0), 5000.0f, 5000.0f, 50, 50);
-	entity_manager.make_sphere(Vector3(400, 60.0, 0.0), 100.0f, 100, 100);
 }
+

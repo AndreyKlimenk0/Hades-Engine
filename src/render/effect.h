@@ -56,6 +56,8 @@ struct Fx_Light {
 
 };
 
-void bind_light_entities(Fx_Shader *forward_light_shader, Array<Light *> *lights);
+void bind_light(Fx_Shader *forward_light_shader, Array<Light *> *lights);
+void bind(Fx_Shader *fx_shader, Entity *entity);
+void bind(Fx_Shader *fx_shader, Render_Mesh *render_mesh);
 
 #endif

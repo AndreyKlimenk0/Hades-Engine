@@ -204,7 +204,7 @@ float4 ps_render_light_model(Vertex_Out pixel) : SV_Target
 	return lights[light_model_index].color;
 }
 
-technique11 render_model_use_texture {
+technique11 draw {
 	pass P0 {
 		SetVertexShader(CompileShader(vs_5_0, vs_main()));
 		SetPixelShader(CompileShader(ps_5_0, ps_main(true)));

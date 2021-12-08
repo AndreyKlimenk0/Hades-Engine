@@ -10,6 +10,8 @@
 #include "../libs/os/file.h"
 #include "../libs/os/path.h"
 
+#include "render_system.h"
+
 Fx_Shader_Manager fx_shader_manager;
 
 
@@ -175,7 +177,7 @@ Fx_Shader *Fx_Shader_Manager::get_shader(const char *name)
 }
 
 
-void bind_light_entities(Fx_Shader *forward_light_shader, Array<Light *> *lights)
+void bind_light(Fx_Shader *forward_light_shader, Array<Light *> *lights)
 {
 	if (lights->is_empty())
 		return;
@@ -218,4 +220,18 @@ void bind_light_entities(Fx_Shader *forward_light_shader, Array<Light *> *lights
 
 	forward_light_shader->bind("lights", (void *)&fx_lights.items[0], sizeof(Fx_Light) * fx_lights.count);
 	forward_light_shader->bind("light_count", fx_lights.count);
+}
+
+void bind(Fx_Shader *fx_shader, Entity *entity)
+{
+	Matrix4 world = entity->get_world_matrix();
+	Matrix4 screen_projection = world * render_sys.view_matrix * render_sys.view_info->perspective_matrix;
+	fx_shader->bind("world", &world);
+	fx_shader->bind("world_view_projection", &screen_projection);
+}
+
+void bind(Fx_Shader *fx_shader, Render_Mesh *render_mesh)
+{
+	fx_shader->bind("texture_map", render_mesh->diffuse_texture->shader_resource);
+	fx_shader->bind("material", (void *)&render_mesh->material, sizeof(Material));
 }
