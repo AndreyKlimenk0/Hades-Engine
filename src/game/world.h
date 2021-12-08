@@ -14,7 +14,7 @@
 const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
 
 enum Entity_Type {
-	ENTITY_TYPE_UNKNOWN,
+	ENTITY_TYPE_ENTITY,
 	ENTITY_TYPE_GRID,
 	ENTITY_TYPE_BOX,
 	ENTITY_TYPE_SPHERE,
@@ -25,12 +25,10 @@ enum Entity_Type {
 };
 
 struct Entity {
-	Entity() { type = ENTITY_TYPE_UNKNOWN; }
+	Entity() { type = ENTITY_TYPE_ENTITY; }
 	u32 id;
 	Entity_Type type;
 	Vector3 position;
-
-	Render_Model *model = NULL;
 
 	Matrix4 get_world_matrix();
 	void get_world_matrix(Matrix4 &matrix);
@@ -85,9 +83,6 @@ struct Entity_Manager {
 	Array<Entity *> entities;
 
 	void add_entity(Entity *entity);
-	
-	Entity *make_entity(Entity_Type type);
-	Entity *make_entity(Entity_Type type, const Vector3 &position);
 
 	Entity *make_grid(const Vector3 &position, float width, float depth, int m, int n);
 	Entity *make_box(const Vector3 &position, float width, float height, float depth);
@@ -96,10 +91,26 @@ struct Entity_Manager {
 	Light  *make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
 	Light  *make_point_light(const Vector3 &position, const Vector3 &color, float range);
 	Light  *make_direction_light(const Vector3 &direction, const Vector3 &color);
+
+	Mutant *make_mutant(const Vector3 &position);
 };
+
+struct Render_Entity {
+	u32 stencil_ref_value = 0;
+	Stencil_Test *stencil_test = NULL;
+
+	Entity *entity = NULL;
+	Render_Model *render_model = NULL;
+	
+	void (*draw_after_drawn_entity)(Render_Entity *render_entity) = NULL;
+};
+
+void make_render_entity(Entity *entity, const char *model_name);
+void make_render_entity(Entity *entity, Render_Model *render_model);
 
 struct World {
 	Entity_Manager entity_manager;
+	Array<Render_Entity *> render_entities;
 
 	void init();
 	void init_from_map(const char *map_name);

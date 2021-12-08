@@ -58,10 +58,7 @@ inline void View_Info::update_projection_matries()
 View_Info *make_view_info(float near_plane, float far_plane);
 
 
-void draw_world_entities(Entity_Manager *entity_manager);
-void draw_mesh(Triangle_Mesh *mesh);
-void draw_indexed_mesh(Triangle_Mesh *mesh);
-void draw_not_indexed_mesh(Triangle_Mesh *mesh);
-void draw_normals(Entity *entity, float line_len);
-void draw_shadow(Entity *entity, Fx_Shader *fx_shader_light, Light *light, Matrix4 &view, Matrix4 &perspective);
+void make_outlining(Render_Entity *render_entity);
+void free_outlining(Render_Entity *render_entity);
+void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width = 0.0f, float _height = 0.0f);
 #endif
