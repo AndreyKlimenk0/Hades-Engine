@@ -50,15 +50,19 @@ struct Edit_Field_Theme {
 };
 
 struct Window_Theme {
-	int shift_element_from_left_side = 20;
+	int offset_from_window_top = 20;
+	int shift_element_from_window_side = 20;
 	int place_between_elements = 10;
 	int shift_element_from_left = 15;
-	int header_height = 20;
+	int header_height = 25;
 	int shift_cross_button_from_left_on = 5;
 	float window_rounded_factor = 6.0f;
 	float header_botton_height_in_percents = 50;
-	Color header_color = Color(10, 7, 7);
+	//Color header_color = Color(10, 7, 7);
+	//Color header_color = Color(30, 30, 30);
+	Color header_color = Color(74, 82, 90);;
 	Color color = Color(36, 39, 43);
+	//Color color = Color(36, 39, 43);
 };
 
 enum Element_Type {
@@ -83,6 +87,8 @@ const int WINDOW_LEFT        = 0x10;
 const int WINDOW_RIGHT       = 0x20;
 const int WINDOW_CENTER      = 0x40;
 const int WINDOW_AUTO_WIDTH  = 0x80;	
+const int WINDOW_WITH_HEADER = 0x100;
+const int WINDOW_HEADER_HOVER = 0x200;
 
 struct Point {
 	Point() : x(0), y(0) {}
@@ -178,8 +184,8 @@ struct Input_Field : Element {
 	Input_Field(int x, int y, int width, int height) : Element(x, y, width, height) {};
 	Label label;
 
-	void draw() {}
-	void handle_event(Event *event) {}
+	void draw() { assert(false); }
+	void handle_event(Event *event) { assert(false); }
 	void set_position(int _x, int _y) { assert(false); }
 };
 
@@ -338,36 +344,66 @@ struct Form : Element {
 	void set_position(int _x, int _y);
 };
 
+enum Alignment {
+	LEFT_ALIGNMENT,
+	RIGHT_ALIGNMENT
+};
+
+enum Place {
+	PLACE_HORIZONTALLY,
+	PLACE_VERTICALLY,
+	PLACE_IN_MIDDLE_BY_X,
+};
+
 struct Window : Element {
 	Window();
-	Window(int x, int y, int width, int height);
+	Window(int _width, int _height, int _flags);
+	Window(int _x, int _y, int _width, int _height, int _flags);
 	~Window();
 
+	bool can_move = false;
+	bool window_active = true;
+
+	
+
+	Place place = PLACE_VERTICALLY;
+	Alignment aligment = RIGHT_ALIGNMENT;
+
+	Point last_mouse_position;
 	Point next_place;
+	Point header_text_position;
 
 	Button *close_button = NULL;
+
+	String name;
+	String header_text;
 
 	Window_Theme theme;
 
 	Array<Element *> elements;
 	Array<Input_Field *> input_fields;
 	Array<List_Box *> list_boxies;
-
-	bool close_window = false;
+	Array<Window *> windows_will_be_disabled;
 
 	void draw();
 	void update();
 	void make_header();
+	void make_window(int _x, int _y, int _width, int _height, int _flags, Window_Theme *_theme);
 	void handle_event(Event *event);
+	
+	void add_header_text(const char *);
 	void add_element(Element *element);
-	void go_next_element_place(Element * element);
-	void aligning_input_fields();
-	void close() { close_window = true; };
+	
+	void calculate_current_place(Element *element);
+	void calculate_next_place(Element *element);
+	
+	void window_callback();
 
 	void set_position(int _x, int _y) { assert(false); }
 	void set_element_position(Element *element);
+	void set_element_place(Place _place);
+	void set_alignment(Alignment _alignment);
 	
-	int calculate_place_by_x(Element *element);
 	int get_element_x_place() { return x + next_place.x;}
 	int get_element_y_place() { return y + next_place.y;}
 };
@@ -375,6 +411,8 @@ struct Window : Element {
 struct Editor {
 	Free_Camera free_camera;
 	Array<Window *> windows;
+
+	Window *focused_window = NULL;
 
 	Form *current_form = NULL;
 	Window *current_window = NULL;
@@ -391,17 +429,27 @@ struct Editor {
 	void add_window(Window *window);
 
 	void make_window(int flags);
+	void make_window(int width, int height, int flags);
+	void make_window(int x, int y, int width, int height, int flags);
+	void make_window_button(const char *name, Window *window);
+	void bind_window(const char *window_will_be_drawn, const char *window_will_be_disabled);
+	
 	void make_button(const char *text, Callback *callback = NULL);
 	void make_list_box(const char *text);
+	
 	void make_picked_list_box(const char *text);
 	void make_end_picked_list_box();
+	
 	void make_picked_panel();
 	void end_picked_panel();
+	
 	void make_edit_field(const char *label, Edit_Data_Type edit_data_type);
 	void make_edit_field(const char *label, int value);
 	void make_edit_field(const char *label, float *value);
+	
 	void make_vector3_edit_field(const char *label);
 	void make_vector3_edit_field(const char *label, Vector3 *vec3);
+	
 	void make_form();
 	void end_form();
 
@@ -410,6 +458,8 @@ struct Editor {
 	void add_item(const char *item_text, int enum_value);
 	void add_picked_panel(const char *item_text, int enum_value);
 	void add_form(const char *item_text, int enum_value);
+
+	Window *find_window(const char *name);
 };
 
 extern Editor editor;

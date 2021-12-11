@@ -117,24 +117,24 @@ void Render_System::resize()
 void Render_System::render_frame()
 {
 
-	view_matrix = free_camera->get_view_matrix();
+	//view_matrix = free_camera->get_view_matrix();
 
-	Render_Entity *render_entity = NULL;
-	For(current_render_world->render_entities, render_entity)
-	{
-		make_outlining(render_entity);
-	}
+	//Render_Entity *render_entity = NULL;
+	//For(current_render_world->render_entities, render_entity)
+	//{
+	//	make_outlining(render_entity);
+	//}
 
-	draw_world_entities(current_render_world);
+	//draw_world_entities(current_render_world);
 
-	For(current_render_world->render_entities, render_entity)
-	{
-		free_outlining(render_entity);
-	}
+	//For(current_render_world->render_entities, render_entity)
+	//{
+	//	free_outlining(render_entity);
+	//}
 
-	draw_texture_on_screen(0, 0, texture_manager.get_texture("Lion_Albedo.png"), 250.0f, 250.0f);
+	//draw_texture_on_screen(0, 0, texture_manager.get_texture("Lion_Albedo.png"), 250.0f, 250.0f);
 
-	draw_text(0.5, 0.5, "AAAAAAAAAAAAAAAAAAAAA");
+	//draw_text(0.5, 0.5, "AAAAAAAAAAAAAAAAAAAAA");
 }
 
 View_Info *make_view_info(float near_plane, float far_plane)
