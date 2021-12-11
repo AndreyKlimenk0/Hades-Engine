@@ -46,4 +46,5 @@ void push_event(Event_Type type, int first_value, int second_value);
 void run_event_loop();
 
 bool was_click_by_left_mouse_button();
+bool is_left_mouse_button_down();
 #endif

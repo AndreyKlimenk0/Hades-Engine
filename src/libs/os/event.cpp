@@ -9,18 +9,22 @@
 #include "../../sys/sys_local.h"
 #include "../../editor/editor.h"
 
-
-static bool click_by_left_mouse_button = false;
 static Queue<Event> event_queue;
 
+static bool click_by_left_mouse_button = false;
+static bool left_mouse_button_state = false;
 
-static void update_left_mouse_button_click_state(Event *event)
+
+static void update_left_mouse_button_state(Event *event)
 {
 	static bool key_is_down = false;
 	if (event->is_key_down(VK_LBUTTON)) {
 		key_is_down = true;
-	}
-	else {
+		left_mouse_button_state = true;
+	
+	} else {
+		left_mouse_button_state = false;
+		
 		if (key_is_down) {
 			key_is_down = false;
 			click_by_left_mouse_button = true;
@@ -51,7 +55,7 @@ void push_event(Event_Type type, int first_value, int second_value)
 	case EVENT_TYPE_KEY: {
 		event->key_info.key = first_value;
 		event->key_info.is_pressed = second_value;
-		update_left_mouse_button_click_state(event);
+		update_left_mouse_button_state(event);
 		break;
 	}
 	case EVENT_TYPE_MOUSE: {
@@ -82,4 +86,9 @@ void run_event_loop()
 bool was_click_by_left_mouse_button()
 {
 	return click_by_left_mouse_button;
+}
+
+bool is_left_mouse_button_down()
+{
+	return left_mouse_button_state;
 }
