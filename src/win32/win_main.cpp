@@ -132,9 +132,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		s64 x = cpu_ticks_counter() - t;
 		s64 fps = cpu_ticks_per_second() / x;
 		
-		display_text(700, 5, "Fps {} ms", fps);
-		display_text(700, 30, "Microseconds elapsed {} ms", r);
-		display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
+		display_text(700, 70, "Fps {} ms", fps);
+		display_text(700, 90, "Microseconds elapsed {} ms", r);
+		//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
 		
 		
 		direct2d.end_draw();

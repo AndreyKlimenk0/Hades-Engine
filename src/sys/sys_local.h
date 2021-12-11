@@ -4,7 +4,7 @@
 #include "../libs/str.h"
 #include "../win32/win_local.h"
 #include "../win32/win_types.h"
-
+//#include "../libs/ds/dict.h"
 
 void report_error(const char *error_message);
 void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *expr);
@@ -77,5 +77,43 @@ void error(Args... args)
 #define DELETE_COPING(class_name) \
 	class_name(const class_name &other) = delete; \
 	void operator=(const class_name &other) = delete; \
+
+
+struct Args;
+
+struct Callback {
+	virtual void call() = 0;
+};
+
+template< typename T>
+struct Member_Callback : Callback {
+	Member_Callback(T *object, void (T::*callback)()) : object(object), member(callback) {}
+
+	T *object;
+	void (T::*member)();
+
+	void call() { (object->*member)(); }
+};
+
+template <typename T>
+Member_Callback<T> *make_member_callback(T *object, void (T::*callback)())
+{
+	return new Member_Callback<T>(object, callback);
+}
+
+struct Function_Callback : Callback {
+	Function_Callback(void(*callback)()) : callback(callback) {}
+	void(*callback)();
+
+	void call() { (*callback)(); }
+};
+
+struct Function_Callback_With_Arg : Callback {
+	Function_Callback_With_Arg(void(*callback)(Args *args)) : callback(callback) {}
+	void(*callback)(Args *args);
+
+	void call() {}
+	void call(Args *args) { (*callback)(args); }
+};
 
 #endif

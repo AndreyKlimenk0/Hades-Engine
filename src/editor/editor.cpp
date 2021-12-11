@@ -20,37 +20,6 @@ static Button_Theme button_theme;
 static List_Box_Theme list_box_theme;
 static Edit_Field_Theme edit_field_theme;
 
-
-struct Callback {
-	virtual void call() = 0;
-};
-
-template< typename T>
-struct Member_Callback : Callback {
-	Member_Callback(T *object, void (T::*callback)()) : object(object), member(callback) {}
-
-	T *object;
-	void (T::*member)();
-
-	void call() { (object->*member)(); }
-};
-
-struct Function_Callback : Callback {
-	Function_Callback(void(*callback)()) : callback(callback) {}
-	void(*callback)();
-
-	void call() { (*callback)(); }
-};
-
-struct Function_Callback_With_Arg : Callback {
-	Function_Callback_With_Arg(void(*callback)(Args *args)) : callback(callback) {}
-	void(*callback)(Args *args);
-	//Args *args;
-
-	void call() {}
-	void call(Args *args) { (*callback)(args); }
-};
-
 void editor_make_entity(Args *args)
 {
 	Entity_Type entity_type;
@@ -68,7 +37,7 @@ void editor_make_entity(Args *args)
 
 		int stack_count;
 		args->get("stack_count", &stack_count);
-		
+
 		world.entity_manager.make_sphere(vec3, radius, stack_slice, stack_count);
 	} else if (entity_type == ENTITY_TYPE_LIGHT) {
 		Light_Type light_type;
@@ -95,7 +64,7 @@ void editor_make_entity(Args *args)
 			world.entity_manager.make_direction_light(direction, color);
 		}
 	}
-	
+
 	//world.entity_manager.make_entity(entity_type, vec3);
 }
 
@@ -115,6 +84,15 @@ static int compare_list_boxies(const void *first, const void *second)
 
 	return first_list_box->y > second_list_box->y;
 }
+
+static inline bool detect_collision(Mouse_Info *mouse, int x, int y, int width, int height)
+{
+	if (mouse->x > x && mouse->x < (x + width) && mouse->y > y && mouse->y < (y + height)) {
+		return true;
+	}
+	return false;
+}
+
 
 static inline bool detect_collision(Mouse_Info *mouse, Element *element)
 {
@@ -244,8 +222,8 @@ Button::Button(const char *_text, int _x, int _y, int _width, int _height, Butto
 	}
 
 	text_position = Point(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
-	
-	
+
+
 	width += theme.border_about_text;
 	height += theme.border_about_text;
 }
@@ -336,7 +314,7 @@ List_Box::List_Box(const char *_label, int _x, int _y)
 	load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\down.png", 1, 1, &down_image);
 	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 100);
 	D2D1_SIZE_U size = down_image->GetPixelSize();
-	
+
 	drop_button_image_width = (size.width * cross_scale_factor);
 
 	drop_button = new Button(x + width - drop_button_image_width, y, down_image, cross_scale_factor);
@@ -350,9 +328,10 @@ List_Box::List_Box(const char *_label, int _x, int _y)
 List_Box::~List_Box()
 {
 	DELETE_PTR(drop_button);
-	
+
 	Button *button = NULL;
-	For(item_list, button) {
+	For(item_list, button)
+	{
 		DELETE_PTR(button);
 	}
 }
@@ -360,9 +339,9 @@ List_Box::~List_Box()
 void List_Box::draw()
 {
 	label.draw();
-	
+
 	direct2d.draw_rounded_rect(x, y, header_width, height, theme.rounded_border, theme.rounded_border, theme.color);
-	
+
 	if (current_chosen_item_text) {
 		direct2d.draw_text(text_x, text_y, current_chosen_item_text->to_str());
 	} else {
@@ -403,7 +382,8 @@ void List_Box::handle_event(Event *event)
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
 		Button *b = NULL;
-		For(item_list, b) {
+		For(item_list, b)
+		{
 			button = b;
 			b->handle_event(event);
 		}
@@ -457,7 +437,7 @@ void List_Box::set_position(int _x, int _y)
 	}
 }
 
-Panel_List_Box::Panel_List_Box(int _x, int _y, const char *_label) : List_Box(_label, _x, _y) 
+Panel_List_Box::Panel_List_Box(int _x, int _y, const char *_label) : List_Box(_label, _x, _y)
 {
 	type = ELEMENT_TYPE_PANEL_LIST_BOX;
 }
@@ -483,9 +463,9 @@ void Panel_List_Box::add_item(const char *string, int enum_value, Picked_Panel *
 		last_picked_panel = picked_panel;
 		last_picked_panel->draw_panel = true;
 	}
-	
+
 	List_Box::add_item(string, enum_value);
-	
+
 	Button *button = item_list.last_item();
 	DELETE_PTR(button->callback);
 	button->callback = new Member_Callback<Panel_List_Box>(this, &Panel_List_Box::on_list_item_click);
@@ -496,7 +476,8 @@ void Panel_List_Box::add_item(const char *string, int enum_value, Picked_Panel *
 Picked_Panel::~Picked_Panel()
 {
 	Input_Field *input_field = NULL;
-	For(input_fields, input_field) {
+	For(input_fields, input_field)
+	{
 		DELETE_PTR(input_field);
 	}
 }
@@ -513,7 +494,8 @@ void Picked_Panel::draw()
 	}
 
 	Input_Field *input_field = NULL;
-	For(input_fields, input_field) {
+	For(input_fields, input_field)
+	{
 		if (input_field->type == ELEMENT_TYPE_LIST_BOX) {
 			continue;
 		}
@@ -521,7 +503,8 @@ void Picked_Panel::draw()
 	}
 
 	List_Box *list_box = NULL;
-	For(list_boxies, list_box) {
+	For(list_boxies, list_box)
+	{
 		list_box->draw();
 	}
 }
@@ -533,7 +516,8 @@ void Picked_Panel::handle_event(Event * event)
 	}
 
 	Input_Field *input_field = NULL;
-	For(input_fields, input_field) {
+	For(input_fields, input_field)
+	{
 		input_field->handle_event(event);
 	}
 }
@@ -558,9 +542,9 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 	} else {
 		theme = edit_field_theme;
 	}
-	
+
 	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
-	
+
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
 	x = _x + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;
@@ -572,7 +556,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	edit_itself_data = true;
 
-	max_text_width = (field_width - theme.shift_caret_from_left * 3 -10);
+	max_text_width = (field_width - theme.shift_caret_from_left * 3 - 10);
 
 	edit_data_type = _edit_data_type;
 
@@ -613,9 +597,9 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 	} else {
 		theme = edit_field_theme;
 	}
-	
+
 	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
-	
+
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
 	x = _x + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;
@@ -636,7 +620,7 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
 
 	edit_data.not_itself_data.float_value = float_value;
-	
+
 	char *float_str = to_string(*float_value);
 
 	set_text(float_str);
@@ -649,13 +633,13 @@ void Edit_Field::handle_event(Event *event)
 
 	if (!edit_itself_data) {
 		char *str_value = NULL;
-		
+
 		if (edit_data_type == EDIT_DATA_INT) {
 			str_value = to_string(*edit_data.not_itself_data.int_value);
 		} else if (edit_data_type == EDIT_DATA_FLOAT) {
 			str_value = to_string(*edit_data.not_itself_data.float_value);
 		}
-		
+
 		if (text != str_value) {
 			set_text(str_value);
 		}
@@ -689,14 +673,14 @@ void Edit_Field::handle_event(Event *event)
 		if (flags & ELEMENT_FOCUSED) {
 			if (event->is_key_down(VK_BACK)) {
 				if (caret_index_in_text > -1) {
-					
+
 					char c = text.data[caret_index_in_text];
 					text.remove(caret_index_in_text);
 					Direct_Character character = direct_write.characters[c];
 
 					caret.fx -= character.width;
 					text_width -= character.width;
-					
+
 					caret_index_in_text -= 1;
 					caret_index_for_inserting -= 1;
 
@@ -705,18 +689,18 @@ void Edit_Field::handle_event(Event *event)
 
 			} else if (event->is_key_down(VK_LEFT)) {
 				if (caret_index_in_text > -1) {
-					
+
 					char c = text.data[caret_index_in_text];
 					Direct_Character character = direct_write.characters[c];
 					caret.fx -= character.width;
 					text_width -= character.width;
-					
+
 					caret_index_in_text -= 1;
 					caret_index_for_inserting -= 1;
 				}
 			} else if (event->is_key_down(VK_RIGHT)) {
 				if (caret_index_in_text < text.len) {
-					
+
 					caret_index_in_text += 1;
 					caret_index_for_inserting += 1;
 
@@ -730,7 +714,7 @@ void Edit_Field::handle_event(Event *event)
 	} else if (event->type == EVENT_TYPE_CHAR) {
 		if (flags & ELEMENT_FOCUSED) {
 			if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
-				
+
 				if (caret_index_in_text == (text.len - 1)) {
 					text.append(event->char_key);
 				} else {
@@ -738,7 +722,7 @@ void Edit_Field::handle_event(Event *event)
 				}
 				caret_index_in_text += 1;
 				caret_index_for_inserting += 1;
-				
+
 				Direct_Character character = direct_write.characters[event->char_key];
 				caret.fx += character.width;
 				text_width += character.width;
@@ -798,14 +782,14 @@ void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 
 		float pad = 0.5f;
 		if ((mouse_x_relative_character >= 0.0f) && ((mouse_x_relative_character + pad) <= character.width)) {
-			
+
 			float characters_width = 0.0f;
 			for (int j = 0; j < i; j++) {
 				char _char = text.data[j];
 				Direct_Character character = direct_write.characters[_char];
 				characters_width += character.width;
 			}
-			
+
 			caret.fx = x + theme.shift_caret_from_left + characters_width;
 			caret_index_for_inserting = i;
 			caret_index_in_text = i - 1;
@@ -822,7 +806,7 @@ void Edit_Field::set_text(const char * _text)
 		int width_current_text = direct_write.get_text_width(text);
 		caret.fx -= width_current_text;
 	}
-	
+
 	text = String(_text, 0, 7);
 
 	int _width = direct_write.get_text_width(text);
@@ -924,11 +908,11 @@ void Vector3_Edit_Field::handle_event(Event * event)
 void Vector3_Edit_Field::set_position(int _x, int _y)
 {
 	int edit_width = x.theme.width;
-		
-	x.set_position(_x - (edit_width * 2) - 40, _y);	
+
+	x.set_position(_x - (edit_width * 2) - 40, _y);
 	y.set_position(_x - edit_width - 20, _y);
 	z.set_position(_x, _y);
-	
+
 	// Label x position works only for current window size
 	label.set_position(_x - (edit_width * 2) - 50 - label.width, x.label.y);
 }
@@ -976,7 +960,8 @@ void Form::on_submit()
 void Form::fill_args(Args * args, Array<Input_Field *> *fields)
 {
 	Input_Field *input_field = NULL;
-	For((*fields), input_field) {
+	For((*fields), input_field)
+	{
 		String str = input_field->label.text;
 		str.to_lower();
 		str.replace(' ', '_');
@@ -1007,7 +992,7 @@ void Form::fill_args(Args * args, Array<Input_Field *> *fields)
 			Vector3 vec3;
 			Vector3_Edit_Field *vec3_edit_field = static_cast<Vector3_Edit_Field *>(input_field);
 			vec3_edit_field->get_vector(&vec3);
-			
+
 			args->set(str, &vec3);
 		}
 	}
@@ -1026,25 +1011,75 @@ Window::Window()
 	theme = window_theme;
 }
 
-Window::Window(int x, int y, int width, int height) : Element(x, y, width, height + window_theme.header_height)
+static inline void place_in_middle(Element *element, int width, int height)
 {
-	type = ELEMENT_TYPE_WINDOW;
-	make_header();
+	assert(element->width > 2);
+	assert(element->height > 2);
+
+	element->x = (width / 2) - (element->width / 2);
+	element->y = (height / 2) - (element->height / 2);
+}
+
+Window::Window(int _width, int _height, int _flags) 
+{
+	make_window(-1, -1, _width, _height, _flags, NULL);
+}
+
+Window::Window(int _x, int _y, int _width, int _height, int _flags)
+{
+	make_window(_x, _y, _width, _height, _flags, NULL);
 }
 
 Window::~Window()
 {
 	Element *element = NULL;
-	For(elements, element) {
+	For(elements, element)
+	{
 		delete element;
 	}
 
 	List_Box *list_box = NULL;
-	For(list_boxies, list_box) {
+	For(list_boxies, list_box)
+	{
 		delete list_box;
 	}
 
 	DELETE_PTR(close_button);
+}
+
+void Window::make_window(int _x, int _y, int _width, int _height, int _flags, Window_Theme * _theme)
+{
+	next_place.x = 0;
+	next_place.y = 0;
+	width = _width;
+	height = _height;
+	x = _x > -1 ? _x : 0;
+	y = _y > -1 ? _y : 0;
+
+	type = ELEMENT_TYPE_WINDOW;
+	theme = _theme ? *_theme : window_theme;
+
+	if (_x == -1 || _y == -1) {
+		place_in_middle(this, win32.window_width, win32.window_height);
+	}
+
+	if (_flags & WINDOW_CENTER) {
+		place_in_middle(this, win32.window_width, win32.window_height);
+	}
+
+	if (_flags & WINDOW_WITH_HEADER) {
+		flags |= WINDOW_WITH_HEADER;
+		next_place.y += window_theme.header_height;
+
+	}
+	next_place.x += x + window_theme.shift_element_from_window_side;
+	next_place.y += y + window_theme.offset_from_window_top;
+}
+void Window::add_header_text(const char *)
+{
+	if (!(flags & WINDOW_WITH_HEADER)) {
+		print("Window doesn't have a header.Text can not be drawn");
+	}
 }
 
 void Window::add_element(Element *element)
@@ -1088,18 +1123,61 @@ void Window::make_header()
 	int button_x = x + width - (size.width * cross_scale_factor) - window_theme.shift_cross_button_from_left_on;
 	int button_y = (y + window_theme.header_height / 2) - ((size.height * cross_scale_factor) / 2);
 
-	close_button = new Button(button_x, button_y, cross_image, cross_scale_factor);
-	close_button->callback = new Member_Callback<Window>(this, &Window::close);
+	//close_button = new Button(button_x, button_y, cross_image, cross_scale_factor);
+	//close_button->callback = new Member_Callback<Window>(this, &Window::close);
 }
 
-void Window::go_next_element_place(Element *element)
+void Window::calculate_current_place(Element * element)
 {
-	next_place.y += element->height + window_theme.place_between_elements;
+	if (place == PLACE_VERTICALLY) {
+		if (aligment == RIGHT_ALIGNMENT) {
+			next_place.x = x + width - element->width - theme.shift_element_from_window_side;
+		} else {
+			next_place.x = x + theme.shift_element_from_window_side;
+		}
+	
+	} else if (place == PLACE_HORIZONTALLY) {	
+		if (aligment == RIGHT_ALIGNMENT) {
+			next_place.x -= element->width + window_theme.place_between_elements;
+			if (next_place.x < x) {
+				next_place.x = ((x + width) - theme.shift_element_from_window_side) - (element->width + window_theme.place_between_elements);
+				next_place.y += element->height + window_theme.place_between_elements;
+			}
+		} else {
+			if ((next_place.x + element->width) > (x + width)) {
+				next_place.x = x + theme.shift_element_from_window_side;
+				next_place.y += element->height + window_theme.place_between_elements;
+			}
+		}
+	} else if (place == PLACE_IN_MIDDLE_BY_X) {
+
+	}
 }
 
-int Window::calculate_place_by_x(Element *element)
+void Window::calculate_next_place(Element * element)
 {
-	return x + width - element->width - theme.shift_element_from_left_side;
+	if (place == PLACE_VERTICALLY) {
+		next_place.y += element->height + window_theme.place_between_elements;
+	} else {
+		if (aligment == RIGHT_ALIGNMENT) {
+			//next_place.x -= element->width + window_theme.place_between_elements;
+		} else {
+			next_place.x += element->width + window_theme.place_between_elements;
+		}
+	}
+}
+
+void Window::window_callback()
+{
+	if (window_active) {
+		window_active = false;
+	} else {
+		window_active = true;
+		Window *window = NULL;
+		For(windows_will_be_disabled, window) {
+			window->window_active = false;
+		}
+	}
 }
 
 void Window::set_element_position(Element *element)
@@ -1113,12 +1191,12 @@ void Window::set_element_position(Element *element)
 		element = form->submit;
 	}
 
-	int _x = calculate_place_by_x(element);
+	calculate_current_place(element);
 
 	if (element->type == ELEMENT_TYPE_PANEL_LIST_BOX) {
 		Panel_List_Box *panel_list_box = static_cast<Panel_List_Box *>(element);
-		panel_list_box->set_position(_x, next_place.y);
-		go_next_element_place(element);
+		panel_list_box->set_position(next_place.x, next_place.y);
+		calculate_next_place(element);
 
 		int next_place_max_y = 0;
 
@@ -1131,61 +1209,102 @@ void Window::set_element_position(Element *element)
 			For(panel->input_fields, input_field) {
 				set_element_position(input_field);
 			}
-			
+
 			if (next_place.y > next_place_max_y) {
 				next_place_max_y = next_place.y;
 			}
 
 			next_place.y = temp_storage;
 		}
-		
+
 		next_place.y = next_place_max_y;
 
 	} else {
-		element->set_position(_x, next_place.y);
-		go_next_element_place(element);
+		element->set_position(next_place.x, next_place.y);
+		calculate_next_place(element);
 	}
 }
 
-void Window::aligning_input_fields()
+void Window::set_element_place(Place _place)
 {
-	static int max_text_width = 0;
-	static int shift_from_left_side = 20;
+	place = _place;
+}
 
-	Input_Field *input_field = NULL;
-	For(input_fields, input_field) {
-		if (max_text_width < input_field->x) {
-			max_text_width = input_field->x;
-		}
-	}
-
-	For(input_fields, input_field) {
-		int d = max_text_width - input_field->x;
-		input_field->x = max_text_width;
-		input_field->label.x += d;
-
-		if (input_field->type == ELEMENT_TYPE_EDIT_FIELD) {
-			Edit_Field *edit_field = static_cast<Edit_Field *>(input_field);
-			edit_field->caret.fx += d;
-		}
+void Window::set_alignment(Alignment _alignment)
+{
+	if (_alignment == RIGHT_ALIGNMENT) {
+		aligment = RIGHT_ALIGNMENT;
+		next_place.x = (x + width) - theme.shift_element_from_window_side;
+	} else {
+		aligment = LEFT_ALIGNMENT;
+		next_place.x = x + theme.shift_element_from_window_side;
 	}
 }
 
 void Window::handle_event(Event *event)
 {
-	if (detect_collision(&event->mouse_info, this)) {
-		flags |= ELEMENT_HOVER;
-	} else {
-		flags &= ~ELEMENT_HOVER;
+	if (event->type == EVENT_TYPE_MOUSE) {
+		if (detect_collision(&event->mouse_info, this)) {
+			flags |= ELEMENT_HOVER;
+		} else {
+			flags &= ~ELEMENT_HOVER;
+		}
+	} else if (event->type == EVENT_TYPE_KEY) {
+		if (flags & ELEMENT_HOVER) {
+			if (was_click_by_left_mouse_button()) {
+				Window *window = NULL;
+				For(editor.windows, window) {
+					window->flags &= ~ELEMENT_FOCUSED;
+				}
+				flags |= ELEMENT_FOCUSED;
+				editor.focused_window = this;
+			}
+		}
 	}
-	
+
+	if (flags & WINDOW_WITH_HEADER) {
+
+		if (event->type == EVENT_TYPE_MOUSE) {
+
+			if (detect_collision(&event->mouse_info, x, y, width, window_theme.header_height)) {
+				flags |= WINDOW_HEADER_HOVER;
+			} else {
+				flags &= ~WINDOW_HEADER_HOVER;
+			}
+
+			int x_delta = event->mouse_info.x - last_mouse_position.x;
+			int y_delta = event->mouse_info.y - last_mouse_position.y;
+
+			if (can_move) {
+				x += x_delta;
+				y += y_delta;
+
+				Element *element = NULL;
+				For(elements, element) {
+					element->set_position(element->x + x_delta, element->y + y_delta);
+				}
+			}
+
+			last_mouse_position.x = event->mouse_info.x;
+			last_mouse_position.y = event->mouse_info.y;
+		} else if (event->type == EVENT_TYPE_KEY) {
+			if (is_left_mouse_button_down() && (flags & WINDOW_HEADER_HOVER)) {
+				can_move = true;
+			} else {
+				can_move = false;
+			}
+		}
+	}
+
 	Element *element = NULL;
-	For(elements, element) {
+	For(elements, element)
+	{
 		element->handle_event(event);
 	}
 
 	List_Box *list_box = NULL;
-	For(list_boxies, list_box) {
+	For(list_boxies, list_box)
+	{
 		list_box->handle_event(event);
 	}
 }
@@ -1196,25 +1315,32 @@ void Window::update()
 
 void Window::draw()
 {
-	if (close_window) {
-		return;
+	//if (close_window) {
+	//	return;
+	//}
+
+	//float factor = window_theme.window_rounded_factor + 2;
+	//direct2d.draw_rounded_rect(x, y, width, height, factor, factor, window_theme.header_color);
+	//direct2d.draw_rounded_rect(x, y + window_theme.header_height, width, height - window_theme.header_height, factor, factor, window_theme.color);
+	//direct2d.fill_rect(x, y + window_theme.header_height, width, 10, window_theme.color);
+	direct2d.fill_rect(x, y, width, height, window_theme.color);
+
+	if (flags & WINDOW_WITH_HEADER) {
+		direct2d.fill_rect(x, y, width, window_theme.header_height, window_theme.header_color);
 	}
 
-	float factor = window_theme.window_rounded_factor + 2;
-	direct2d.draw_rounded_rect(x, y, width, height, factor, factor, window_theme.header_color);
-	direct2d.draw_rounded_rect(x, y + window_theme.header_height, width, height - window_theme.header_height, factor, factor, window_theme.color);
-	direct2d.fill_rect(x, y + window_theme.header_height, width, 10, window_theme.color);
-
-	close_button->draw();
+	//close_button->draw();
 
 
 	Element *element = NULL;
-	For(elements, element) {
+	For(elements, element)
+	{
 		element->draw();
 	}
 
 	List_Box *list_box = NULL;
-	For(list_boxies, list_box) {
+	For(list_boxies, list_box)
+	{
 		list_box->draw();
 	}
 }
@@ -1230,6 +1356,11 @@ void Editor::handle_event(Event * event)
 
 	Window *window = NULL;
 	For(windows, window) {
+
+		if (!window->window_active) {
+			continue;
+		}
+
 		window->handle_event(event);
 		if (window->flags & ELEMENT_HOVER) {
 			window_hover = true;
@@ -1244,7 +1375,8 @@ void Editor::handle_event(Event * event)
 void Editor::update()
 {
 	Window *window = NULL;
-	For(windows, window) {
+	For(windows, window)
+	{
 		//window->update();
 	}
 }
@@ -1252,15 +1384,32 @@ void Editor::update()
 void Editor::draw()
 {
 	Window *window = NULL;
+	//Window *focused_window = NULL;
+	//
+	//For(windows, window) {
+	//	if (window->flags & ELEMENT_FOCUSED) {
+	//		focused_window = window;
+	//		break;
+	//	}
+	//}
+	//
+
 	For(windows, window) {
+		if (!window->window_active || (window == focused_window)) {
+			continue;
+		}
 		window->draw();
+	}
+
+	if (focused_window) {
+		focused_window->draw();
 	}
 }
 
 void Editor::make_window(int flags)
 {
 	current_window = new Window();
-	
+
 	int window_width_in_persents = 20;
 	int auto_window_width = win32.window_width * window_width_in_persents / 100;
 
@@ -1278,7 +1427,7 @@ void Editor::make_window(int flags)
 	if (WINDOW_FULL_WIDTH & flags) {
 		window_width = win32.window_width;
 	}
-	
+
 	if (WINDOW_LEFT & flags) {
 		current_window->x = 0;
 		current_window->y = 0;
@@ -1296,10 +1445,45 @@ void Editor::make_window(int flags)
 	add_window(current_window);
 }
 
+void Editor::make_window(int width, int height, int flags)
+{
+	current_window = new Window(width, height, flags);
+	add_window(current_window);
+}
+
+void Editor::make_window(int x, int y, int width, int height, int flags)
+{
+	current_window = new Window(x, y, width, height, flags);
+	add_window(current_window);
+}
+
+void Editor::make_window_button(const char *name, Window *window)
+{
+	make_button(name);
+	current_button->callback = make_member_callback(window, &Window::window_callback);
+}
+
+void Editor::bind_window(const char *window_will_be_drawn, const char *window_will_be_disabled)
+{
+	Window *w1 = find_window(window_will_be_drawn);
+	Window *w2 = find_window(window_will_be_disabled);
+	if (!w1) {
+		print("Editor:bind_window Window which will be drawn with name {} was not found");
+		return;
+	}
+
+	if (!w2) {
+		print("Editor:bind_window Window which will be disabled with name {} was not found");
+		return;
+	}
+
+	w1->windows_will_be_disabled.push(w2);
+}
+
 void Editor::make_button(const char * text, Callback * callback)
 {
 	assert(current_window != NULL);
-	
+
 	current_button = new Button(text);
 	current_button->callback = callback;
 
@@ -1309,7 +1493,7 @@ void Editor::make_button(const char * text, Callback * callback)
 void Editor::make_list_box(const char *label)
 {
 	assert(current_window != NULL);
-	
+
 	current_list_box = new List_Box(label);
 
 	if (current_picked_panel) {
@@ -1460,4 +1644,15 @@ void Editor::add_item(const char * item_text, int enum_value)
 void Editor::add_picked_panel(const char * item_text, int enum_value)
 {
 	current_panel_list_box->add_item(item_text, enum_value, current_picked_panel);
+}
+
+Window *Editor::find_window(const char *name)
+{
+	Window *window = NULL;
+	For(windows, window) {
+		if (name == window->name) {
+			return window;
+		}
+	}
+	return NULL;
 }
