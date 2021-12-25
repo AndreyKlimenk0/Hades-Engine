@@ -4,6 +4,7 @@
 
 #include "../libs/spng.h"
 #include "../libs/os/file.h"
+#include "../libs/ds/linked_list.h"
 #include <string.h>
 #include <stdlib.h>
 #include "../game/world.h"
@@ -126,10 +127,47 @@ struct Test {
 };
 
 void test()
-{
-	String temp = "123";
-	temp.insert(0, 'c');
-	temp.print();
-	//temp.insert(0, 'c')
+{	
+	Linked_List<String> list;
+	list.append_front("A");
+	list.append_front("B");
+	list.append_front("C");
+	list.append_front("D");
+	//list.print();
+
+	//print("------------APPEND BACK------------------------");
+	Linked_List<String> list2;
+	list2.append_back("A");
+	list2.append_back("B");
+	list2.append_back("C");
+	list2.append_back("D");
+	//list2.print();
+
+	//print("-----------------AFTER REMOVING-----------------");
+	//list2.remove("B");
+	//list2.remove("C");
+	//list2.remove("A");
+	//list2.remove("D");
+
+	//list2.remove(list2.last_node);
+	//list2.print();
+	Node<String> *next_node = NULL;
+	int count = 0;
+	for (Node<String> *first = list2.first_node; first != NULL; first = next_node) {
+		next_node = first->next;
+		if ((count == 1)) {
+			//print("Before -------------------");
+			//list2.print();
+			list2.remove(first);
+			list2.append_front(first);
+			//print("After -------------------");
+			//list2.print();
+		} else if (count == 2) {
+			list2.remove(first);
+			list2.append_front(first);
+		}
+		count++;
+	}
+	list2.print();
 
 }
