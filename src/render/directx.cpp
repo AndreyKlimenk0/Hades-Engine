@@ -16,6 +16,8 @@ DirectX11 directx11;
 
 inline wchar_t *char_string_wchar(const char *str)
 {
+	assert(str != NULL);
+
 	int len = strlen(str);
 	if (*str == '?') {
 		str++;
@@ -133,6 +135,8 @@ void Direct_Write::shutdown()
 
 D2D1_SIZE_F Direct_Write::get_text_size_in_pixels(const char *text)
 {
+	assert(text != NULL);
+
 	wchar_t *wtext = char_string_wchar(text);
 
 	// Get text length

@@ -50,6 +50,7 @@ struct Edit_Field_Theme {
 };
 
 struct Window_Theme {
+	bool draw_window_name_in_header = true;
 	int offset_from_window_top = 20;
 	int shift_element_from_window_side = 20;
 	int place_between_elements = 10;
@@ -60,7 +61,7 @@ struct Window_Theme {
 	float header_botton_height_in_percents = 50;
 	//Color header_color = Color(10, 7, 7);
 	//Color header_color = Color(30, 30, 30);
-	Color header_color = Color(74, 82, 90);;
+	Color header_color = Color(74, 82, 90);
 	Color color = Color(36, 39, 43);
 	//Color color = Color(36, 39, 43);
 };
@@ -352,7 +353,7 @@ enum Alignment {
 enum Place {
 	PLACE_HORIZONTALLY,
 	PLACE_VERTICALLY,
-	PLACE_IN_MIDDLE_BY_X,
+	PLACE_HORIZONTALLY_AND_IN_MIDDLE,
 };
 
 struct Window : Element {
@@ -364,19 +365,16 @@ struct Window : Element {
 	bool can_move = false;
 	bool window_active = true;
 
-	
-
 	Place place = PLACE_VERTICALLY;
 	Alignment aligment = RIGHT_ALIGNMENT;
 
-	Point last_mouse_position;
 	Point next_place;
+	Point last_mouse_position;
 	Point header_text_position;
 
 	Button *close_button = NULL;
 
 	String name;
-	String header_text;
 
 	Window_Theme theme;
 
@@ -399,6 +397,9 @@ struct Window : Element {
 	
 	void window_callback();
 
+	void move(int x_delta, int y_delta);
+
+	void set_name(const char *_name);
 	void set_position(int _x, int _y) { assert(false); }
 	void set_element_position(Element *element);
 	void set_element_place(Place _place);
@@ -411,6 +412,7 @@ struct Window : Element {
 struct Editor {
 	Free_Camera free_camera;
 	Array<Window *> windows;
+	Linked_List<Window *> drawn_windows;
 
 	Window *focused_window = NULL;
 
@@ -426,7 +428,6 @@ struct Editor {
 	void handle_event(Event *event);
 	void draw();
 	void update();
-	void add_window(Window *window);
 
 	void make_window(int flags);
 	void make_window(int width, int height, int flags);
@@ -454,10 +455,12 @@ struct Editor {
 	void end_form();
 
 	void set_form_label(const char *label);
+	void set_window_name(const char *name);
 
 	void add_item(const char *item_text, int enum_value);
-	void add_picked_panel(const char *item_text, int enum_value);
 	void add_form(const char *item_text, int enum_value);
+	void add_window(Window *window);
+	void add_picked_panel(const char *item_text, int enum_value);
 
 	Window *find_window(const char *name);
 };

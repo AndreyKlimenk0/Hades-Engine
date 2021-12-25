@@ -132,6 +132,21 @@ static inline int place_in_middle(Element *source, Element *dest)
 	return (dest->y + dest->height / 2) - (source->height / 2);
 }
 
+static inline void place_in_middle(Element *element, int width, int height)
+{
+	assert(element->width > 2);
+	assert(element->height > 2);
+
+	element->x = (width / 2) - (element->width / 2);
+	element->y = (height / 2) - (element->height / 2);
+}
+
+static inline void place_in_center(int *x, int *y, int placed_element_width, int placed_element_height, int width, int height)
+{
+	*x = (width / 2) - (placed_element_width / 2);
+	*y = (height / 2) - (placed_element_height / 2);
+}
+
 Label::Label(int _x, int _y, const char *_text) : Element(_x, _y)
 {
 	text = _text;
@@ -1011,16 +1026,7 @@ Window::Window()
 	theme = window_theme;
 }
 
-static inline void place_in_middle(Element *element, int width, int height)
-{
-	assert(element->width > 2);
-	assert(element->height > 2);
-
-	element->x = (width / 2) - (element->width / 2);
-	element->y = (height / 2) - (element->height / 2);
-}
-
-Window::Window(int _width, int _height, int _flags) 
+Window::Window(int _width, int _height, int _flags)
 {
 	make_window(-1, -1, _width, _height, _flags, NULL);
 }
@@ -1047,7 +1053,7 @@ Window::~Window()
 	DELETE_PTR(close_button);
 }
 
-void Window::make_window(int _x, int _y, int _width, int _height, int _flags, Window_Theme * _theme)
+void Window::make_window(int _x, int _y, int _width, int _height, int _flags, Window_Theme *_theme)
 {
 	next_place.x = 0;
 	next_place.y = 0;
@@ -1135,8 +1141,8 @@ void Window::calculate_current_place(Element * element)
 		} else {
 			next_place.x = x + theme.shift_element_from_window_side;
 		}
-	
-	} else if (place == PLACE_HORIZONTALLY) {	
+
+	} else if (place == PLACE_HORIZONTALLY) {
 		if (aligment == RIGHT_ALIGNMENT) {
 			next_place.x -= element->width + window_theme.place_between_elements;
 			if (next_place.x < x) {
@@ -1149,8 +1155,8 @@ void Window::calculate_current_place(Element * element)
 				next_place.y += element->height + window_theme.place_between_elements;
 			}
 		}
-	} else if (place == PLACE_IN_MIDDLE_BY_X) {
-
+	} else if (place == PLACE_HORIZONTALLY_AND_IN_MIDDLE) {
+		next_place.y = place_in_middle(element, this);
 	}
 }
 
@@ -1174,10 +1180,37 @@ void Window::window_callback()
 	} else {
 		window_active = true;
 		Window *window = NULL;
-		For(windows_will_be_disabled, window) {
+		For(windows_will_be_disabled, window)
+		{
 			window->window_active = false;
 		}
 	}
+}
+
+void Window::move(int x_delta, int y_delta)
+{
+	x += x_delta;
+	y += y_delta;
+
+	header_text_position.x += x_delta;
+	header_text_position.y += y_delta;
+
+	Element *element = NULL;
+	For(elements, element) {
+		element->set_position(element->x + x_delta, element->y + y_delta);
+	}
+}
+
+void Window::set_name(const char *_name)
+{
+	int _x, _y;
+	D2D1_SIZE_F size = direct_write.get_text_size_in_pixels(_name);
+	
+	name = _name;
+	
+	place_in_center(&_x, &_y, size.width, size.height, width, theme.header_height);
+	header_text_position.x = _x + x;
+	header_text_position.y = _y + y;
 }
 
 void Window::set_element_position(Element *element)
@@ -1206,7 +1239,8 @@ void Window::set_element_position(Element *element)
 			int temp_storage = next_place.y;
 
 			Input_Field *input_field = NULL;
-			For(panel->input_fields, input_field) {
+			For(panel->input_fields, input_field)
+			{
 				set_element_position(input_field);
 			}
 
@@ -1244,21 +1278,10 @@ void Window::set_alignment(Alignment _alignment)
 void Window::handle_event(Event *event)
 {
 	if (event->type == EVENT_TYPE_MOUSE) {
-		if (detect_collision(&event->mouse_info, this)) {
+		if (detect_collision(&event->mouse_info, x, y, width, height)) {
 			flags |= ELEMENT_HOVER;
 		} else {
 			flags &= ~ELEMENT_HOVER;
-		}
-	} else if (event->type == EVENT_TYPE_KEY) {
-		if (flags & ELEMENT_HOVER) {
-			if (was_click_by_left_mouse_button()) {
-				Window *window = NULL;
-				For(editor.windows, window) {
-					window->flags &= ~ELEMENT_FOCUSED;
-				}
-				flags |= ELEMENT_FOCUSED;
-				editor.focused_window = this;
-			}
 		}
 	}
 
@@ -1276,13 +1299,7 @@ void Window::handle_event(Event *event)
 			int y_delta = event->mouse_info.y - last_mouse_position.y;
 
 			if (can_move) {
-				x += x_delta;
-				y += y_delta;
-
-				Element *element = NULL;
-				For(elements, element) {
-					element->set_position(element->x + x_delta, element->y + y_delta);
-				}
+				move(x_delta, y_delta);
 			}
 
 			last_mouse_position.x = event->mouse_info.x;
@@ -1324,9 +1341,19 @@ void Window::draw()
 	//direct2d.draw_rounded_rect(x, y + window_theme.header_height, width, height - window_theme.header_height, factor, factor, window_theme.color);
 	//direct2d.fill_rect(x, y + window_theme.header_height, width, 10, window_theme.color);
 	direct2d.fill_rect(x, y, width, height, window_theme.color);
+	direct2d.draw_rect(x, y, width, height, window_theme.header_color, 3.0f);
 
 	if (flags & WINDOW_WITH_HEADER) {
-		direct2d.fill_rect(x, y, width, window_theme.header_height, window_theme.header_color);
+
+		if (flags & ELEMENT_FOCUSED) {
+			direct2d.fill_rect(x, y, width, window_theme.header_height, Color(26, 26, 26));
+		} else {
+			direct2d.fill_rect(x, y, width, window_theme.header_height, window_theme.header_color);
+		}
+
+		if (theme.draw_window_name_in_header && !name.is_empty()) {
+			direct2d.draw_text(header_text_position.x, header_text_position.y, name);
+		}
 	}
 
 	//close_button->draw();
@@ -1347,6 +1374,7 @@ void Window::draw()
 
 void Editor::add_window(Window *window)
 {
+	drawn_windows.append_front(window);
 	windows.push(window);
 }
 
@@ -1354,8 +1382,30 @@ void Editor::handle_event(Event * event)
 {
 	bool window_hover = false;
 
-	Window *window = NULL;
-	For(windows, window) {
+	Node<Window *> *next_node = NULL;
+	for (Node<Window *> *window_node = drawn_windows.first_node; window_node != NULL; window_node = next_node) {
+		next_node = window_node->next;
+		Window *window = window_node->item;
+
+
+		if (event->type == EVENT_TYPE_KEY) {
+			if (window->flags & ELEMENT_HOVER) {
+				if (is_left_mouse_button_down()) {
+					if (focused_window) {
+						focused_window->flags &= ~ELEMENT_FOCUSED;
+					}
+					window->flags |= ELEMENT_FOCUSED;
+					focused_window = window;
+
+
+					drawn_windows.remove(window_node);
+					drawn_windows.append_front(window_node);
+
+					focused_window->handle_event(event);
+					break;
+				}
+			}
+		}
 
 		if (!window->window_active) {
 			continue;
@@ -1383,7 +1433,7 @@ void Editor::update()
 
 void Editor::draw()
 {
-	Window *window = NULL;
+	//Window *window = NULL;
 	//Window *focused_window = NULL;
 	//
 	//For(windows, window) {
@@ -1394,7 +1444,9 @@ void Editor::draw()
 	//}
 	//
 
-	For(windows, window) {
+	for (Node<Window *> *window_node = drawn_windows.first_node; window_node != NULL; window_node = window_node->next) {
+		Window *window = window_node->item;
+
 		if (!window->window_active || (window == focused_window)) {
 			continue;
 		}
@@ -1634,6 +1686,11 @@ void Editor::set_form_label(const char * label)
 	current_form->label = label;
 }
 
+void Editor::set_window_name(const char *name)
+{
+	current_window->set_name(name);
+}
+
 void Editor::add_item(const char * item_text, int enum_value)
 {
 	assert(current_list_box != NULL);
@@ -1649,7 +1706,8 @@ void Editor::add_picked_panel(const char * item_text, int enum_value)
 Window *Editor::find_window(const char *name)
 {
 	Window *window = NULL;
-	For(windows, window) {
+	For(windows, window)
+	{
 		if (name == window->name) {
 			return window;
 		}

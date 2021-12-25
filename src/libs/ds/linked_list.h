@@ -16,11 +16,12 @@ struct Node {
 
 	T item;
 	Node<T> *next = NULL;
+	Node<T> *previous = NULL;
 };
 
 template <typename T>
 struct Linked_List {
-	Linked_List(bool handle_node_item_deleting = true) : handle_node_item_deleting(handle_node_item_deleting) {};
+	Linked_List(bool handle_node_item_deleting = false) : handle_node_item_deleting(handle_node_item_deleting) {};
 	~Linked_List();
 
 	bool handle_node_item_deleting;
@@ -32,12 +33,14 @@ struct Linked_List {
 	Node<T> *last_node = NULL;
 
 	void print();
-	void append(const T &item);
-	void append(Node<T> *node);
+	void append_back(const T &item);
+	void append_front(const T &item);
 
-	//void remove(const T &item);
-	void remove(const T &item, T &item_buffer);
-	void remove_node(const T &item, Node<T> **node_ptr);
+	void append_front(Node<T> *node);
+
+	void remove(const T &item);
+	void remove(Node<T> *node);
+	
 	void delete_node(Node<T> *node);
 	
 	void set_pointer_to_item(T *ptr, u32 index);
@@ -85,100 +88,51 @@ Linked_List<T>::~Linked_List()
 }
 
 template <typename T>
-void Linked_List<T>::append(const T &item)
-{
-	if (!first_node) {
-		first_node = new Node<T>(item);
-		last_node = first_node;
-	} else {
-		last_node->next = new Node<T>(item);
-		last_node = last_node->next;
-	}
-	count++;
-}
-
-template<typename T>
-inline void Linked_List<T>::append(Node<T>* node)
-{
-	assert(node);
-
-	if (!first_node) {
-		first_node = node;
-		last_node = first_node;
-	} else {
-		last_node->next = node;
-		last_node = last_node->next;
-	}
-	count++;
-}
-
-template <typename T>
 void Linked_List<T>::delete_node(Node<T> *node)
 {
 	static Run_Time_Pointer_Deleter<T> deleter;
 	
 	if (is_pointer_type && handle_node_item_deleting) {
 		deleter(node->item);
-		delete node;
+		DELETE_PTR(node);
 	} else {
-		delete node;
+		DELETE_PTR(node);
 	}
 }
 
 template <typename T>
-void Linked_List<T>::remove(const T &item, T &item_buffer)
+void Linked_List<T>::remove(const T &item)
 {
-	Node<T> *removing_node = NULL;
-	if (first_node->item == item) {
-		item_buffer = first_node->item;
-
-		removing_node = first_node;
-		first_node = first_node->next;
-
-		delete_node(removing_node);
-	} else {
-		Node<T> *node = first_node;
-		while ((node->next != NULL) && (node->next->item != item)) {
-			node = node->next;
+	Node<T> *current_node = first_node;
+	while (current_node) {
+		if (current_node->item == item) {
+			current_node->next ? current_node->next->previous = current_node->previous : last_node = current_node->previous;
+			current_node->previous ? current_node->previous->next = current_node->next : first_node = current_node->next;
+			delete_node(current_node);
+			count -= 1;
+			break;
 		}
-		assert(node->next);
-
-		removing_node = node->next;
-		node->next = removing_node->next;
-
-		item_buffer = removing_node->item;
-
-		delete_node(removing_node);
+		current_node = current_node->next;
 	}
-	count--;
 }
 
 template<typename T>
-inline void Linked_List<T>::remove_node(const T & item, Node<T> **node_ptr)
+inline void Linked_List<T>::remove(Node<T>* node)
 {
-	Node<T> *removing_node = NULL;
-	if (first_node->item == item) {
-		*node_ptr = first_node;
-		first_node = first_node->next;
-		(*node_ptr)->next = NULL;
-
-		//delete_node(removing_node);
+	if (node->previous) {
+		node->previous->next = node->next;
 	} else {
-		Node<T> *node = first_node;
-		while ((node->next != NULL) && (node->next->item != item)) {
-			node = node->next;
-		}
-		assert(node->next);
-
-		removing_node = node->next;
-		node->next = removing_node->next;
-
-		removing_node->next = NULL;
-		*node_ptr = removing_node;
-
-		//delete_node(removing_node);
+		first_node = node->next;
 	}
-	count--;
+
+	if (node->next) {
+		node->next->previous = node->previous;
+	} else {
+		node->next = node->previous;
+	}
+	node->next = NULL;
+	node->previous = NULL;
+	count -= 1;
 }
 
 template <typename T>
@@ -186,9 +140,68 @@ void Linked_List<T>::print()
 {
 	Node<T> *node = first_node;
 	while (node != NULL) {
-		::print(node->item);
+		::print("----------------------------------------");
+		if (node->previous) {
+			::print("Previous node item: ", node->previous->item);
+		} else {
+			::print("Previous node is NULL");
+		}
+		if (node->next) {
+			::print("Next node item: ", node->next->item);
+		} else {
+			::print("Next node is NULL");
+		}
+		::print("Node item: ", node->item);
+
 		node = node->next;
 	}
+}
+
+template<typename T>
+inline void Linked_List<T>::append_back(const T & item)
+{
+	if (!first_node) {
+		first_node = new Node<T>(item);
+		last_node = first_node;
+	} else {
+		last_node->next = new Node<T>(item);
+		last_node->next->previous = last_node;
+		last_node = last_node->next;
+	}
+	count++;
+}
+
+template<typename T>
+inline void Linked_List<T>::append_front(const T &item)
+{
+	Node<T> *new_node = new Node<T>(item);
+	if (first_node) {
+		first_node->previous = new_node;
+	}
+	new_node->next = first_node;
+	first_node = new_node;
+
+	
+	if (!last_node) {
+		last_node = first_node;
+	}
+	count++;
+}
+
+template<typename T>
+inline void Linked_List<T>::append_front(Node<T>* node)
+{
+	if (first_node) {
+		first_node->previous = node;
+	}
+	node->next = first_node;
+	first_node = node;
+
+	
+	if (!last_node) {
+		last_node = node;
+	}
+	count++;
 }
 
 template <typename T>

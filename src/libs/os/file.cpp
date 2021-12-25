@@ -142,3 +142,11 @@ void extract_file_name(const char *file_name, String &result)
 	split(&str, ".", &buffer);
 	result = buffer.items[0];
 }
+
+void extract_file_from_path(const char *path, String &result)
+{
+	Array<String> buffer;
+	String str = path;
+	split(&str, "\\", &buffer);
+	result = buffer.last_item();
+}
