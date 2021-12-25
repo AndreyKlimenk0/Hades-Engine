@@ -4,30 +4,57 @@
 
 
 
-
 void Editor::init()
 {
-	make_window(700, 600, WINDOW_CENTER | WINDOW_WITH_HEADER);
-	current_window->set_element_place(PLACE_HORIZONTALLY);
-	current_window->name = "Temp";
+	make_window(100, 200, 500, 500, WINDOW_WITH_HEADER);
+	set_window_name("Temp1");
+	current_window->set_element_place(PLACE_HORIZONTALLY_AND_IN_MIDDLE);
+	//make_button("Test1");
+	//make_button("Test2");
+	//make_button("Test3");
+	//make_button("Test5");
 
-	make_button("Button 1");
+	make_window(400, 200, 500, 500, WINDOW_WITH_HEADER);
+	set_window_name("Temp2");
+
+	//make_button("Test1");
+	//make_button("Test2");
+	//make_button("Test3");
+	//make_button("Test5");
+
+	make_window(600, 200, 500, 500, WINDOW_WITH_HEADER);
+	set_window_name("Temp3");
+
+	//make_button("Test1");
+	//make_button("Test2");
+	//make_button("Test3");
+	//make_button("Test5");
+
+	make_window(0, 0, win32.window_width, 40, 0);
+	current_window->aligment = LEFT_ALIGNMENT;
+	current_window->set_element_place(PLACE_HORIZONTALLY_AND_IN_MIDDLE);
+	set_window_name("Temp");
+
+	make_window_button("Create Entity", find_window("Temp1"));
+	//make_button("Create Entity");
 	
-	make_button("Button 2");
+	make_window_button("Temp2", find_window("Temp2"));
+	make_window_button("Temp3", find_window("Temp3"));
+	//make_button("Camera");
 
-	make_button("Button 3");
+	//make_button("Button 3");
 	
 	make_button("Button 4");
-	//
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 4");
-	//make_button("Button 5");
+
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 4");
+	make_button("Button 5");
 	
 	//make_window(300, 200, 500, 500, WINDOW_WITH_HEADER);
 	//current_window->name = "Temp1";
