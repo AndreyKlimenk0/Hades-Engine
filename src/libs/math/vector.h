@@ -78,6 +78,11 @@ inline Vector2 Vector2::operator*(float scalar)
 {
 	return Vector2(x * scalar, y * scalar);
 }
+
+inline Vector2 operator*(float scalar, Vector2 vec2) 
+{
+	return Vector2(vec2.x * scalar, vec2.y * scalar);
+}
 inline Vector2 Vector2::operator*(const Vector2 &other) 
 {
 	return Vector2(x * other.x, y * other.y);
@@ -268,6 +273,11 @@ inline Vector3 Vector3::operator-(const Vector3 &other)
 inline Vector3 Vector3::operator*(float scalar)
 {
 	return Vector3(x * scalar, y * scalar, z * scalar);
+}
+
+inline Vector3 operator*(float scalar, Vector3 &vec)
+{
+	return Vector3(vec.x * scalar, vec.y * scalar, vec.z * scalar);
 }
 
 inline Vector3 Vector3::operator*(const Vector3 &other)

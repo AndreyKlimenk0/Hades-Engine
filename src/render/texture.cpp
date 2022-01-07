@@ -46,8 +46,6 @@ static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *
 	*png_image_buffer = new u8[size];
 
 
-	//png_image_buffer = new u8[size];
-
 	result = spng_decode_chunks(ctx);
 	if (result) {
 		print("spng_decode_chunks() error: {}", spng_strerror(result));
@@ -148,6 +146,14 @@ Texture *create_texture_from_file(const char *file_name)
 
 	String texture_path;
 	os_path.build_full_path_to_texture_file(file_name, texture_path);
+	if (!file_exists(texture_path)) {
+		
+		os_path.build_full_path_to_editor_file(file_name, texture_path);
+		if (!file_exists(texture_path)) {
+			print("create_texture_from_file: file with name {} was not found", file_name);
+			return NULL;
+		}
+	}
 
 	u8 *png_image_buffer = NULL;
 	u32 png_image_width;
@@ -156,12 +162,15 @@ Texture *create_texture_from_file(const char *file_name)
 	bool result = load_png_file(texture_path, &png_image_buffer, &png_image_width, &png_image_height);
 	
 	if (!result) {
-		print("create_texture: Loading png file {} was failed.", file_name);
+		print("create_texture_from_file: Loading png file {} was failed.", file_name);
 		DELETE_PTR(png_image_buffer);
 		return NULL;
 	}
 
-	return create_texture_2d(png_image_width, png_image_height, (void *)png_image_buffer);
+	Texture *texture = create_texture_2d(png_image_width, png_image_height, (void *)png_image_buffer);
+	DELETE_PTR(png_image_buffer);
+	
+	return texture;
 }
 
 Texture::~Texture()
@@ -199,6 +208,8 @@ void Texture::set_color(const Color &color)
 	mapped_subresource.RowPitch = width * sizeof(u32);
 
 	directx11.device_context->UpdateSubresource(texture, 0, NULL, data, width * sizeof(u32), 0);
+
+	DELETE_PTR(data);
 }
 
 Texture::operator ID3D11ShaderResourceView*()
@@ -228,13 +239,15 @@ Texture *Texture_Manager::get_texture(const char *texture_name)
 		return &default_texture;
 	}
 
-	Texture *texture;
+	Texture *texture = NULL;
 	if (!textures.get(texture_name, &texture)) {
 		texture = create_texture_from_file(texture_name);
 		if (!texture) {
 			return &default_texture;
 		}
+		texture->name = texture_name;
 		textures.set(texture_name, texture);
 	}
 	return texture;
 }
+

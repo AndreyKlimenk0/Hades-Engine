@@ -29,6 +29,13 @@ bool get_file_names_from_dir(const char *full_path, Array<String> *file_names)
 	return true;
 }
 
+bool file_exists(const char *full_path)
+{
+  DWORD dwAttrib = GetFileAttributes(full_path);
+
+  return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 u8 read_u8(FILE *file)
 {
 	u8 byte;

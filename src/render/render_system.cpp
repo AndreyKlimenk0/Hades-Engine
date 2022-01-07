@@ -7,6 +7,7 @@
 
 Render_System render_sys;
 
+void draw_rounded_rect(int x, int y, int width, int height);
 
 Matrix4 make_world_view_perspective_matrix(Entity *entity)
 {
@@ -66,23 +67,29 @@ static void draw_world_entities(World *world)
 	light->bind_per_frame_info(render_sys.free_camera);
 
 	Render_Entity *render_entity = NULL;
-	For(world->render_entities, render_entity) {
+	For(world->render_entities, render_entity)
+	{
 
 		if (render_entity->stencil_test) {
 			enable_stencil_test(render_entity->stencil_test, render_entity->stencil_ref_value);
 		}
 
+		if (render_entity->call_before_drawing_entity) {
+			render_entity->call_before_drawing_entity(render_entity);
+		}
+
 		bind(light, render_entity->entity);
 
 		Render_Mesh *render_mesh = NULL;
-		For(render_entity->render_model->render_meshes, render_mesh) {
+		For(render_entity->render_model->render_meshes, render_mesh)
+		{
 			bind(light, render_mesh);
 			light->attach("draw");
 			draw_mesh(&render_mesh->mesh);
 		}
 
-		if (render_entity->draw_after_drawn_entity) {
-			render_entity->draw_after_drawn_entity(render_entity);
+		if (render_entity->call_after_drawn_entity) {
+			render_entity->call_after_drawn_entity(render_entity);
 		}
 
 		if (render_entity->stencil_test) {
@@ -116,7 +123,8 @@ void Render_System::resize()
 
 void Render_System::render_frame()
 {
-
+	//Texture *texture = texture_manager.get_texture("cross.png");
+	//draw_texture_on_screen(700, 400, texture, 25.0f, 25.0f);
 	//view_matrix = free_camera->get_view_matrix();
 
 	//Render_Entity *render_entity = NULL;
@@ -135,6 +143,7 @@ void Render_System::render_frame()
 	//draw_texture_on_screen(0, 0, texture_manager.get_texture("Lion_Albedo.png"), 250.0f, 250.0f);
 
 	//draw_text(0.5, 0.5, "AAAAAAAAAAAAAAAAAAAAA");
+	draw_rounded_rect(500, 150, 500, 500);
 }
 
 View_Info *make_view_info(float near_plane, float far_plane)
@@ -181,33 +190,34 @@ void make_outlining(Render_Entity *render_entity)
 {
 	render_entity->stencil_ref_value = render_entity->entity->id;
 	render_entity->stencil_test = make_outlining_stencil_test();
-	render_entity->draw_after_drawn_entity = draw_outlining;
+	render_entity->call_after_drawn_entity = draw_outlining;
 }
 
 void free_outlining(Render_Entity *render_entity)
 {
 	render_entity->stencil_ref_value = 0;
 	free_com_object(render_entity->stencil_test);
-	render_entity->draw_after_drawn_entity = NULL;
+	render_entity->call_after_drawn_entity = NULL;
 }
 
 inline float x_to_screen_space(float x)
 {
-	 return 2 * x / (win32.window_width - 0) - (win32.window_width + 0) / (win32.window_width - 0); 
+	return 2 * x / (win32.window_width - 0) - (win32.window_width + 0) / (win32.window_width - 0);
 }
 
 inline float y_to_screen_space(float y)
 {
-	return 2 * y / (0 - win32.window_height) - (0 + win32.window_height) / (0 - win32.window_height); 
+	return 2 * y / (0 - win32.window_height) - (0 + win32.window_height) / (0 - win32.window_height);
 }
-
 
 typedef ID3D11Buffer Gpu_Buffer;
 
 Gpu_Buffer *make_gpu_buffer(D3D11_USAGE usage, u32 bind_flags, u32 data_size, u32 data_count, void *data)
 {
+	assert(data);
+
 	Gpu_Buffer *buffer = NULL;
-	
+
 	D3D11_BUFFER_DESC buffer_desc;
 	ZeroMemory(&buffer_desc, sizeof(D3D11_BUFFER_DESC));
 	buffer_desc.Usage = usage;
@@ -233,6 +243,36 @@ inline Gpu_Buffer *make_index_buffer(u32 index_count, u32 *index_data, D3D11_USA
 	return make_gpu_buffer(usage, D3D11_BIND_INDEX_BUFFER, sizeof(u32), index_count, index_data);
 }
 
+static inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, Gpu_Buffer *indices, u32 index_count)
+{
+	assert(vertices);
+	assert(indices && (index_count > 2));
+
+	directx11.device_context->IASetInputLayout(Input_Layout::table[vertex_name]);
+	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	UINT stride = vertex_size;
+	UINT offset = 0;
+	directx11.device_context->IASetVertexBuffers(0, 1, &vertices, &stride, &offset);
+	directx11.device_context->IASetIndexBuffer(indices, DXGI_FORMAT_R32_UINT, 0);
+
+	directx11.device_context->DrawIndexed(index_count, 0, 0);
+}
+
+static inline void draw_not_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, u32 vertex_count)
+{
+	assert(vertices);
+
+	directx11.device_context->IASetInputLayout(Input_Layout::table[vertex_name]);
+	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	UINT stride = vertex_size;
+	UINT offset = 0;
+	directx11.device_context->IASetVertexBuffers(0, 1, &vertices, &stride, &offset);
+
+	directx11.device_context->Draw(vertex_count, 0);
+}
+
 void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width, float _height)
 {
 	float xpos = x;
@@ -241,39 +281,6 @@ void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width, float 
 	float width = _width == 0.0f ? texture->width : _width;
 	float height = _height == 0.0f ? texture->height : _height;
 
-	//Vertex_XUV vertices[6] = {
-	//	Vertex_XUV(Vector3(xpos, ypos + height, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex_XUV(Vector3(xpos, ypos, 1.0f),          Vector2(0.0f, 1.0f)),
-	//	Vertex_XUV(Vector3(xpos + width, ypos, 1.0f),  Vector2(1.0f, 1.0f)),
-
-	//	Vertex_XUV(Vector3(xpos, ypos + height, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex_XUV(Vector3(xpos + width, ypos, 1.0f),  Vector2(1.0f, 1.0f)),
-	//	Vertex_XUV(Vector3(xpos + width, ypos + height, 1.0f), Vector2(1.0f, 0.0f))
-	//};
-
-	//Vertex vertices[6] = {
-	//	Vertex(Vector3(xpos, ypos + height, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(xpos, ypos, 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f)),
-	//	Vertex(Vector3(xpos + width, ypos, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-
-	//	Vertex(Vector3(xpos, ypos + height, 0.0f),Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(xpos + width, ypos, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-	//	Vertex(Vector3(xpos + width, ypos + height, 0.0f),Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f))
-	//};
-
-	//Vertex vertices[6] = {
-	//	Vertex(Vector3(xpos, ypos, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(xpos + width, ypos + height, 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f)),
-	//	Vertex(Vector3(xpos, ypos + height, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-	//	Vertex(Vector3(xpos + width, ypos, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(0.0f, 1.0f)),
-	//};
-
-	//Vertex vertices[6] = {
-	//	Vertex(Vector3(xpos, ypos + height, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f)),
-	//	Vertex(Vector3(xpos, ypos, 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(xpos + width, ypos, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 0.0f)),
-	//	Vertex(Vector3(xpos + width, ypos + height, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-	//};	
 	Vertex vertices[4] = {
 		Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos + height), 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f)),
 		Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos), 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
@@ -281,113 +288,188 @@ void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width, float 
 		Vertex(Vector3(x_to_screen_space(xpos + width), y_to_screen_space(ypos + height), 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
 	};
 
-
-	//Vertex vertices[6] = {
-	//	Vertex(Vector3(xpos, ypos + height, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f)),
-	//	Vertex(Vector3(xpos, ypos, 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 1.0f)),
-	//	Vertex(Vector3(xpos + width, ypos, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(0.0f, 1.0f)),
-	//	Vertex(Vector3(xpos + width, ypos + height, 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(0.0f, 0.0f)),
-	//};
-
-	//u32 indices[6] = {
-	//	0, 1, 2,
-	//	0, 3, 1
-	//};
 	u32 indices[6] = {
 		0, 1, 2,
 		0, 2, 3
-	};	
-	//u32 indices[6] = {
-	//	0, 2, 1,
-	//	3, 2, 1
-	//};
-
-	//Vertex vertices[6] = {
-	//	Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos + height), 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos), 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f)),
-	//	Vertex(Vector3(x_to_screen_space(xpos + width), y_to_screen_space(ypos), 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-
-	//	Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos + height), 0.0f),Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(x_to_screen_space(xpos + width), y_to_screen_space(ypos), 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-	//	Vertex(Vector3(x_to_screen_space(xpos + width), y_to_screen_space(ypos + height), 0.0f),Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f))
-	//};
-
-
-	//Vertex vertices[4] = {
-	//	Vertex(Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f)),
-	//	Vertex(Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f)),
-	//};
-	ID3D11RasterizerState *WireFrame;
-	D3D11_RASTERIZER_DESC wfdesc;
-	ZeroMemory(&wfdesc, sizeof(D3D11_RASTERIZER_DESC));
-	wfdesc.FillMode = D3D11_FILL_SOLID;
-	wfdesc.CullMode = D3D11_CULL_FRONT;
-	//wfdesc.FrontCounterClockwise = false;
-	directx11.device->CreateRasterizerState(&wfdesc, &WireFrame);
-	//directx11.device_context->RSSetState(WireFrame);
-
-	//		D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
-	//ZeroMemory(&depth_stencil_desc, sizeof(D3D11_DEPTH_STENCILOP_DESC));
-	//	depth_stencil_desc.DepthEnable = false;
-	//	depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	//	depth_stencil_desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
-
-	//	Stencil_Test *stencil_state;
-	//HR(directx11.device->CreateDepthStencilState(&depth_stencil_desc, &stencil_state));
-
-	//directx11.device_context->OMSetDepthStencilState(stencil_state, 0);
+	};
 
 	Fx_Shader *color = fx_shader_manager.get_shader("base");
-
-	Matrix4 v = render_sys.view_matrix;
-	//Matrix4 m =  render_sys.view_info->orthogonal_matrix;
-	Matrix4 m;
-	m.indentity();
-	//Matrix4 m = render_sys.view_info->orthogonal_matrix;
-	color->bind("world_view_projection", &m);
 	color->bind("texture_map", texture->shader_resource);
-
 	color->attach("draw_texture");
 
-	ID3D11Buffer *vertex_buffer = NULL;
-	ID3D11Buffer *index_buffer = NULL;
-	
-	D3D11_BUFFER_DESC vertex_buffer_desc;
-	ZeroMemory(&vertex_buffer_desc, sizeof(D3D11_BUFFER_DESC));
-	vertex_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-	vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertex_buffer_desc.ByteWidth = sizeof(Vertex) * 4;
+	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex), 4, (void *)vertices);
+	Gpu_Buffer *index_buffer = make_index_buffer(6, indices);
 
-	D3D11_SUBRESOURCE_DATA vertex_resource_data;
-	ZeroMemory(&vertex_resource_data, sizeof(D3D11_SUBRESOURCE_DATA));
-	vertex_resource_data.pSysMem = (void *)vertices;
-
-	HR(directx11.device->CreateBuffer(&vertex_buffer_desc, &vertex_resource_data, &vertex_buffer));
-
-	D3D11_BUFFER_DESC index_buffer_desc;
-	ZeroMemory(&index_buffer_desc, sizeof(D3D11_BUFFER_DESC));
-	index_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-	index_buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	index_buffer_desc.ByteWidth = sizeof(u32) * 6;
-
-
-	D3D11_SUBRESOURCE_DATA index_data;
-	ZeroMemory(&index_data, sizeof(D3D11_SUBRESOURCE_DATA));
-	index_data.pSysMem = (void *)indices;
-	
-	HR(directx11.device->CreateBuffer(&index_buffer_desc, &index_data, &index_buffer));
-
-	directx11.device_context->IASetInputLayout(Input_Layout::vertex);
-	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	directx11.device_context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
-	directx11.device_context->IASetIndexBuffer(index_buffer, DXGI_FORMAT_R32_UINT, 0);
-
-	directx11.device_context->DrawIndexed(6, 0, 0);
+	draw_indexed_traingles(vertex_buffer, sizeof(Vertex), "vertex", index_buffer, 6);
 
 	free_com_object(vertex_buffer);
+	free_com_object(index_buffer);
+}
+
+#include <math.h>
+const float PI = 3.14;
+static inline float degrees_to_radian(u32 degrees)
+{
+	return degrees * PI / 180.0f;
+}
+
+Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
+{
+	return (float)pow((1 - t), 2) * p0 + 2 * (1 - t) * t * p1 + (float)pow(t, 2) * p2;
+}
+
+struct Primitive_2D {
+	Array<Vertex_XC> vertices;
+	Array<u32> indices;
+
+	void add_triangle();
+	void add_rounded_triangles(int x, int y, int width, int height, const Vector2 &point0, const Vector2 &point1, const Vector2 &point2);
+};
+
+struct Render_2D {
+	Array<Primitive_2D> primitives;
+
+	Gpu_Buffer *vertex_buffer;
+	Gpu_Buffer *index_buffer;
+
+	void draw_all_on_back_buffer();
+};
+
+void Primitive_2D::add_rounded_triangles(int x, int y, int width, int height, const Vector2 &point0, const Vector2 &point1, const Vector2 &point2)
+{
+
+	int f = 50;
+	
+	float s = 1.0f;
+	for (int i = 0; i < 10; i++) {
+		Vector2 p = quad(s, point0, point1, point2);
+		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
+		s -= 0.1f;
+
+
+		vertices.push(v);
+	}
+
+	//if (point1.x > point2.x) {
+	//	float s = 0.0f;
+	//	for (int i = 0; i < 10; i++) {
+	//		Vector2 p = quad(s, point0, point1, point2);
+	//		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
+	//		s += 0.1f;
+
+
+	//		vertices.push(v);
+	//	}
+	//} else {
+	//	float s = 1.0f;
+	//	for (int i = 0; i < 10; i++) {
+	//		Vector2 p = quad(s, point0, point1, point2);
+	//		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
+	//		s -= 0.1f;
+
+
+	//		vertices.push(v);
+	//	}
+	//}
+}
+
+
+void draw_rounding(int x, int y, int width, int height, const Vector2 &point0, const Vector2 &point1, const Vector2 &point2)
+{
+	Vector2 center = { x + width / 2.0f, y + height / 2.0f };
+
+	Array<Vertex_XC> vertices;
+	Vertex_XC c = Vertex_XC(Vector3(x_to_screen_space(center.x), y_to_screen_space(center.y), 0.0f), Color::Green);
+	vertices.push(c);
+
+	Array<u32> indices;
+
+	int f = 50;
+
+	float s = 0.0f;
+	for (int i = 0; i < 10; i++) {
+		Vector2 p = quad(s, point0, point1, point2);
+		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
+		s += 0.1f;
+
+		vertices.push(v);
+
+		if (i == 0) {
+			continue;
+		}
+		indices.push(i);
+		indices.push(i + 1);
+		indices.push(0);
+
+	}
+
+	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), vertices.count, (void *)vertices.items);
+	Gpu_Buffer *index_buffer = make_index_buffer(indices.count, indices.items);
+
+	Fx_Shader *shader = fx_shader_manager.get_shader("color");
+	shader->attach("draw_vertex_on_screen");
+
+	draw_indexed_traingles(vertex_buffer, sizeof(Vertex_XC), "vertex_color", index_buffer, indices.count);
+
+	free_com_object(vertex_buffer);
+	free_com_object(index_buffer);
+}
+
+void draw_rounded_rect(int x, int y, int width, int height)
+{
+	int f = 50;
+
+	Primitive_2D p;
+
+	Vector2 center = { x + width / 2.0f, y + height / 2.0f };
+
+	Vertex_XC c = Vertex_XC(Vector3(x_to_screen_space(center.x), y_to_screen_space(center.y), 0.0f), Color::Green);
+	p.vertices.push(c);
+
+	p.add_rounded_triangles(x, y, width, height, Vector2(x, y + f), Vector2(x, y), Vector2(x + f, y));
+	p.add_rounded_triangles(x, y, width, height, Vector2(x + f, y + height), Vector2(x, y + height), Vector2(x, y + height - f));
+	p.add_rounded_triangles(x, y, width, height, Vector2(x + width, y + height - f), Vector2(x + width, y + height), Vector2(x + width - f, y + height));
+	p.add_rounded_triangles(x, y, width, height, Vector2(x + width - f, y), Vector2(x + width, y), Vector2(x + width, y + f));
+
+	for (int i = 2; i < p.vertices.count; i++) {
+		p.indices.push(i);
+		p.indices.push(i - 1);
+		p.indices.push(0);
+	}
+
+	p.indices.push(1);
+	p.indices.push(p.vertices.count - 1);
+	p.indices.push(0);
+
+	//for (int i = 1; i < p.vertices.count; i++) {
+	//	p.indices.push(i);
+	//	p.indices.push(i + 1);
+	//	p.indices.push(0);
+	//}
+
+	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), p.vertices.count, (void *)p.vertices.items);
+	Gpu_Buffer *index_buffer = make_index_buffer(p.indices.count, p.indices.items);
+
+	Fx_Shader *shader = fx_shader_manager.get_shader("color");
+	shader->attach("draw_vertex_on_screen");
+
+	draw_indexed_traingles(vertex_buffer, sizeof(Vertex_XC), "vertex_color", index_buffer, p.indices.count);
+
+	free_com_object(vertex_buffer);
+	free_com_object(index_buffer);
+
+	p.vertices.clear();
+	p.indices.clear();
+
+	//// top left
+	//draw_rounding(x, y, width, height, Vector2(x, y + f), Vector2(x, y), Vector2(x + f, y));
+	//
+	//// button left
+	//draw_rounding(x, y, width, height, Vector2(x + f, y + height), Vector2(x, y + height), Vector2(x, y + height - f));
+	//
+	//// top right
+	//draw_rounding(x, y, width, height, Vector2(x + width - f, y), Vector2(x + width, y), Vector2(x + width, y + f));
+	//
+	//// bottom right
+	//draw_rounding(x, y, width, height, Vector2(x + width, y + height - f), Vector2(x + width, y + height), Vector2(x + width -  f, y + height));
 }

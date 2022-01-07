@@ -44,7 +44,7 @@ float4 ps_draw_outlining(Vertex_Out pixel) : SV_Target
 Vertex_Out vs_draw_texture(Vertex_In vertex)
 {
 	Vertex_Out result;
-	result.position = mul(float4(vertex.position, 1.0f), world_view_projection);
+	result.position = float4(vertex.position, 1.0f);
 	result.normal = vertex.normal;
 	result.uv = vertex.uv;
 	return result;
@@ -52,7 +52,11 @@ Vertex_Out vs_draw_texture(Vertex_In vertex)
 
 float4 ps_draw_texture(Vertex_Out pixel) : SV_Target
 {
-	return texture_map.Sample(sampler_anisotropic, pixel.uv);
+	float4 tex = texture_map.Sample(sampler_anisotropic, pixel.uv);
+	if (tex.a < 1.0f) {
+		discard;
+	}
+	return tex;
 }
 
 
