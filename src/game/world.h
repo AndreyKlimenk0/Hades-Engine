@@ -102,7 +102,8 @@ struct Render_Entity {
 	Entity *entity = NULL;
 	Render_Model *render_model = NULL;
 	
-	void (*draw_after_drawn_entity)(Render_Entity *render_entity) = NULL;
+	void (*call_before_drawing_entity)(Render_Entity *render_entity) = NULL;
+	void (*call_after_drawn_entity)(Render_Entity *render_entity) = NULL;
 };
 
 void make_render_entity(Entity *entity, const char *model_name);

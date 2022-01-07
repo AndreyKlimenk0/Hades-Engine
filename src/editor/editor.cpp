@@ -10,6 +10,7 @@
 #include "../win32/win_time.h"
 #include "../win32/win_local.h"
 #include "../render/font.h"
+#include "../render/render_system.h"
 
 #include "../game/world.h"
 
@@ -243,22 +244,8 @@ Button::Button(const char *_text, int _x, int _y, int _width, int _height, Butto
 	height += theme.border_about_text;
 }
 
-Button::Button(int _x, int _y, ID2D1Bitmap *_image, float _scale) : Element(_x, _y)
-{
-	assert(_image);
-
-	D2D1_SIZE_U size = _image->GetPixelSize();
-	width = size.width * _scale;
-	height = size.height * _scale;
-	image = _image;
-	scale = _scale;
-	type = ELEMENT_TYPE_BUTTON;
-	theme = button_theme;
-}
-
 Button::~Button()
 {
-	RELEASE_COM(image);
 	DELETE_PTR(callback);
 }
 
@@ -286,10 +273,58 @@ void Button::set_position(int _x, int _y)
 	text_position = Point(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
 }
 
+void Button::init_button(int _x, int _y, int _width, int _height, Button_Theme *_button_theme)
+{
+	type = ELEMENT_TYPE_BUTTON;
+	x = _x;
+	y = _y;
+	width = _width;
+	height = _height;
+
+	if (_button_theme) {
+		theme = *_button_theme;
+	} else {
+		theme = button_theme;
+	}
+}
+
+void Button::init_text_button(const char * _text, int _x, int _y, int _width, int _height, Button_Theme * _button_theme)
+{
+	if (_width == -1) {
+		_width = direct_write.get_text_width(_text);
+	}
+
+	if (_height == -1) {
+		_height = direct_write.glyph_height;
+	}
+
+	text_position = Point(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
+
+	init_button(_x, _y, _width, _height, _button_theme);
+
+	width += theme.border_about_text;
+	height += theme.border_about_text;
+}
+
+void Button::init_texture_button(const char *texture_name, int _x, int _y, int _width, int _height, Button_Theme * _button_theme)
+{
+	texture = texture_manager.get_texture(texture_name);
+
+	if (_width == -1) {
+		_width = texture->width;
+	}
+
+	if (_height == -1) {
+		_height = texture->height;
+	}
+
+	init_button(_x, _y, _width, _height, _button_theme);
+}
+
 void Button::draw()
 {
-	if (image) {
-		direct2d.draw_bitmap(x, y, width, height, image, scale);
+	if (texture) {
+		draw_texture_on_screen(x, y, texture, width, height);
 		return;
 	}
 
@@ -324,16 +359,18 @@ List_Box::List_Box(const char *_label, int _x, int _y)
 
 	list_box_size = 0;
 
-	ID2D1Bitmap *down_image = NULL;
+	//ID2D1Bitmap *down_image = NULL;
 
-	load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\down.png", 1, 1, &down_image);
-	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 100);
-	D2D1_SIZE_U size = down_image->GetPixelSize();
+	//load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\down.png", 1, 1, &down_image);
+	//float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, get_height_from_bitmap(down_image), 100);
+	//D2D1_SIZE_U size = down_image->GetPixelSize();
 
-	drop_button_image_width = (size.width * cross_scale_factor);
+	//drop_button_image_width = (size.width * cross_scale_factor);
 
-	drop_button = new Button(x + width - drop_button_image_width, y, down_image, cross_scale_factor);
-	drop_button->callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
+	//drop_button = new Button(x + width - drop_button_image_width, y, down_image, cross_scale_factor);
+	//drop_button->callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
+	drop_button.init_texture_button("cross.png", x + width - 50, y);
+	drop_button.callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
 
 	text_y = place_in_middle(this, direct_write.glyph_height);
 	text_x = x + 2;
@@ -342,8 +379,6 @@ List_Box::List_Box(const char *_label, int _x, int _y)
 
 List_Box::~List_Box()
 {
-	DELETE_PTR(drop_button);
-
 	Button *button = NULL;
 	For(item_list, button)
 	{
@@ -363,7 +398,7 @@ void List_Box::draw()
 		direct2d.draw_text(text_x, text_y, "There is no added items");
 	}
 
-	drop_button->draw();
+	drop_button.draw();
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
 		direct2d.draw_rounded_rect(x, y + 2 + height, header_width, list_box_size, theme.rounded_border, theme.rounded_border, theme.color);
@@ -393,7 +428,7 @@ void List_Box::on_drop_button_click()
 
 void List_Box::handle_event(Event *event)
 {
-	drop_button->handle_event(event);
+	drop_button.handle_event(event);
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
 		Button *b = NULL;
@@ -440,7 +475,7 @@ void List_Box::set_position(int _x, int _y)
 	x = _x + direct_write.get_text_width(label.text) + theme.list_box_shift_from_text;
 	y = _y;
 
-	drop_button->set_position(x + header_width - drop_button_image_width, _y);
+	drop_button.set_position(x + header_width - 50, _y);
 
 	label.set_position(_x, place_in_middle(this, direct_write.glyph_height));
 
@@ -1199,6 +1234,11 @@ void Window::move(int x_delta, int y_delta)
 	For(elements, element) {
 		element->set_position(element->x + x_delta, element->y + y_delta);
 	}
+
+	//List_Box *list_box = NULL;
+	//For(list_boxies, list_box) {
+	//	list_box->set_position(list_box->x + x_delta, list_box->y + y_delta);
+	//}
 }
 
 void Window::set_name(const char *_name)
@@ -1391,6 +1431,8 @@ void Editor::handle_event(Event * event)
 		if (event->type == EVENT_TYPE_KEY) {
 			if (window->flags & ELEMENT_HOVER) {
 				if (is_left_mouse_button_down()) {
+					window_hover = true;
+
 					if (focused_window) {
 						focused_window->flags &= ~ELEMENT_FOCUSED;
 					}
@@ -1433,17 +1475,6 @@ void Editor::update()
 
 void Editor::draw()
 {
-	//Window *window = NULL;
-	//Window *focused_window = NULL;
-	//
-	//For(windows, window) {
-	//	if (window->flags & ELEMENT_FOCUSED) {
-	//		focused_window = window;
-	//		break;
-	//	}
-	//}
-	//
-
 	for (Node<Window *> *window_node = drawn_windows.first_node; window_node != NULL; window_node = window_node->next) {
 		Window *window = window_node->item;
 
@@ -1548,13 +1579,24 @@ void Editor::make_list_box(const char *label)
 
 	current_list_box = new List_Box(label);
 
+	//if (current_picked_panel) {
+	//	current_picked_panel->add_field(current_list_box);
+	//	return;
+	//} else if (current_form) {
+	//	current_form->add_field(current_list_box);
+	//}
+	//current_window->add_element(current_list_box);
+		
 	if (current_picked_panel) {
 		current_picked_panel->add_field(current_list_box);
-		return;
 	} else if (current_form) {
 		current_form->add_field(current_list_box);
 	}
-	current_window->add_element(current_list_box);
+
+	if ((!current_picked_panel) && (!current_form)) {
+		current_window->add_element(current_list_box);
+	}
+
 }
 
 void Editor::make_picked_list_box(const char * label)

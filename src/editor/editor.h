@@ -5,6 +5,7 @@
 #include <d2d1.h>
 
 #include "../render/directx.h"
+#include "../render/texture.h"
 #include "../libs/str.h"
 #include "../libs/os/camera.h"
 #include "../libs/ds/array.h"
@@ -141,10 +142,9 @@ enum Button_Place_Type {
 struct Button : Element {
 	Button() { type = ELEMENT_TYPE_BUTTON; }
 	Button(const char *_text, int _x = 0, int _y = 0, int _width = 0, int _height = 0, Button_Theme *_button_theme = NULL);
-	Button(int _x, int _y, ID2D1Bitmap *_image, float _scale = 1.0f);
 	~Button();
 
-	ID2D1Bitmap *image = NULL;
+	Texture *texture = NULL;
 	Callback *callback = NULL;
 
 	bool cursor_on_button = false;
@@ -158,6 +158,10 @@ struct Button : Element {
 	void draw();
 	void handle_event(Event *event);
 	void set_position(int _x, int _y);
+
+	void init_button(int _x, int _y, int _width, int _height, Button_Theme *_button_theme = NULL);
+	void init_text_button(const char *_text, int _x = -1, int _y = -1, int _width = -1, int _height = -1, Button_Theme *_button_theme = NULL);
+	void init_texture_button(const char *texture_name, int _x = -1, int _y = -1, int _width = -1, int _height = -1, Button_Theme *_button_theme = NULL);
 
 	DELETE_COPING(Button);
 };
@@ -203,7 +207,7 @@ struct List_Box : Input_Field {
 	~List_Box();
 
 	Button *button = NULL;
-	Button *drop_button = NULL;
+	Button drop_button;
 	String *current_chosen_item_text = NULL;
 	
 	List_Box_State list_state = LIST_BOX_IS_PICKED_UP;

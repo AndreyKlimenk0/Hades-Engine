@@ -10,8 +10,10 @@
 
 void extract_file_name(const char *file_name, String &result);
 void extract_file_extension(const char *file_name, String &result);
+void extract_file_from_path(const char *path, String &result);
 
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names);
+bool file_exists(const char *full_path);
 
 u8  read_u8(FILE *file);
 u16 read_u16(FILE *file);

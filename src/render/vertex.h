@@ -3,6 +3,7 @@
 
 #include <d3d11.h>
 #include "../libs/math/vector.h"
+#include "../libs/ds/hash_table.h"
 
 
 struct Vertex_XC {
@@ -37,6 +38,7 @@ struct Input_Layout {
 	static const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2];
 	static const D3D11_INPUT_ELEMENT_DESC vertex_desc[3];
 	
+	static Hash_Table<String, ID3D11InputLayout *> table;
 	static void init();
 };
 #endif

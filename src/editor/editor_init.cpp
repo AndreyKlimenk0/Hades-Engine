@@ -25,6 +25,12 @@ void Editor::init()
 	make_window(600, 200, 500, 500, WINDOW_WITH_HEADER);
 	set_window_name("Temp3");
 
+	make_list_box("Test List box");
+	add_item("Text 1", 0);
+	add_item("Text 1", 1);
+	add_item("Text 1", 2);
+	add_item("Text 1", 3);
+
 	//make_button("Test1");
 	//make_button("Test2");
 	//make_button("Test3");
