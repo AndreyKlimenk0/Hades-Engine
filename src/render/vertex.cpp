@@ -9,6 +9,8 @@
 ID3D11InputLayout *Input_Layout::vertex_color = NULL;
 ID3D11InputLayout *Input_Layout::vertex = NULL;
 ID3D11InputLayout *Input_Layout::vertex_xuv = NULL;
+Hash_Table<String, ID3D11InputLayout *> Input_Layout::table;
+
 
 const D3D11_INPUT_ELEMENT_DESC Input_Layout::vertex_xuv_desc[2] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -52,5 +54,9 @@ void Input_Layout::init()
 	HR(directx11.device->CreateInputLayout(vertex_col_desc, 2, color_pass_desc.pIAInputSignature, color_pass_desc.IAInputSignatureSize, &vertex_color));
 	HR(directx11.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
 	HR(directx11.device->CreateInputLayout(vertex_xuv_desc, 2, font_pass_desc.pIAInputSignature, font_pass_desc.IAInputSignatureSize, &vertex_xuv));
+
+	table.set("vertex_color", vertex_color);
+	table.set("vertex", vertex);
+	table.set("vertex_xuv", vertex_xuv);
 
 }

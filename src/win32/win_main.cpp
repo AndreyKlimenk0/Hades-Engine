@@ -40,7 +40,7 @@ void create_and_show_window(int nCmdShow)
 	RegisterClass(&wc);
 
 	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
-		10, 10, 1700, 980, NULL, NULL, win32.hinstance, NULL
+		10, 10, 1900, 980, NULL, NULL, win32.hinstance, NULL
 	);
 
 	if (hwnd == NULL) {
@@ -125,7 +125,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		
 		render_sys.render_frame();	
 
-		editor.draw();
+		//editor.draw();
 		
 		s64 result = milliseconds_counter() - last;
 		s64 r = microseconds_counter() - l;
