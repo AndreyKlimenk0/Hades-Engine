@@ -7,7 +7,15 @@
 
 Render_System render_sys;
 
-void draw_rounded_rect(int x, int y, int width, int height);
+const u32 ROUND_TOP_LEFT_RECT = 0x1;
+const u32 ROUND_TOP_RIGHT_RECT = 0x4;
+const u32 ROUND_BOTTOM_LEFT_RECT = 0x2;
+const u32 ROUND_BOTTOM_RIGHT_RECT = 0x8;
+const u32 ROUND_TOP_RECT = ROUND_TOP_LEFT_RECT | ROUND_TOP_RIGHT_RECT;
+const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
+const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
+
+void draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 
 Matrix4 make_world_view_perspective_matrix(Entity *entity)
 {
@@ -143,7 +151,9 @@ void Render_System::render_frame()
 	//draw_texture_on_screen(0, 0, texture_manager.get_texture("Lion_Albedo.png"), 250.0f, 250.0f);
 
 	//draw_text(0.5, 0.5, "AAAAAAAAAAAAAAAAAAAAA");
-	draw_rounded_rect(500, 150, 500, 500);
+	//draw_rect(500, 150, 500, 500, Color::Green);
+	draw_rect(800, 450, 300, 300, Color::Blue, 50);
+	direct2d.draw_rounded_rect(10, 10, 300, 300, 50, 50, Color::Blue);
 }
 
 View_Info *make_view_info(float near_plane, float far_plane)
@@ -156,7 +166,7 @@ View_Info *make_view_info(float near_plane, float far_plane)
 	view_info->near_plane = near_plane;
 	view_info->far_plane = far_plane;
 	view_info->perspective_matrix = XMMatrixPerspectiveFovLH(view_info->fov_y_ratio, view_info->window_ratio, near_plane, far_plane);
-	view_info->orthogonal_matrix = XMMatrixOrthographicLH(view_info->window_width, view_info->window_height, near_plane, far_plane);
+	view_info->orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, view_info->window_width, 0.0f, view_info->window_height, near_plane, far_plane);
 	return view_info;
 }
 
@@ -318,158 +328,126 @@ Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 	return (float)pow((1 - t), 2) * p0 + 2 * (1 - t) * t * p1 + (float)pow(t, 2) * p2;
 }
 
+enum Rect_Side {
+	RECT_SIDE_TOP_LEFT,
+	RECT_SIDE_TOP_RIGHT,
+	RECT_SIDE_BOTTOM_LEFT,
+	RECT_SIDE_BOTTOM_RIGHT,
+};
+
 struct Primitive_2D {
+	~Primitive_2D();
+	
+	Gpu_Buffer *vertex_buffer = NULL;
+	Gpu_Buffer *index_buffer = NULL;
+
+	Array<Vector2> points;
 	Array<Vertex_XC> vertices;
 	Array<u32> indices;
 
-	void add_triangle();
-	void add_rounded_triangles(int x, int y, int width, int height, const Vector2 &point0, const Vector2 &point1, const Vector2 &point2);
+	void allocate_gpu_buffer();
+	void add_point(const Vector2 &point) { points.push(point); }
+	//void add_rounded_points(const Vector2 &point0, const Vector2 &point1, const Vector2 &point2);
+	void add_rounded_points(int x, int y, int width, int height, Rect_Side rect_side, u32 rounding);
+	void make_triangle_polygon(const Color &color);
 };
 
-struct Render_2D {
-	Array<Primitive_2D> primitives;
-
-	Gpu_Buffer *vertex_buffer;
-	Gpu_Buffer *index_buffer;
-
-	void draw_all_on_back_buffer();
-};
-
-void Primitive_2D::add_rounded_triangles(int x, int y, int width, int height, const Vector2 &point0, const Vector2 &point1, const Vector2 &point2)
+Primitive_2D::~Primitive_2D()
 {
-
-	int f = 50;
-	
-	float s = 1.0f;
-	for (int i = 0; i < 10; i++) {
-		Vector2 p = quad(s, point0, point1, point2);
-		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
-		s -= 0.1f;
-
-
-		vertices.push(v);
-	}
-
-	//if (point1.x > point2.x) {
-	//	float s = 0.0f;
-	//	for (int i = 0; i < 10; i++) {
-	//		Vector2 p = quad(s, point0, point1, point2);
-	//		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
-	//		s += 0.1f;
-
-
-	//		vertices.push(v);
-	//	}
-	//} else {
-	//	float s = 1.0f;
-	//	for (int i = 0; i < 10; i++) {
-	//		Vector2 p = quad(s, point0, point1, point2);
-	//		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
-	//		s -= 0.1f;
-
-
-	//		vertices.push(v);
-	//	}
-	//}
+	free_com_object(vertex_buffer);
+	free_com_object(index_buffer);
 }
 
 
-void draw_rounding(int x, int y, int width, int height, const Vector2 &point0, const Vector2 &point1, const Vector2 &point2)
+void Primitive_2D::add_rounded_points(int x, int y, int width, int height, Rect_Side rect_side, u32 rounding)
 {
-	Vector2 center = { x + width / 2.0f, y + height / 2.0f };
-
-	Array<Vertex_XC> vertices;
-	Vertex_XC c = Vertex_XC(Vector3(x_to_screen_space(center.x), y_to_screen_space(center.y), 0.0f), Color::Green);
-	vertices.push(c);
-
-	Array<u32> indices;
-
-	int f = 50;
+	Vector2 point0, point1, point2;
+	if (rect_side == RECT_SIDE_TOP_LEFT) {
+		point0 = Vector2(x, y + rounding);
+		point1 = Vector2(x, y);
+		point2 = Vector2(x + rounding, y);
+	
+	} else if (rect_side == RECT_SIDE_TOP_RIGHT) {
+		point0 = Vector2(x + width - rounding, y); 
+		point1 = Vector2(x + width, y); 
+		point2 = Vector2(x + width, y + rounding);
+	
+	} else if (rect_side == RECT_SIDE_BOTTOM_LEFT) {
+		point0 = Vector2(x + rounding, y + height); 
+		point1 = Vector2(x, y + height); 
+		point2 = Vector2(x, y + height - rounding);
+	
+	} else if (rect_side == RECT_SIDE_BOTTOM_RIGHT) {
+		point0 = Vector2(x + width, y + height - rounding);
+		point1 = Vector2(x + width, y + height); 
+		point2 = Vector2(x + width - rounding, y + height);
+	}
 
 	float s = 0.0f;
 	for (int i = 0; i < 10; i++) {
-		Vector2 p = quad(s, point0, point1, point2);
-		Vertex_XC v = Vertex_XC(Vector3(x_to_screen_space(p.x), y_to_screen_space(p.y), 0.0f), Color::Green);
+		Vector2 point = quad(s, point0, point1, point2);
+		points.push(point);
 		s += 0.1f;
-
-		vertices.push(v);
-
-		if (i == 0) {
-			continue;
-		}
-		indices.push(i);
-		indices.push(i + 1);
-		indices.push(0);
-
 	}
-
-	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), vertices.count, (void *)vertices.items);
-	Gpu_Buffer *index_buffer = make_index_buffer(indices.count, indices.items);
-
-	Fx_Shader *shader = fx_shader_manager.get_shader("color");
-	shader->attach("draw_vertex_on_screen");
-
-	draw_indexed_traingles(vertex_buffer, sizeof(Vertex_XC), "vertex_color", index_buffer, indices.count);
-
-	free_com_object(vertex_buffer);
-	free_com_object(index_buffer);
 }
 
-void draw_rounded_rect(int x, int y, int width, int height)
+void Primitive_2D::allocate_gpu_buffer()
 {
-	int f = 50;
+	vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), vertices.count, (void *)vertices.items);
+	index_buffer = make_index_buffer(indices.count, indices.items);
+}
 
-	Primitive_2D p;
+void Primitive_2D::make_triangle_polygon(const Color &color)
+{
+	assert(points.count > 2);
 
-	Vector2 center = { x + width / 2.0f, y + height / 2.0f };
-
-	Vertex_XC c = Vertex_XC(Vector3(x_to_screen_space(center.x), y_to_screen_space(center.y), 0.0f), Color::Green);
-	p.vertices.push(c);
-
-	p.add_rounded_triangles(x, y, width, height, Vector2(x, y + f), Vector2(x, y), Vector2(x + f, y));
-	p.add_rounded_triangles(x, y, width, height, Vector2(x + f, y + height), Vector2(x, y + height), Vector2(x, y + height - f));
-	p.add_rounded_triangles(x, y, width, height, Vector2(x + width, y + height - f), Vector2(x + width, y + height), Vector2(x + width - f, y + height));
-	p.add_rounded_triangles(x, y, width, height, Vector2(x + width - f, y), Vector2(x + width, y), Vector2(x + width, y + f));
-
-	for (int i = 2; i < p.vertices.count; i++) {
-		p.indices.push(i);
-		p.indices.push(i - 1);
-		p.indices.push(0);
+	vertices.resize(points.count);
+	for (int i = 0; i < points.count; i++) {
+		vertices.push(Vertex_XC(points[i], color.value));
 	}
 
-	p.indices.push(1);
-	p.indices.push(p.vertices.count - 1);
-	p.indices.push(0);
+	for (int i = 2; i < points.count; i++) {
+		indices.push(i);
+		indices.push(i - 1);
+		indices.push(0);
+	}
+}
 
-	//for (int i = 1; i < p.vertices.count; i++) {
-	//	p.indices.push(i);
-	//	p.indices.push(i + 1);
-	//	p.indices.push(0);
-	//}
+struct Render_2D {
+	Array<Primitive_2D *> primitives;
 
-	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), p.vertices.count, (void *)p.vertices.items);
-	Gpu_Buffer *index_buffer = make_index_buffer(p.indices.count, p.indices.items);
+	void add_primitive(Primitive_2D *primitive) { primitives.push(primitive); }
+	
+	void draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags);
+	void draw_primitives();
+};
+
+void draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
+{
+	//Primitive_2D *primitive = new Primitive_2D();
+	Primitive_2D p;
+
+	if (rounding > 0) {
+		(flags & ROUND_TOP_LEFT_RECT) ? p.add_rounded_points(x, y, width, height, RECT_SIDE_TOP_LEFT, rounding) : p.add_point(Vector2(x, y));
+		(flags & ROUND_TOP_RIGHT_RECT) ? p.add_rounded_points(x, y, width, height, RECT_SIDE_TOP_RIGHT, rounding) : p.add_point(Vector2(x + width, y));
+		(flags & ROUND_BOTTOM_RIGHT_RECT) ? p.add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : p.add_point(Vector2(x + width, y + height));
+		(flags & ROUND_BOTTOM_LEFT_RECT) ? p.add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : p.add_point(Vector2(x, y + height));
+	
+	} else {
+		p.add_point(Vector2(x, y));
+		p.add_point(Vector2(x + width, y));
+		p.add_point(Vector2(x + width, y + height));
+		p.add_point(Vector2(x, y + height));
+	}
+
+	p.make_triangle_polygon(color);
+
+	p.allocate_gpu_buffer();
+
 
 	Fx_Shader *shader = fx_shader_manager.get_shader("color");
+	shader->bind("world_view_projection", &render_sys.view_info->orthogonal_matrix);
 	shader->attach("draw_vertex_on_screen");
 
-	draw_indexed_traingles(vertex_buffer, sizeof(Vertex_XC), "vertex_color", index_buffer, p.indices.count);
-
-	free_com_object(vertex_buffer);
-	free_com_object(index_buffer);
-
-	p.vertices.clear();
-	p.indices.clear();
-
-	//// top left
-	//draw_rounding(x, y, width, height, Vector2(x, y + f), Vector2(x, y), Vector2(x + f, y));
-	//
-	//// button left
-	//draw_rounding(x, y, width, height, Vector2(x + f, y + height), Vector2(x, y + height), Vector2(x, y + height - f));
-	//
-	//// top right
-	//draw_rounding(x, y, width, height, Vector2(x + width - f, y), Vector2(x + width, y), Vector2(x + width, y + f));
-	//
-	//// bottom right
-	//draw_rounding(x, y, width, height, Vector2(x + width, y + height - f), Vector2(x + width, y + height), Vector2(x + width -  f, y + height));
+	draw_indexed_traingles(p.vertex_buffer, sizeof(Vertex_XC), "vertex_color", p.index_buffer, p.indices.count);
 }

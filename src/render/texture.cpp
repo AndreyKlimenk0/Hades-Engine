@@ -132,8 +132,6 @@ static Texture *create_texture_2d(u32 width, u32 height, void *data, u32 mip_lev
 	return create_texture_2d(texture, width, height, data, mip_levels, usage, format);
 }
 
-#include <d3dx11.h>
-
 Texture *create_texture_from_file(const char *file_name)
 {
 	String file_extension;

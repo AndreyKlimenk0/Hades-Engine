@@ -1,7 +1,7 @@
 #include "global.fx"
 
 struct Vertex_In {
-	float3 position : POSITION;
+	float2 position : POSITION;
 	float4 color : COLOR;
 };
 
@@ -13,7 +13,7 @@ struct Vertex_Out {
 Vertex_Out vs_main(Vertex_In vertex)
 {
 	Vertex_Out result;
-	result.position = mul(float4(vertex.position, 1.0f), world_view_projection);
+	result.position = mul(float4(vertex.position, 0.0, 1.0f), world_view_projection);
 	result.color = vertex.color;
 	return result;
 }
@@ -26,8 +26,9 @@ float4 ps_main(Vertex_Out pixel) : SV_TARGET
 Vertex_Out vs_draw_vertex_on_screen(Vertex_In vertex)
 {
 	Vertex_Out result;
-	result.position = float4(vertex.position, 1.0f);
+	result.position = mul(float4(vertex.position, 0.0, 1.0f), world_view_projection);
 	result.color = vertex.color;
+	result.position.z = 0.0f;
 	return result;
 }
 
