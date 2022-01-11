@@ -7,10 +7,10 @@
 
 
 struct Vertex_XC {
-	Vector3 position;
+	Vector2 position;
 	Vector4 color;
 	Vertex_XC() {}
-	Vertex_XC(const Vector3 &position, const Vector4 &color) : position(position), color(color) {}
+	Vertex_XC(const Vector2 &position, const Vector4 &color) : position(position), color(color) {}
 };
 
 struct Vertex_XUV {
