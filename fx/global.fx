@@ -1,7 +1,6 @@
 cbuffer per_entity{ 
-	float4x4 world_view_projection;
 	float4x4 world;
-	float3 model_color;
+	float4x4 world_view_projection;
 };
 
 cbuffer per_frame {
