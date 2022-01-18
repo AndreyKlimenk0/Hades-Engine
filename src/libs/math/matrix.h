@@ -245,15 +245,21 @@ struct Matrix4 {
 
 	operator XMMATRIX();
 	operator float *();
+	
+	
+	void zero();
+	void indentity();
+	void translate(Vector2 *vector);
+	void translate(Vector3 *vector);
+	void translate(float x = 0.0f, float y = 0.0f, float z = 0.0f);
 
+	bool is_indentity();
+	bool compare(const Matrix4 &other);
+	
 	Matrix4 transpose();
 	Matrix4 inverse();
 
-	void zero();
-	void indentity();
 
-	bool compare(const Matrix4 &other);
-	bool is_indentity();
 };
 
 extern Matrix4 matrix4_indentity;
@@ -388,9 +394,59 @@ inline Matrix4::operator float *()
 	return &matrix[0].x;
 }
 
+inline bool Matrix4::is_indentity()
+{
+	return compare(matrix4_indentity);
+}
+
+inline bool Matrix4::compare(const Matrix4 & other)
+{
+	float *first = (float *)&other;
+	float *second = (float *)&matrix;
+
+	for (int i = 0; i < 4 * 5; i++) {
+		if (first[i] != second[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
 inline void Matrix4::indentity()
 {
 	*this = matrix4_indentity;
+}
+
+inline void Matrix4::translate(Vector2 *vector)
+{
+	if (!is_indentity()) {
+		indentity();
+	}
+
+	matrix[3].x = vector->x;
+	matrix[3].y = vector->y;
+}
+
+inline void Matrix4::translate(Vector3 *vector)
+{
+	if (!is_indentity()) {
+		indentity();
+	}
+
+	matrix[3].x = vector->x;
+	matrix[3].y = vector->y;
+	matrix[3].z = vector->z;
+}
+
+inline void Matrix4::translate(float x, float y, float z)
+{
+	if (!is_indentity()) {
+		indentity();
+	}
+
+	matrix[3].x = x;
+	matrix[3].y = y;
+	matrix[3].z = z;
 }
 
 inline Matrix4 Matrix4::inverse()
