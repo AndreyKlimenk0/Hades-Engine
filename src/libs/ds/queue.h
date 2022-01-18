@@ -37,7 +37,7 @@ Queue<T>::~Queue()
 }
 
 template <typename T>
-bool Queue<T>::is_empty()
+inline bool Queue<T>::is_empty()
 {
 	return first == NULL;
 }

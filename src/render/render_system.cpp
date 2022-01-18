@@ -150,8 +150,24 @@ void Render_System::render_frame()
 	//render_2d.draw_rect(700, 10, 300, 300, Color::Silver);
 	//render_2d.draw_rect(700, 400, 300, 300, Color::Cyan);
 	
-	render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 50);
-	render_2d.draw_rect(10, 10, 300, 300, Color::Red, 50);
+//	render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 50);
+//	render_2d.draw_rect(10, 10, 300, 300, Color::Red, 50);
+	render_2d.draw_rect(800, 450, 300, 300, Color::Blue);
+	render_2d.draw_rect(10, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(10, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(100, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(200, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(300, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(400, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(400, 10, 300, 300, Color::Red);
+	render_2d.draw_rect(500, 10, 300, 300, Color::Red);
+
+	render_2d.draw_rect(100, 200, 300, 300, Color::Red);
+	render_2d.draw_rect(200, 300, 300, 300, Color::Red);
+	render_2d.draw_rect(300, 400, 300, 300, Color::Red);
+	render_2d.draw_rect(400, 500, 300, 300, Color::Red);
+	render_2d.draw_rect(400, 600, 300, 300, Color::Red);
+	render_2d.draw_rect(500, 700, 300, 300, Color::Red);
 	//render_2d.draw_rect(700, 10, 300, 300, Color::Silver, 50);
 	//render_2d.draw_rect(700, 400, 300, 300, Color::Cyan, 50);
 	
@@ -258,7 +274,7 @@ inline Gpu_Buffer *make_index_buffer(u32 index_count, u32 *index_data, D3D11_USA
 	return make_gpu_buffer(sizeof(u32), index_count, index_data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access);
 }
 
-static inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, Gpu_Buffer *indices, u32 index_count, u32 vertex_offset = 0, u32 index_offset = 0)
+inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, Gpu_Buffer *indices, u32 index_count, u32 vertex_offset = 0, u32 index_offset = 0)
 {
 	assert(vertices);
 	assert(indices && (index_count > 2));
@@ -274,7 +290,7 @@ static inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size,
 	directx11.device_context->DrawIndexed(index_count, index_offset, vertex_offset);
 }
 
-static inline void draw_not_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, u32 vertex_count)
+inline void draw_not_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, u32 vertex_count)
 {
 	assert(vertices);
 
@@ -414,8 +430,24 @@ struct Render_Primitive_2D {
 
 void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
 {
-	String s = String(width) + String(height) + String((int)rounding);
+	String hash = String(width + height + (int)rounding);
+	
+	Render_Primitive_2D_Info render_primitive;
+	render_primitive.position.x = (float)x;
+	render_primitive.position.y = (float)y;
+	render_primitive.color.value = color.value;
+	
+	Primitive_2D *found_primitive = NULL;
+	if (lookup_table.get(hash, found_primitive)) {
+		render_primitive.primitive = found_primitive;
+		render_primitives.push(render_primitive);
+		return;
+	}
+	
 	Primitive_2D *primitive = new Primitive_2D;
+	lookup_table.set(hash, primitive);
+	render_primitive.primitive = primitive;
+	render_primitives.push(render_primitive);
 
 	if (rounding > 0) {
 		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(x, y));
@@ -424,10 +456,10 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(x, y + height));
 	
 	} else {
-		primitive->add_point(Vector2(x, y));
-		primitive->add_point(Vector2(x + width, y));
-		primitive->add_point(Vector2(x + width, y + height));
-		primitive->add_point(Vector2(x, y + height));
+		primitive->add_point(Vector2(0, 0));
+		primitive->add_point(Vector2(width, 0));
+		primitive->add_point(Vector2(width, height));
+		primitive->add_point(Vector2(0, height));
 	}
 
 	primitive->make_triangle_polygon(color);
@@ -441,53 +473,40 @@ void Render_2D::draw_primitives()
 	}
 
 	static u32 privious_total_vertex_count;
-	static u32 privious_total_index_count;
 
 	if (!vertex_buffer || (privious_total_vertex_count != total_vertex_count)) {
 		privious_total_vertex_count = total_vertex_count;
-		
+
 		free_com_object(vertex_buffer);
-		
-		vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), total_vertex_count, NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	}
-
-	if (!index_buffer || (privious_total_index_count != total_index_count)) {
-		privious_total_index_count = total_index_count;
-
 		free_com_object(index_buffer);
-		
+
+		vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), total_vertex_count, NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 		index_buffer = make_index_buffer(total_index_count, NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	}
 
-	D3D11_MAPPED_SUBRESOURCE buffer;
-	ZeroMemory(&buffer, sizeof(D3D11_MAPPED_SUBRESOURCE));
+		D3D11_MAPPED_SUBRESOURCE buffer;
+		D3D11_MAPPED_SUBRESOURCE i_buffer;
 		
-	HR(directx11.device_context->Map(vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &buffer));
+		ZeroMemory(&buffer, sizeof(D3D11_MAPPED_SUBRESOURCE));
+		ZeroMemory(&i_buffer, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
-	D3D11_MAPPED_SUBRESOURCE i_buffer;
-	ZeroMemory(&i_buffer, sizeof(D3D11_MAPPED_SUBRESOURCE));
+		HR(directx11.device_context->Map(vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &buffer));
+		HR(directx11.device_context->Map(index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &i_buffer));
 
-	HR(directx11.device_context->Map(index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &i_buffer));
+		Vertex_XC *p1 = (Vertex_XC *)buffer.pData;
+		u32 *p2 = (u32 *)i_buffer.pData;
 
-	Vertex_XC *p1 = (Vertex_XC *)buffer.pData;
-	u32 *p2 = (u32 *)i_buffer.pData;
-	
-	Primitive_2D *primitive = NULL;
-	For(primitives, primitive) {
+		Primitive_2D *primitive = NULL;
+		For(primitives, primitive) {
 
-		memcpy((void *)p1, primitive->vertices.items, primitive->vertices.count * sizeof(Vertex_XC));
-		memcpy((void *)p2, primitive->indices.items, primitive->indices.count * sizeof(u32));
-		p1 += primitive->vertices.count;
-		p2 += primitive->indices.count;
+			memcpy((void *)p1, primitive->vertices.items, primitive->vertices.count * sizeof(Vertex_XC));
+			memcpy((void *)p2, primitive->indices.items, primitive->indices.count * sizeof(u32));
+			p1 += primitive->vertices.count;
+			p2 += primitive->indices.count;
+		}
+		
+		directx11.device_context->Unmap(index_buffer, 0);
+		directx11.device_context->Unmap(vertex_buffer, 0);
 	}
-
-	directx11.device_context->Unmap(index_buffer, 0);
-	directx11.device_context->Unmap(vertex_buffer, 0);
-
-	Fx_Shader *shader = fx_shader_manager.get_shader("color");
-	shader->bind("world_view_projection", &render_sys.view_info->orthogonal_matrix);
-	shader->attach("draw_vertex_on_screen");
-
 
 	D3D11_DEPTH_STENCIL_DESC depth_stencil;
 	ZeroMemory(&depth_stencil, sizeof(D3D11_DEPTH_STENCIL_DESC));
@@ -501,11 +520,31 @@ void Render_2D::draw_primitives()
 
 	directx11.device_context->OMSetDepthStencilState(state, 0);
 
-	primitive = NULL;
-	For(primitives, primitive) {
-		draw_indexed_traingles(vertex_buffer, sizeof(Vertex_XC), "vertex_color", index_buffer, primitive->indices.count, primitive->vertex_offset, primitive->index_offset);
-	}
+	Fx_Shader *shader = fx_shader_manager.get_shader("color");
 
+	Matrix4 mat;
+
+	directx11.device_context->IASetInputLayout(Input_Layout::table["vertex_color"]);
+	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	UINT stride = sizeof(Vertex_XC);
+	UINT offset = 0;
+	directx11.device_context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
+	directx11.device_context->IASetIndexBuffer(index_buffer, DXGI_FORMAT_R32_UINT, 0);
+
+
+	Render_Primitive_2D_Info *render_primitive = NULL;
+	For(render_primitives, render_primitive) {
+		
+		mat.translate(&render_primitive->position);
+		
+		shader->bind("color", &render_primitive->color.value);
+		shader->bind("world_view_projection", mat * render_sys.view_info->orthogonal_matrix);
+		shader->attach("draw_vertex_on_screen");
+
+		Primitive_2D *primitive = render_primitive->primitive;
+		directx11.device_context->DrawIndexed(primitive->indices.count, primitive->index_offset, primitive->index_offset);
+	}
 
 	directx11.device_context->RSSetState(0);
 }
