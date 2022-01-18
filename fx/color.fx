@@ -1,5 +1,9 @@
 #include "global.fx"
 
+cbuffer Primitive_Info {
+	float4 color;
+};
+
 struct Vertex_In {
 	float2 position : POSITION;
 	float4 color : COLOR;
@@ -34,7 +38,7 @@ Vertex_Out vs_draw_vertex_on_screen(Vertex_In vertex)
 
 float4 ps_draw_vertex_on_screen(Vertex_Out pixel) : SV_TARGET
 {
-	return pixel.color;
+	return color;
 }
 
 technique11 Color {

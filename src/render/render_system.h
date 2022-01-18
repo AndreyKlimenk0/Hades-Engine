@@ -10,6 +10,8 @@
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
 #include "../libs/os/camera.h"
+#include "../libs/ds/hash_table.h"
+#include "../libs/ds/array.h"
 
 
 struct View_Info {
@@ -52,6 +54,12 @@ struct Primitive_2D {
 	void make_triangle_polygon(const Color &color);
 };
 
+struct Render_Primitive_2D_Info {
+	Primitive_2D *primitive = NULL;
+	Vector2 position;
+	Color color;
+};
+
 const u32 ROUND_TOP_LEFT_RECT = 0x1;
 const u32 ROUND_TOP_RIGHT_RECT = 0x4;
 const u32 ROUND_BOTTOM_LEFT_RECT = 0x2;
@@ -70,6 +78,8 @@ struct Render_2D {
 	u32 total_index_count = 0;
 
 	Array<Primitive_2D *> primitives;
+	Array<Render_Primitive_2D_Info> render_primitives;
+	Hash_Table<String, Primitive_2D *> lookup_table;
 
 	void clear();
 	void add_primitive(Primitive_2D *primitive);
@@ -79,15 +89,17 @@ struct Render_2D {
 
 inline void Render_2D::clear()
 {
-	Primitive_2D *primitive = NULL;
-	For(primitives, primitive) {
-		DELETE_PTR(primitive);
-	}
+	//Primitive_2D *primitive = NULL;
+	//For(primitives, primitive) {
+	//	DELETE_PTR(primitive);
+	//}
 	
-	primitives.clear();
+	//primitives.clear();
+
+	render_primitives.count = 0;
 	
-	total_vertex_count = 0;
-	total_index_count = 0;
+	//total_vertex_count = 0;
+	//total_index_count = 0;
 }
 
 struct Render_System {
