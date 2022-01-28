@@ -21,9 +21,6 @@
     <ClCompile Include="src\win32\win_console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\effect.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\render\vertex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -72,9 +69,6 @@
     <ClCompile Include="src\libs\os\input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\libs\os\path.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\game\world.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -111,15 +105,18 @@
     <ClCompile Include="src\sys\map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\os\path.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\win32\win_local.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\vertex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\render\effect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\libs\ds\hash_table.h">
@@ -176,9 +173,6 @@
     <ClInclude Include="src\libs\os\input.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\libs\os\path.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\game\world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -215,15 +209,17 @@
     <ClInclude Include="src\sys\map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="fx\base.fx" />
-    <FxCompile Include="fx\global.fx" />
-    <FxCompile Include="fx\forward_light.fx" />
-    <FxCompile Include="fx\color.fx" />
-    <FxCompile Include="fx\font.fx" />
+    <ClInclude Include="src\render\shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\os\path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="tasks.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="scripts\tool.py" />
   </ItemGroup>
 </Project>

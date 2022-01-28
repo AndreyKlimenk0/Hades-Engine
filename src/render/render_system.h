@@ -5,7 +5,7 @@
 #include <DirectXMath.h>
 
 #include "directx.h"
-#include "effect.h"
+#include "shader.h"
 #include "../game/world.h"
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
@@ -26,13 +26,16 @@ struct View_Info {
 	Matrix4 perspective_matrix;
 	Matrix4 orthogonal_matrix;
 
-	void update_projection_matries();
+	void update_projection_matries(u32 new_window_width, u32 new_window_height);
 };
 
-inline void View_Info::update_projection_matries()
+inline void View_Info::update_projection_matries(u32 new_window_width, u32 new_window_height)
 {
+	window_width = new_window_width;
+	window_height = new_window_height;
+	window_ratio = (float)window_width / (float)window_height;
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, window_ratio, near_plane, far_plane);
-	orthogonal_matrix = XMMatrixOrthographicLH(window_width, window_height, near_plane, far_plane);
+	orthogonal_matrix =  XMMatrixOrthographicOffCenterLH(0.0f, (float)window_width, (float)window_height, 0.0f, near_plane, far_plane);
 }
 
 View_Info *make_view_info(float near_plane, float far_plane);
@@ -114,16 +117,26 @@ struct Render_System {
 
 	Render_2D render_2d;
 
+	Shader_Manager shader_manager;
+
 	void init(View_Info *_view_info);
 	void resize();
 	void shutdown();
 	
 	void render_frame();
+
+	Shader_Manager *get_shader_manager();
 };
+
+inline Shader_Manager *Render_System::get_shader_manager()
+{
+	return &shader_manager;
+}
 
 extern Render_System render_sys;
 
 void make_outlining(Render_Entity *render_entity);
 void free_outlining(Render_Entity *render_entity);
 void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width = 0.0f, float _height = 0.0f);
+
 #endif

@@ -38,7 +38,7 @@ void split(const char *string, const char *characters, Array<char *> *array)
 	}
 }
 
-void split(String *string, const char *symbols, Array<String> *array)
+bool split(String *string, const char *symbols, Array<String> *array)
 {
 	int curr_pos = 0;
 	int prev_pos = 0;
@@ -50,9 +50,15 @@ void split(String *string, const char *symbols, Array<String> *array)
 		curr_pos += len;
 	}
 
+	if ((prev_pos == 0) && (curr_pos == -1)) {
+		return false;
+	}
+
 	if (prev_pos != string->len) {
 		array->push(String(*string, prev_pos, string->len));
 	}
+
+	return true;
 }
 
 static void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars)

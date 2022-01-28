@@ -33,12 +33,13 @@ int hash(const char* string, const int factor, const int table_count)
 
 int double_hash(const char* string, const int table_count, const int attempt)
 {
-	//const int hash_a = hash(string, HT_PRIME_1, table_count);
-	//const int hash_b = hash(string, HT_PRIME_2, table_count);
-	uint32_t hash_a = SuperFastHash(string, strlen(string));
-	uint32_t hash_b = SuperFastHash(string, strlen(string));
-	return (hash_a + (attempt * (hash_b + 1))) % table_count;
+	const int hash_a = hash(string, HT_PRIME_1, table_count);
+	const int hash_b = hash(string, HT_PRIME_2, table_count);
+	//uint32_t hash_a = SuperFastHash(string, strlen(string));
+	//uint32_t hash_b = SuperFastHash(string, strlen(string));
+	return (hash_a + (attempt * (hash_b + attempt))) % table_count;
 }
+
 
 int double_hash(int number, const int table_count, const int attempt)
 {

@@ -4,7 +4,6 @@
 #include "mesh.h"
 #include "font.h"
 #include "vertex.h"
-#include "effect.h"
 #include "directx.h"
 #include "render_system.h"
 #include "../win32/win_types.h"
