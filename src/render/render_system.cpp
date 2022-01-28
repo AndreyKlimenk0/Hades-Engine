@@ -57,45 +57,45 @@ static void draw_mesh(Triangle_Mesh *mesh)
 
 static void draw_world_entities(World *world)
 {
-	Entity_Manager *entity_manager = &world->entity_manager;
+	//Entity_Manager *entity_manager = &world->entity_manager;
 
-	Fx_Shader *light = fx_shader_manager.get_shader("forward_light");
+	//Fx_Shader *light = fx_shader_manager.get_shader("forward_light");
 
-	bind_light(light, &entity_manager->lights);
+	//bind_light(light, &entity_manager->lights);
 
-	light->bind_per_frame_info(render_sys.free_camera);
+	//light->bind_per_frame_info(render_sys.free_camera);
 
-	Render_Entity *render_entity = NULL;
-	For(world->render_entities, render_entity)
-	{
+	//Render_Entity *render_entity = NULL;
+	//For(world->render_entities, render_entity)
+	//{
 
-		if (render_entity->stencil_test) {
-			enable_stencil_test(render_entity->stencil_test, render_entity->stencil_ref_value);
-		}
+	//	if (render_entity->stencil_test) {
+	//		enable_stencil_test(render_entity->stencil_test, render_entity->stencil_ref_value);
+	//	}
 
-		if (render_entity->call_before_drawing_entity) {
-			render_entity->call_before_drawing_entity(render_entity);
-		}
+	//	if (render_entity->call_before_drawing_entity) {
+	//		render_entity->call_before_drawing_entity(render_entity);
+	//	}
 
-		bind(light, render_entity->entity);
+	//	bind(light, render_entity->entity);
 
-		Render_Mesh *render_mesh = NULL;
-		For(render_entity->render_model->render_meshes, render_mesh)
-		{
-			bind(light, render_mesh);
-			light->attach("draw");
-			draw_mesh(&render_mesh->mesh);
-		}
+	//	Render_Mesh *render_mesh = NULL;
+	//	For(render_entity->render_model->render_meshes, render_mesh)
+	//	{
+	//		bind(light, render_mesh);
+	//		light->attach("draw");
+	//		draw_mesh(&render_mesh->mesh);
+	//	}
 
-		if (render_entity->call_after_drawn_entity) {
-			render_entity->call_after_drawn_entity(render_entity);
-		}
+	//	if (render_entity->call_after_drawn_entity) {
+	//		render_entity->call_after_drawn_entity(render_entity);
+	//	}
 
-		if (render_entity->stencil_test) {
-			disable_stencil_test();
-		}
+	//	if (render_entity->stencil_test) {
+	//		disable_stencil_test();
+	//	}
 
-	}
+	//}
 }
 
 Render_System::~Render_System()
@@ -106,6 +106,11 @@ Render_System::~Render_System()
 void Render_System::init(View_Info *view_info)
 {
 	this->view_info = view_info;
+
+	shader_manager.init();
+	Shader *render_2d = shader_manager.get_shader("render_2d");
+	directx11.device_context->VSSetShader(render_2d->vertex_shader, NULL, 0);
+	directx11.device_context->PSSetShader(render_2d->pixel_shader, NULL, 0);
 }
 
 void Render_System::shutdown()
@@ -115,7 +120,9 @@ void Render_System::shutdown()
 
 void Render_System::resize()
 {
-	if (view_info) { view_info->update_projection_matries(); }
+	if (view_info) { 
+		view_info->update_projection_matries(win32.window_width, win32.window_height); 
+	}
 }
 
 #include "font.h"
@@ -150,10 +157,10 @@ void Render_System::render_frame()
 	//render_2d.draw_rect(700, 10, 300, 300, Color::Silver);
 	//render_2d.draw_rect(700, 400, 300, 300, Color::Cyan);
 	
-//	render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 50);
-//	render_2d.draw_rect(10, 10, 300, 300, Color::Red, 50);
-	render_2d.draw_rect(800, 450, 300, 300, Color::Blue);
-	render_2d.draw_rect(10, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 50);
+	//render_2d.draw_rect(10, 10, 300, 300, Color::Red, 50);
+	render_2d.draw_rect(10, 10, 300, 300, Color::Blue);
+	render_2d.draw_rect(0, 0, 300, 300, Color::Red);
 	render_2d.draw_rect(10, 10, 300, 300, Color::Red);
 	render_2d.draw_rect(100, 10, 300, 300, Color::Red);
 	render_2d.draw_rect(200, 10, 300, 300, Color::Red);
@@ -162,12 +169,12 @@ void Render_System::render_frame()
 	render_2d.draw_rect(400, 10, 300, 300, Color::Red);
 	render_2d.draw_rect(500, 10, 300, 300, Color::Red);
 
-	render_2d.draw_rect(100, 200, 300, 300, Color::Red);
-	render_2d.draw_rect(200, 300, 300, 300, Color::Red);
-	render_2d.draw_rect(300, 400, 300, 300, Color::Red);
-	render_2d.draw_rect(400, 500, 300, 300, Color::Red);
-	render_2d.draw_rect(400, 600, 300, 300, Color::Red);
-	render_2d.draw_rect(500, 700, 300, 300, Color::Red);
+	//render_2d.draw_rect(100, 200, 300, 300, Color::Red);
+	//render_2d.draw_rect(200, 300, 300, 300, Color::Red);
+	//render_2d.draw_rect(300, 400, 300, 300, Color::Red);
+	//render_2d.draw_rect(400, 500, 300, 300, Color::Red);
+	//render_2d.draw_rect(400, 600, 300, 300, Color::Red);
+	//render_2d.draw_rect(500, 700, 300, 300, Color::Red);
 	//render_2d.draw_rect(700, 10, 300, 300, Color::Silver, 50);
 	//render_2d.draw_rect(700, 400, 300, 300, Color::Cyan, 50);
 	
@@ -197,23 +204,23 @@ inline Stencil_Test *make_outlining_stencil_test()
 
 void draw_outlining(Render_Entity *render_entity)
 {
-	Fx_Shader *color = fx_shader_manager.get_shader("base");
+	//Fx_Shader *color = fx_shader_manager.get_shader("base");
 
-	Matrix4 world = render_entity->entity->get_world_matrix();
-	Matrix4 wvp_projection = make_world_view_perspective_matrix(render_entity->entity);
+	//Matrix4 world = render_entity->entity->get_world_matrix();
+	//Matrix4 wvp_projection = make_world_view_perspective_matrix(render_entity->entity);
 
-	color->bind("world", &world);
-	color->bind("world_view_projection", &wvp_projection);
+	//color->bind("world", &world);
+	//color->bind("world_view_projection", &wvp_projection);
 
-	color->attach("draw_outlining");
+	//color->attach("draw_outlining");
 
-	Stencil_Test *second_test = make_stecil_test(D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_REPLACE, D3D11_COMPARISON_NOT_EQUAL, 0x0, 0xff);
-	enable_stencil_test(second_test, render_entity->entity->id);
+	//Stencil_Test *second_test = make_stecil_test(D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_REPLACE, D3D11_COMPARISON_NOT_EQUAL, 0x0, 0xff);
+	//enable_stencil_test(second_test, render_entity->entity->id);
 
-	draw_mesh(render_entity->render_model->get_triangle_mesh());
+	//draw_mesh(render_entity->render_model->get_triangle_mesh());
 
-	disable_stencil_test();
-	free_com_object(second_test);
+	//disable_stencil_test();
+	//free_com_object(second_test);
 }
 
 void make_outlining(Render_Entity *render_entity)
@@ -260,7 +267,6 @@ Gpu_Buffer *make_gpu_buffer(u32 data_size, u32 data_count, void *data, D3D11_USA
 		HR(directx11.device->CreateBuffer(&buffer_desc, NULL, &buffer));
 	}
 
-
 	return buffer;
 }
 
@@ -272,6 +278,26 @@ inline Gpu_Buffer *make_vertex_buffer(u32 vertex_size, u32 vertex_count, void *v
 inline Gpu_Buffer *make_index_buffer(u32 index_count, u32 *index_data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, u32 cpu_access = 0)
 {
 	return make_gpu_buffer(sizeof(u32), index_count, index_data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access);
+}
+
+inline Gpu_Buffer *make_constant_buffer(u32 buffer_size, void *data = NULL)
+{
+	return make_gpu_buffer(buffer_size, 1, data, D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE);
+}
+
+inline void update_constant_buffer(Gpu_Buffer *buffer, void *data, u32 data_size)
+{
+	assert(buffer);
+	assert(data);
+
+	D3D11_MAPPED_SUBRESOURCE mapped_resource;
+	ZeroMemory(&mapped_resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+
+	HR(directx11.device_context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource));
+
+	memcpy(mapped_resource.pData, data, data_size);
+
+	directx11.device_context->Unmap(buffer, 0);
 }
 
 inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, Gpu_Buffer *indices, u32 index_count, u32 vertex_offset = 0, u32 index_offset = 0)
@@ -324,9 +350,9 @@ void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width, float 
 		0, 2, 3
 	};
 
-	Fx_Shader *color = fx_shader_manager.get_shader("base");
-	color->bind("texture_map", texture->shader_resource);
-	color->attach("draw_texture");
+	//Fx_Shader *color = fx_shader_manager.get_shader("base");
+	//color->bind("texture_map", texture->shader_resource);
+	//color->attach("draw_texture");
 
 	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex), 4, (void *)vertices);
 	Gpu_Buffer *index_buffer = make_index_buffer(6, indices);
@@ -423,11 +449,6 @@ void Render_2D::add_primitive(Primitive_2D *primitive)
 	primitives.push(primitive);
 }
 
-struct Render_Primitive_2D {
-	Vector2 position;
-	Color color;
-};
-
 void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
 {
 	String hash = String(width + height + (int)rounding);
@@ -465,6 +486,11 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 	primitive->make_triangle_polygon(color);
 	add_primitive(primitive);
 }
+
+struct CB_Render_2d_Info {
+	Matrix4 position_orthographic_matrix;
+	Vector4 color;
+};
 
 void Render_2D::draw_primitives()
 {
@@ -520,8 +546,13 @@ void Render_2D::draw_primitives()
 
 	directx11.device_context->OMSetDepthStencilState(state, 0);
 
-	Fx_Shader *shader = fx_shader_manager.get_shader("color");
 
+	Gpu_Buffer *constant_buffer = make_constant_buffer(sizeof(CB_Render_2d_Info));
+	CB_Render_2d_Info cb_render_info;
+	
+	Shader_Manager *sm = render_sys.get_shader_manager();
+	Shader *render_2d = sm->get_shader("render_2d");
+	
 	Matrix4 mat;
 
 	directx11.device_context->IASetInputLayout(Input_Layout::table["vertex_color"]);
@@ -532,19 +563,27 @@ void Render_2D::draw_primitives()
 	directx11.device_context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
 	directx11.device_context->IASetIndexBuffer(index_buffer, DXGI_FORMAT_R32_UINT, 0);
 
+	directx11.device_context->VSSetShader(render_2d->vertex_shader, NULL, 0);
+	directx11.device_context->PSSetShader(render_2d->pixel_shader, NULL, 0);
+
 
 	Render_Primitive_2D_Info *render_primitive = NULL;
 	For(render_primitives, render_primitive) {
 		
 		mat.translate(&render_primitive->position);
 		
-		shader->bind("color", &render_primitive->color.value);
-		shader->bind("world_view_projection", mat * render_sys.view_info->orthogonal_matrix);
-		shader->attach("draw_vertex_on_screen");
+		cb_render_info.position_orthographic_matrix = mat * render_sys.view_info->orthogonal_matrix;
+		cb_render_info.color = render_primitive->color.value;
+		update_constant_buffer(constant_buffer, (void *)&cb_render_info, sizeof(CB_Render_2d_Info));
+		
+		directx11.device_context->VSSetConstantBuffers(0, 1, &constant_buffer);
+		directx11.device_context->PSSetConstantBuffers(0, 1, &constant_buffer);
 
 		Primitive_2D *primitive = render_primitive->primitive;
 		directx11.device_context->DrawIndexed(primitive->indices.count, primitive->index_offset, primitive->index_offset);
 	}
 
 	directx11.device_context->RSSetState(0);
+
+	free_com_object(constant_buffer);
 }
