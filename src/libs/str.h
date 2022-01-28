@@ -11,7 +11,7 @@ struct String;
 
 void format_(Array<char *> *array);
 void split(const char *string, const char *characters, Array<char *> *array);
-void split(String *string, const char *characters, Array<String> *array);
+bool split(String *string, const char *characters, Array<String> *array);
 
 inline void free_string(const char *string)
 {

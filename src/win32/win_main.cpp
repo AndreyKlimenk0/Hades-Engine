@@ -13,7 +13,6 @@
 #include "../libs/os/path.h"
 
 #include "../render/font.h"
-#include "../render/effect.h"
 #include "../render/directx.h"
 #include "../render/texture.h"
 #include "../render/render_system.h"
@@ -83,14 +82,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	
 	font.init(50);
 
-	fx_shader_manager.init();
 
 	texture_manager.init();
 
 
 	ShowWindow(win32.window, nCmdShow);
-
-	Input_Layout::init();
 
 	Key_Input::init();
 
@@ -104,6 +100,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	render_sys.init(view_info);
 	render_sys.current_render_world = &world;
 	render_sys.free_camera = &editor.free_camera;
+
+	Input_Layout::init();
 
 	// Test
 	test();

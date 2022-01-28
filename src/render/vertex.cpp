@@ -1,9 +1,10 @@
 #include <d3dx11effect.h>
 #include "directx.h"
 #include "vertex.h"
-#include "effect.h"
+#include "shader.h"
 #include "../libs/ds/hash_table.h"
 #include "../sys/sys_local.h"
+#include "render_system.h"
 
 
 ID3D11InputLayout *Input_Layout::vertex_color = NULL;
@@ -37,26 +38,13 @@ Input_Layout::~Input_Layout()
 
 void Input_Layout::init()
 {
-	ID3DX11Effect *fx = fx_shader_manager.get_shader("base")->shader;
-	ID3DX11Effect *color = fx_shader_manager.get_shader("color")->shader;
-	ID3DX11Effect *font = fx_shader_manager.get_shader("font")->shader;
-
-	D3DX11_PASS_DESC pass_desc;
-	fx->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&pass_desc);
-
-	D3DX11_PASS_DESC color_pass_desc;
-	color->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&color_pass_desc);
-
-	D3DX11_PASS_DESC font_pass_desc;
-	font->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&font_pass_desc);
-
-
-	HR(directx11.device->CreateInputLayout(vertex_col_desc, 2, color_pass_desc.pIAInputSignature, color_pass_desc.IAInputSignatureSize, &vertex_color));
-	HR(directx11.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
-	HR(directx11.device->CreateInputLayout(vertex_xuv_desc, 2, font_pass_desc.pIAInputSignature, font_pass_desc.IAInputSignatureSize, &vertex_xuv));
+	Shader_Manager *shader_manager = render_sys.get_shader_manager();
+	Shader *render_2d = shader_manager->get_shader("render_2d");
+	HR(directx11.device->CreateInputLayout(vertex_col_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, &vertex_color));
+	//HR(directx11.device->CreateInputLayout(vertex_desc, 3, pass_desc.pIAInputSignature, pass_desc.IAInputSignatureSize, &vertex));
+	//HR(directx11.device->CreateInputLayout(vertex_xuv_desc, 2, font_pass_desc.pIAInputSignature, font_pass_desc.IAInputSignatureSize, &vertex_xuv));
 
 	table.set("vertex_color", vertex_color);
-	table.set("vertex", vertex);
-	table.set("vertex_xuv", vertex_xuv);
-
+	//table.set("vertex", vertex);
+	//table.set("vertex_xuv", vertex_xuv);
 }

@@ -173,6 +173,13 @@ inline void DirectX11::end_draw()
 
 typedef ID3D11DepthStencilState Stencil_Test;
 
+typedef ID3D11VertexShader      Vertex_Shader;
+typedef ID3D11GeometryShader    Geometry_Shader;
+typedef ID3D11ComputeShader     Compute_Shader;
+typedef ID3D11HullShader        Hull_Shader;
+typedef ID3D11DomainShader      Domain_Shader;
+typedef ID3D11PixelShader       Pixel_Shader;
+
 inline Stencil_Test *make_stecil_test(D3D11_STENCIL_OP stencil_failed, D3D11_STENCIL_OP depth_failed, D3D11_STENCIL_OP pass, D3D11_COMPARISON_FUNC compare_func, u32 write_mask = 0xff, u32 read_mask = 0xff, bool enable_depth_test = true)
 {
 	ID3D11DepthStencilState *stencil_state = NULL;
