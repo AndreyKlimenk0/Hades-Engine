@@ -86,14 +86,14 @@ Array<T>::~Array()
 }
 
 template <typename T>
-T &Array<T>::operator[](int i)
+inline T &Array<T>::operator[](int i)
 {
 	assert(size > i);
 	return items[i];
 }
 
 template <typename T>
-const T &Array<T>::operator[](int i) const
+inline const T &Array<T>::operator[](int i) const
 {
 	assert(size > i);
 	return items[i];
@@ -149,7 +149,7 @@ void Array<T>::shutdown()
 }
 
 template <typename T>
-bool Array<T>::is_empty()
+inline bool Array<T>::is_empty()
 {
 	assert(count >= 0);
 
@@ -157,7 +157,7 @@ bool Array<T>::is_empty()
 }
 
 template <typename T>
-void Array<T>::set_pointer_to_item(T *ptr, int index)
+inline void Array<T>::set_pointer_to_item(T *ptr, int index)
 {
 	assert(count > index);
 
@@ -165,7 +165,7 @@ void Array<T>::set_pointer_to_item(T *ptr, int index)
 }
 
 template <typename T>
-void Array<T>::set_pointer_to_item(T **ptr, int index)
+inline void Array<T>::set_pointer_to_item(T **ptr, int index)
 {
 	assert(count > index);
 	*ptr = &items[index];

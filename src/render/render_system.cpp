@@ -108,9 +108,7 @@ void Render_System::init(View_Info *view_info)
 	this->view_info = view_info;
 
 	shader_manager.init();
-	Shader *render_2d = shader_manager.get_shader("render_2d");
-	directx11.device_context->VSSetShader(render_2d->vertex_shader, NULL, 0);
-	directx11.device_context->PSSetShader(render_2d->pixel_shader, NULL, 0);
+	render_2d.init();
 }
 
 void Render_System::shutdown()
@@ -159,24 +157,27 @@ void Render_System::render_frame()
 	
 	//render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 50);
 	//render_2d.draw_rect(10, 10, 300, 300, Color::Red, 50);
-	render_2d.draw_rect(10, 10, 300, 300, Color::Blue);
-	render_2d.draw_rect(0, 0, 300, 300, Color::Red);
-	render_2d.draw_rect(10, 10, 300, 300, Color::Red);
-	render_2d.draw_rect(100, 10, 300, 300, Color::Red);
-	render_2d.draw_rect(200, 10, 300, 300, Color::Red);
-	render_2d.draw_rect(300, 10, 300, 300, Color::Red);
-	render_2d.draw_rect(400, 10, 300, 300, Color::Red);
-	render_2d.draw_rect(400, 10, 300, 300, Color::Red);
-	render_2d.draw_rect(500, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(10, 10, 300, 300, Color::Blue);
+	//render_2d.draw_rect(0, 0, 300, 300, Color::Red);
+	//render_2d.draw_rect(10, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(100, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(200, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(300, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(400, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(400, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(500, 10, 300, 300, Color::Red);
 
 	//render_2d.draw_rect(100, 200, 300, 300, Color::Red);
 	//render_2d.draw_rect(200, 300, 300, 300, Color::Red);
 	//render_2d.draw_rect(300, 400, 300, 300, Color::Red);
 	//render_2d.draw_rect(400, 500, 300, 300, Color::Red);
-	//render_2d.draw_rect(400, 600, 300, 300, Color::Red);
-	//render_2d.draw_rect(500, 700, 300, 300, Color::Red);
-	//render_2d.draw_rect(700, 10, 300, 300, Color::Silver, 50);
-	//render_2d.draw_rect(700, 400, 300, 300, Color::Cyan, 50);
+	render_2d.draw_rect(400, 600, 300, 300, Color::Yellow);
+	render_2d.draw_rect(700, 10, 300, 300, Color::Blue, 50);
+	render_2d.draw_rect(500, 400, 300, 300, Color::Red);
+
+	render_2d.draw_rect(0, 10, 300, 300, Color::Blue, 50);
+	//render_2d.draw_rect(10, 10, 300, 300, Color::Red);
+	//render_2d.draw_rect(700, 400, 300, 300, Color::Red, 50);
 	
 	render_2d.draw_primitives();
 	
@@ -406,11 +407,14 @@ void Primitive_2D::add_rounded_points(int x, int y, int width, int height, Rect_
 		point2 = Vector2(x + width - rounding, y + height);
 	}
 
-	float s = 0.0f;
-	for (int i = 0; i < 10; i++) {
-		Vector2 point = quad(s, point0, point1, point2);
+	u32 points_count_in_rounding = 10;
+	float offset = 1.0f / (float)points_count_in_rounding;
+	float point_position = 0.0f;
+	
+	for (u32 i = 0; i < points_count_in_rounding; i++) {
+		Vector2 point = quad(point_position, point0, point1, point2);
 		points.push(point);
-		s += 0.1f;
+		point_position += offset;
 	}
 }
 
@@ -432,11 +436,31 @@ void Primitive_2D::make_triangle_polygon(const Color &color)
 
 Render_2D::~Render_2D()
 {
+	free_com_object(depth_test);
+	free_com_object(constant_buffer);
 	free_com_object(vertex_buffer);
 	free_com_object(index_buffer);
 	clear();
 }
 
+struct CB_Render_2d_Info {
+	Matrix4 position_orthographic_matrix;
+	Vector4 color;
+};
+
+void Render_2D::init()
+{
+	D3D11_DEPTH_STENCIL_DESC depth_test_desc;
+	ZeroMemory(&depth_test_desc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+	depth_test_desc.DepthEnable = false;
+	depth_test_desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+	depth_test_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depth_test_desc.StencilEnable = false;
+
+	HR(directx11.device->CreateDepthStencilState(&depth_test_desc, &depth_test));
+
+	constant_buffer = make_constant_buffer(sizeof(CB_Render_2d_Info));
+}
 
 void Render_2D::add_primitive(Primitive_2D *primitive)
 {
@@ -471,26 +495,27 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 	render_primitives.push(render_primitive);
 
 	if (rounding > 0) {
-		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(x, y));
-		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2(x + width, y));
-		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2(x + width, y + height));
-		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(x, y + height));
+		//(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(x, y));
+		//(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2(x + width, y));
+		//(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2(x + width, y + height));
+		//(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(x, y + height));
+		//primitive->points.push(Vector2(width / 2.0f, height / 2.0f));
+		
+		(flags & ROUND_TOP_LEFT_RECT)     ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
+		(flags & ROUND_TOP_RIGHT_RECT)    ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)y));
+		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)height));
+		(flags & ROUND_BOTTOM_LEFT_RECT)  ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
 	
 	} else {
-		primitive->add_point(Vector2(0, 0));
-		primitive->add_point(Vector2(width, 0));
-		primitive->add_point(Vector2(width, height));
-		primitive->add_point(Vector2(0, height));
+		primitive->add_point(Vector2(0.0f, 0.0f));
+		primitive->add_point(Vector2((float)width, 0.0f));
+		primitive->add_point(Vector2((float)width, (float)height));
+		primitive->add_point(Vector2(0.0f, (float)height));
 	}
 
 	primitive->make_triangle_polygon(color);
 	add_primitive(primitive);
 }
-
-struct CB_Render_2d_Info {
-	Matrix4 position_orthographic_matrix;
-	Vector4 color;
-};
 
 void Render_2D::draw_primitives()
 {
@@ -534,26 +559,10 @@ void Render_2D::draw_primitives()
 		directx11.device_context->Unmap(vertex_buffer, 0);
 	}
 
-	D3D11_DEPTH_STENCIL_DESC depth_stencil;
-	ZeroMemory(&depth_stencil, sizeof(D3D11_DEPTH_STENCIL_DESC));
-	depth_stencil.DepthEnable = false;
-	depth_stencil.DepthFunc = D3D11_COMPARISON_ALWAYS;
-	depth_stencil.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depth_stencil.StencilEnable = false;
-
-	ID3D11DepthStencilState *state = NULL;
-	directx11.device->CreateDepthStencilState(&depth_stencil, &state);
-
-	directx11.device_context->OMSetDepthStencilState(state, 0);
-
-
-	Gpu_Buffer *constant_buffer = make_constant_buffer(sizeof(CB_Render_2d_Info));
 	CB_Render_2d_Info cb_render_info;
 	
 	Shader_Manager *sm = render_sys.get_shader_manager();
 	Shader *render_2d = sm->get_shader("render_2d");
-	
-	Matrix4 mat;
 
 	directx11.device_context->IASetInputLayout(Input_Layout::table["vertex_color"]);
 	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -566,13 +575,14 @@ void Render_2D::draw_primitives()
 	directx11.device_context->VSSetShader(render_2d->vertex_shader, NULL, 0);
 	directx11.device_context->PSSetShader(render_2d->pixel_shader, NULL, 0);
 
+	directx11.device_context->OMSetDepthStencilState(depth_test, 0);
 
 	Render_Primitive_2D_Info *render_primitive = NULL;
 	For(render_primitives, render_primitive) {
 		
-		mat.translate(&render_primitive->position);
+		screen_postion.translate(&render_primitive->position);
 		
-		cb_render_info.position_orthographic_matrix = mat * render_sys.view_info->orthogonal_matrix;
+		cb_render_info.position_orthographic_matrix = screen_postion * render_sys.view_info->orthogonal_matrix;
 		cb_render_info.color = render_primitive->color.value;
 		update_constant_buffer(constant_buffer, (void *)&cb_render_info, sizeof(CB_Render_2d_Info));
 		
@@ -580,10 +590,9 @@ void Render_2D::draw_primitives()
 		directx11.device_context->PSSetConstantBuffers(0, 1, &constant_buffer);
 
 		Primitive_2D *primitive = render_primitive->primitive;
-		directx11.device_context->DrawIndexed(primitive->indices.count, primitive->index_offset, primitive->index_offset);
+		directx11.device_context->DrawIndexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
 	}
 
 	directx11.device_context->RSSetState(0);
 
-	free_com_object(constant_buffer);
 }

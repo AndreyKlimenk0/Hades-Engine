@@ -325,28 +325,23 @@ inline Vector4 Matrix4::operator*(const Vector4 &vec)
 
 inline Matrix4 Matrix4::operator*(const Matrix4 &other)
 {
-	Matrix4 mat;
-	mat[0].x = matrix[0].x * other[0].x + matrix[0].y * other[1].x + matrix[0].z * other[2].x + matrix[0].w * other[3].x;
-	mat[0].y = matrix[0].x * other[0].y + matrix[0].y * other[1].y + matrix[0].z * other[2].y + matrix[0].w * other[3].y;
-	mat[0].z = matrix[0].x * other[0].z + matrix[0].y * other[1].z + matrix[0].z * other[2].z + matrix[0].w * other[3].z;
-	mat[0].w = matrix[0].x * other[0].w + matrix[0].y * other[1].w + matrix[0].z * other[2].w + matrix[0].w * other[3].w;
+	int i, j;
+	const float *m1Ptr, *m2Ptr;
+	float *dstPtr;
+	Matrix4 dst;
 
-	mat[1].x = matrix[1].x * other[0].x + matrix[1].y * other[1].x + matrix[1].z * other[2].x + matrix[1].w * other[3].x;
-	mat[1].y = matrix[1].x * other[0].y + matrix[1].y * other[1].y + matrix[1].z * other[2].y + matrix[1].w * other[3].y;
-	mat[1].z = matrix[1].x * other[0].z + matrix[1].y * other[1].z + matrix[1].z * other[2].z + matrix[1].w * other[3].z;
-	mat[1].w = matrix[1].x * other[0].w + matrix[1].y * other[1].w + matrix[1].z * other[2].w + matrix[1].w * other[3].w;
+	m1Ptr = reinterpret_cast<const float *>(this);
+	m2Ptr = reinterpret_cast<const float *>(&other);
+	dstPtr = reinterpret_cast<float *>(&dst);
 
-	mat[2].x = matrix[2].x * other[0].x + matrix[2].y * other[1].x + matrix[2].z * other[2].x + matrix[2].w * other[3].x;
-	mat[2].y = matrix[2].x * other[0].y + matrix[2].y * other[1].y + matrix[2].z * other[2].y + matrix[2].w * other[3].y;
-	mat[2].z = matrix[2].x * other[0].z + matrix[2].y * other[1].z + matrix[2].z * other[2].z + matrix[2].w * other[3].z;
-	mat[2].w = matrix[2].x * other[0].w + matrix[2].y * other[1].w + matrix[2].z * other[2].w + matrix[2].w * other[3].w;
-
-	mat[3].x = matrix[3].x * other[0].x + matrix[3].y * other[1].x + matrix[3].z * other[2].x + matrix[3].w * other[3].x;
-	mat[3].y = matrix[3].x * other[0].y + matrix[3].y * other[1].y + matrix[3].z * other[2].y + matrix[3].w * other[3].y;
-	mat[3].z = matrix[3].x * other[0].z + matrix[3].y * other[1].z + matrix[3].z * other[2].z + matrix[3].w * other[3].z;
-	mat[3].w = matrix[3].x * other[0].w + matrix[3].y * other[1].w + matrix[3].z * other[2].w + matrix[3].w * other[3].w;
-
-	return mat;
+	for ( i = 0; i < 4; i++ ) {
+		for ( j = 0; j < 4; j++ ) {
+			*dstPtr = m1Ptr[0] * m2Ptr[ 0 * 4 + j ] + m1Ptr[1] * m2Ptr[ 1 * 4 + j ]+ m1Ptr[2] * m2Ptr[ 2 * 4 + j ] + m1Ptr[3] * m2Ptr[ 3 * 4 + j ];
+			dstPtr++;
+		}
+		m1Ptr += 4;
+	}
+	return dst;
 }
 
 inline Matrix4& Matrix4::operator*=(const Matrix4 &other)
@@ -447,6 +442,17 @@ inline void Matrix4::translate(float x, float y, float z)
 	matrix[3].x = x;
 	matrix[3].y = y;
 	matrix[3].z = z;
+}
+
+inline Matrix4 Matrix4::transpose()
+{
+	Matrix4 transpose;
+	for (int r = 0; r < 4; r++) {
+		for (int c = 0; c < 4; c++) {
+			transpose[c][r] = matrix[r][c];
+		}
+	}
+	return transpose;
 }
 
 inline Matrix4 Matrix4::inverse()
