@@ -74,21 +74,28 @@ const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 struct Render_2D {
 	~Render_2D();
 
+	ID3D11DepthStencilState *depth_test = NULL;
+
+	Gpu_Buffer *constant_buffer = NULL;
 	Gpu_Buffer *vertex_buffer = NULL;
 	Gpu_Buffer *index_buffer = NULL;
 
 	u32 total_vertex_count = 0;
 	u32 total_index_count = 0;
 
+	Matrix4 screen_postion;
+
 	Array<Primitive_2D *> primitives;
 	Array<Render_Primitive_2D_Info> render_primitives;
 	Hash_Table<String, Primitive_2D *> lookup_table;
 
+	void init();
 	void clear();
 	void add_primitive(Primitive_2D *primitive);
 	void draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void draw_primitives();
 };
+
 
 inline void Render_2D::clear()
 {
