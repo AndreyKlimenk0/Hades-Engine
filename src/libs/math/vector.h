@@ -452,13 +452,10 @@ inline Vector4 &Vector4::operator=(const Vector3 &vector3)
 	w = 1.0f;
 	return *this;
 }
-
+#include <string.h>
 inline Vector4 &Vector4::operator=(const Vector4 &vector4)
 {
-	x = vector4.x;
-	y = vector4.y;
-	z = vector4.z;
-	w = vector4.w;
+	memcpy((void *)this, (void *)&vector4, sizeof(float) * 4);
 	return *this;
 }
 
