@@ -80,7 +80,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	
 	//direct2d.init(directx11.swap_chain);
 	
-	font.init(30);
+	font.init(11);
 
 
 	texture_manager.init();

@@ -19,12 +19,11 @@ void Font::init(int font_size)
 	}
 
 	FT_Face face;
-	if (FT_New_Face(ft, "C:/Windows/Fonts/arial.ttf", 0, &face)) {
+	if (FT_New_Face(ft, "C:/Windows/Fonts/consola.ttf", 0, &face)) {
 		print("Font::init: Failed to load font");
 	}
 
 	FT_Set_Pixel_Sizes(face, 0, font_size);
-
 
 	for (unsigned char c = 0; c < 128; c++) {
 		
@@ -41,8 +40,6 @@ void Font::init(int font_size)
 			print("K");
 		}
 
-
-
 		Font_Char font_char;
 		font_char.advance_y = face->glyph->advance.y;
 		font_char.advance = face->glyph->advance.x;
@@ -53,6 +50,14 @@ void Font::init(int font_size)
 		font_char.bitmap = data;
 		font_char.bitmap_size = Size_u32(face->glyph->bitmap.width, face->glyph->bitmap.rows);
 
+		if (font_char.size.width > max_width) {
+			max_width = font_char.size.width;
+		}
+
+		if (font_char.size.height > max_height) {
+			max_height = font_char.size.height;
+		}
+
 		
 		characters.set(c, font_char);
 	}
@@ -60,7 +65,8 @@ void Font::init(int font_size)
 
 u32 Font::get_text_width(const char *text)
 {
-	return u32();
+	Size_u32 size = font.get_text_size(text);
+	return size.width;
 }
 
 Size_u32 Font::get_text_size(const char *text)
@@ -69,8 +75,8 @@ Size_u32 Font::get_text_size(const char *text)
 	u32 max_height = 0;
 	Size_u32 result;
 
-	for (u32 i = 0; i < len; i++) {
-		char c = text[i];
+	for (u32 index = 0; index < len; index++) {
+		char c = text[index];
 		Font_Char &font_char = characters[c];
 
 		//if (font_char.size.height > max_height) {
@@ -78,16 +84,25 @@ Size_u32 Font::get_text_size(const char *text)
 		//	result.height = font_char.size.height;
 		//}
 
-		if (font_char.advance_y > max_height) {
-			max_height = font_char.advance_y;
-			result.height = font_char.advance_y >> 5;
+		if (font_char.size.height > max_height) {
+			max_height = font_char.size.height;
+			result.height = font_char.size.height;
 		}
 		
 		//if (c == ' ') {
 		//	result.width += font_char.advance >> 6;
 		//}
-		result.width += font_char.advance >> 6;
-		//result.width += font_char.size.width;
+
+		if ((index == 0) && (index == (len - 1))) {
+			result.width += (font_char.advance >> 6) - (font_char.bearing.width * 2);
+			break;
+		}
+
+		if ((index == 0) || (index == (len - 1))) {
+			result.width += (font_char.advance >> 6) - font_char.bearing.width;
+		} else {
+			result.width += font_char.advance >> 6;
+		}
 	}
 	
 	return result;
