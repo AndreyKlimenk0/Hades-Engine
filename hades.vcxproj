@@ -175,6 +175,7 @@
     <ClCompile Include="src\render\vertex.cpp" />
     <ClCompile Include="src\sys\map.cpp" />
     <ClCompile Include="src\sys\sys_debug.cpp" />
+    <ClCompile Include="src\sys\sys_engine.cpp" />
     <ClCompile Include="src\sys\sys_output_info.cpp" />
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
