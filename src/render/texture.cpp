@@ -186,17 +186,17 @@ void Texture::set_color(const Color &color)
 {
 	u32 *data = new u32[width * height];
 	
-	u8* pixels = (u8*)data;
-	for( UINT row = 0; row < height; row++ )
+	u8* pixels = (u8 *)data;
+	for(u32 row = 0; row < height; row++ )
 	{
-		UINT rowStart = row * (width * sizeof(u32));
-		for( UINT col = 0; col < width; col++ )
+		u32 row_start = row * (width * sizeof(u32));
+		for(u32 col = 0; col < width; col++ )
 		{
-			UINT colStart = col * 4;
-			pixels[rowStart + colStart + 0] = u8(color.value.x * 255);
-			pixels[rowStart + colStart + 1] = u8(color.value.y * 255);
-			pixels[rowStart + colStart + 2] = u8(color.value.z * 255);
-			pixels[rowStart + colStart + 3] = u8(color.value.w * 255);
+			u32 col_start = col * 4;
+			pixels[row_start + col_start + 0] = u8(color.value.x * 255);
+			pixels[row_start + col_start + 1] = u8(color.value.y * 255);
+			pixels[row_start + col_start + 2] = u8(color.value.z * 255);
+			pixels[row_start + col_start + 3] = u8(color.value.w * 255);
 		}
 	}
 
@@ -208,6 +208,18 @@ void Texture::set_color(const Color &color)
 	directx11.device_context->UpdateSubresource(texture, 0, NULL, data, width * sizeof(u32), 0);
 
 	DELETE_PTR(data);
+}
+
+void Texture::update(Rect_u32 *rect, void *data, u32 row_pitch)
+{
+	D3D11_BOX box;
+	box.left = rect->x;
+	box.right = rect->x + rect->width;
+	box.top = rect->y;
+	box.bottom = rect->y + rect->height;
+	box.front = 0;
+	box.back = 1;
+	directx11.device_context->UpdateSubresource(texture, 0, &box, (const void *)data, row_pitch, 0);
 }
 
 Texture::operator ID3D11ShaderResourceView*()
@@ -249,3 +261,46 @@ Texture *Texture_Manager::get_texture(const char *texture_name)
 	return texture;
 }
 
+u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
+{
+	u32 *new_data = new u32[width * height];
+
+	u8* pixels = (u8*)new_data;
+	for(u32 row = 0; row < height; row++)
+	{
+		u32 row_start = row * (width * sizeof(u32));
+		u32 row_2 = row * (width * sizeof(u8));
+		
+		for(u32 col = 0; col < width; col++)
+		{
+			u32 col_start = col * 4;
+			pixels[row_start + col_start + 0] = 255;
+			//pixels[row_start + col_start + 0] = data[row_2 + col];
+			pixels[row_start + col_start + 1] = 255;
+			pixels[row_start + col_start + 2] = 255;
+			pixels[row_start + col_start + 3] = data[row_2 + col];
+			//pixels[row_start + col_start + 3] = 255;
+		}
+	}
+	return new_data;
+}
+
+//void rgba32_to_abgr32(u32 *data, u32 width, u32 height)
+//{
+//	u8* pixels = (u8 *)data;
+//	for(u32 row = 0; row < height; row++)
+//	{
+//		u32 row_start = row * (width * sizeof(u32));
+//		u32 row_2 = row * (width * sizeof(u8));
+//		
+//		for(u32 col = 0; col < width; col++)
+//		{
+//			u32 col_start = col * 4;
+//			pixels[row_start + col_start + 0] = data[row_2 + col];
+//			pixels[row_start + col_start + 1] = 0;
+//			pixels[row_start + col_start + 2] = 0;
+//			pixels[row_start + col_start + 3] = 255;
+//		}
+//	}
+//	return new_data;
+//}

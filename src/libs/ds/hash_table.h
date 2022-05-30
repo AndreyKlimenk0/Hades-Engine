@@ -6,21 +6,31 @@
 #include <string.h>
 
 #include "../../sys/sys_local.h"
+#include "../../win32/win_types.h"
 
-//#define HT_PRIME_1 151
-#define HT_PRIME_1 1007887
-//#define HT_PRIME_2 163
-//#define HT_PRIME_2 1007957
-#define HT_PRIME_2 2008393
+inline u32 hash(char c, const int factor, const int table_count)
+{
+	return (u32)c % table_count;
+}
 
+inline u32 hash(const char* string, const int factor, const int table_count)
+{
+	unsigned long hash = 5381;
+    int c;
 
-int hash(char c, const int factor, const int table_count);
-int double_hash(char c, const int table_count, const int attempt);
+	while (c = *string++) {
+        hash = factor * ((hash << 5) + hash) + c; 
+	}
+    return (u32)(hash % table_count);
+}
 
-int hash(const char* string, const int factor, const int table_count);
-int double_hash(const char* string, const int table_count, const int attempt);
-
-int double_hash(int number, const int table_count, const int attempt);
+inline u32 hash(int number, const int table_count, const int attempt)
+{
+	char *str = to_string(number);
+	u32 h = hash(str, table_count, attempt);
+	free_string(str);
+	return h;
+}
 
 template <typename _Key_, typename _Value_>
 struct Hash_Node {
@@ -51,48 +61,94 @@ struct Hash_Table {
 	Hash_Table(int _size = 8);
 	~Hash_Table();
 
-	Hash_Node<_Key_, _Value_> **nodes;
-	u32 size;
-	u32 count;
+	typedef Hash_Node<_Key_, _Value_> Table_Entry;
 
-	void resize();
+	Array<Table_Entry *> nodes;
+	
+	u32 size = 0;
+	u32 count = 0;
+	u32 max_loop = 0;
+	u32 table_size = 0;
+	u32 hash_factor1 = 7;
+	u32 hash_facotr2 = 11;
+
+	void rehash();
+	void insert_entry(Table_Entry *entry);
+	void free_table(Table_Entry **table, u32 _table_size);
 
 	void set(const _Key_ &key, const _Value_ &value);
+
+	bool key_in_table(const _Key_ &key);
 	bool get(const _Key_ &key, _Value_ &value);
 	bool get(const _Key_ &key, _Value_ *value);
 
-	_Value_ &operator[](const _Key_ &key);
+	u32 hash1(const _Key_ &key);
+	u32 hash2(const _Key_ &key);
+
 	_Value_ &operator[](u32 index);
+	_Value_ &operator[](const _Key_ &key);
 
 	Hash_Node<_Key_, _Value_> *get_node(u32 index);
+	Hash_Node<_Key_, _Value_> *get_table_entry(const _Key_ &key);
 };
+
+template<typename _Key_, typename _Value_>
+Hash_Table<_Key_, _Value_>::Hash_Table(int _size)
+{
+	rand();
+	hash_factor1 = rand();
+	hash_facotr2 = rand() % 256;
+	size = _size;
+	table_size = _size * 2;
+	max_loop = table_size;
+
+	nodes.resize(table_size);
+
+	memset(nodes.items, 0, sizeof(Table_Entry *) * table_size);
+}
+
+template<typename _Key_, typename _Value_>
+Hash_Table<_Key_, _Value_>::~Hash_Table()
+{
+	for (u32 i = 0; i < table_size; i++) {
+		delete nodes[i];
+	}
+}
+
+template<typename _Key_, typename _Value_>
+u32 Hash_Table<_Key_, _Value_>::hash1(const _Key_ &key)
+{
+	return (u32)hash(key, hash_factor1, size);
+}
+
+template<typename _Key_, typename _Value_>
+u32 Hash_Table<_Key_, _Value_>::hash2(const _Key_ &key)
+{
+	return (u32)hash(key, hash_facotr2, size) + size;
+}
 
 template<typename _Key_, typename _Value_>
 _Value_ &Hash_Table<_Key_, _Value_>::operator[](u32 index)
 {
-	assert(count > index);
-
-	u32 node_count = 0;
-	for (int i = 0; i < size; i++) {
-		Hash_Node<_Key_, _Value_> *node = nodes[i];
-		if ((node != NULL) && (node_count == index)) {
-			return node->value;
-		} else {
-			if (node != NULL) {
-				node_count += 1;
-			}
-		}
-	}
-	assert(false);
+	Table_Entry *entry = get_node(index);
+	return entry->value;
 }
 
 template<typename _Key_, typename _Value_>
-inline Hash_Node<_Key_, _Value_>* Hash_Table<_Key_, _Value_>::get_node(u32 index)
+_Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
+{
+	Table_Entry *entry = get_table_entry(key);
+	assert(entry);
+	return entry->value;
+}
+
+template<typename _Key_, typename _Value_>
+Hash_Node<_Key_, _Value_>* Hash_Table<_Key_, _Value_>::get_node(u32 index)
 {
 	assert(count > index);
 
 	u32 node_count = 0;
-	for (int i = 0; i < size; i++) {
+	for (u32 i = 0; i < table_size; i++) {
 		Hash_Node<_Key_, _Value_> *node = nodes[i];
 		if ((node != NULL) && (node_count == index)) {
 			return node;
@@ -107,106 +163,128 @@ inline Hash_Node<_Key_, _Value_>* Hash_Table<_Key_, _Value_>::get_node(u32 index
 }
 
 template<typename _Key_, typename _Value_>
-_Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
+Hash_Node<_Key_, _Value_> *Hash_Table<_Key_, _Value_>::get_table_entry(const _Key_ &key)
 {
-	int index = double_hash(key, size, 0);
-	Hash_Node<_Key_, _Value_> *node = nodes[index];
-	int i = 1;
-	while (node != NULL) {
-		if (node->compare(key)) {
-			return node->value;
-		}
-		index = double_hash(key, size, i);
-		node = nodes[index];
-		i++;
+	u32 _hash1 = hash1(key);
+	u32 _hash2 = hash2(key);
+
+	if ((nodes[_hash1] != NULL) && (nodes[_hash1]->key == key)) {
+		return nodes[_hash1];
 	}
-	assert(false);
-	return node->value;
+
+	if ((nodes[_hash2] != NULL) && (nodes[_hash2]->key == key)) {
+		return nodes[_hash2];
+	}
+	return NULL;
 }
 
-template <typename _Key_, typename _Value_>
-Hash_Table<_Key_, _Value_>::Hash_Table(int _size)
-{
+
+template<typename _Key_, typename _Value_>
+void Hash_Table<_Key_, _Value_>::rehash()
+{	
+	u32 old_table_size = table_size;
+	u32 _size = size * 2;
+	
+	hash_factor1 = rand();
+	hash_facotr2 = rand() % 256;
 	size = _size;
 	count = 0;
-	nodes = new Hash_Node<_Key_, _Value_> *[size];
-	memset(nodes, 0, sizeof(Hash_Node<_Key_, _Value_> *) * size);
-}
+	table_size = table_size *2;
+	max_loop = table_size;
 
-template <typename _Key_, typename _Value_>
-Hash_Table<_Key_, _Value_>::~Hash_Table()
-{
-	delete[] nodes;
-	nodes = NULL;
-}
+	Table_Entry **old_nodes = nodes.items;
 
-template <typename _Key_, typename _Value_>
-void Hash_Table<_Key_, _Value_>::resize()
-{
-	Hash_Node<_Key_, _Value_> **temp_nodes = nodes;
-	
-	size *= 2;
-	nodes = new Hash_Node<_Key_, _Value_> *[size];
-	
-	memset(nodes, 0, sizeof(Hash_Node<_Key_, _Value_> *) * size);
-	memcpy(nodes, temp_nodes, sizeof(Hash_Node<_Key_, _Value_> *) * count);
+	nodes.items = new Table_Entry *[table_size];
+	nodes.size = table_size;
+	memset(nodes.items, 0, sizeof(Table_Entry *) * table_size);
 
-	delete[] temp_nodes;
-}
-
-template <typename _Key_, typename _Value_>
-inline void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
-{
-	if (size == count) {
-		resize();
+	for (u32 i = 0; i < old_table_size; i++) {
+		Table_Entry *entry = old_nodes[i];
+		if (entry != NULL) {
+			insert_entry(entry);
+		}
 	}
+	delete[] old_nodes;
+}
 
-	int index = double_hash(key, size, 0);
-	Hash_Node<_Key_, _Value_> *node = nodes[index];
-	int i = 1;
-	while (node != NULL) {
-		index = double_hash(key, size, i);
-		node = nodes[index];
-		i++;
+template<typename _Key_, typename _Value_>
+void Hash_Table<_Key_, _Value_>::free_table(Table_Entry **table, u32 _table_size)
+{
+	delete[] table;
+	table = NULL;
+}
+
+template<typename _Key_, typename _Value_>
+void Hash_Table<_Key_, _Value_>::insert_entry(Table_Entry *entry)
+{
+	_Key_ _key = entry->key;
+	
+	Table_Entry *inserting_entry = entry;
+	Table_Entry **existing_entry = NULL;
+
+	for (u32 i = 0; i < max_loop; i++) {
+		u32 hashies[] = { hash1(_key), hash2(_key) };
+
+		u32 index = hashies[i % 2];
+		
+		if (nodes[index] == NULL) {
+			nodes[index] = inserting_entry;
+			break;
+		}
+		Table_Entry *temp = nodes[index];
+		nodes[index] = inserting_entry;
+		inserting_entry = temp;
+		_key = temp->key;
+
+		if ((i + 1) >= max_loop) {
+			rehash();
+			i = 0;
+		}
 	}
-	nodes[index] = new Hash_Node<_Key_, _Value_>(key, value);
 	count++;
 }
 
-template <typename _Key_, typename _Value_>
-inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
+template<typename _Key_, typename _Value_>
+void Hash_Table<_Key_, _Value_>::set(const _Key_ &key, const _Value_ &value)
 {
-	int index = double_hash(key, size, 0);
-	Hash_Node<_Key_, _Value_> *node = nodes[index];
-	int i = 1;
-	while (node != NULL) {
-		if (node->compare(key)) {
-			value = node->value;
-			return true;
-		}
-		index = double_hash(key, size, i);
-		node = nodes[index];
-		i++;
+	Table_Entry *entry = get_table_entry(key);
+	if (entry) {
+		entry->value = value;
+		return;
+	}
+
+	Table_Entry *new_entry = new Table_Entry(key, value);
+	insert_entry(new_entry);
+}
+
+template<typename _Key_, typename _Value_>
+bool Hash_Table<_Key_, _Value_>::key_in_table(const _Key_ &key)
+{
+	Table_Entry *entry = get_table_entry(key);
+	if (entry) {
+		return true;
 	}
 	return false;
 }
 
-template <typename _Key_, typename _Value_>
-inline bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ *value)
+template<typename _Key_, typename _Value_>
+bool Hash_Table<_Key_, _Value_>::get(const _Key_ &key, _Value_ &value)
 {
-	int index = double_hash(key, size, 0);
-	Hash_Node<_Key_, _Value_> *node = nodes[index];
-	u32 i = 1;
-	u32 c = 0;
-	while ((node != NULL) && (c < count)) {
-		if (node->compare(key)) {
-			*value = node->value;
-			return true;
-		}
-		index = double_hash(key, size, i);
-		node = nodes[index];
-		i++;
-		c++;
+	Table_Entry *entry = get_table_entry(key);
+	if (entry) {
+		value = entry->value;
+		return true;
+	}
+	return false;
+}
+
+template<typename _Key_, typename _Value_>
+bool Hash_Table<_Key_, _Value_>::get(const _Key_ & key, _Value_ *value)
+{
+	Table_Entry *entry = get_table_entry(key);
+	if (entry) {
+		*value = entry->value;
+		return true;
 	}
 	return false;
 }

@@ -17,7 +17,7 @@ cbuffer per_frame {
 	float3 camera_direction;
 };
 
-Texture2D texture_map;
+Texture2D texture_map : register(t0);
 
 SamplerState sampler_anisotropic : register(s0);
 

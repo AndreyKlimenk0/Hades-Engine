@@ -2,7 +2,6 @@
 #define EDITOR_H
 
 #include <stdlib.h>
-#include <d2d1.h>
 
 #include "../render/directx.h"
 #include "../render/texture.h"
@@ -24,7 +23,7 @@ struct Picked_Panel;
 struct Button_Theme {
 	int border_about_text = 6;
 	int text_shift = 0;
-	float rounded_border = 3.0f;
+	u32 rounded_border = 5;
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
 	Color hover_color = Color(0, 60, 168);

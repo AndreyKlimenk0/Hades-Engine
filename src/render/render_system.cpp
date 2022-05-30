@@ -1,8 +1,11 @@
 #include <assert.h>
+
+#include "font.h"
 #include "directx.h"
 #include "render_system.h"
-#include "../win32/win_local.h"
 #include "../sys/sys_local.h"
+#include "../win32/win_local.h"
+#include "../libs/math/common.h"
 
 
 Render_System render_sys;
@@ -109,6 +112,19 @@ void Render_System::init(View_Info *view_info)
 
 	shader_manager.init();
 	render_2d.init();
+
+	D3D11_SAMPLER_DESC sampler_desc;
+	ZeroMemory(&sampler_desc, sizeof(sampler_desc));
+	sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler_desc.MipLODBias = 0.f;
+	sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	sampler_desc.MinLOD = 0.f;
+	sampler_desc.MaxLOD = 0.f;
+
+	directx11.device->CreateSamplerState(&sampler_desc, &sampler);
 }
 
 void Render_System::shutdown()
@@ -125,63 +141,154 @@ void Render_System::resize()
 
 #include "font.h"
 
+#include "../editor/editor.h"
+
+struct rect_t {
+	rect_t() {};
+	rect_t(int x, int y, int w, int h, const Color &c) : x(x), y(y), width(w), height(h), color(c) {}
+	int x;
+	int y;
+	int width;
+	int height;
+	Color color;
+};
+
+static int compare_rects(const void *first_rect, const void *second_rect)
+{
+	assert(first_rect);
+	assert(second_rect);
+
+	const rect_t *first = static_cast<const rect_t *>(first_rect);
+	const rect_t *second = static_cast<const rect_t *>(second_rect);
+
+	return first->height > second->height;
+}
+
+void pack_rects(rect_t *main_rect, Array<rect_t> *rects)
+{
+	qsort(rects->items, rects->count, sizeof((*rects)[0]), compare_rects);
+
+	u32 x_pos = 0;
+	u32 y_pos = 0;
+	u32 large = 0;
+
+	rect_t *rect = NULL;
+	For((*rects), rect) {
+
+		if ((rect->width + x_pos) > main_rect->width) {
+			y_pos += large;
+			x_pos = 0;
+			large = 0;
+		}
+
+		if ((y_pos + rect->height) > main_rect->height) {
+			break;
+		}
+		
+		rect->x = x_pos;
+		rect->y = y_pos;
+
+		x_pos += rect->width;
+
+		if (rect->height > large) {
+			large = rect->height;
+		}
+	}
+}
+
+static int compare_rects_u32(const void *first_rect, const void *second_rect)
+{
+	assert(first_rect);
+	assert(second_rect);
+
+	const Rect_u32 *first = static_cast<const Rect_u32 *>(first_rect);
+	const Rect_u32 *second = static_cast<const Rect_u32 *>(second_rect);
+
+	return first->height > second->height;
+}
+
+void pack_rects(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
+{
+	qsort(rects.items, rects.count, sizeof(rects[0]), compare_rects_u32);
+
+	u32 x_pos = 0;
+	u32 y_pos = 0;
+	u32 large = 0;
+
+	Rect_u32 *rect = NULL;
+	For(rects, rect) {
+
+		if ((rect->width + x_pos) > main_rect->width) {
+			y_pos += large;
+			x_pos = 0;
+			large = 0;
+		}
+
+		if ((y_pos + rect->height) > main_rect->height) {
+			break;
+		}
+		
+		rect->x = x_pos;
+		rect->y = y_pos;
+
+		x_pos += rect->width;
+
+		if (rect->height > large) {
+			large = rect->height;
+		}
+	}
+}
+
 void Render_System::render_frame()
 {
-	//Texture *texture = texture_manager.get_texture("cross.png");
-	//draw_texture_on_screen(700, 400, texture, 25.0f, 25.0f);
-	//view_matrix = free_camera->get_view_matrix();
+	Array<rect_t> rects;
+	rects.push(rect_t(0, 0, 50, 110, Color::Silver));
+	rects.push(rect_t(50, 0, 70, 120, Color::Red));
+	rects.push(rect_t(0, 100, 50, 100, Color::Blue));
+	rects.push(rect_t(200, 200, 50, 100, Color::Silver));
+	rects.push(rect_t(300, 0, 150, 177, Color::LightSteelBlue));
+	rects.push(rect_t(500, 0, 400, 120, Color::Magenta));
+	rects.push(rect_t(500, 0, 150, 130, Color::Cyan));
+	rects.push(rect_t(400, 0, 50, 100, Color::Yellow));
+	rects.push(rect_t(0, 200, 220, 120, Color::Red));
+	rects.push(rect_t(0, 300, 120, 100, Color::Blue));
+	rects.push(rect_t(0, 400, 320, 150, Color::Blue));
+	rects.push(rect_t(0, 500, 220, 122, Color::Green));
+	rects.push(rect_t(0, 600, 150, 233, Color::Green));
+	rects.push(rect_t(700, 700, 50, 154, Color::Magenta));
+	rects.push(rect_t(200, 300, 50, 122, Color::Silver));
+	rects.push(rect_t(0, 500, 220, 122, Color::Green));
+	rects.push(rect_t(0, 600, 150, 233, Color::Green));
+	rects.push(rect_t(700, 700, 50, 154, Color::Magenta));
+	rects.push(rect_t(200, 300, 50, 122, Color::Silver));
+	rects.push(rect_t(0, 0, 50, 110, Color::Silver));
+	rects.push(rect_t(50, 0, 70, 120, Color::Red));
+	rects.push(rect_t(0, 100, 50, 100, Color::Blue));
+	rects.push(rect_t(200, 200, 50, 100, Color::Silver));
 
-	//Render_Entity *render_entity = NULL;
-	//For(current_render_world->render_entities, render_entity)
-	//{
-	//	make_outlining(render_entity);
-	//}
+	rect_t r = rect_t(0, 0, 900, 900, Color::Red);
+	pack_rects(&r, &rects);
 
-	//draw_world_entities(current_render_world);
-
-	//For(current_render_world->render_entities, render_entity)
-	//{
-	//	free_outlining(render_entity);
-	//}
-
-	//draw_texture_on_screen(0, 0, texture_manager.get_texture("Lion_Albedo.png"), 250.0f, 250.0f);
-
-	//draw_text(0.5, 0.5, "AAAAAAAAAAAAAAAAAAAAA");
-	//draw_rect(500, 150, 500, 500, Color::Green);
 	render_2d.clear();
 
-	//render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 100);
-	//render_2d.draw_rect(10, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(700, 10, 300, 300, Color::Silver);
-	//render_2d.draw_rect(700, 400, 300, 300, Color::Cyan);
-	
-	//render_2d.draw_rect(800, 450, 300, 300, Color::Blue, 50);
-	//render_2d.draw_rect(10, 10, 300, 300, Color::Red, 50);
-	//render_2d.draw_rect(10, 10, 300, 300, Color::Blue);
-	//render_2d.draw_rect(0, 0, 300, 300, Color::Red);
-	//render_2d.draw_rect(10, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(100, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(200, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(300, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(400, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(400, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(500, 10, 300, 300, Color::Red);
 
-	//render_2d.draw_rect(100, 200, 300, 300, Color::Red);
-	//render_2d.draw_rect(200, 300, 300, 300, Color::Red);
-	//render_2d.draw_rect(300, 400, 300, 300, Color::Red);
-	//render_2d.draw_rect(400, 500, 300, 300, Color::Red);
-	render_2d.draw_rect(400, 600, 300, 300, Color::Yellow);
-	render_2d.draw_rect(700, 10, 300, 300, Color::Blue, 50);
-	render_2d.draw_rect(500, 400, 300, 300, Color::Red);
+	//render_2d.draw_texture(0, 0, 500, 500, render_2d.temp);
+//	render_2d.draw_texture(600, 0, 400, 400, &render_2d.font_atlas);
+	const char *text = "aaaa";
+	Size_u32 s = font.get_text_size(text);
+	render_2d.draw_rect(10, 10, s.width, s.height, Color::Red);
+	render_2d.draw_text(10, 10, text);
 
-	render_2d.draw_rect(0, 10, 300, 300, Color::Blue, 50);
-	//render_2d.draw_rect(10, 10, 300, 300, Color::Red);
-	//render_2d.draw_rect(700, 400, 300, 300, Color::Red, 50);
+	//render_2d.draw_rect(0, 0, 900, 300, Color::Black);
+	//render_2d.draw_rect(0, 400, 200, 200, Color::Red, 50);
 	
+
+	//rect_t *rect = NULL;
+	//For(rects, rect) {
+	//	render_2d.draw_rect(rect->x, rect->y, rect->width, rect->height, rect->color);
+	//}
+
 	render_2d.draw_primitives();
-	
-	//direct2d.draw_rounded_rect(10, 10, 300, 300, 50, 50, Color::Blue);
 }
 
 View_Info *make_view_info(float near_plane, float far_plane)
@@ -195,6 +302,7 @@ View_Info *make_view_info(float near_plane, float far_plane)
 	view_info->far_plane = far_plane;
 	view_info->perspective_matrix = XMMatrixPerspectiveFovLH(view_info->fov_y_ratio, view_info->window_ratio, near_plane, far_plane);
 	view_info->orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)view_info->window_width, (float)view_info->window_height, 0.0f, near_plane, far_plane);
+
 	return view_info;
 }
 
@@ -271,22 +379,7 @@ Gpu_Buffer *make_gpu_buffer(u32 data_size, u32 data_count, void *data, D3D11_USA
 	return buffer;
 }
 
-inline Gpu_Buffer *make_vertex_buffer(u32 vertex_size, u32 vertex_count, void *vertex_data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, u32 cpu_access = 0)
-{
-	return make_gpu_buffer(vertex_size, vertex_count, vertex_data, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access);
-}
-
-inline Gpu_Buffer *make_index_buffer(u32 index_count, u32 *index_data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, u32 cpu_access = 0)
-{
-	return make_gpu_buffer(sizeof(u32), index_count, index_data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access);
-}
-
-inline Gpu_Buffer *make_constant_buffer(u32 buffer_size, void *data = NULL)
-{
-	return make_gpu_buffer(buffer_size, 1, data, D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE);
-}
-
-inline void update_constant_buffer(Gpu_Buffer *buffer, void *data, u32 data_size)
+void update_constant_buffer(Gpu_Buffer *buffer, void *data, u32 data_size)
 {
 	assert(buffer);
 	assert(data);
@@ -385,6 +478,17 @@ enum Rect_Side {
 
 void Primitive_2D::add_rounded_points(int x, int y, int width, int height, Rect_Side rect_side, u32 rounding)
 {
+	if ((rounding > width) || (rounding > height)) {
+		int size;
+		
+		if (width > height) {
+			size = height;
+		} else {
+			size = width;
+		}
+		rounding = size / 2;
+	}
+
 	Vector2 point0, point1, point2;
 	if (rect_side == RECT_SIDE_TOP_LEFT) {
 		point0 = Vector2(x, y + rounding);
@@ -408,29 +512,25 @@ void Primitive_2D::add_rounded_points(int x, int y, int width, int height, Rect_
 	}
 
 	u32 points_count_in_rounding = 10;
-	float offset = 1.0f / (float)points_count_in_rounding;
+	float point_count = 1.0f / (float)points_count_in_rounding;
 	float point_position = 0.0f;
 	
 	for (u32 i = 0; i < points_count_in_rounding; i++) {
 		Vector2 point = quad(point_position, point0, point1, point2);
-		points.push(point);
-		point_position += offset;
+		add_point(point);
+		point_position += point_count;
 	}
 }
 
-void Primitive_2D::make_triangle_polygon(const Color &color)
+void Primitive_2D::make_triangle_polygon()
 {
-	assert(points.count > 2);
-
-	vertices.resize(points.count);
-	for (int i = 0; i < points.count; i++) {
-		vertices.push(Vertex_XC(points[i], color.value));
-	}
-
-	for (int i = 2; i < points.count; i++) {
-		indices.push(0);
+	for (int i = 2; i < vertices.count; i++) {
+		//indices.push(0);
+		//indices.push(i);
+		//indices.push(i - 1);
 		indices.push(i - 1);
 		indices.push(i);
+		indices.push(0);
 	}
 }
 
@@ -459,7 +559,90 @@ void Render_2D::init()
 
 	HR(directx11.device->CreateDepthStencilState(&depth_test_desc, &depth_test));
 
+	D3D11_BLEND_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.AlphaToCoverageEnable = false;
+	desc.RenderTarget[0].BlendEnable = true;
+	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	HR(directx11.device->CreateBlendState(&desc, &blending_test));
+
 	constant_buffer = make_constant_buffer(sizeof(CB_Render_2d_Info));
+	init_font_rendering();
+
+	default_texture.init(100, 100);
+	default_texture.set_color(Color::White);
+}
+
+void Render_2D::init_font_rendering()
+{
+	Hash_Table<char, Rect_f32> uvs;
+	init_font_atlas(&font, &uvs);
+
+	for (char c = 32; c < 127; c++) {
+
+		if (font.characters.key_in_table(c)) {
+			Font_Char &font_char = font.characters[c];
+			Size_u32 &size = font_char.size;
+			Rect_f32 &uv = uvs[c];
+
+			Primitive_2D *primitive = new Primitive_2D();
+
+			primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
+			primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.x + uv.width, uv.y));
+			primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.x + uv.width, uv.y + uv.height));
+			primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.y + uv.height));
+
+			primitive->make_triangle_polygon();
+			add_primitive(primitive);
+
+			lookup_table.set(String(c), primitive);
+		}
+	}
+}
+
+void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs)
+{
+	font_atlas.init(200, 200);
+	font_atlas.set_color(Color::White);
+
+	Array<Rect_u32 *> rects;
+	Hash_Table<char, Rect_u32> table;
+
+	for (u32 i = 32; i < 127; i++) {
+		if (font->characters.key_in_table((char)i)) {
+			Font_Char &font_char = font->characters[(char)i];
+			table.set((char)i, Rect_u32(font_char.bitmap_size));
+			rects.push(&table[(char)i]);
+		}
+	}
+	Rect_u32 main_rect = Rect_u32(font_atlas.width, font_atlas.height);
+	pack_rects(&main_rect, rects);
+
+	for (u32 i = 32; i < 127; i++) {
+		if (font->characters.key_in_table((char)i)) {
+			Font_Char &character = font->characters[(char)i];
+			
+			Rect_u32 &rect = table[(char)i];
+
+			Rect_f32 uv;
+			uv.x = static_cast<float>(rect.x) / static_cast<float>(font_atlas.width);
+			uv.y = static_cast<float>(rect.y) / static_cast<float>(font_atlas.height);
+			uv.width = static_cast<float>(rect.width) / static_cast<float>(font_atlas.width);
+			uv.height = static_cast<float>(rect.height) / static_cast<float>(font_atlas.height);
+
+			font_uvs->set((char)i, uv);
+
+			
+			font_atlas.update(&rect, character.bitmap, sizeof(u32) * character.size.width);
+		}
+	}
 }
 
 void Render_2D::add_primitive(Primitive_2D *primitive)
@@ -473,6 +656,38 @@ void Render_2D::add_primitive(Primitive_2D *primitive)
 	primitives.push(primitive);
 }
 
+void Render_2D::draw_text(int x, int y, const char *text)
+{
+	u32 len = strlen(text);
+	u32 max_height = 0;
+	
+	for (u32 i = 0; i < len; i++) {
+		char c = text[i];	
+		Font_Char &font_char = font.characters[c];
+
+		if (font_char.size.height > max_height) {
+			max_height = font_char.size.height;
+		}
+	}
+
+	for (u32 i = 0; i < len; i++) {
+
+		char c = text[i];
+		Font_Char &font_char = font.characters[c];
+
+		Render_Primitive_2D_Info info;
+		info.texture = &font_atlas;
+		info.position = Vector2(x, y + (max_height - font_char.size.height));
+		info.color = Color::White;
+		info.primitive = lookup_table[String(c)];
+		
+		x += (font_char.advance >> 6);
+
+
+		render_primitives.push(info);
+	}
+}
+
 void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
 {
 	String hash = String(width + height + (int)rounding);
@@ -481,6 +696,7 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 	render_primitive.position.x = (float)x;
 	render_primitive.position.y = (float)y;
 	render_primitive.color.value = color.value;
+	render_primitive.texture = &default_texture;
 	
 	Primitive_2D *found_primitive = NULL;
 	if (lookup_table.get(hash, found_primitive)) {
@@ -495,17 +711,10 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 	render_primitives.push(render_primitive);
 
 	if (rounding > 0) {
-		//(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(x, y));
-		//(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2(x + width, y));
-		//(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2(x + width, y + height));
-		//(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(x, y, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(x, y + height));
-		//primitive->points.push(Vector2(width / 2.0f, height / 2.0f));
-		
 		(flags & ROUND_TOP_LEFT_RECT)     ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
 		(flags & ROUND_TOP_RIGHT_RECT)    ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)y));
 		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)height));
 		(flags & ROUND_BOTTOM_LEFT_RECT)  ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
-	
 	} else {
 		primitive->add_point(Vector2(0.0f, 0.0f));
 		primitive->add_point(Vector2((float)width, 0.0f));
@@ -513,7 +722,38 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 		primitive->add_point(Vector2(0.0f, (float)height));
 	}
 
-	primitive->make_triangle_polygon(color);
+	primitive->make_triangle_polygon();
+	add_primitive(primitive);
+}
+
+void Render_2D::draw_texture(int x, int y, int width, int height, Texture *texture)
+{
+	String hash = String(width + height);
+	
+	Render_Primitive_2D_Info render_primitive;
+	render_primitive.position.x = (float)x;
+	render_primitive.position.y = (float)y;
+	render_primitive.color = Color::White;
+	render_primitive.texture = texture;
+	
+	Primitive_2D *found_primitive = NULL;
+	if (lookup_table.get(hash, found_primitive)) {
+		render_primitive.primitive = found_primitive;
+		render_primitives.push(render_primitive);
+		return;
+	}
+	
+	Primitive_2D *primitive = new Primitive_2D;
+	lookup_table.set(hash, primitive);
+	render_primitive.primitive = primitive;
+	render_primitives.push(render_primitive);
+
+	primitive->add_point(Vector2(0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	primitive->add_point(Vector2((float)width, 0.0f), Vector2(1.0f, 0.0f));
+	primitive->add_point(Vector2((float)width, (float)height), Vector2(1.0f, 1.0f));
+	primitive->add_point(Vector2(0.0f, (float)height), Vector2(0.0f, 1.0f));
+
+	primitive->make_triangle_polygon();
 	add_primitive(primitive);
 }
 
@@ -531,7 +771,7 @@ void Render_2D::draw_primitives()
 		free_com_object(vertex_buffer);
 		free_com_object(index_buffer);
 
-		vertex_buffer = make_vertex_buffer(sizeof(Vertex_XC), total_vertex_count, NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+		vertex_buffer = make_vertex_buffer(sizeof(Vertex_X2UV), total_vertex_count, NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 		index_buffer = make_index_buffer(total_index_count, NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 		D3D11_MAPPED_SUBRESOURCE buffer;
@@ -543,13 +783,13 @@ void Render_2D::draw_primitives()
 		HR(directx11.device_context->Map(vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &buffer));
 		HR(directx11.device_context->Map(index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &i_buffer));
 
-		Vertex_XC *p1 = (Vertex_XC *)buffer.pData;
+		Vertex_X2UV *p1 = (Vertex_X2UV *)buffer.pData;
 		u32 *p2 = (u32 *)i_buffer.pData;
 
 		Primitive_2D *primitive = NULL;
 		For(primitives, primitive) {
 
-			memcpy((void *)p1, primitive->vertices.items, primitive->vertices.count * sizeof(Vertex_XC));
+			memcpy((void *)p1, primitive->vertices.items, primitive->vertices.count * sizeof(Vertex_X2UV));
 			memcpy((void *)p2, primitive->indices.items, primitive->indices.count * sizeof(u32));
 			p1 += primitive->vertices.count;
 			p2 += primitive->indices.count;
@@ -564,16 +804,19 @@ void Render_2D::draw_primitives()
 	Shader_Manager *sm = render_sys.get_shader_manager();
 	Shader *render_2d = sm->get_shader("render_2d");
 
-	directx11.device_context->IASetInputLayout(Input_Layout::table["vertex_color"]);
+	directx11.device_context->IASetInputLayout(Input_Layout::table["vertex_xuv"]);
 	directx11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	UINT stride = sizeof(Vertex_XC);
+	UINT stride = sizeof(Vertex_X2UV);
 	UINT offset = 0;
 	directx11.device_context->IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
 	directx11.device_context->IASetIndexBuffer(index_buffer, DXGI_FORMAT_R32_UINT, 0);
 
 	directx11.device_context->VSSetShader(render_2d->vertex_shader, NULL, 0);
 	directx11.device_context->PSSetShader(render_2d->pixel_shader, NULL, 0);
+
+	float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	directx11.device_context->OMSetBlendState(blending_test, b, 0xffffffff);
 
 	directx11.device_context->OMSetDepthStencilState(depth_test, 0);
 
@@ -588,11 +831,15 @@ void Render_2D::draw_primitives()
 		
 		directx11.device_context->VSSetConstantBuffers(0, 1, &constant_buffer);
 		directx11.device_context->PSSetConstantBuffers(0, 1, &constant_buffer);
+		
+		if (render_primitive->texture) {
+			directx11.device_context->PSSetShaderResources(0, 1, &render_primitive->texture->shader_resource);
+		}
 
 		Primitive_2D *primitive = render_primitive->primitive;
 		directx11.device_context->DrawIndexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
 	}
 
+	directx11.device_context->OMSetBlendState(0, b, 0);
 	directx11.device_context->RSSetState(0);
-
 }

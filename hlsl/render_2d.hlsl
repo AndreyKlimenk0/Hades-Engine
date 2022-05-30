@@ -2,31 +2,24 @@
 #define __RENDER_2D__
 
 #include "cbuffer.hlsl"
+#include "vertex.hlsl"
 
 
-struct Vertex_In {
-	float2 position : POSITION;
-	float4 color : COLOR;
-};
-
-struct Vertex_Out {
-	float4 position : SV_POSITION;
-	float4 color : COLOR;
-};
-
-Vertex_Out vs_main(Vertex_In vertex)
+Vertex_XUV_Out vs_main(Vertex_XUV_In vertex)
 {
-	Vertex_Out result;
+	Vertex_XUV_Out result;
 	result.position = mul(float4(vertex.position, 0.0f, 1.0f), orthographics_matrix);
-	result.color = vertex.color;
 	result.position.z = 0.0f;
 	result.position.w = 1.0f;
+	result.uv = vertex.uv;
 	return result;
 }
 
-float4 ps_main(Vertex_Out pixel) : SV_TARGET
+float4 ps_main(Vertex_XUV_Out pixel) : SV_TARGET
 {
-	return primitive_color;
+	float4 color = primitive_color * texture_map.Sample(sampler_anisotropic, pixel.uv);
+	float alpha = texture_map.Sample(sampler_anisotropic, pixel.uv).a;
+	return float4(color.xyz, alpha);
 }
 
 #endif

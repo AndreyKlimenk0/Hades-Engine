@@ -131,13 +131,18 @@ struct Test {
 
 void test()
 {	
-	String shader = "demo.hlsl";
-	String shader2 = "demo_ps.hlsl";
-
-	Array<String> buffer;
-	if (split(&shader, "_", &buffer)) {
-		print("Ok");
-	} else {
-		print("faild");
-	}
+	Hash_Table<String, int> table;
+	//table.set(String("100"), 1);
+	//table.set(String("200"), 1);
+	//table.set(String("300"), 1);
+	//table.set(String("400"), 1);
+	//table.set(String("500"), 1);
+	//table.set(String("600"), 1);
+	//table.set(String("700"), 1);
+	//table.set(String("800"), 1);
+	//table.set(String("900"), 1);
+	//table.set(String("1100"), 1);
+	//table.set(String("2100"), 1);
+	//table.set(String("3100"), 1);
+	//table.set(String("4100"), 1);
 }

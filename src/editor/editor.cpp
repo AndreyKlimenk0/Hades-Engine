@@ -157,7 +157,7 @@ Label::Label(int _x, int _y, const char *_text) : Element(_x, _y)
 
 void Label::draw()
 {
-	direct2d.draw_text(x, y, text);
+	//direct2d.draw_text(x, y, text);
 }
 
 Caret::Caret(float x, float y, float height)
@@ -189,9 +189,9 @@ void Caret::draw()
 		show_time_accumulator += elapsed_time;
 		if (show_time_accumulator < show_time) {
 			if (use_float_rect) {
-				direct2d.fill_rect(fx, fy, fwidth, fheight, Color::White);
+				//direct2d.fill_rect(fx, fy, fwidth, fheight, Color::White);
 			} else {
-				direct2d.fill_rect(x, y, width, height, Color::White);
+				//direct2d.fill_rect(x, y, width, height, Color::White);
 			}
 		} else {
 			show = false;
@@ -328,14 +328,16 @@ void Button::draw()
 		return;
 	}
 
+	Render_2D *render_2d = get_render_2d();
+
 	if (flags & ELEMENT_HOVER) {
-		direct2d.draw_rounded_rect(x, y, width, height, theme.rounded_border, theme.rounded_border, theme.hover_color);
+		render_2d->draw_rect(x, y, width, height, theme.hover_color, theme.rounded_border);
 	} else {
-		direct2d.draw_rounded_rect(x, y, width, height, theme.rounded_border, theme.rounded_border, theme.color);
+		render_2d->draw_rect(x, y, width, height, theme.color, theme.rounded_border);
 	}
 
 	if (!text.is_empty()) {
-		direct2d.draw_text(text_position.x, text_position.y, text);
+		//direct2d.draw_text(text_position.x, text_position.y, text);
 	}
 }
 
@@ -390,18 +392,18 @@ void List_Box::draw()
 {
 	label.draw();
 
-	direct2d.draw_rounded_rect(x, y, header_width, height, theme.rounded_border, theme.rounded_border, theme.color);
+	//direct2d.draw_rounded_rect(x, y, header_width, height, theme.rounded_border, theme.rounded_border, theme.color);
 
 	if (current_chosen_item_text) {
-		direct2d.draw_text(text_x, text_y, current_chosen_item_text->to_str());
+		//direct2d.draw_text(text_x, text_y, current_chosen_item_text->to_str());
 	} else {
-		direct2d.draw_text(text_x, text_y, "There is no added items");
+		//direct2d.draw_text(text_x, text_y, "There is no added items");
 	}
 
 	drop_button.draw();
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
-		direct2d.draw_rounded_rect(x, y + 2 + height, header_width, list_box_size, theme.rounded_border, theme.rounded_border, theme.color);
+		//direct2d.draw_rounded_rect(x, y + 2 + height, header_width, list_box_size, theme.rounded_border, theme.rounded_border, theme.color);
 		for (int i = 0; i < item_list.count; i++) {
 			item_list[i]->draw();
 		}
@@ -787,14 +789,14 @@ void Edit_Field::handle_event(Event *event)
 void Edit_Field::draw()
 {
 	label.draw();
-	direct2d.draw_rounded_rect(x, y, field_width, height, theme.rounded_border, theme.rounded_border, theme.color);
+	//direct2d.draw_rounded_rect(x, y, field_width, height, theme.rounded_border, theme.rounded_border, theme.color);
 
 	if (flags & ELEMENT_FOCUSED) {
 		caret.draw();
 	}
 
 	if (!text.is_empty()) {
-		direct2d.draw_text(x + theme.shift_caret_from_left, place_in_middle(this, direct_write.glyph_height) + 1, text);
+		//direct2d.draw_text(x + theme.shift_caret_from_left, place_in_middle(this, direct_write.glyph_height) + 1, text);
 	}
 }
 
@@ -1155,7 +1157,7 @@ void Window::add_element(Element *element)
 void Window::make_header()
 {
 	ID2D1Bitmap *cross_image = NULL;
-	load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\cross.png", 1, 1, &cross_image);
+	//load_bitmap_from_file("D:\\dev\\Hades-Engine\\data\\editor\\cross.png", 1, 1, &cross_image);
 
 	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(window_theme.header_height, get_height_from_bitmap(cross_image), 70);
 
@@ -1380,19 +1382,22 @@ void Window::draw()
 	//direct2d.draw_rounded_rect(x, y, width, height, factor, factor, window_theme.header_color);
 	//direct2d.draw_rounded_rect(x, y + window_theme.header_height, width, height - window_theme.header_height, factor, factor, window_theme.color);
 	//direct2d.fill_rect(x, y + window_theme.header_height, width, 10, window_theme.color);
-	direct2d.fill_rect(x, y, width, height, window_theme.color);
-	direct2d.draw_rect(x, y, width, height, window_theme.header_color, 3.0f);
+
+	Render_2D *render_2d = render_sys.get_render_2d();
+	
+	render_2d->draw_rect(x, y, width, height, window_theme.color);
+	//direct2d.draw_rect(x, y, width, height, window_theme.header_color, 3.0f);
 
 	if (flags & WINDOW_WITH_HEADER) {
 
 		if (flags & ELEMENT_FOCUSED) {
-			direct2d.fill_rect(x, y, width, window_theme.header_height, Color(26, 26, 26));
+			render_2d->draw_rect(x, y, width, window_theme.header_height, Color(26, 26, 26));
 		} else {
-			direct2d.fill_rect(x, y, width, window_theme.header_height, window_theme.header_color);
+			render_2d->draw_rect(x, y, width, window_theme.header_height, window_theme.header_color);
 		}
 
 		if (theme.draw_window_name_in_header && !name.is_empty()) {
-			direct2d.draw_text(header_text_position.x, header_text_position.y, name);
+			//direct2d.draw_text(header_text_position.x, header_text_position.y, name);
 		}
 	}
 
