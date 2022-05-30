@@ -12,7 +12,7 @@ struct Vertex_XC_Out {
 };
 
 struct Vertex_XUV_In {
-    float3 position : POSITION;
+    float2 position : POSITION;
     float2 uv       : TEXCOORD;
 };
 

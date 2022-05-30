@@ -278,6 +278,14 @@ String::~String()
 	DELETE_ARRAY(data);
 }
 
+String::String(char _char)
+{
+	len = 1;
+	data = new char[2];
+	data[0] = _char;
+	data[1] = '\0';
+}
+
 String::String(int number)
 {
 	char *num = to_string(number);

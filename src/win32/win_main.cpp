@@ -58,7 +58,7 @@ template <typename... Args>
 void display_text(int x, int y, Args... args)
 {
 	char *formatted_text = format(args...);
-	direct2d.draw_text(x, y, formatted_text);
+	draw_text(x, y, formatted_text);
 	DELETE_ARRAY(formatted_text);
 }
 
@@ -75,12 +75,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	
 	directx11.init();
 	
-	direct_write.init("Consolas", 11, Color::White);
-	direct_write.init_characters();
+	//direct_write.init("Consolas", 11, Color::Red);
+	//direct_write.init_characters();
 	
-	direct2d.init(directx11.swap_chain);
+	//direct2d.init(directx11.swap_chain);
 	
-	font.init(50);
+	font.init(30);
 
 
 	texture_manager.init();
@@ -119,7 +119,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		editor.update();
 
 		directx11.begin_draw();
-		direct2d.begin_draw();
+		//direct2d.begin_draw();
 		
 		render_sys.render_frame();	
 
@@ -130,12 +130,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		s64 x = cpu_ticks_counter() - t;
 		s64 fps = cpu_ticks_per_second() / x;
 		
-		display_text(700, 70, "Fps {} ms", fps);
-		display_text(700, 90, "Microseconds elapsed {} ms", r);
+		char *s = format("fps{}", fps);
+		draw_text(700, 0, s);
+		free_string(s);
+		//display_text(700, 70, "Fps {} ms", fps);
+		//display_text(700, 90, "Microseconds elapsed {} ms", r);
 		//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
 		
+		//draw_text(0, 0, "dotaISNOTGAMEJ");
+		//draw_text(10, 70, "ahrgpbqy");
+		//draw_text(10, 150, "klimenko");
 		
-		direct2d.end_draw();
+		//direct2d.end_draw();
 		directx11.end_draw();
 	}
 
@@ -160,7 +166,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			win32.window_width = LOWORD(lParam);
 			win32.window_height = HIWORD(lParam);
 			
-			directx11.resize(&direct2d);
+			directx11.resize();
 			render_sys.resize();
 			
 			break;
