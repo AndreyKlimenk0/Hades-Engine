@@ -274,10 +274,10 @@ void Render_System::render_frame()
 
 	//render_2d.draw_texture(0, 0, 500, 500, render_2d.temp);
 //	render_2d.draw_texture(600, 0, 400, 400, &render_2d.font_atlas);
-	const char *text = "aaaa";
+	const char *text = "ANDREYKLIENMKOQWEZ";
 	Size_u32 s = font.get_text_size(text);
-	render_2d.draw_rect(10, 10, s.width, s.height, Color::Red);
-	render_2d.draw_text(10, 10, text);
+	//render_2d.draw_rect(10, 10, s.width, s.height, Color::Red);
+	//render_2d.draw_text(10, 10, text);
 
 	//render_2d.draw_rect(0, 0, 900, 300, Color::Black);
 	//render_2d.draw_rect(0, 400, 200, 200, Color::Red, 50);
@@ -287,7 +287,7 @@ void Render_System::render_frame()
 	//For(rects, rect) {
 	//	render_2d.draw_rect(rect->x, rect->y, rect->width, rect->height, rect->color);
 	//}
-
+	editor.draw();
 	render_2d.draw_primitives();
 }
 
