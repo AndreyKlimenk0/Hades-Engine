@@ -6,6 +6,7 @@
 #include "editor.h"
 #include "../libs/color.h"
 #include "../libs/os/input.h"
+#include "../libs/math/common.h"
 #include "../sys/sys_local.h"
 #include "../win32/win_time.h"
 #include "../win32/win_local.h"
@@ -151,8 +152,8 @@ static inline void place_in_center(int *x, int *y, int placed_element_width, int
 Label::Label(int _x, int _y, const char *_text) : Element(_x, _y)
 {
 	text = _text;
-	width = direct_write.get_text_width(text);
-	height = direct_write.glyph_height;
+	width = font.get_text_width(text);
+	height = font.max_height;
 }
 
 void Label::draw()
@@ -222,12 +223,12 @@ Button::Button(const char *_text, int _x, int _y, int _width, int _height, Butto
 	text = _text;
 
 	if (_width == 0) {
-		_width = direct_write.get_text_width(_text);
+		_width = font.get_text_width(_text);
 	}
 	width = _width;
 
 	if (_height == 0) {
-		_height = direct_write.glyph_height;
+		_height = font.max_height;
 	}
 	height = _height;
 
@@ -291,11 +292,11 @@ void Button::init_button(int _x, int _y, int _width, int _height, Button_Theme *
 void Button::init_text_button(const char * _text, int _x, int _y, int _width, int _height, Button_Theme * _button_theme)
 {
 	if (_width == -1) {
-		_width = direct_write.get_text_width(_text);
+		_width = font.get_text_width(_text);
 	}
 
 	if (_height == -1) {
-		_height = direct_write.glyph_height;
+		_height = font.max_height;
 	}
 
 	text_position = Point(x + (theme.border_about_text / 2) + theme.text_shift, y + (theme.border_about_text / 2));
@@ -338,6 +339,7 @@ void Button::draw()
 
 	if (!text.is_empty()) {
 		//direct2d.draw_text(text_position.x, text_position.y, text);
+		render_2d->draw_text(text_position.x, text_position.y, text);
 	}
 }
 
@@ -345,14 +347,14 @@ List_Box::List_Box(const char *_label, int _x, int _y)
 {
 	type = ELEMENT_TYPE_LIST_BOX;
 	theme = list_box_theme;
-	x = _x + direct_write.get_text_width(_label) + theme.list_box_shift_from_text;
+	x = _x + font.get_text_width(_label) + theme.list_box_shift_from_text;
 	y = _y;
-	width = direct_write.get_text_width(_label) + theme.list_box_shift_from_text + theme.header_width;;
+	width = font.get_text_width(_label) + theme.list_box_shift_from_text + theme.header_width;;
 	height = theme.header_height;
 
 	header_width = theme.header_width;
 
-	label = Label(_x, place_in_middle(this, direct_write.glyph_height), _label);
+	label = Label(_x, place_in_middle(this, font.max_height), _label);
 
 	button_theme.rounded_border = 2.0f;
 	button_theme.border_about_text = 0;
@@ -374,7 +376,7 @@ List_Box::List_Box(const char *_label, int _x, int _y)
 	drop_button.init_texture_button("cross.png", x + width - 50, y);
 	drop_button.callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
 
-	text_y = place_in_middle(this, direct_write.glyph_height);
+	text_y = place_in_middle(this, font.max_height);
 	text_x = x + 2;
 }
 
@@ -444,11 +446,11 @@ void List_Box::handle_event(Event *event)
 
 void List_Box::add_item(const char *item_text)
 {
-	Button *button = new Button(item_text, x, (y + 2 + height) + (direct_write.glyph_height * item_list.count), header_width, direct_write.glyph_height, &button_theme);
+	Button *button = new Button(item_text, x, (y + 2 + height) + (font.max_height * item_list.count), header_width, font.max_height, &button_theme);
 	button->callback = new Member_Callback<List_Box>(this, &List_Box::on_list_item_click);
 	item_list.push(button);
 
-	list_box_size += direct_write.glyph_height;
+	list_box_size += font.max_height;
 
 	if (item_list.count == 1) {
 		current_chosen_item_text = &item_list[0]->text;
@@ -474,18 +476,18 @@ String *List_Box::get_chosen_item_string()
 
 void List_Box::set_position(int _x, int _y)
 {
-	x = _x + direct_write.get_text_width(label.text) + theme.list_box_shift_from_text;
+	x = _x + font.get_text_width(label.text) + theme.list_box_shift_from_text;
 	y = _y;
 
 	drop_button.set_position(x + header_width - 50, _y);
 
-	label.set_position(_x, place_in_middle(this, direct_write.glyph_height));
+	label.set_position(_x, place_in_middle(this, font.max_height));
 
-	text_y = place_in_middle(this, direct_write.glyph_height);
+	text_y = place_in_middle(this, font.max_height);
 	text_x = x + 2;
 
 	for (int i = 0; i < item_list.count; i++) {
-		item_list[i]->set_position(x, (y + 2 + height) + (direct_write.glyph_height * i));
+		item_list[i]->set_position(x, (y + 2 + height) + (font.max_height * i));
 	}
 }
 
@@ -599,9 +601,9 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
-	x = _x + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;
+	x = _x + font.get_text_width(_label_text) + theme.field_shift_from_text;
 	y = _y;
-	width = theme.width + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;;
+	width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;;
 	height = theme.height;
 
 	field_width = theme.width;
@@ -612,7 +614,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	edit_data_type = _edit_data_type;
 
-	label = Label(_x, place_in_middle(this, direct_write.glyph_height), _label_text);
+	label = Label(_x, place_in_middle(this, font.max_height), _label_text);
 
 	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
 
@@ -631,7 +633,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 	} else if (edit_data_type == EDIT_DATA_FLOAT) {
 		text.append("0.0");
 
-		D2D1_SIZE_F size = direct_write.get_text_size_in_pixels("0.0");
+		Size_u32 size = font.get_text_size("0.0");
 		caret.fx += size.width;
 
 		caret_index_for_inserting = 3;
@@ -654,9 +656,9 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
-	x = _x + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;
+	x = _x + font.get_text_width(_label_text) + theme.field_shift_from_text;
 	y = _y;
-	width = theme.width + direct_write.get_text_width(_label_text) + theme.field_shift_from_text;;
+	width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;;
 	height = theme.height;
 
 	field_width = theme.width;
@@ -667,7 +669,7 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 
 	edit_data_type = EDIT_DATA_FLOAT;
 
-	label = Label(_x, place_in_middle(this, direct_write.glyph_height), _label_text);
+	label = Label(_x, place_in_middle(this, font.max_height), _label_text);
 
 	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
 
@@ -796,7 +798,7 @@ void Edit_Field::draw()
 	}
 
 	if (!text.is_empty()) {
-		//direct2d.draw_text(x + theme.shift_caret_from_left, place_in_middle(this, direct_write.glyph_height) + 1, text);
+		//direct2d.draw_text(x + theme.shift_caret_from_left, place_in_middle(this, font.max_height) + 1, text);
 	}
 }
 
@@ -804,19 +806,19 @@ void Edit_Field::set_position(int _x, int _y)
 {
 	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
 
-	x = _x + direct_write.get_text_width(label.text) + theme.field_shift_from_text;
+	x = _x + font.get_text_width(label.text) + theme.field_shift_from_text;
 	y = _y;
 
-	label.set_position(_x, place_in_middle(this, direct_write.glyph_height));
+	label.set_position(_x, place_in_middle(this, font.max_height));
 	caret.set_position(x + theme.shift_caret_from_left, place_in_middle(this, caret_height));
 
-	int text_width = direct_write.get_text_width(text);
+	int text_width = font.get_text_width(text);
 	caret.fx = x + theme.shift_caret_from_left + text_width + caret.fwidth;
 }
 
 void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 {
-	int text_width = direct_write.get_text_width(text);
+	int text_width = font.get_text_width(text);
 	int mouse_x_relative_text = mouse_x - x - theme.shift_caret_from_left;
 
 	if (mouse_x_relative_text > text_width) {
@@ -855,13 +857,13 @@ void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 void Edit_Field::set_text(const char * _text)
 {
 	if (!text.is_empty()) {
-		int width_current_text = direct_write.get_text_width(text);
+		int width_current_text = font.get_text_width(text);
 		caret.fx -= width_current_text;
 	}
 
 	text = String(_text, 0, 7);
 
-	int _width = direct_write.get_text_width(text);
+	int _width = font.get_text_width(text);
 	caret.fx += _width;
 
 	caret_index_for_inserting = text.len;
@@ -1246,7 +1248,7 @@ void Window::move(int x_delta, int y_delta)
 void Window::set_name(const char *_name)
 {
 	int _x, _y;
-	D2D1_SIZE_F size = direct_write.get_text_size_in_pixels(_name);
+	Size_u32 size = font.get_text_size(_name);
 	
 	name = _name;
 	
@@ -1397,6 +1399,7 @@ void Window::draw()
 		}
 
 		if (theme.draw_window_name_in_header && !name.is_empty()) {
+			render_2d->draw_text(header_text_position.x, header_text_position.y, name);
 			//direct2d.draw_text(header_text_position.x, header_text_position.y, name);
 		}
 	}
