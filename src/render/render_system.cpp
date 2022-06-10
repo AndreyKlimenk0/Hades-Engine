@@ -274,20 +274,22 @@ void Render_System::render_frame()
 
 	//render_2d.draw_texture(0, 0, 500, 500, render_2d.temp);
 //	render_2d.draw_texture(600, 0, 400, 400, &render_2d.font_atlas);
-	const char *text = "ANDREYKLIENMKOQWEZ";
-	Size_u32 s = font.get_text_size(text);
+	//const char *text = "ANDREYKLIENMKOQWEZ";
+	//Size_u32 s = font.get_text_size(text);
 	//render_2d.draw_rect(10, 10, s.width, s.height, Color::Red);
 	//render_2d.draw_text(10, 10, text);
 
 	//render_2d.draw_rect(0, 0, 900, 300, Color::Black);
 	//render_2d.draw_rect(0, 400, 200, 200, Color::Red, 50);
 	
-
 	//rect_t *rect = NULL;
 	//For(rects, rect) {
 	//	render_2d.draw_rect(rect->x, rect->y, rect->width, rect->height, rect->color);
 	//}
+
+	
 	editor.draw();
+
 	render_2d.draw_primitives();
 }
 
@@ -424,39 +426,6 @@ inline void draw_not_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, co
 	directx11.device_context->Draw(vertex_count, 0);
 }
 
-void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width, float _height)
-{
-	float xpos = x;
-	float ypos = y;
-
-	float width = _width == 0.0f ? texture->width : _width;
-	float height = _height == 0.0f ? texture->height : _height;
-
-	Vertex vertices[4] = {
-		Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos + height), 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f)),
-		Vertex(Vector3(x_to_screen_space(xpos), y_to_screen_space(ypos), 0.0f),  Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f)),
-		Vertex(Vector3(x_to_screen_space(xpos + width), y_to_screen_space(ypos), 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 0.0f)),
-		Vertex(Vector3(x_to_screen_space(xpos + width), y_to_screen_space(ypos + height), 0.0f),Vector3(0.0f, 0.0f, 1.0f),  Vector2(1.0f, 1.0f)),
-	};
-
-	u32 indices[6] = {
-		0, 1, 2,
-		0, 2, 3
-	};
-
-	//Fx_Shader *color = fx_shader_manager.get_shader("base");
-	//color->bind("texture_map", texture->shader_resource);
-	//color->attach("draw_texture");
-
-	Gpu_Buffer *vertex_buffer = make_vertex_buffer(sizeof(Vertex), 4, (void *)vertices);
-	Gpu_Buffer *index_buffer = make_index_buffer(6, indices);
-
-	draw_indexed_traingles(vertex_buffer, sizeof(Vertex), "vertex", index_buffer, 6);
-
-	free_com_object(vertex_buffer);
-	free_com_object(index_buffer);
-}
-
 #include <math.h>
 const float PI = 3.14;
 static inline float degrees_to_radian(u32 degrees)
@@ -476,7 +445,7 @@ enum Rect_Side {
 	RECT_SIDE_BOTTOM_RIGHT,
 };
 
-void Primitive_2D::add_rounded_points(int x, int y, int width, int height, Rect_Side rect_side, u32 rounding)
+void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)
 {
 	if ((rounding > width) || (rounding > height)) {
 		int size;
@@ -659,16 +628,7 @@ void Render_2D::add_primitive(Primitive_2D *primitive)
 void Render_2D::draw_text(int x, int y, const char *text)
 {
 	u32 len = strlen(text);
-	u32 max_height = 0;
-	
-	for (u32 i = 0; i < len; i++) {
-		char c = text[i];	
-		Font_Char &font_char = font.characters[c];
-
-		if (font_char.size.height > max_height) {
-			max_height = font_char.size.height;
-		}
-	}
+	u32 max_height = font.get_text_size(text).height;
 
 	for (u32 i = 0; i < len; i++) {
 
@@ -677,7 +637,7 @@ void Render_2D::draw_text(int x, int y, const char *text)
 
 		Render_Primitive_2D_Info info;
 		info.texture = &font_atlas;
-		info.position = Vector2(x, y + (max_height - font_char.size.height));
+		info.position = Vector2(x + font_char.bearing.width, y + (max_height - font_char.size.height) + (font_char.size.height - font_char.bearing.height));
 		info.color = Color::White;
 		info.primitive = lookup_table[String(c)];
 		
@@ -688,33 +648,38 @@ void Render_2D::draw_text(int x, int y, const char *text)
 	}
 }
 
-void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
+void Render_2D::draw_rect(Rect_u32 *rect, const Color &color, u32 rounding, u32 flags)
+{
+	draw_rect((int)rect->x, (int)rect->y, (int)rect->width, (int)rect->height, color, rounding, flags);
+}
+
+void Render_2D::draw_rect(float x, float y, float width, float height, const Color &color, u32 rounding, u32 flags)
 {
 	String hash = String(width + height + (int)rounding);
-	
+
 	Render_Primitive_2D_Info render_primitive;
-	render_primitive.position.x = (float)x;
-	render_primitive.position.y = (float)y;
+	render_primitive.position.x = x;
+	render_primitive.position.y = y;
 	render_primitive.color.value = color.value;
 	render_primitive.texture = &default_texture;
-	
+
 	Primitive_2D *found_primitive = NULL;
 	if (lookup_table.get(hash, found_primitive)) {
 		render_primitive.primitive = found_primitive;
 		render_primitives.push(render_primitive);
 		return;
 	}
-	
+
 	Primitive_2D *primitive = new Primitive_2D;
 	lookup_table.set(hash, primitive);
 	render_primitive.primitive = primitive;
 	render_primitives.push(render_primitive);
 
 	if (rounding > 0) {
-		(flags & ROUND_TOP_LEFT_RECT)     ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-		(flags & ROUND_TOP_RIGHT_RECT)    ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)y));
-		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)height));
-		(flags & ROUND_BOTTOM_LEFT_RECT)  ? primitive->add_rounded_points(0, 0, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
+		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
+		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)y));
+		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)height));
+		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
 	} else {
 		primitive->add_point(Vector2(0.0f, 0.0f));
 		primitive->add_point(Vector2((float)width, 0.0f));
@@ -724,6 +689,16 @@ void Render_2D::draw_rect(int x, int y, int width, int height, const Color &colo
 
 	primitive->make_triangle_polygon();
 	add_primitive(primitive);
+}
+
+void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
+{
+	float _x = static_cast<float>(x);
+	float _y = static_cast<float>(y);
+	float _width = static_cast<float>(width);
+	float _height = static_cast<float>(height);
+
+	draw_rect(_x, _y, _width, _height, color, rounding, flags);
 }
 
 void Render_2D::draw_texture(int x, int y, int width, int height, Texture *texture)

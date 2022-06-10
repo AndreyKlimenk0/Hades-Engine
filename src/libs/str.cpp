@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "str.h"
 #include "../sys/sys_local.h"
@@ -58,6 +59,18 @@ bool split(String *string, const char *symbols, Array<String> *array)
 		array->push(String(*string, prev_pos, string->len));
 	}
 
+	return true;
+}
+
+bool is_alphabet(const char *string)
+{
+	u32 len = strlen(string);
+
+	for (u32 i = 0; i < len; i++) {
+		if (!isalpha(string[i])) {
+			return false;
+		}
+	}
 	return true;
 }
 

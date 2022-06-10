@@ -82,7 +82,9 @@ void error(Args... args)
 struct Args;
 
 struct Callback {
+	~Callback() {}
 	virtual void call() = 0;
+	virtual Callback *copy() = 0;
 };
 
 template< typename T>
@@ -93,6 +95,8 @@ struct Member_Callback : Callback {
 	void (T::*member)();
 
 	void call() { (object->*member)(); }
+	Callback *copy() { return new Member_Callback<T>(object, member); }
+
 };
 
 template <typename T>
@@ -106,6 +110,7 @@ struct Function_Callback : Callback {
 	void(*callback)();
 
 	void call() { (*callback)(); }
+	Callback *copy() { return new Function_Callback(callback); }
 };
 
 struct Function_Callback_With_Arg : Callback {
@@ -114,6 +119,7 @@ struct Function_Callback_With_Arg : Callback {
 
 	void call() {}
 	void call(Args *args) { (*callback)(args); }
+	Callback *copy() { assert(false); return NULL; }
 };
 
 #endif

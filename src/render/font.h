@@ -32,6 +32,7 @@ struct Font {
 
 	u32 max_height = 0;
 	u32 max_width  = 0;
+	u32 max_alphabet_height = 0;
 
 	u32 bitmaps_width = 0;
 	u32 bitmaps_height = 0;
@@ -41,6 +42,7 @@ struct Font {
 	Hash_Table<char, Font_Char> characters;
 	
 	void init(int font_size);
+	u32 get_char_width(char c);
 	u32 get_text_width(const char *text);
 	Size_u32 get_text_size(const char *text);
 };
