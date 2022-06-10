@@ -11,6 +11,8 @@
 #include "../game/world.h"
 #include <tuple>
 #include "../libs/str.h"
+#include "../render/font.h"
+
 
 
 #define TO_STRING(x) (#x)
@@ -131,18 +133,6 @@ struct Test {
 
 void test()
 {	
-	Hash_Table<String, int> table;
-	//table.set(String("100"), 1);
-	//table.set(String("200"), 1);
-	//table.set(String("300"), 1);
-	//table.set(String("400"), 1);
-	//table.set(String("500"), 1);
-	//table.set(String("600"), 1);
-	//table.set(String("700"), 1);
-	//table.set(String("800"), 1);
-	//table.set(String("900"), 1);
-	//table.set(String("1100"), 1);
-	//table.set(String("2100"), 1);
-	//table.set(String("3100"), 1);
-	//table.set(String("4100"), 1);
+	Font_Char c = font.characters['.'];
+	print("");
 }

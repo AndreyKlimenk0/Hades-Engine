@@ -11,64 +11,6 @@
 #include "../libs/color.h"
 #include "../libs/ds/hash_table.h"
 
-struct Direct_Character {
-	float width;
-	float height;
-};
-
-struct Direct_Write {
-	Direct_Write() : characters(128) {}
-	~Direct_Write();
-
-	wchar_t *font_name = NULL;
-	IDWriteFactory *write_factory = NULL;
-	IDWriteTextFormat *text_format = NULL;
-	IDWriteFontFace *font_face = NULL;
-
-	int glyph_height;
-	int glyph_width;
-	int font_size;
-	
-	float max_glyph_height = 0.0f;
-	float max_glyph_width = 0.0f;
-	float avarage_glyph_height = 0.0f;
-	
-	Color text_color;
-
-	Hash_Table<char, Direct_Character> characters;
-
-	void init(const char *_font_name, int _font_size, const Color &color);
-	void init_characters();
-	void shutdown();
-
-	D2D1_SIZE_F get_text_size_in_pixels(const char *text);
-	int get_text_width(const char *text);
-	int get_max_glyph_height(const char *text);
-};
-
-inline int Direct_Write::get_text_width(const char *text)
-{
-	D2D1_SIZE_F size = get_text_size_in_pixels(text);
-	return static_cast<int>(size.width);
-}
-
-inline int Direct_Write::get_max_glyph_height(const char *text)
-{
-	int max_glyph_height = 0;
-	int str_len = strlen(text);
-	
-	for (int i = 0; i < str_len; i++) {
-		Direct_Character c = characters[text[i]];
-		if (c.height > max_glyph_height) {
-			max_glyph_height = c.height;
-		}
-	}
-
-	return max_glyph_height;
-}
-
-extern Direct_Write direct_write;
-
 
 struct Rect {
 	int x;

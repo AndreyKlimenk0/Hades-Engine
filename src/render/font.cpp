@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <d3dx11.h>
 #include <windows.h>
 
@@ -36,9 +37,6 @@ void Font::init(int font_size)
 		//	print("Font::init: Failed to load the face bitmap of char {} index {}", (char)c, (int)c);
 		//	continue;
 		//}
-		if (c == ' ') {
-			print("K");
-		}
 
 		Font_Char font_char;
 		font_char.advance_y = face->glyph->advance.y;
@@ -56,11 +54,20 @@ void Font::init(int font_size)
 
 		if (font_char.size.height > max_height) {
 			max_height = font_char.size.height;
+			print("max char = {}", (char)c);
 		}
 
+		if (isalpha(c) && (font_char.size.height > max_alphabet_height)) {
+			max_alphabet_height = font_char.size.height;
+		}
 		
 		characters.set(c, font_char);
 	}
+}
+
+u32 Font::get_char_width(char c)
+{
+	return characters[c].size.width;
 }
 
 u32 Font::get_text_width(const char *text)
@@ -71,6 +78,8 @@ u32 Font::get_text_width(const char *text)
 
 Size_u32 Font::get_text_size(const char *text)
 {
+	assert(text);
+
 	u32 len = strlen(text);
 	u32 max_height = 0;
 	Size_u32 result;
@@ -79,20 +88,12 @@ Size_u32 Font::get_text_size(const char *text)
 		char c = text[index];
 		Font_Char &font_char = characters[c];
 
-		//if (font_char.size.height > max_height) {
-		//	max_height = font_char.size.height;
-		//	result.height = font_char.size.height;
-		//}
 
 		if (font_char.size.height > max_height) {
 			max_height = font_char.size.height;
 			result.height = font_char.size.height;
 		}
 		
-		//if (c == ' ') {
-		//	result.width += font_char.advance >> 6;
-		//}
-
 		if ((index == 0) && (index == (len - 1))) {
 			result.width += (font_char.advance >> 6) - (font_char.bearing.width * 2);
 			break;
