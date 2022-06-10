@@ -12,7 +12,7 @@
 #include "../libs/ds/linked_list.h"
 #include "../libs/ds/hash_table.h"
 #include "../sys/sys_local.h"
-
+#include "../render/font.h"
 
 struct Event;
 struct Callback;
@@ -20,9 +20,8 @@ struct Form;
 struct Picked_Panel;
 
 
-struct Button_Theme {
-	int border_about_text = 6;
-	int text_shift = 0;
+struct Text_Button_Theme {
+	int border_about_text = 10;
 	u32 rounded_border = 5;
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
@@ -30,10 +29,12 @@ struct Button_Theme {
 };
 
 struct List_Box_Theme {
+	int field_text_offset_from_left = 5;
+	int drop_button_offset_from_right = 5;
 	int border_about_text = 0;
 	int list_box_shift = 2;
-	int header_width = 180;
-	int header_height = 20;
+	int field_width = 180;
+	int field_height = 20;
 	int list_box_shift_from_text = 4;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
@@ -43,6 +44,7 @@ struct Edit_Field_Theme {
 	int width = 180;
 	int height = 20;
 	int shift_caret_from_left = 4;
+	int text_offset_from_left = shift_caret_from_left;
 	int field_shift_from_text = 4;
 	float caret_height_in_percents = 80.0f;
 	float rounded_border = 4.0f;
@@ -68,7 +70,10 @@ struct Window_Theme {
 
 enum Element_Type {
 	ELEMENT_TYPE_UNDEFINED,
+	ELEMENT_TYPE_TEXT,
 	ELEMENT_TYPE_BUTTON,
+	ELEMENT_TYPE_TEXT_BUTTON,
+	ELEMENT_TYPE_TEXTURE_BUTTON,
 	ELEMENT_TYPE_PANEL_LIST_BOX,
 	ELEMENT_TYPE_LIST_BOX,
 	ELEMENT_TYPE_INPUT_FIELD,
@@ -108,6 +113,7 @@ struct Element {
 	int x;
 	int y;
 	int width;
+
 	int height;
 
 	virtual void draw() = 0;
@@ -115,9 +121,22 @@ struct Element {
 	virtual void set_position(int _x, int y_) = 0;
 };
 
+struct Text : Element {
+	Text() { type = ELEMENT_TYPE_TEXT; }
+	Text(const char *text);
+
+	String string;
+
+	void operator=(const char *text);
+
+	void draw();
+	void handle_event(Event *event) { assert(false); }
+	void set_position(int _x, int _y);
+};
+
 struct Caret : Element {
 	Caret() {};
-	Caret(int x, int y) : Element(x, y, 1, direct_write.glyph_height) {} // blink time are a time in milliseconds
+	Caret(int x, int y) : Element(x, y, 1, font.max_height) {} // blink time are a time in milliseconds
 	Caret(float x, float y, float height);
 
 	bool use_float_rect = false;
@@ -140,29 +159,38 @@ enum Button_Place_Type {
 
 struct Button : Element {
 	Button() { type = ELEMENT_TYPE_BUTTON; }
-	Button(const char *_text, int _x = 0, int _y = 0, int _width = 0, int _height = 0, Button_Theme *_button_theme = NULL);
 	~Button();
 
-	Texture *texture = NULL;
 	Callback *callback = NULL;
+	Text_Button_Theme theme;
+	
+	void draw() = 0;
+	void set_position(int _x, int _y) = 0;
 
-	bool cursor_on_button = false;
-	float scale;
+	Button(const Button &other);
+	void handle_event(Event *event);
+	void operator=(const Button &other);
+};
 
-	Point text_position;
+struct Text_Button : Button {
+	Text_Button() { type = ELEMENT_TYPE_TEXT_BUTTON; }
+	Text_Button(const char *_text, int _width = 0, int _height = 0);
+	
+	Text text;
+	
+	void draw();
+	void set_theme(Text_Button_Theme *_theme);
+	void set_position(int _x, int _y);
+};
 
-	String text;
-	Button_Theme theme;
+struct Texture_Button : Button {
+	Texture_Button() { type = ELEMENT_TYPE_TEXTURE_BUTTON; }
+	Texture_Button(Texture *_texture, float scale = 1.0f);
+	
+	Texture *texture = NULL;
 
 	void draw();
-	void handle_event(Event *event);
 	void set_position(int _x, int _y);
-
-	void init_button(int _x, int _y, int _width, int _height, Button_Theme *_button_theme = NULL);
-	void init_text_button(const char *_text, int _x = -1, int _y = -1, int _width = -1, int _height = -1, Button_Theme *_button_theme = NULL);
-	void init_texture_button(const char *texture_name, int _x = -1, int _y = -1, int _width = -1, int _height = -1, Button_Theme *_button_theme = NULL);
-
-	DELETE_COPING(Button);
 };
 
 enum Label_Side {
@@ -186,7 +214,7 @@ struct Label : Element {
 struct Input_Field : Element {
 	Input_Field() { type = ELEMENT_TYPE_INPUT_FIELD; }
 	Input_Field(int x, int y, int width, int height) : Element(x, y, width, height) {};
-	Label label;
+	Text label;
 
 	void draw() { assert(false); }
 	void handle_event(Event *event) { assert(false); }
@@ -200,41 +228,38 @@ enum List_Box_State {
 	LIST_BOX_IS_DROPPED,
 };
 
-struct List_Box : Input_Field {
-	
+struct List_Box : Input_Field {	
 	List_Box(const char *_label, int _x = 0, int _y = 0);
-	~List_Box();
 
-	Button *button = NULL;
-	Button drop_button;
-	String *current_chosen_item_text = NULL;
+	Text_Button *button = NULL;
+	Text current_chosen_item_text;
+	Texture_Button drop_button;
 	
 	List_Box_State list_state = LIST_BOX_IS_PICKED_UP;
 	
-	int text_x;
-	int text_y;
-	int header_width;
 	int list_box_size;
-	int button_height;
-	int drop_button_image_width;
+	//Point text_position;
+	Rect_u32 field_rect;
+	//Point field_position;
 
 	List_Box_Theme theme;
-	Button_Theme button_theme;
+	Text_Button_Theme button_theme;
 	
-	Array<Button *> item_list;
+	Array<Text_Button> item_list;
 	Hash_Table<String, int> string_enum_pairs;
 
 	void draw();
+	void handle_event(Event *event);
+	void set_position(int _x, int _y);
+	
 	void on_list_item_click();
 	void on_drop_button_click();
-	void handle_event(Event *event);
 	void add_item(const char *item_text);
 	void add_item(const char *string, int enum_value);
 	
 	int get_chosen_enum_value();
 	String *get_chosen_item_string();
 	
-	void set_position(int _x, int _y);
 };
 
 struct Panel_List_Box : List_Box {
@@ -273,17 +298,18 @@ enum Edit_Data_Type {
 struct Edit_Field : Input_Field {
 	Edit_Field() { type = ELEMENT_TYPE_EDIT_FIELD; }
 	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
-	//Edit_Field(int _x, int _y, const char *_label_text, int *int_value);
 	Edit_Field(const char *_label_text, float *float_value, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
-	//Edit_Field(int _x, int _y, const char *_label_text, String *string_value);
+
 
 	bool edit_itself_data;
 
+	int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
 	int max_text_width;
 	int text_width;
-	int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
 	int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
 	int field_width;
+
+	Point field_position;
 	
 	Edit_Data_Type edit_data_type;
 
@@ -319,11 +345,12 @@ struct Vector3_Edit_Field : Input_Field {
 	Vector3_Edit_Field() { type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD; }
 	Vector3_Edit_Field(const char *_label, int _x = 0, int _y = 0);
 	Vector3_Edit_Field(const char *_label, Vector3 *vec3, int _x = 0, int _y = 0);
-	~Vector3_Edit_Field() {};
 
-	Edit_Field x;
-	Edit_Field y;
-	Edit_Field z;
+	u32 place_between_fields = 10;
+
+	Edit_Field x_field;
+	Edit_Field y_field;
+	Edit_Field z_field;
 
 	void draw();
 	void handle_event(Event *event);
@@ -374,8 +401,9 @@ struct Window : Element {
 	Point next_place;
 	Point last_mouse_position;
 	Point header_text_position;
+	Rect_u32 header;
 
-	Button *close_button = NULL;
+	Texture_Button close_button;
 
 	String name;
 
