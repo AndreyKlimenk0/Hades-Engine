@@ -107,12 +107,19 @@ struct Render_2D {
 	void add_primitive(Primitive_2D *primitive);
 	void draw_primitives();
 	
+
+	void draw_text(Rect_u32 *rect, const char *text);
 	void draw_text(int x, int y, const char *text);
 	void draw_rect(Rect_u32 *rect, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void draw_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void draw_texture(int x, int y, int width, int height, Texture *texture);
 };
+
+inline void Render_2D::draw_text(Rect_u32 *rect, const char *text)
+{
+	draw_text((int)rect->x, (int)rect->y, text);
+}
 
 
 inline void Render_2D::clear()

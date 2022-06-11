@@ -83,10 +83,10 @@ static int compare_list_boxies(const void *first, const void *second)
 	const List_Box *first_list_box = static_cast<const List_Box *>(first);
 	const List_Box *second_list_box = static_cast<const List_Box *>(second);
 
-	return first_list_box->y > second_list_box->y;
+	return first_list_box->rect.y > second_list_box->rect.y;
 }
 
-static inline bool detect_collision(Mouse_Info *mouse, int x, int y, int width, int height)
+inline bool detect_collision(Mouse_Info *mouse, int x, int y, int width, int height)
 {
 	if (mouse->x > x && mouse->x < (x + width) && mouse->y > y && mouse->y < (y + height)) {
 		return true;
@@ -94,11 +94,10 @@ static inline bool detect_collision(Mouse_Info *mouse, int x, int y, int width, 
 	return false;
 }
 
-
-static inline bool detect_collision(Mouse_Info *mouse, Element *element)
+inline bool detect_collision(Mouse_Info *mouse, Rect_u32 *rect)
 {
-	if (mouse->x > element->x && mouse->x < (element->x + element->width) &&
-		mouse->y > element->y && mouse->y < (element->y + element->height)) {
+	if (mouse->x > rect->x && mouse->x < (rect->x + rect->width) && 
+		mouse->y > rect->y && mouse->y < (rect->y + rect->height)) {
 		return true;
 	}
 	return false;
@@ -111,17 +110,17 @@ inline float calculate_scale_based_on_percent_from_element_height(int header_hei
 	return ratios;
 }
 
-inline int place_in_middle(Element *dest, int height)
+inline int place_in_middle(Rect_u32 *dest, int height)
 {
 	return (dest->y + dest->height / 2) - (height / 2);
 }
 
-inline int place_in_middle(Element *dest, Element *source)
+inline int place_in_middle(Rect_u32 *dest, Rect_u32 *source)
 {
 	return (dest->y + dest->height / 2) - (source->height / 2);
 }
 
-inline void place_in_middle(Element *element, int width, int height)
+inline void place_in_middle(Rect_u32 *element, int width, int height)
 {
 	assert(element->width > 2);
 	assert(element->height > 2);
@@ -136,58 +135,73 @@ inline void place_in_center(int *x, int *y, int placed_element_width, int placed
 	*y = (height / 2) - (placed_element_height / 2);
 }
 
-void place_in_center(Element *in_element_place, Element *placed_element)
+void place_in_center(Rect_u32 *in_element_place, Rect_u32 *placed_element)
 {
 	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
 	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
 }
 
-static void draw_debug_rect(Element *element)
+inline void place_in_middle_and_by_left(Rect_u32 *placing_element, Rect_u32 *placed_element, int offset_from_left = 0)
+{
+	placed_element->x = placing_element->x + offset_from_left;
+	placed_element->y = place_in_middle(placing_element, placed_element);
+}
+
+inline void place_in_middle_and_by_right(Rect_u32 *placing_element, Rect_u32 *placed_element, int offset_from_right = 0)
+{
+	placed_element->x = placing_element->x + placing_element->width - placed_element->width - offset_from_right;
+	placed_element->y = place_in_middle(placing_element, placed_element);
+}
+
+void inline place_by_left(Rect_u32 *element, Rect_u32 *point, int offset_from_left = 0)
+{
+	point->x = element->x + offset_from_left;
+	point->y = element->y;
+}
+
+static void draw_debug_rect(Rect_u32 *rect)
 {
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_rect(element->x, element->y, element->width, element->height, Color::Red);
+	render_2d->draw_rect(rect, Color::Red);
 }
 
 Text::Text(const char *text)
 {
 	Size_u32 size = font.get_text_size(text);
 	string = text;
-	width = size.width;
-	height = size.height;
+	rect.set(size);
 }
 
 void Text::operator=(const char *text)
 {
 	Size_u32 size = font.get_text_size(text);
 	string = text;
-	width = size.width;
-	height = size.height;
+	rect.set(size);
 }
 
 void Text::draw()
 {
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_text(x, y, string);
+	render_2d->draw_text(rect.x, rect.y, string);
 }
 
-void Text::set_position(int _x, int _y)
+void Text::set_position(u32 x, u32 y)
 {
-	x = _x;
-	y = _y;
+	rect.set(x, y);
 }
 
-Label::Label(int _x, int _y, const char *_text) : Element(_x, _y)
-{
-	text = _text;
-	width = font.get_text_width(text);
-	height = font.max_height;
-}
-
-void Label::draw()
-{
-	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_text(x, y, text);
-}
+//Label::Label(int _x, int _y, const char *_text) : Element(_x, _y)
+//{
+//	text = _text;
+//	width = font.get_text_width(text);
+//	height = font.max_height;
+//}
+//
+//void Label::draw()
+//{
+//	Render_2D *render_2d = get_render_2d();
+//	render_2d->draw_text(x, y, text);
+//}
 
 Caret::Caret(float x, float y, float height)
 {
@@ -222,7 +236,7 @@ void Caret::draw()
 			if (use_float_rect) {
 				render_2d->draw_rect(fx, fy, fwidth, fheight, Color::White);
 			} else {
-				render_2d->draw_rect(x, y, width, height, Color::White);
+				render_2d->draw_rect(&rect, Color::White);
 			}
 		} else {
 			show = false;
@@ -239,10 +253,9 @@ void Caret::draw()
 	last_time = milliseconds_counter();
 }
 
-void Caret::set_position(int _x, int _y)
+void Caret::set_position(u32 x, u32 y)
 {
-	fx = _x;
-	fy = _y;
+	rect.set(x, y);
 }
 
 Button::~Button()
@@ -253,7 +266,7 @@ Button::~Button()
 void Button::handle_event(Event *event)
 {
 	if (event->type == EVENT_TYPE_MOUSE) {
-		if (detect_collision(&event->mouse_info, this)) {
+		if (detect_collision(&event->mouse_info, &rect)) {
 			flags |= ELEMENT_HOVER;
 		} else {
 			flags &= ~ELEMENT_HOVER;
@@ -269,20 +282,14 @@ void Button::handle_event(Event *event)
 
 Button::Button(const Button &other)
 {
-	x = other.x;
-	y = other.y;
-	width = other.width;
-	height = other.height;
+	rect = other.rect;
 	theme = other.theme;
 	callback = other.callback->copy();
 }
 
 void Button::operator=(const Button &other)
 {
-	x = other.x;
-	y = other.y;
-	width = other.width;
-	height = other.height;
+	rect = other.rect;
 	theme = other.theme;
 	
 	if (other.callback) {
@@ -290,50 +297,32 @@ void Button::operator=(const Button &other)
 	}
 }
 
-//void Button::draw()
-//{
-//	Render_2D *render_2d = get_render_2d();
-//	
-//	if (texture) {
-//		render_2d->draw_texture(x, y, width, height, texture);
-//		return;
-//	}
-//
-//
-//	if (flags & ELEMENT_HOVER) {
-//		render_2d->draw_rect(x, y, width, height, theme.hover_color, theme.rounded_border);
-//	} else {
-//		render_2d->draw_rect(x, y, width, height, theme.color, theme.rounded_border);
-//	}
-//
-//	if (!text.is_empty()) {
-//		render_2d->draw_text(text_position.x, text_position.y, text);
-//	}
-//}
-
-List_Box::List_Box(const char *_label, int _x, int _y)
+List_Box::List_Box(const char *_label, u32 x, u32 y)
 {
+	u32 total_width = theme.field_width + font.get_text_width(_label) + theme.list_box_shift_from_text;
+	
 	type = ELEMENT_TYPE_LIST_BOX;
 	theme = list_box_theme;
-	x = _x;
-	y = _y;
-	width = theme.field_width + font.get_text_width(_label) + theme.list_box_shift_from_text;
-	height = theme.field_height;
-	field_rect = Rect_u32(x + font.get_text_width(_label) + theme.list_box_shift_from_text, y, theme.field_width, height);
+	rect = Rect_u32(x, y, total_width, theme.field_height);
+
+	field_rect = Rect_u32(x + font.get_text_width(_label) + theme.list_box_shift_from_text, y, theme.field_width, rect.height);
 
 	label = Text(_label);
 
-	button_theme.rounded_border = 2.0f;
 	button_theme.border_about_text = 0;
-	button_theme.color = Color(74, 82, 90);
+	button_theme.rounded_border = 0.0f;
+	button_theme.color = theme.color;
 
 	list_box_size = 0;
 
 	Texture *cross_texture = texture_manager.get_texture("down.png");
-	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(height, cross_texture->height, 70);
+	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(rect.height, cross_texture->height, 70);
 
 	drop_button = Texture_Button(cross_texture, cross_scale_factor);
 	drop_button.callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
+
+	current_chosen_item_text = "There is no added items.";
+	//place_in_middle_and_by_left(&field_rect, current_chosen_item_text, theme.field_text_offset_from_left);
 }
 
 void List_Box::draw()
@@ -343,17 +332,17 @@ void List_Box::draw()
 	Render_2D *render_2d = get_render_2d();
 	render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
 
-	if (current_chosen_item_text.string.is_empty()) {
-		render_2d->draw_text(current_chosen_item_text.x, current_chosen_item_text.y, "There is no added items.");
-	} else {
+	//if (current_chosen_item_text.string.is_empty()) {
+		//render_2d->draw_text(current_chosen_item_text, "There is no added items.");
+	//} else {
 		current_chosen_item_text.draw();
-	}
+	//}
 
 	drop_button.draw();
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
-		//render_2d->draw_rect(x, y + 2 + height, theme.field_width, list_box_size, theme.color, theme.rounded_border);
-		//render_2d->draw_rect(field_position.x, y + 2 + height, theme.field_width, list_box_size, theme.color, theme.rounded_border);
+		render_2d->draw_rect(&list_box_rect, theme.color, theme.rounded_border);
+		
 		for (int i = 0; i < item_list.count; i++) {
 			item_list[i].draw();
 		}
@@ -365,7 +354,7 @@ void List_Box::on_list_item_click()
 	if (button) {
 		button->flags &= ~ELEMENT_HOVER;
 		list_state = LIST_BOX_IS_PICKED_UP;
-		current_chosen_item_text.string = button->text.string;
+		current_chosen_item_text = button->text.string;
 	}
 }
 
@@ -393,21 +382,19 @@ void List_Box::handle_event(Event *event)
 
 void List_Box::add_item(const char *item_text)
 {
-	//Button *button = new Button(item_text, x, (y + 2 + height) + (font.max_height * item_list.count), header_width, font.max_height, &button_theme);
-	int button_height = 50;
-	//int button_y = y + theme.field_width + (button_height * item_list.count);
-	int button_y = y + theme.field_height;
-	//Button *button = new Button(item_text, field_position.x, button_y, theme.field_width, button_height, &button_theme);
-	Text_Button button = Text_Button(item_text);
-	//button->init_text_button(item_text, field_position.x, button_y, theme.field_width, button_height, &button_theme);
-	//Button *button = new Button(item_text, field_position.x, (y + 2 + height) + (font.max_height * item_list.count), theme.field_width, font.max_height + 10, &button_theme);
+	Text_Button button = Text_Button(item_text, field_rect.width, field_rect.height);
+	button.set_position(field_rect.x, field_rect.bottom() + (field_rect.height * item_list.count) + 10);
+	button.set_theme(&button_theme);
 	button.callback = new Member_Callback<List_Box>(this, &List_Box::on_list_item_click);
+	
 	item_list.push(button);
 
-	list_box_size += font.max_height;
+	list_box_size += button.get_height();
+
+	list_box_rect.set_wh(field_rect.width, list_box_size + theme.list_box_top_bottom_border);
 
 	if (item_list.count == 1) {
-		current_chosen_item_text.string = item_list[0].text.string;
+		current_chosen_item_text = item_list[0].text.string;
 	}
 }
 
@@ -427,42 +414,18 @@ String *List_Box::get_chosen_item_string()
 	return &current_chosen_item_text.string;
 }
 
-inline void place_in_middle_and_by_left(Element *placing_element, Element *placed_element, int offset_from_left = 0)
+void List_Box::set_position(u32 x, u32 y)
 {
-	placed_element->x = placing_element->x + offset_from_left;
-	placed_element->y = place_in_middle(placing_element, placed_element);
-}
+	rect.set(x, y);
+	place_by_left(&rect, &field_rect, label.get_width() + theme.list_box_shift_from_text);
+	place_in_middle_and_by_left(&field_rect, current_chosen_item_text, theme.field_text_offset_from_left);
+	place_in_middle_and_by_left(&rect, label);
+	place_in_middle_and_by_right(&rect, drop_button, theme.drop_button_offset_from_right);
 
-inline void place_in_middle_and_by_right(Element *placing_element, Element *placed_element, int offset_from_right = 0)
-{
-	placed_element->x = placing_element->x + placing_element->width - placed_element->width - offset_from_right;
-	placed_element->y = place_in_middle(placing_element, placed_element);
-}
-
-void inline place_by_left(Element *element, Rect_u32 *point, int offset_from_left = 0)
-{
-	point->x = element->x + offset_from_left;
-	point->y = element->y;
-}
-
-void inline place_by_left(Rect_u32 *element, Element *point, int offset_from_left = 0)
-{
-	point->x = element->x + offset_from_left;
-	point->y = element->y;
-}
-
-void List_Box::set_position(int _x, int _y)
-{
-	x = _x;
-	y = _y;
-	
-	place_by_left(this, &field_rect, label.width + theme.list_box_shift_from_text);
-	place_by_left(&field_rect, &current_chosen_item_text, theme.field_text_offset_from_left);
-	place_in_middle_and_by_left(this, &label);
-	place_in_middle_and_by_right(this, &drop_button, theme.drop_button_offset_from_right);
+	list_box_rect.set(field_rect.x, field_rect.bottom() + theme.list_box_offset);
 
 	for (int i = 0; i < item_list.count; i++) {
-		item_list[i].set_position(x, (y + 2 + height) + (font.max_height * i));
+		item_list[i].set_position(x, (y + 2 + rect.height) + (font.max_height * i));
 	}
 }
 
@@ -555,12 +518,12 @@ void Picked_Panel::add_field(Input_Field *input_field)
 	input_fields.push(input_field);
 }
 
-void Picked_Panel::set_position(int _x, int _y)
+void Picked_Panel::set_position(u32 x, u32 y)
 {
 	assert(false);
 }
 
-Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme, int _x, int _y)
+Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme, u32 x, u32 y)
 {
 	if (edit_theme) {
 		theme = *edit_theme;
@@ -572,10 +535,8 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
-	x = _x;
-	y = _y;
-	width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;
-	height = theme.height;
+	u32 total_width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;
+	rect = Rect_u32(x, y, total_width, theme.height);
 
 	field_position = Point(y, x + font.get_text_width(_label_text) + theme.field_shift_from_text);
 
@@ -589,7 +550,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	label = Text(_label_text);
 
-	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
+	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(*this, caret_height), caret_height);
 
 
 	if (edit_data_type == EDIT_DATA_INT) {
@@ -617,7 +578,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 	}
 }
 
-Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_Theme *edit_theme, int _x, int _y)
+Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_Theme *edit_theme, u32 x, u32 y)
 {
 	if (edit_theme) {
 		theme = *edit_theme;
@@ -629,10 +590,8 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
-	x = _x + font.get_text_width(_label_text) + theme.field_shift_from_text;
-	y = _y;
-	width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;;
-	height = theme.height;
+	u32 total_width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;
+	rect = Rect_u32(x, y, total_width, theme.height);
 
 	field_width = theme.width;
 
@@ -644,7 +603,7 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 
 	label = Text(_label_text);
 
-	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(this, caret_height), caret_height);
+	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(*this, caret_height), caret_height);
 
 	edit_data.not_itself_data.float_value = float_value;
 
@@ -677,7 +636,7 @@ void Edit_Field::handle_event(Event *event)
 	static int last_mouse_y;
 
 	if (event->type == EVENT_TYPE_MOUSE) {
-		if (detect_collision(&event->mouse_info, this)) {
+		if (detect_collision(&event->mouse_info, &rect)) {
 			flags |= ELEMENT_HOVER;
 
 			last_mouse_x = event->mouse_info.x;
@@ -765,7 +724,8 @@ void Edit_Field::draw()
 {
 	Render_2D *render_2d = get_render_2d();
 	
-	render_2d->draw_rect(field_position.x, field_position.y, theme.width, height, theme.color, theme.rounded_border);
+	print("Edit_Field::draw() !!!!!!!!!!!");
+	//render_2d->draw_rect(field_position.x, field_position.y, theme.width, height, theme.color, theme.rounded_border);
 
 	label.draw();
 
@@ -774,20 +734,19 @@ void Edit_Field::draw()
 	}
 
 	if (!text.is_empty()) {
-		render_2d->draw_text(field_position.x + theme.text_offset_from_left, place_in_middle(this, font.max_height), text);
+		render_2d->draw_text(field_position.x + theme.text_offset_from_left, place_in_middle(*this, font.max_height), text);
 	}
 }
 
-void Edit_Field::set_position(int _x, int _y)
+void Edit_Field::set_position(u32 x, u32 y)
 {
-	x = _x;
-	y = _y;
-	field_position = Point(x + label.width + theme.field_shift_from_text, y);
+	rect.set(x, y);
+	field_position = Point(x + label.get_width() + theme.field_shift_from_text, y);
 
 	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
 	
-	label.set_position(x, place_in_middle(this, font.max_height));
-	caret.set_position(x + theme.shift_caret_from_left, place_in_middle(this, caret_height));
+	label.set_position(x, place_in_middle(*this, font.max_height));
+	caret.set_position(x + theme.shift_caret_from_left, place_in_middle(*this, caret_height));
 
 	u32 text_width = font.get_text_width(text);
 	caret.fx = field_position.x + theme.shift_caret_from_left + text_width;
@@ -796,7 +755,7 @@ void Edit_Field::set_position(int _x, int _y)
 void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 {
 	int text_width = font.get_text_width(text);
-	int mouse_x_relative_text = mouse_x - x - theme.shift_caret_from_left;
+	int mouse_x_relative_text = mouse_x - rect.x - theme.shift_caret_from_left;
 
 	if (mouse_x_relative_text > text_width) {
 		caret.fx = field_position.x + theme.shift_caret_from_left + text_width;
@@ -821,7 +780,7 @@ void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 				characters_width += char_width;
 			}
 
-			caret.fx = x + theme.shift_caret_from_left + characters_width;
+			caret.fx = rect.x + theme.shift_caret_from_left + characters_width;
 			caret_index_for_inserting = i;
 			caret_index_in_text = i - 1;
 			break;
@@ -888,10 +847,10 @@ float Edit_Field::get_float_value()
 	return *edit_data.not_itself_data.float_value;
 }
 
-Vector3_Edit_Field::Vector3_Edit_Field(const char *_label, int _x, int _y)
+Vector3_Edit_Field::Vector3_Edit_Field(const char *_label, u32 x, u32 y)
 {
 	//@Note: The Constructor doeesn't support setting of positon.
-	assert(_x == 0);
+	assert(x == 0);
 
 	type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD;
 
@@ -909,15 +868,15 @@ Vector3_Edit_Field::Vector3_Edit_Field(const char *_label, int _x, int _y)
 	Size_u32 label_size = font.get_text_size(_label);
 	
 	u32 fields_count = 3;
-	width = label_size.width + x_field.width + y_field.width + z_field.width + (place_between_fields * fields_count);
-	height = x_field.height;
+	u32 total_width = label_size.width + x_field.get_width() + y_field.get_width() + z_field.get_width() + (place_between_fields * fields_count);
+	rect = Rect_u32(x, y, total_width, theme.height);
 	print("Right Constructor");
 }
 
-Vector3_Edit_Field::Vector3_Edit_Field(const char * _label, Vector3 *vec3, int _x, int _y)
+Vector3_Edit_Field::Vector3_Edit_Field(const char * _label, Vector3 *vec3, u32 x, u32 y)
 {
 	//@Note: The Constructor doeesn't support setting of positon
-	assert(_x == 0);
+	assert(x == 0);
 
 	type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD;
 
@@ -950,24 +909,20 @@ void Vector3_Edit_Field::handle_event(Event * event)
 	z_field.handle_event(event);
 }
 
-void Vector3_Edit_Field::set_position(int _x, int _y)
+void Vector3_Edit_Field::set_position(u32 x, u32 y)
 {
-	x = _x;
-	y = _y;
+	rect.set(x, y);
 
-	label.set_position(_x, place_in_middle(this, label.height));
+	label.set_position(x, place_in_middle(*this, label.get_height()));
 
-	int x_field_position = _x + label.width + place_between_fields;
-	x_field.set_position(x_field_position, _y);
+	int x_field_position = x + label.get_width() + place_between_fields;
+	x_field.set_position(x_field_position, y);
 
-	int y_field_position = x_field_position + x_field.width + place_between_fields;
-	y_field.set_position(y_field_position, _y);
+	int y_field_position = x_field_position + x_field.get_width() + place_between_fields;
+	y_field.set_position(y_field_position, y);
 	
-	int z_field_position = y_field_position + y_field.width + place_between_fields;
-	z_field.set_position(z_field_position, _y);
-
-	// Label x position works only for current window size
-	//label.set_position(_x - (edit_width * 2) - 50 - label.width, x.label.y);
+	int z_field_position = y_field_position + y_field.get_width() + place_between_fields;
+	z_field.set_position(z_field_position, y);
 }
 
 void Vector3_Edit_Field::get_vector(Vector3 *vector)
@@ -993,9 +948,9 @@ void Form::add_field(Input_Field *input_field)
 	input_fields.push(input_field);
 }
 
-void Form::set_position(int _x, int _y)
+void Form::set_position(u32 x, u32 y)
 {
-	submit->set_position(_x, _y);
+	submit->set_position(x, y);
 }
 
 void Form::on_submit()
@@ -1087,33 +1042,32 @@ Window::~Window()
 	}
 }
 
-void Window::make_window(int _x, int _y, int _width, int _height, int _flags, Window_Theme *_theme)
+void Window::make_window(int x, int y, u32 width, u32 height, int _flags, Window_Theme *_theme)
 {
 	next_place.x = 0;
 	next_place.y = 0;
-	width = _width;
-	height = _height;
-	x = _x > -1 ? _x : 0;
-	y = _y > -1 ? _y : 0;
+	x = x > -1 ? x : 0;
+	y = y > -1 ? y : 0;
+	rect = Rect_u32((u32)x, (u32)y, width, height);
 
 	type = ELEMENT_TYPE_WINDOW;
 	theme = _theme ? *_theme : window_theme;
 
-	if (_x == -1 || _y == -1) {
-		place_in_middle(this, win32.window_width, win32.window_height);
-	}
+	if (x == -1 || y == -1) {
+		place_in_middle(&rect, win32.window_width, win32.window_height);
+	} 
 
 	if (_flags & WINDOW_CENTER) {
-		place_in_middle(this, win32.window_width, win32.window_height);
+		place_in_middle(&rect, win32.window_width, win32.window_height);
 	}
 
 	if (_flags & WINDOW_WITH_HEADER) {
 		flags |= WINDOW_WITH_HEADER;
-		next_place.y += window_theme.header_height;
+		next_place.y += window_theme.header_height + window_theme.offset_from_header;
 
 	}
-	next_place.x += x + window_theme.shift_element_from_window_side;
-	next_place.y += y + window_theme.offset_from_window_top;
+	next_place.x += rect.x + window_theme.shift_element_from_window_side;
+	next_place.y += rect.y;
 }
 void Window::add_header_text(const char *)
 {
@@ -1153,7 +1107,7 @@ void Window::add_element(Element *element)
 
 void Window::make_header()
 {
-	header = Rect_u32(x, y, width, theme.header_height);
+	header = Rect_u32(rect.x, rect.y, rect.width, theme.header_height);
 	
 	Texture *cross = texture_manager.get_texture("cross_button1.png");
 	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(window_theme.header_height, cross->height, 70.0f);
@@ -1168,38 +1122,38 @@ void Window::calculate_current_place(Element *element)
 {
 	if (place == PLACE_VERTICALLY) {
 		if (aligment == RIGHT_ALIGNMENT) {		
-			next_place.x = (x + width) - (element->width + theme.shift_element_from_window_side);
+			next_place.x = rect.right() - (element->get_width() + theme.shift_element_from_window_side);
 		} else {
-			next_place.x = x + theme.shift_element_from_window_side;
+			next_place.x = rect.x + theme.shift_element_from_window_side;
 		}
 
 	} else if (place == PLACE_HORIZONTALLY) {
 		if (aligment == RIGHT_ALIGNMENT) {
-			next_place.x -= element->width + window_theme.place_between_elements;
-			if (next_place.x < x) {
-				next_place.x = ((x + width) - theme.shift_element_from_window_side) - (element->width + window_theme.place_between_elements);
-				next_place.y += element->height + window_theme.place_between_elements;
+			next_place.x -= element->get_width() + window_theme.place_between_elements;
+			if (next_place.x < rect.x) {
+				next_place.x = (rect.right() - theme.shift_element_from_window_side) - (element->get_width() + window_theme.place_between_elements);
+				next_place.y += element->get_height() + window_theme.place_between_elements;
 			}
 		} else {
-			if ((next_place.x + element->width) > (x + width)) {
-				next_place.x = x + theme.shift_element_from_window_side;
-				next_place.y += element->height + window_theme.place_between_elements;
+			if ((next_place.x + element->get_width()) > rect.right()) {
+				next_place.x = rect.x + theme.shift_element_from_window_side;
+				next_place.y += element->get_height() + window_theme.place_between_elements;
 			}
 		}
 	} else if (place == PLACE_HORIZONTALLY_AND_IN_MIDDLE) {
-		next_place.y = place_in_middle(element, this);
+		next_place.y = place_in_middle(&rect, &element->rect);
 	}
 }
 
 void Window::calculate_next_place(Element * element)
 {
 	if (place == PLACE_VERTICALLY) {
-		next_place.y += element->height + window_theme.place_between_elements;
+		next_place.y += element->get_height() + window_theme.place_between_elements;
 	} else {
 		if (aligment == RIGHT_ALIGNMENT) {
 			//next_place.x -= element->width + window_theme.place_between_elements;
 		} else {
-			next_place.x += element->width + window_theme.place_between_elements;
+			next_place.x += element->get_width() + window_theme.place_between_elements;
 		}
 	}
 }
@@ -1219,24 +1173,24 @@ void Window::window_callback()
 
 void Window::move(int x_delta, int y_delta)
 {
-	x += x_delta;
-	y += y_delta;
+	rect.x += x_delta;
+	rect.y += y_delta;
 
 	header_text_position.x += x_delta;
 	header_text_position.y += y_delta;
 
-	place_in_middle_and_by_right(this, &close_button, theme.shift_cross_button_from_left_on);
+	place_in_middle_and_by_right(&rect, close_button, theme.shift_cross_button_from_left_on);
 	//close_button.set_position(100, 100);
 
 	Element *element = NULL;
 	For(elements, element) {
-		element->set_position(element->x + x_delta, element->y + y_delta);
+		element->set_position(element->get_x() + x_delta, element->get_y() + y_delta);
 	}
 
 
 	List_Box *list_box = NULL;
 	For(list_boxies, list_box) {
-		list_box->set_position(list_box->x + x_delta, list_box->y + y_delta);
+		list_box->set_position(list_box->get_x() + x_delta, list_box->get_y() + y_delta);
 	}
 }
 
@@ -1247,9 +1201,9 @@ void Window::set_name(const char *_name)
 	
 	name = _name;
 	
-	place_in_center(&_x, &_y, size.width, size.height, width, theme.header_height);
-	header_text_position.x = _x + x;
-	header_text_position.y = _y + y;
+	place_in_center(&_x, &_y, size.width, size.height, rect.width, theme.header_height);
+	header_text_position.x = _x + rect.x;
+	header_text_position.y = _y + rect.y;
 }
 
 void Window::set_element_position(Element *element)
@@ -1306,17 +1260,17 @@ void Window::set_alignment(Alignment _alignment)
 {
 	if (_alignment == RIGHT_ALIGNMENT) {
 		aligment = RIGHT_ALIGNMENT;
-		next_place.x = (x + width) - theme.shift_element_from_window_side;
+		next_place.x = rect.right() - theme.shift_element_from_window_side;
 	} else {
 		aligment = LEFT_ALIGNMENT;
-		next_place.x = x + theme.shift_element_from_window_side;
+		next_place.x = rect.x + theme.shift_element_from_window_side;
 	}
 }
 
 void Window::handle_event(Event *event)
 {
 	if (event->type == EVENT_TYPE_MOUSE) {
-		if (detect_collision(&event->mouse_info, x, y, width, height)) {
+		if (detect_collision(&event->mouse_info, &rect)) {
 			flags |= ELEMENT_HOVER;
 		} else {
 			flags &= ~ELEMENT_HOVER;
@@ -1327,7 +1281,8 @@ void Window::handle_event(Event *event)
 
 		if (event->type == EVENT_TYPE_MOUSE) {
 
-			if (detect_collision(&event->mouse_info, x, y, width, window_theme.header_height)) {
+			Rect_u32 header_rect = Rect_u32(rect.x, rect.y, rect.width, window_theme.header_height);
+			if (detect_collision(&event->mouse_info, &header_rect)) {
 				flags |= WINDOW_HEADER_HOVER;
 			} else {
 				flags &= ~WINDOW_HEADER_HOVER;
@@ -1379,15 +1334,16 @@ void Window::draw()
 
 	Render_2D *render_2d = render_sys.get_render_2d();
 	
-	render_2d->draw_rect(x, y, width, height, window_theme.color);
+	render_2d->draw_rect(&rect, window_theme.color);
 	//direct2d.draw_rect(x, y, width, height, window_theme.header_color, 3.0f);
 
 	if (flags & WINDOW_WITH_HEADER) {
 
+		Rect_u32 header_rect = Rect_u32(rect.x, rect.y, rect.width, window_theme.header_height);
 		if (flags & ELEMENT_FOCUSED) {
-			render_2d->draw_rect(x, y, width, window_theme.header_height, Color(26, 26, 26));
+			render_2d->draw_rect(&header_rect, Color(26, 26, 26));
 		} else {
-			render_2d->draw_rect(x, y, width, window_theme.header_height, window_theme.header_color);
+			render_2d->draw_rect(&header_rect, window_theme.header_color);
 		}
 
 		if (theme.draw_window_name_in_header && !name.is_empty()) {
@@ -1397,7 +1353,7 @@ void Window::draw()
 	}
 
 	Texture *cross = texture_manager.get_texture("cross_button1.png");
-	render_2d->draw_texture(100, 100, close_button.width, close_button.height, cross);
+	render_2d->draw_texture(100, 100, close_button.get_width(), close_button.get_height(), cross);
 	//close_button.draw();
 
 	Element *element = NULL;
@@ -1510,17 +1466,17 @@ void Editor::make_window(int flags)
 	}
 
 	if (WINDOW_LEFT & flags) {
-		current_window->x = 0;
-		current_window->y = 0;
+		current_window->rect.x = 0;
+		current_window->rect.y = 0;
 	}
 
 	if (WINDOW_RIGHT & flags) {
-		current_window->x = win32.window_width - window_width;
-		current_window->y = 0;
+		current_window->rect.x = win32.window_width - window_width;
+		current_window->rect.y = 0;
 	}
 
-	current_window->height = window_height;
-	current_window->width = window_width;
+	current_window->rect.height = window_height;
+	current_window->rect.width = window_width;
 	current_window->make_header();
 
 	add_window(current_window);
@@ -1755,37 +1711,37 @@ Window *Editor::find_window(const char *name)
 	return NULL;
 }
 
-Text_Button::Text_Button(const char *_text, int _width, int _height)
+Text_Button::Text_Button(const char *_text, u32 width, u32 height)
 {
 	assert(_text);
 
 	text = _text;
 	theme = button_theme;
 	
-	if (_width > 0) {
-		if (_width > text.width) {
-			width = _width;
+	if (width > 0) {
+		if (width > text.get_width()) {
+			rect.width = width;
 		} else {
-			width = text.width;
+			rect.width = text.get_width();
 			print("Text_Button::Text_Button : The Button width can't be less than width of the text.");
 		}
 	} else {
-		width = text.width;
+		rect.width = text.get_width();
 	}
 
-	if (_height > 0) {
-		if (_height > text.height) {
-			height = _height;
+	if (height > 0) {
+		if (height > text.get_height()) {
+			rect.height = height;
 		} else {
-			height = text.height;
-			print("Text_Button::Text_Button : The Button width can't be less than width of the text.");
+			rect.height = text.get_height();
+			print("Text_Button::Text_Button : The Button width can't be less than height of the text.");
 		}
 	} else {
-		height = text.height;
+		rect.height = text.get_height();
 	}
 
-	width += theme.border_about_text;
-	height += theme.border_about_text;
+	rect.width += theme.border_about_text;
+	rect.height += theme.border_about_text;
 }
 
 void Text_Button::draw()
@@ -1793,9 +1749,9 @@ void Text_Button::draw()
 	Render_2D *render_2d = get_render_2d();
 	
 	if (flags & ELEMENT_HOVER) {
-		render_2d->draw_rect(x, y, width, height, theme.hover_color, theme.rounded_border);
+		render_2d->draw_rect(&rect, theme.hover_color, theme.rounded_border);
 	} else {
-		render_2d->draw_rect(x, y, width, height, theme.color, theme.rounded_border);
+		render_2d->draw_rect(&rect, theme.color, theme.rounded_border);
 	}
 	
 	text.draw();
@@ -1803,20 +1759,21 @@ void Text_Button::draw()
 
 void Text_Button::set_theme(Text_Button_Theme *_theme)
 {
-	width -= theme.border_about_text;
-	height -= theme.border_about_text;
+	rect.width -= theme.border_about_text;
+	rect.height -= theme.border_about_text;
 	
 	theme = *_theme;
 	
-	width += theme.border_about_text;
-	height += theme.border_about_text;
+	rect.width += theme.border_about_text;
+	rect.height += theme.border_about_text;
+
+	place_in_center(&rect, text);
 }
 
-void Text_Button::set_position(int _x, int _y)
+void Text_Button::set_position(u32 x, u32 y)
 {
-	x = _x;
-	y = _y;
-	place_in_center(this, &text);
+	rect.set(x, y);
+	place_in_center(&rect, text);
 }
 
 Texture_Button::Texture_Button(Texture *_texture, float scale)
@@ -1824,18 +1781,17 @@ Texture_Button::Texture_Button(Texture *_texture, float scale)
 	assert(_texture);
 
 	texture = _texture;
-	width = texture->width * scale;
-	height = texture->height * scale;
+	rect.width = texture->width * scale;
+	rect.height = texture->height * scale;
 }
 
 void Texture_Button::draw()
 {
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_texture(x, y, width, height, texture);
+	render_2d->draw_texture(rect.x, rect.y, rect.width, rect.height, texture);
 }
 
-void Texture_Button::set_position(int _x, int _y)
+void Texture_Button::set_position(u32 x, u32 y)
 {
-	x = _x;
-	y = _y;
+	rect.set(x, y);
 }

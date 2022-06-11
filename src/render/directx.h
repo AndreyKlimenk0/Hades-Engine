@@ -12,15 +12,15 @@
 #include "../libs/ds/hash_table.h"
 
 
-struct Rect {
-	int x;
-	int y;
-	int width;
-	int height;
-	Rect() : x(0), y(0), width(0), height(0) {}
-	Rect(int x, int y) : x(x), y(y), width(0), height(0) {}
-	Rect(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
-};
+//struct Rect {
+//	int x;
+//	int y;
+//	int width;
+//	int height;
+//	Rect() : x(0), y(0), width(0), height(0) {}
+//	Rect(int x, int y) : x(x), y(y), width(0), height(0) {}
+//	Rect(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
+//};
 
 struct Shader;
 

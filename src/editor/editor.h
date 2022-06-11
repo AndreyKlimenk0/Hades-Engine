@@ -21,7 +21,7 @@ struct Picked_Panel;
 
 
 struct Text_Button_Theme {
-	int border_about_text = 10;
+	u32 border_about_text = 10;
 	u32 rounded_border = 5;
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
@@ -29,23 +29,24 @@ struct Text_Button_Theme {
 };
 
 struct List_Box_Theme {
-	int field_text_offset_from_left = 5;
-	int drop_button_offset_from_right = 5;
-	int border_about_text = 0;
-	int list_box_shift = 2;
-	int field_width = 180;
-	int field_height = 20;
-	int list_box_shift_from_text = 4;
+	u32 field_text_offset_from_left = 5;
+	u32 drop_button_offset_from_right = 5;
+	u32 border_about_text = 0;
+	u32 list_box_offset = 5;
+	u32 list_box_top_bottom_border = 10;
+	u32 field_width = 180;
+	u32 field_height = 20;
+	u32 list_box_shift_from_text = 4;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
 };
 
 struct Edit_Field_Theme {
-	int width = 180;
-	int height = 20;
-	int shift_caret_from_left = 4;
-	int text_offset_from_left = shift_caret_from_left;
-	int field_shift_from_text = 4;
+	u32 width = 180;
+	u32 height = 20;
+	u32 shift_caret_from_left = 4;
+	u32 text_offset_from_left = shift_caret_from_left;
+	u32 field_shift_from_text = 4;
 	float caret_height_in_percents = 80.0f;
 	float rounded_border = 4.0f;
 	Color color = Color(74, 82, 90);
@@ -53,12 +54,12 @@ struct Edit_Field_Theme {
 
 struct Window_Theme {
 	bool draw_window_name_in_header = true;
-	int offset_from_window_top = 20;
-	int shift_element_from_window_side = 20;
-	int place_between_elements = 10;
-	int shift_element_from_left = 15;
-	int header_height = 25;
-	int shift_cross_button_from_left_on = 5;
+	u32 offset_from_header = 20;
+	u32 shift_element_from_window_side = 20;
+	u32 place_between_elements = 10;
+	u32 shift_element_from_left = 15;
+	u32 header_height = 25;
+	u32 shift_cross_button_from_left_on = 5;
 	float window_rounded_factor = 6.0f;
 	float header_botton_height_in_percents = 50;
 	//Color header_color = Color(10, 7, 7);
@@ -104,21 +105,24 @@ struct Point {
 };
 
 struct Element {
-	Element() : x(0), y(0), width(0), height(9) {}
-	Element(int x, int y) : x(x), y(y), width(0), height(9) {}
-	Element(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {}
+	Element() {}
+	Element(u32 x, u32 y) : rect(x, y, 0, 0) {}
+	Element(u32 x, u32 y, u32 width, u32 height) : rect(x, y, 0, 0) {}
 
 	Element_Type type = ELEMENT_TYPE_UNDEFINED;
 	int flags = 0;
-	int x;
-	int y;
-	int width;
+	Rect_u32 rect;
 
-	int height;
+	operator Rect_u32*() { return &rect; }
 
 	virtual void draw() = 0;
 	virtual void handle_event(Event *event) = 0;
-	virtual void set_position(int _x, int y_) = 0;
+	virtual void set_position(u32 x, u32 y) = 0;
+
+	u32 get_x() { return rect.x; }
+	u32 get_y() { return rect.y; }
+	u32 get_width() { return rect.width; }
+	u32 get_height() { return rect.height; }
 };
 
 struct Text : Element {
@@ -131,7 +135,7 @@ struct Text : Element {
 
 	void draw();
 	void handle_event(Event *event) { assert(false); }
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 };
 
 struct Caret : Element {
@@ -149,7 +153,7 @@ struct Caret : Element {
 
 	void draw();
 	void handle_event(Event *event) {};
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 };
 
 enum Button_Place_Type {
@@ -165,7 +169,7 @@ struct Button : Element {
 	Text_Button_Theme theme;
 	
 	void draw() = 0;
-	void set_position(int _x, int _y) = 0;
+	void set_position(u32 x, u32 y) = 0;
 
 	Button(const Button &other);
 	void handle_event(Event *event);
@@ -174,13 +178,13 @@ struct Button : Element {
 
 struct Text_Button : Button {
 	Text_Button() { type = ELEMENT_TYPE_TEXT_BUTTON; }
-	Text_Button(const char *_text, int _width = 0, int _height = 0);
+	Text_Button(const char *_text, u32 width = 0, u32 height = 0);
 	
 	Text text;
 	
 	void draw();
 	void set_theme(Text_Button_Theme *_theme);
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 };
 
 struct Texture_Button : Button {
@@ -190,7 +194,7 @@ struct Texture_Button : Button {
 	Texture *texture = NULL;
 
 	void draw();
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 };
 
 enum Label_Side {
@@ -208,7 +212,7 @@ struct Label : Element {
 
 	void draw();
 	void handle_event(Event *event) {};
-	void set_position(int _x, int _y) { x = _x, y = _y; }
+	void set_position(u32 x, u32 y) { rect.set(x, y); }
 };
 
 struct Input_Field : Element {
@@ -229,18 +233,16 @@ enum List_Box_State {
 };
 
 struct List_Box : Input_Field {	
-	List_Box(const char *_label, int _x = 0, int _y = 0);
+	List_Box(const char *_label, u32 x = 0, u32 y = 0);
 
-	Text_Button *button = NULL;
-	Text current_chosen_item_text;
-	Texture_Button drop_button;
-	
+	u32 list_box_size;
+	Text_Button *button = NULL;	
 	List_Box_State list_state = LIST_BOX_IS_PICKED_UP;
 	
-	int list_box_size;
-	//Point text_position;
 	Rect_u32 field_rect;
-	//Point field_position;
+	Rect_u32 list_box_rect;
+	Text current_chosen_item_text;
+	Texture_Button drop_button;
 
 	List_Box_Theme theme;
 	Text_Button_Theme button_theme;
@@ -250,7 +252,7 @@ struct List_Box : Input_Field {
 
 	void draw();
 	void handle_event(Event *event);
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 	
 	void on_list_item_click();
 	void on_drop_button_click();
@@ -286,7 +288,7 @@ struct Picked_Panel : Element {
 	void draw();
 	void handle_event(Event *event);
 	void add_field(Input_Field *input_field);
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 };
 
 enum Edit_Data_Type {
@@ -297,8 +299,8 @@ enum Edit_Data_Type {
 
 struct Edit_Field : Input_Field {
 	Edit_Field() { type = ELEMENT_TYPE_EDIT_FIELD; }
-	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
-	Edit_Field(const char *_label_text, float *float_value, Edit_Field_Theme *edit_theme = NULL, int _x = 0, int _y = 0);
+	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme = NULL, u32 x = 0, u32 y = 0);
+	Edit_Field(const char *_label_text, float *float_value, Edit_Field_Theme *edit_theme = NULL, u32 x = 0, u32 y = 0);
 
 
 	bool edit_itself_data;
@@ -332,7 +334,7 @@ struct Edit_Field : Input_Field {
 
 	void draw();
 	void handle_event(Event *event);
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 	void set_caret_position_on_mouse_click(int mouse_x, int mouse_y);
 	void set_text(const char *_text);
 	void update_edit_data(const char *text);
@@ -343,8 +345,8 @@ struct Edit_Field : Input_Field {
 
 struct Vector3_Edit_Field : Input_Field {
 	Vector3_Edit_Field() { type = ELEMENT_TYPE_VECTOR3_EDIT_FIELD; }
-	Vector3_Edit_Field(const char *_label, int _x = 0, int _y = 0);
-	Vector3_Edit_Field(const char *_label, Vector3 *vec3, int _x = 0, int _y = 0);
+	Vector3_Edit_Field(const char *_label, u32 x = 0, u32 y = 0);
+	Vector3_Edit_Field(const char *_label, Vector3 *vec3, u32 x = 0, u32 y = 0);
 
 	u32 place_between_fields = 10;
 
@@ -354,7 +356,7 @@ struct Vector3_Edit_Field : Input_Field {
 
 	void draw();
 	void handle_event(Event *event);
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 	void get_vector(Vector3 *vector);
 };
 
@@ -372,7 +374,7 @@ struct Form : Element {
 	void fill_args(Args *args, Array<Input_Field *> *fields);
 	void handle_event(Event *event);
 	void add_field(Input_Field *input_field);
-	void set_position(int _x, int _y);
+	void set_position(u32 x, u32 y);
 };
 
 enum Alignment {
@@ -417,7 +419,7 @@ struct Window : Element {
 	void draw();
 	void update();
 	void make_header();
-	void make_window(int _x, int _y, int _width, int _height, int _flags, Window_Theme *_theme);
+	void make_window(int x, int y, u32 width, u32 height, int _flags, Window_Theme *_theme);
 	void handle_event(Event *event);
 	
 	void add_header_text(const char *);
@@ -431,13 +433,13 @@ struct Window : Element {
 	void move(int x_delta, int y_delta);
 
 	void set_name(const char *_name);
-	void set_position(int _x, int _y) { assert(false); }
+	void set_position(u32 x, u32 y) { assert(false); }
 	void set_element_position(Element *element);
 	void set_element_place(Place _place);
 	void set_alignment(Alignment _alignment);
 	
-	int get_element_x_place() { return x + next_place.x;}
-	int get_element_y_place() { return y + next_place.y;}
+	int get_element_x_place() { return rect.x + next_place.x;}
+	int get_element_y_place() { return rect.y + next_place.y;}
 };
 
 struct Editor {
