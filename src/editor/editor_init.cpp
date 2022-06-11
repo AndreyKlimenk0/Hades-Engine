@@ -40,12 +40,21 @@ void Editor::init()
 	set_window_name("New Window");
 
 	make_button("Test_1");
+	//make_button("Test_1");
+	//make_button("Test_1");
+	//make_button("Test_1");
 	//make_button("Test_2");
 
 	make_list_box("AAAAList Box");
 	add_item("First Item", 0);
-	//add_item("First Item1", 1);
-	//add_item("First Item2", 2);
+	add_item("First Item1", 1);
+	add_item("First Item2", 2);
+	add_item("First Item4", 0);
+	add_item("First Item5", 1);
+	add_item("First Item6", 2);
+	add_item("First Item7", 0);
+	add_item("First Item8", 1);
+	add_item("First Item9", 2);
 
 	//make_list_box("List Box");
 	//add_item("First Item", 0);
