@@ -42,8 +42,8 @@ struct List_Box_Theme {
 };
 
 struct Edit_Field_Theme {
-	u32 width = 180;
-	u32 height = 20;
+	u32 field_width = 180;
+	u32 field_height = 20;
 	u32 shift_caret_from_left = 4;
 	u32 text_offset_from_left = shift_caret_from_left;
 	u32 field_shift_from_text = 4;
@@ -62,11 +62,8 @@ struct Window_Theme {
 	u32 shift_cross_button_from_left_on = 5;
 	float window_rounded_factor = 6.0f;
 	float header_botton_height_in_percents = 50;
-	//Color header_color = Color(10, 7, 7);
-	//Color header_color = Color(30, 30, 30);
 	Color header_color = Color(74, 82, 90);
 	Color color = Color(36, 39, 43);
-	//Color color = Color(36, 39, 43);
 };
 
 enum Element_Type {
@@ -136,20 +133,14 @@ struct Text : Element {
 	void draw();
 	void handle_event(Event *event) { assert(false); }
 	void set_position(u32 x, u32 y);
+	void update_size();
 };
 
 struct Caret : Element {
 	Caret() {};
-	Caret(int x, int y) : Element(x, y, 1, font.max_height) {} // blink time are a time in milliseconds
-	Caret(float x, float y, float height);
-
-	bool use_float_rect = false;
+	Caret(u32 x, u32 y, u32 height);
 	
-	int blink_time = 500;
-	float fx;
-	float fy;
-	float fwidth = 1;
-	float fheight;
+	u32 blink_time = 500; // blink time are a time in milliseconds
 
 	void draw();
 	void handle_event(Event *event) {};
@@ -195,24 +186,6 @@ struct Texture_Button : Button {
 
 	void draw();
 	void set_position(u32 x, u32 y);
-};
-
-enum Label_Side {
-	LABEL_ON_UP_SIDE,
-	LABEL_ON_LEFT_SIDE,
-	LABEL_ON_RIGHT_SIDE,
-};
-
-struct Label : Element {
-	Label() {}
-	Label(int _x, int _y, const char *_text);
-
-	Label_Side label_side;
-	String text;
-
-	void draw();
-	void handle_event(Event *event) {};
-	void set_position(u32 x, u32 y) { rect.set(x, y); }
 };
 
 struct Input_Field : Element {
@@ -264,18 +237,6 @@ struct List_Box : Input_Field {
 	
 };
 
-struct Panel_List_Box : List_Box {
-	Panel_List_Box(int _x, int _y, const char *_label);
-
-	Picked_Panel *last_picked_panel = NULL;
-
-	Hash_Table<String, Picked_Panel *> string_picked_panel_pairs;
-
-	void on_list_item_click();
-	void add_item(const char *string, int enum_value, Picked_Panel *form);
-	Picked_Panel *get_picked_panel();
-};
-
 struct Picked_Panel : Element {
 	Picked_Panel() { type = ELEMENT_TYPE_PICKED_PANEL; }
 	~Picked_Panel();
@@ -291,6 +252,18 @@ struct Picked_Panel : Element {
 	void set_position(u32 x, u32 y);
 };
 
+struct Panel_List_Box : List_Box {
+	Panel_List_Box(int _x, int _y, const char *_label);
+
+	Picked_Panel *last_picked_panel = NULL;
+
+	Hash_Table<String, Picked_Panel *> string_picked_panel_pairs;
+
+	void on_list_item_click();
+	void add_item(const char *string, int enum_value, Picked_Panel *form);
+	Picked_Panel *get_picked_panel();
+};
+
 enum Edit_Data_Type {
 	EDIT_DATA_INT,
 	EDIT_DATA_FLOAT,
@@ -302,20 +275,19 @@ struct Edit_Field : Input_Field {
 	Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, Edit_Field_Theme *edit_theme = NULL, u32 x = 0, u32 y = 0);
 	Edit_Field(const char *_label_text, float *float_value, Edit_Field_Theme *edit_theme = NULL, u32 x = 0, u32 y = 0);
 
-
 	bool edit_itself_data;
 
-	int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
-	int max_text_width;
 	int text_width;
+	int max_text_width;
+	int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
 	int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
-	int field_width;
 
-	Point field_position;
-	
 	Edit_Data_Type edit_data_type;
-
+	Rect_u32 field_rect;
+	Caret caret;
+	Text text;
 	Edit_Field_Theme theme;
+
 
 	union {
 		union {
@@ -328,9 +300,6 @@ struct Edit_Field : Input_Field {
 			float float_value;
 		} itself_data;
 	} edit_data;
-
-	Caret caret;
-	String text;
 
 	void draw();
 	void handle_event(Event *event);

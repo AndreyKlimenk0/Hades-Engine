@@ -110,12 +110,13 @@ inline float calculate_scale_based_on_percent_from_element_height(int header_hei
 	return ratios;
 }
 
-inline int place_in_middle(Rect_u32 *dest, int height)
+
+inline u32 place_in_middle(Rect_u32 *dest, int height)
 {
 	return (dest->y + dest->height / 2) - (height / 2);
 }
 
-inline int place_in_middle(Rect_u32 *dest, Rect_u32 *source)
+inline u32 place_in_middle(Rect_u32 *dest, Rect_u32 *source)
 {
 	return (dest->y + dest->height / 2) - (source->height / 2);
 }
@@ -190,27 +191,16 @@ void Text::set_position(u32 x, u32 y)
 	rect.set(x, y);
 }
 
-//Label::Label(int _x, int _y, const char *_text) : Element(_x, _y)
-//{
-//	text = _text;
-//	width = font.get_text_width(text);
-//	height = font.max_height;
-//}
-//
-//void Label::draw()
-//{
-//	Render_2D *render_2d = get_render_2d();
-//	render_2d->draw_text(x, y, text);
-//}
-
-Caret::Caret(float x, float y, float height)
+void Text::update_size()
 {
-	use_float_rect = true;
+	Size_u32 size = font.get_text_size(string);
+	rect.set(size);
+}
 
-	fx = x;
-	fy = y;
-	fwidth = 1;
-	fheight = height;
+Caret::Caret(u32 x, u32 y, u32 height)
+{
+	rect.set(x, y);
+	rect.set_wh(1, height);
 }
 
 void Caret::draw()
@@ -233,11 +223,7 @@ void Caret::draw()
 	if (show) {
 		show_time_accumulator += elapsed_time;
 		if (show_time_accumulator < show_time) {
-			if (use_float_rect) {
-				render_2d->draw_rect(fx, fy, fwidth, fheight, Color::White);
-			} else {
-				render_2d->draw_rect(&rect, Color::White);
-			}
+			render_2d->draw_rect(&rect, Color::White);
 		} else {
 			show = false;
 			show_time_accumulator = 0;
@@ -303,26 +289,22 @@ List_Box::List_Box(const char *_label, u32 x, u32 y)
 	
 	type = ELEMENT_TYPE_LIST_BOX;
 	theme = list_box_theme;
-	rect = Rect_u32(x, y, total_width, theme.field_height);
-
-	field_rect = Rect_u32(x + font.get_text_width(_label) + theme.list_box_shift_from_text, y, theme.field_width, rect.height);
-
+	list_box_size = 0;
 	label = Text(_label);
+	rect = Rect_u32(x, y, total_width, theme.field_height);
+	field_rect = Rect_u32(x + font.get_text_width(_label) + theme.list_box_shift_from_text, y, theme.field_width, rect.height);
 
 	button_theme.border_about_text = 0;
 	button_theme.rounded_border = 0.0f;
 	button_theme.color = theme.color;
 
-	list_box_size = 0;
+	Texture *down_texture = texture_manager.get_texture("down.png");
+	float down_scale_factor = calculate_scale_based_on_percent_from_element_height(rect.height, down_texture->height, 70);
 
-	Texture *cross_texture = texture_manager.get_texture("down.png");
-	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(rect.height, cross_texture->height, 70);
-
-	drop_button = Texture_Button(cross_texture, cross_scale_factor);
+	drop_button = Texture_Button(down_texture, down_scale_factor);
 	drop_button.callback = new Member_Callback<List_Box>(this, &List_Box::on_drop_button_click);
 
 	current_chosen_item_text = "There is no added items.";
-	//place_in_middle_and_by_left(&field_rect, current_chosen_item_text, theme.field_text_offset_from_left);
 }
 
 void List_Box::draw()
@@ -332,13 +314,8 @@ void List_Box::draw()
 	Render_2D *render_2d = get_render_2d();
 	render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
 
-	//if (current_chosen_item_text.string.is_empty()) {
-		//render_2d->draw_text(current_chosen_item_text, "There is no added items.");
-	//} else {
-		current_chosen_item_text.draw();
-	//}
-
 	drop_button.draw();
+	current_chosen_item_text.draw();
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
 		render_2d->draw_rect(&list_box_rect, theme.color, theme.rounded_border);
@@ -383,7 +360,7 @@ void List_Box::handle_event(Event *event)
 void List_Box::add_item(const char *item_text)
 {
 	Text_Button button = Text_Button(item_text, field_rect.width, field_rect.height);
-	button.set_position(field_rect.x, field_rect.bottom() + (field_rect.height * item_list.count) + 10);
+	button.set_position(field_rect.x, field_rect.bottom() + (field_rect.height * item_list.count) + theme.list_box_top_bottom_border);
 	button.set_theme(&button_theme);
 	button.callback = new Member_Callback<List_Box>(this, &List_Box::on_list_item_click);
 	
@@ -424,8 +401,8 @@ void List_Box::set_position(u32 x, u32 y)
 
 	list_box_rect.set(field_rect.x, field_rect.bottom() + theme.list_box_offset);
 
-	for (int i = 0; i < item_list.count; i++) {
-		item_list[i].set_position(x, (y + 2 + rect.height) + (font.max_height * i));
+	for (u32 index = 0; index < item_list.count; index++) {
+		item_list[index].set_position(field_rect.x, field_rect.bottom() + (field_rect.height * index) + theme.list_box_top_bottom_border);
 	}
 }
 
@@ -531,20 +508,16 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 		theme = edit_field_theme;
 	}
 
-	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
+	int caret_height = (int)(theme.field_height * theme.caret_height_in_percents / 100.0f);
 
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
-	u32 total_width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;
-	rect = Rect_u32(x, y, total_width, theme.height);
-
-	field_position = Point(y, x + font.get_text_width(_label_text) + theme.field_shift_from_text);
-
-	field_width = theme.width;
+	u32 total_width = theme.field_width + font.get_text_width(_label_text) + theme.field_shift_from_text;
+	rect = Rect_u32(x, y, total_width, theme.field_height);
 
 	edit_itself_data = true;
 
-	max_text_width = (field_width - theme.shift_caret_from_left * 3 - 10);
+	max_text_width = (theme.field_width - theme.shift_caret_from_left * 3 - 10);
 
 	edit_data_type = _edit_data_type;
 
@@ -552,27 +525,25 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(*this, caret_height), caret_height);
 
+	field_rect.set_wh(theme.field_width, theme.field_height);
+
 
 	if (edit_data_type == EDIT_DATA_INT) {
-		text.append('0');;
-
-		Font_Char font_char = font.characters['0'];
-		caret.fx += font_char.size.width;
+		text = "0";
+		caret.rect.x += text.get_width();
 
 		caret_index_in_text = 0;
-		text_width = font_char.size.width;
+		text_width = text.get_width();
 
 		edit_data.itself_data.int_value = 0;
 
 	} else if (edit_data_type == EDIT_DATA_FLOAT) {
-		text.append("0.0");
-
-		Size_u32 size = font.get_text_size("0.0");
-		caret.fx += size.width;
+		text = "0.0";
+		caret.rect.x += text.get_width();
 
 		caret_index_for_inserting = 3;
 		caret_index_in_text = 2;
-		text_width = size.width;
+		text_width = text.get_width();
 
 		edit_data.itself_data.float_value = 0.0f;
 	}
@@ -586,18 +557,17 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 		theme = edit_field_theme;
 	}
 
-	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
+	int caret_height = (int)(theme.field_height * theme.caret_height_in_percents / 100.0f);
 
 	type = ELEMENT_TYPE_EDIT_FIELD;
 
-	u32 total_width = theme.width + font.get_text_width(_label_text) + theme.field_shift_from_text;
-	rect = Rect_u32(x, y, total_width, theme.height);
+	u32 total_width = theme.field_width + font.get_text_width(_label_text) + theme.field_shift_from_text;
+	rect = Rect_u32(x, y, total_width, theme.field_height);
 
-	field_width = theme.width;
 
 	edit_itself_data = false;
 
-	max_text_width = (field_width - theme.shift_caret_from_left * 3);
+	max_text_width = (theme.field_width - theme.shift_caret_from_left * 3);
 
 	edit_data_type = EDIT_DATA_FLOAT;
 
@@ -608,6 +578,8 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 	edit_data.not_itself_data.float_value = float_value;
 
 	char *float_str = to_string(*float_value);
+
+	field_rect.set_wh(theme.field_width, theme.field_height);
 
 	set_text(float_str);
 
@@ -626,7 +598,7 @@ void Edit_Field::handle_event(Event *event)
 			str_value = to_string(*edit_data.not_itself_data.float_value);
 		}
 
-		if (text != str_value) {
+		if (text.string != str_value) {
 			set_text(str_value);
 		}
 		free_string(str_value);
@@ -660,39 +632,40 @@ void Edit_Field::handle_event(Event *event)
 			if (event->is_key_down(VK_BACK)) {
 				if (caret_index_in_text > -1) {
 
-					char c = text.data[caret_index_in_text];
-					text.remove(caret_index_in_text);
+					char c = text.string[caret_index_in_text];
+					text.string.remove(caret_index_in_text);
+					text.update_size();
 					
 					u32 char_width = font.get_char_width(c);
-					caret.fx -= (float)char_width;
+					caret.rect.x -= (float)char_width;
 					text_width -= char_width;
 
 					caret_index_in_text -= 1;
 					caret_index_for_inserting -= 1;
 
-					update_edit_data(text);
+					update_edit_data(text.string);
 				}
 
 			} else if (event->is_key_down(VK_LEFT)) {
 				if (caret_index_in_text > -1) {
 
-					char c = text.data[caret_index_in_text];
+					char c = text.string[caret_index_in_text];
 					u32 char_width = font.get_char_width(c);
-					caret.fx -= (float)char_width;
+					caret.rect.x -= (float)char_width;
 					text_width -= char_width;
 
 					caret_index_in_text -= 1;
 					caret_index_for_inserting -= 1;
 				}
 			} else if (event->is_key_down(VK_RIGHT)) {
-				if (caret_index_in_text < text.len) {
+				if (caret_index_in_text < text.string.len) {
 
 					caret_index_in_text += 1;
 					caret_index_for_inserting += 1;
 
-					char c = text.data[caret_index_in_text];
+					char c = text.string[caret_index_in_text];
 					u32 char_width = font.get_char_width(c);
-					caret.fx += (float)char_width;
+					caret.rect.x += (float)char_width;
 					text_width += char_width;
 				}
 			}
@@ -701,19 +674,21 @@ void Edit_Field::handle_event(Event *event)
 		if (flags & ELEMENT_FOCUSED) {
 			if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
 
-				if (caret_index_in_text == (text.len - 1)) {
-					text.append(event->char_key);
+				if (caret_index_in_text == (text.string.len - 1)) {
+					text.string.append(event->char_key);
 				} else {
-					text.insert(caret_index_for_inserting, event->char_key);
+					text.string.insert(caret_index_for_inserting, event->char_key);
 				}
+				text.update_size();
+
 				caret_index_in_text += 1;
 				caret_index_for_inserting += 1;
 
 				u32 char_width = font.get_char_width(event->char_key);
-				caret.fx += (float)char_width;
+				caret.rect.x += (float)char_width;
 				text_width += char_width;
 
-				update_edit_data(text);
+				update_edit_data(text.string);
 
 			}
 		}
@@ -724,49 +699,48 @@ void Edit_Field::draw()
 {
 	Render_2D *render_2d = get_render_2d();
 	
-	print("Edit_Field::draw() !!!!!!!!!!!");
-	//render_2d->draw_rect(field_position.x, field_position.y, theme.width, height, theme.color, theme.rounded_border);
+	render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
 
 	label.draw();
 
+	text.draw();
+	
 	if (flags & ELEMENT_FOCUSED) {
 		caret.draw();
-	}
-
-	if (!text.is_empty()) {
-		render_2d->draw_text(field_position.x + theme.text_offset_from_left, place_in_middle(*this, font.max_height), text);
 	}
 }
 
 void Edit_Field::set_position(u32 x, u32 y)
 {
-	rect.set(x, y);
-	field_position = Point(x + label.get_width() + theme.field_shift_from_text, y);
-
-	int caret_height = (int)(theme.height * theme.caret_height_in_percents / 100.0f);
+	u32 caret_height = (u32)(theme.field_height * theme.caret_height_in_percents / 100.0f);
 	
-	label.set_position(x, place_in_middle(*this, font.max_height));
-	caret.set_position(x + theme.shift_caret_from_left, place_in_middle(*this, caret_height));
+	rect.set(x, y);
+	place_by_left(&rect, &field_rect, label.get_width() + theme.field_shift_from_text);
+	place_in_middle_and_by_left(&field_rect, text, theme.text_offset_from_left);
 
-	u32 text_width = font.get_text_width(text);
-	caret.fx = field_position.x + theme.shift_caret_from_left + text_width;
+	label.set_position(x, place_in_middle(&rect, label.get_height()));
+	caret.set_position(x + theme.shift_caret_from_left, place_in_middle(&rect, caret_height));
+	place_in_middle_and_by_left(&field_rect, caret, theme.shift_caret_from_left);
+
+	u32 text_width = text.get_width();
+	caret.rect.x = field_rect.x + theme.shift_caret_from_left + text_width;
 }
 
 void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 {
-	int text_width = font.get_text_width(text);
+	int text_width = text.get_width();
 	int mouse_x_relative_text = mouse_x - rect.x - theme.shift_caret_from_left;
 
 	if (mouse_x_relative_text > text_width) {
-		caret.fx = field_position.x + theme.shift_caret_from_left + text_width;
+		caret.rect.x = field_rect.x + theme.shift_caret_from_left + text_width;
 		return;
 	}
 
-	float caret_temp_x = caret.fx;
+	float caret_temp_x = caret.rect.x;
 	float characters_width = 0.0f;
 
-	for (int i = 0; i < text.len; i++) {
-		char c = text.data[i];
+	for (int i = 0; i < text.string.len; i++) {
+		char c = text.string[i];
 		u32 char_width = font.get_char_width(c);
 		float mouse_x_relative_character = mouse_x_relative_text - characters_width;
 
@@ -775,36 +749,36 @@ void Edit_Field::set_caret_position_on_mouse_click(int mouse_x, int mouse_y)
 
 			float characters_width = 0.0f;
 			for (int j = 0; j < i; j++) {
-				char _char = text.data[j];
+				char _char = text.string.data[j];
 				u32 char_width = font.get_char_width(c);
 				characters_width += char_width;
 			}
 
-			caret.fx = rect.x + theme.shift_caret_from_left + characters_width;
+			caret.rect.x = rect.x + theme.shift_caret_from_left + characters_width;
 			caret_index_for_inserting = i;
 			caret_index_in_text = i - 1;
 			break;
 		}
 
 		characters_width += char_width;
-		caret.fx = caret_temp_x;
+		caret.rect.x = caret_temp_x;
 	}
 }
 
 void Edit_Field::set_text(const char * _text)
 {
-	if (!text.is_empty()) {
-		int width_current_text = font.get_text_width(text);
-		caret.fx -= width_current_text;
+	if (!text.string.is_empty()) {
+		u32 width_current_text = text.get_width();
+		caret.rect.x -= width_current_text;
 	}
 
 	text = String(_text, 0, 7);
 
-	int _width = font.get_text_width(text);
-	caret.fx += _width;
+	int _width = text.get_width();
+	caret.rect.x += _width;
 
-	caret_index_for_inserting = text.len;
-	caret_index_in_text = text.len - 1;
+	caret_index_for_inserting = text.string.len;
+	caret_index_in_text = text.string.len - 1;
 	text_width = _width;
 }
 
@@ -857,19 +831,17 @@ Vector3_Edit_Field::Vector3_Edit_Field(const char *_label, u32 x, u32 y)
 	label = Text(_label);
 
 	Edit_Field_Theme theme;
-	theme.width = 60;
+	theme.field_width = 60;
 
 	x_field = Edit_Field("X", EDIT_DATA_FLOAT, &theme);
 	y_field = Edit_Field("Y", EDIT_DATA_FLOAT, &theme);
 	z_field = Edit_Field("Z", EDIT_DATA_FLOAT, &theme);
 
-	//width = x.width; // made for Window::calculate_place_by_x
-	//height = x.height; // made for Window::go_to_next_element_place
 	Size_u32 label_size = font.get_text_size(_label);
 	
 	u32 fields_count = 3;
 	u32 total_width = label_size.width + x_field.get_width() + y_field.get_width() + z_field.get_width() + (place_between_fields * fields_count);
-	rect = Rect_u32(x, y, total_width, theme.height);
+	rect = Rect_u32(x, y, total_width, theme.field_height);
 	print("Right Constructor");
 }
 
@@ -883,14 +855,11 @@ Vector3_Edit_Field::Vector3_Edit_Field(const char * _label, Vector3 *vec3, u32 x
 	label = Text(_label);
 
 	Edit_Field_Theme theme;
-	theme.width = 50;
+	theme.field_width = 50;
 
 	x_field = Edit_Field("x", &vec3->x, &theme);
 	y_field = Edit_Field("y", &vec3->y, &theme);
 	z_field = Edit_Field("z", &vec3->z, &theme);
-
-	//width = x.width; // made for Window::calculate_place_by_x
-	//height = x.height; // made for Window::go_to_next_element_place
 }
 
 void Vector3_Edit_Field::draw()
@@ -1112,7 +1081,6 @@ void Window::make_header()
 	Texture *cross = texture_manager.get_texture("cross_button1.png");
 	float cross_scale_factor = calculate_scale_based_on_percent_from_element_height(window_theme.header_height, cross->height, 70.0f);
 
-	//close_button = Texture_Button(cross, cross_scale_factor);
 	close_button = Texture_Button(cross, 3.0f);
 	close_button.callback = new Member_Callback<Window>(this, &Window::window_callback);
 	close_button.texture = texture_manager.get_texture("cross_button1.png");
@@ -1180,7 +1148,6 @@ void Window::move(int x_delta, int y_delta)
 	header_text_position.y += y_delta;
 
 	place_in_middle_and_by_right(&rect, close_button, theme.shift_cross_button_from_left_on);
-	//close_button.set_position(100, 100);
 
 	Element *element = NULL;
 	For(elements, element) {
@@ -1353,7 +1320,7 @@ void Window::draw()
 	}
 
 	Texture *cross = texture_manager.get_texture("cross_button1.png");
-	render_2d->draw_texture(100, 100, close_button.get_width(), close_button.get_height(), cross);
+	//render_2d->draw_texture(100, 100, close_button.get_width(), close_button.get_height(), cross);
 	//close_button.draw();
 
 	Element *element = NULL;
