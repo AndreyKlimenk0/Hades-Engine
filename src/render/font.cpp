@@ -54,7 +54,6 @@ void Font::init(int font_size)
 
 		if (font_char.size.height > max_height) {
 			max_height = font_char.size.height;
-			print("max char = {}", (char)c);
 		}
 
 		if (isalpha(c) && (font_char.size.height > max_alphabet_height)) {

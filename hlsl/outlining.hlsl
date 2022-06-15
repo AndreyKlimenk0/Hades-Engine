@@ -13,7 +13,7 @@ Vertex_XNUV_Out vs_main(Vertex_XNUV_In vertex)
 {
 
 	Vertex_XNUV_Out result;
-	result.position = mul(float4(vertex.position + (vertex.normal * 4.0), 1.0f), world_view_projection);
+	result.position = mul(float4(vertex.position + (vertex.normal * 4.0), 1.0f), wvp_matrix);
 	result.normal = vertex.normal;
 	result.uv = vertex.uv;
 	return result;

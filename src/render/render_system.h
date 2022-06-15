@@ -143,11 +143,15 @@ struct Render_System {
 
 	Shader_Manager shader_manager;
 
+
+	ID3D11ShaderResourceView *shader_resource = NULL;
+
 	void init(View_Info *_view_info);
 	void resize();
 	void shutdown();
 	
 	void render_frame();
+	void draw_world_entities(World *world);
 
 	Render_2D *get_render_2d();
 	Shader_Manager *get_shader_manager();
@@ -188,6 +192,7 @@ inline Gpu_Buffer *make_index_buffer(u32 index_count, u32 *index_data, D3D11_USA
 
 inline Gpu_Buffer *make_constant_buffer(u32 buffer_size, void *data = NULL)
 {
+	assert((buffer_size % 16) == 0);
 	return make_gpu_buffer(buffer_size, 1, data, D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE);
 }
 

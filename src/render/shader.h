@@ -14,6 +14,16 @@ enum Shader_Type {
 	PIXEL_SHADER,
 };
 
+//enum Shader_Buffer_Type {
+//
+//};
+
+struct Shader_Buffer {
+	u32 index;
+	//Shader_Buffer_Type type;
+	String name;
+};
+
 struct Shader {
 	Shader() {};
 	~Shader();
@@ -27,6 +37,8 @@ struct Shader {
 
 	u8 *byte_code = NULL;
 	u32 byte_code_size = 0;
+
+	String name;
 };
 
 struct Shader_Manager {
@@ -42,6 +54,9 @@ inline Shader *Shader_Manager::get_shader(const char *shader_name)
 {
 	return shaders[shader_name];
 }
+
+#define DECLARE_CBUFFER(name);
+
 
 struct CB_Render_Matix {
 	Matrix4 world_view_perspective;
