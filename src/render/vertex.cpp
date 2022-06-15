@@ -39,11 +39,11 @@ Input_Layout::~Input_Layout()
 void Input_Layout::init()
 {
 	Shader_Manager *shader_manager = render_sys.get_shader_manager();
-	Shader *render_2d = shader_manager->get_shader("render_2d");
+	Shader *render_2d = shader_manager->get_shader("forward_light");
 	Shader *text = shader_manager->get_shader("draw_text");
 
 	//HR(directx11.device->CreateInputLayout(vertex_col_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, &vertex_color));
-	//HR(directx11.device->CreateInputLayout(vertex_desc, 3, (void *)render_2d->byte_code, render_2d->byte_code_size, &vertex));
+	HR(directx11.device->CreateInputLayout(vertex_desc, 3, (void *)render_2d->byte_code, render_2d->byte_code_size, &vertex));
 	HR(directx11.device->CreateInputLayout(vertex_xuv_desc, 2, (void *)text->byte_code, text->byte_code_size, &vertex_xuv));
 
 	table.set("vertex_color", vertex_color);

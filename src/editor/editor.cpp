@@ -842,7 +842,6 @@ Vector3_Edit_Field::Vector3_Edit_Field(const char *_label, u32 x, u32 y)
 	u32 fields_count = 3;
 	u32 total_width = label_size.width + x_field.get_width() + y_field.get_width() + z_field.get_width() + (place_between_fields * fields_count);
 	rect = Rect_u32(x, y, total_width, theme.field_height);
-	print("Right Constructor");
 }
 
 Vector3_Edit_Field::Vector3_Edit_Field(const char * _label, Vector3 *vec3, u32 x, u32 y)

@@ -377,7 +377,6 @@ void load_fbx_model(const char *file_name, Render_Model *model)
 	assert(result);
 
 	model->render_meshes.set_count(fbx_mesh_nodes.count);
-
 	
 	int index = 0;
 	FbxNode *fbx_mesh_node = NULL;
@@ -392,10 +391,6 @@ void load_fbx_model(const char *file_name, Render_Model *model)
 		get_normal_texture_file_name(fbx_mesh_node, &normal_texture_name);
 		get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
 		get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
-
-		if (index == 250) {
-			print("sss");
-		}
 
 		render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
 

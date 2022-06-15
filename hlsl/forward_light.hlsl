@@ -12,37 +12,34 @@
 #define DIRECTIONAL_LIGHT_TYPE 2
 
 
-struct Light {
-	float3 position;
-	float3 direction;
-	float3 color;
-	float radius;
-	float range;
-	int light_type;
-};
-
 struct Material {
 	float4 ambient;
 	float4 diffuse;
 	float4 specular;
 };
 
-cbuffer ambient_constant {
-	float3 ambient_lower_color;
-	float3 ambient_upper_color;
-	int light_count;
-	int light_model_index;
+cbuffer Mesh_Info : register(b3) {
 	Material material;
-	Light lights[MAX_NUMBER_LIGHT_IN_WORLD];
 };
 
+struct Light {
+	float4 position;
+	float4 direction;
+	float4 color;
+	uint light_type;
+	float radius;
+	float range;
+	float pad;
+};
 
-float4 calculate_ambient_light(float3 normal, float3 color)
-{
-	float up = normal.y * 0.5 + 0.5;
-	float3 ambient_color = ambient_lower_color + up * ambient_upper_color;
-	return float4(ambient_color * color, 0.0f);
-}
+StructuredBuffer<Light> lights : register(t1);
+
+//float4 calculate_ambient_light(float3 normal, float3 color)
+//{
+//	float up = normal.y * 0.5 + 0.5;
+//	float3 ambient_color = ambient_lower_color + up * ambient_upper_color;
+//	return float4(ambient_color * color, 0.0f);
+//}
 
 float4 calculate_spot_light(Light light, Material material, float3 normal, float3 position)
 {
@@ -52,7 +49,8 @@ float4 calculate_spot_light(Light light, Material material, float3 normal, float
 	float4 specular = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	float ambient_power = 0.1f;
-	float4 ambient = ambient_power * material.ambient * float4(light.color, 1.0f);
+	float4 ambient = ambient_power * material.ambient * float4(light.color.xyz, 1.0f);
+	//float4 ambient = ambient_power * material.ambient * float4(light.color, 1.0f);
 	//float4 ambient = calculate_ambient_light(normal, light.color);
 
 	float3 to_light = normalize(light.position - position);
@@ -74,8 +72,8 @@ float4 calculate_spot_light(Light light, Material material, float3 normal, float
 		
 		float specular_factor = pow(max(dot(reflect_dir, dir_to_camera), 0.0f), shininess);
 		
-		diffuse = diffuse_factor * material.diffuse * float4(light.color, 1.0f);
-		specular = specular_factor * material.specular * float4(light.color, 1.0f);
+		diffuse = diffuse_factor * material.diffuse * light.color;
+		specular = specular_factor * material.specular * light.color;
 	}
 
 	return specular + diffuse + ambient;
@@ -95,7 +93,7 @@ float4 calculate_point_light(Light light, Material material, float3 normal, floa
 	float4 specular = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	float ambient_power = 0.1f;
-	float4 ambient = ambient_power * material.ambient * float4(light.color, 1.0f);
+	float4 ambient = ambient_power * material.ambient * light.color;
 	//float4 ambient = calculate_ambient_light(normal, light.color);
 
 	normal = normalize(normal);
@@ -109,8 +107,8 @@ float4 calculate_point_light(Light light, Material material, float3 normal, floa
 		float3 dir_to_camera = normalize(camera_position - world_position);
 		float specular_factor = pow(max(dot(reflect_dir, dir_to_camera), 0.0f), shininess);
 		
-		diffuse = diffuse_factor * material.diffuse * float4(light.color, 1.0f);
-		specular = specular_factor * material.specular * float4(light.color, 1.0f);
+		diffuse = diffuse_factor * material.diffuse * light.color, 1.0f;
+		specular = specular_factor * material.specular * light.color, 1.0f;
 
 		float x = 1.0f - saturate(distance * ( 1.0f / light.range));
 		float attenuation = x * x;
@@ -131,7 +129,7 @@ float4 calculate_directional_light(Light light, Material material, float3 normal
 	float4 specular = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	float ambient_power = 0.1f;
-	float4 ambient = ambient_power * material.ambient * float4(light.color, 1.0f);
+	float4 ambient = ambient_power * material.ambient * light.color;
 	//float4 ambient = calculate_ambient_light(normal, light.color);
 
 	normal = normalize(normal);
@@ -139,13 +137,13 @@ float4 calculate_directional_light(Light light, Material material, float3 normal
 	float diffuse_factor = max(dot(-light.direction, normal), 0.0f);
 
 	if (diffuse_factor > 0.0f) {
-		diffuse = diffuse_factor * material.diffuse * float4(light.color, 1.0f);
+		diffuse = diffuse_factor * material.diffuse * light.color;
 
 		float3 reflect_dir = normalize(reflect(-light.direction, normal));
 
 		float3 dir_to_camera = normalize(camera_position - world_position);
 		float specular_factor = pow(max(dot(reflect_dir, dir_to_camera), 0.0f), shininess);
-		specular = specular_factor * material.specular * float4(light.color, 1.0f);
+		specular = specular_factor * material.specular * light.color;
 	}
 
 	return specular + diffuse + ambient;
@@ -161,21 +159,21 @@ struct Vertex_Out {
 Vertex_Out vs_main(Vertex_XNUV_In vertex)
 {
 	Vertex_Out result;
-	result.position = mul(float4(vertex.position, 1.0f), world_view_projection);
-	result.world_position = mul(vertex.position, (float3x3)world);
-	result.normal = mul(vertex.normal, (float3x3)world);
+	result.position = mul(float4(vertex.position, 1.0f), wvp_matrix); 
+	result.world_position = mul(vertex.position, (float3x3)world_matrix);
+	result.normal = mul(vertex.normal, (float3x3)world_matrix);
 	result.uv = vertex.uv;
 	return result;
 }
 
 float4 ps_main(Vertex_Out pixel) : SV_Target
 {
-	float4 texture_color = texture_map.Sample(sampler_anisotropic, pixel.uv);
+	float4 test = texture_map.Sample(sampler_anisotropic, pixel.uv);
 
 	if (light_count == 0) {
-		return texture_color;
+		return test;
 	}
-
+	
 	float4 final_color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	for (int i = 0; i < light_count; i++) {
 		switch (lights[i].light_type) {
@@ -191,8 +189,8 @@ float4 ps_main(Vertex_Out pixel) : SV_Target
 		}
 	}
 
-	float4 r = final_color * texture_color;
-	r.a = material.diffuse.a * texture_color.a;
+	float4 r = final_color * test;
+	r.a = material.diffuse.a * test.a;
 	return r;
 }
 

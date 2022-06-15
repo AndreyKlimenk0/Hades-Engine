@@ -58,47 +58,149 @@ static void draw_mesh(Triangle_Mesh *mesh)
 	}
 }
 
-static void draw_world_entities(World *world)
+struct CB_Light {
+	Vector4 position;
+	Vector4 direction;
+	Vector4 color;
+	u32 light_type;
+	float radius;
+	float range;
+	float pad;
+};
+
+struct World_Info {
+	Vector3 camera_position;
+	int pad;
+	Vector3 camera_direction;
+	int pad2;
+	u32 light_count;
+	Vector3 pad3;
+};
+
+struct Entity_Info {
+	Matrix4 world_matrix;
+	Matrix4 wvp_matrix;
+};
+
+
+void create_structured_buffer(u32 size, u32 count, void *data, Gpu_Buffer **buffer, ID3D11ShaderResourceView **shader_resource)
 {
-	//Entity_Manager *entity_manager = &world->entity_manager;
+	assert((size % 16) == 0);
 
-	//Fx_Shader *light = fx_shader_manager.get_shader("forward_light");
+	D3D11_BUFFER_DESC buffer_desc;
+	ZeroMemory(&buffer_desc, sizeof(buffer_desc));
+	buffer_desc.ByteWidth = (size * count);
+	buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	buffer_desc.CPUAccessFlags = 0;
+	buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+	buffer_desc.StructureByteStride = size;
 
-	//bind_light(light, &entity_manager->lights);
+	D3D11_SUBRESOURCE_DATA resource;
+	ZeroMemory(&resource, sizeof(resource));
+	resource.pSysMem = data;
 
-	//light->bind_per_frame_info(render_sys.free_camera);
+	HR(directx11.device->CreateBuffer(&buffer_desc, &resource, buffer));
 
-	//Render_Entity *render_entity = NULL;
-	//For(world->render_entities, render_entity)
-	//{
+	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
+	ZeroMemory(&shader_resource_desc, sizeof(shader_resource_desc));
+	shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+	shader_resource_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	shader_resource_desc.Buffer.FirstElement = 0;
+	shader_resource_desc.Buffer.NumElements = count;
 
-	//	if (render_entity->stencil_test) {
-	//		enable_stencil_test(render_entity->stencil_test, render_entity->stencil_ref_value);
-	//	}
+	HR(directx11.device->CreateShaderResourceView(*buffer, &shader_resource_desc, shader_resource));
+}
 
-	//	if (render_entity->call_before_drawing_entity) {
-	//		render_entity->call_before_drawing_entity(render_entity);
-	//	}
+void bind_lights(Entity_Manager *entity_manager, Array<CB_Light> *lights)
+{
+	Light *light = NULL;
+	For(entity_manager->lights, light) {
+		CB_Light cb_light;
+		cb_light.position = light->position;
+		cb_light.direction = light->direction;
+		cb_light.color = light->color;
+		cb_light.radius = light->radius;
+		cb_light.range = light->range;
+		cb_light.light_type = light->light_type;
+		lights->push(cb_light);
+	}
+}
 
-	//	bind(light, render_entity->entity);
+void bind_world_info()
+{
 
-	//	Render_Mesh *render_mesh = NULL;
-	//	For(render_entity->render_model->render_meshes, render_mesh)
-	//	{
-	//		bind(light, render_mesh);
-	//		light->attach("draw");
-	//		draw_mesh(&render_mesh->mesh);
-	//	}
+}
 
-	//	if (render_entity->call_after_drawn_entity) {
-	//		render_entity->call_after_drawn_entity(render_entity);
-	//	}
 
-	//	if (render_entity->stencil_test) {
-	//		disable_stencil_test();
-	//	}
+void Render_System::draw_world_entities(World *world)
+{
+	static Gpu_Buffer *world_info_bufffer = make_constant_buffer(sizeof(World_Info));
+	static Gpu_Buffer *entity_buffer = make_constant_buffer(sizeof(Entity_Info));
+	static Gpu_Buffer *material_buffer = make_constant_buffer(sizeof(Material));
 
-	//}
+	Entity_Manager *entity_manager = &world->entity_manager;
+
+	Shader_Manager *shader_manager = render_sys.get_shader_manager();
+
+	Shader *light = shader_manager->get_shader("forward_light");
+
+	assert(shader_resource);
+
+	directx11.device_context->VSSetShader(light->vertex_shader, NULL, 0);
+	directx11.device_context->PSSetShader(light->pixel_shader, NULL, 0);
+
+	directx11.device_context->PSSetSamplers(0, 1, &render_sys.sampler);
+	directx11.device_context->PSSetShaderResources(1, 1, &shader_resource);
+
+	World_Info world_info;
+	world_info.camera_direction = render_sys.free_camera->target;
+	world_info.camera_position = render_sys.free_camera->position;
+	world_info.light_count = entity_manager->lights.count;
+
+	update_constant_buffer(world_info_bufffer, (void *)&world_info, sizeof(World_Info));
+	directx11.device_context->PSSetConstantBuffers(2, 1, &world_info_bufffer);
+
+	Render_Entity *render_entity = NULL;
+	For(world->render_entities, render_entity) {
+
+		if (render_entity->stencil_test) {
+			//enable_stencil_test(render_entity->stencil_test, render_entity->stencil_ref_value);
+		}
+
+		if (render_entity->call_before_drawing_entity) {
+			render_entity->call_before_drawing_entity(render_entity);
+		}
+
+		Entity_Info entity_info;
+		entity_info.wvp_matrix = make_world_view_perspective_matrix(render_entity->entity);
+		entity_info.world_matrix = render_entity->entity->get_world_matrix();
+		update_constant_buffer(entity_buffer, (void *)&entity_info, sizeof(Entity_Info));
+		
+		directx11.device_context->VSSetConstantBuffers(1, 1, &entity_buffer);
+
+		Render_Mesh *render_mesh = NULL;
+		For(render_entity->render_model->render_meshes, render_mesh) {
+
+			update_constant_buffer(material_buffer, (void *)&render_mesh->material, sizeof(Material));
+			directx11.device_context->PSSetConstantBuffers(3, 1, &material_buffer);
+			directx11.device_context->PSSetShaderResources(0, 1, &render_mesh->diffuse_texture->shader_resource);
+			//directx11.device_context->PSSetShaderResources(1, 1, &shader_resource);
+			
+			draw_mesh(&render_mesh->mesh);
+		}
+
+		if (render_entity->call_after_drawn_entity) {
+			render_entity->call_after_drawn_entity(render_entity);
+		}
+
+		if (render_entity->stencil_test) {
+			//disable_stencil_test();
+		}
+	}
+
+	//free_com_object(shader_resource);
+	//free_com_object(world_info_bufffer);
 }
 
 Render_System::~Render_System()
@@ -124,7 +226,13 @@ void Render_System::init(View_Info *view_info)
 	sampler_desc.MinLOD = 0.f;
 	sampler_desc.MaxLOD = 0.f;
 
-	directx11.device->CreateSamplerState(&sampler_desc, &sampler);
+	HR(directx11.device->CreateSamplerState(&sampler_desc, &sampler));
+
+	Gpu_Buffer *buffer = NULL;
+	Entity_Manager *entity_manager = &world.entity_manager;
+	Array<CB_Light> cb_light;
+	bind_lights(entity_manager, &cb_light);
+	create_structured_buffer(sizeof(CB_Light), cb_light.count, (void *)&cb_light.items[0], &buffer, &shader_resource);
 }
 
 void Render_System::shutdown()
@@ -241,35 +349,35 @@ void pack_rects(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
 
 void Render_System::render_frame()
 {
-	Array<rect_t> rects;
-	rects.push(rect_t(0, 0, 50, 110, Color::Silver));
-	rects.push(rect_t(50, 0, 70, 120, Color::Red));
-	rects.push(rect_t(0, 100, 50, 100, Color::Blue));
-	rects.push(rect_t(200, 200, 50, 100, Color::Silver));
-	rects.push(rect_t(300, 0, 150, 177, Color::LightSteelBlue));
-	rects.push(rect_t(500, 0, 400, 120, Color::Magenta));
-	rects.push(rect_t(500, 0, 150, 130, Color::Cyan));
-	rects.push(rect_t(400, 0, 50, 100, Color::Yellow));
-	rects.push(rect_t(0, 200, 220, 120, Color::Red));
-	rects.push(rect_t(0, 300, 120, 100, Color::Blue));
-	rects.push(rect_t(0, 400, 320, 150, Color::Blue));
-	rects.push(rect_t(0, 500, 220, 122, Color::Green));
-	rects.push(rect_t(0, 600, 150, 233, Color::Green));
-	rects.push(rect_t(700, 700, 50, 154, Color::Magenta));
-	rects.push(rect_t(200, 300, 50, 122, Color::Silver));
-	rects.push(rect_t(0, 500, 220, 122, Color::Green));
-	rects.push(rect_t(0, 600, 150, 233, Color::Green));
-	rects.push(rect_t(700, 700, 50, 154, Color::Magenta));
-	rects.push(rect_t(200, 300, 50, 122, Color::Silver));
-	rects.push(rect_t(0, 0, 50, 110, Color::Silver));
-	rects.push(rect_t(50, 0, 70, 120, Color::Red));
-	rects.push(rect_t(0, 100, 50, 100, Color::Blue));
-	rects.push(rect_t(200, 200, 50, 100, Color::Silver));
+	//Array<rect_t> rects;
+	//rects.push(rect_t(0, 0, 50, 110, Color::Silver));
+	//rects.push(rect_t(50, 0, 70, 120, Color::Red));
+	//rects.push(rect_t(0, 100, 50, 100, Color::Blue));
+	//rects.push(rect_t(200, 200, 50, 100, Color::Silver));
+	//rects.push(rect_t(300, 0, 150, 177, Color::LightSteelBlue));
+	//rects.push(rect_t(500, 0, 400, 120, Color::Magenta));
+	//rects.push(rect_t(500, 0, 150, 130, Color::Cyan));
+	//rects.push(rect_t(400, 0, 50, 100, Color::Yellow));
+	//rects.push(rect_t(0, 200, 220, 120, Color::Red));
+	//rects.push(rect_t(0, 300, 120, 100, Color::Blue));
+	//rects.push(rect_t(0, 400, 320, 150, Color::Blue));
+	//rects.push(rect_t(0, 500, 220, 122, Color::Green));
+	//rects.push(rect_t(0, 600, 150, 233, Color::Green));
+	//rects.push(rect_t(700, 700, 50, 154, Color::Magenta));
+	//rects.push(rect_t(200, 300, 50, 122, Color::Silver));
+	//rects.push(rect_t(0, 500, 220, 122, Color::Green));
+	//rects.push(rect_t(0, 600, 150, 233, Color::Green));
+	//rects.push(rect_t(700, 700, 50, 154, Color::Magenta));
+	//rects.push(rect_t(200, 300, 50, 122, Color::Silver));
+	//rects.push(rect_t(0, 0, 50, 110, Color::Silver));
+	//rects.push(rect_t(50, 0, 70, 120, Color::Red));
+	//rects.push(rect_t(0, 100, 50, 100, Color::Blue));
+	//rects.push(rect_t(200, 200, 50, 100, Color::Silver));
 
-	rect_t r = rect_t(0, 0, 900, 900, Color::Red);
-	pack_rects(&r, &rects);
+	//rect_t r = rect_t(0, 0, 900, 900, Color::Red);
+	//pack_rects(&r, &rects);
 
-	render_2d.clear();
+	//render_2d.clear();
 
 
 	//render_2d.draw_texture(0, 0, 500, 500, render_2d.temp);
@@ -287,10 +395,12 @@ void Render_System::render_frame()
 	//	render_2d.draw_rect(rect->x, rect->y, rect->width, rect->height, rect->color);
 	//}
 
+	view_matrix = free_camera->get_view_matrix();
+	draw_world_entities(current_render_world);
 	
-	editor.draw();
+	//editor.draw();
 
-	render_2d.draw_primitives();
+	//render_2d.draw_primitives();
 }
 
 View_Info *make_view_info(float near_plane, float far_plane)
@@ -542,6 +652,7 @@ void Render_2D::init()
 
 	HR(directx11.device->CreateBlendState(&desc, &blending_test));
 
+	constant_buffer = make_constant_buffer(sizeof(CB_Render_2d_Info));
 	constant_buffer = make_constant_buffer(sizeof(CB_Render_2d_Info));
 	init_font_rendering();
 

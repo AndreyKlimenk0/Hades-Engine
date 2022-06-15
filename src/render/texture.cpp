@@ -105,17 +105,25 @@ static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void 
 		HR(directx11.device->CreateTexture2D(&texture_2d_desc, NULL, (ID3D11Texture2D **)&texture->texture));
 	}
 
-	if (data && (mip_levels == 1)) {
-		D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
-		shader_resource_desc.Format = format;
-		shader_resource_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		shader_resource_desc.Texture2D.MostDetailedMip = 0;
-		shader_resource_desc.Texture2D.MipLevels = mip_levels;
-		
-		HR(directx11.device->CreateShaderResourceView(texture->texture, &shader_resource_desc, &texture->shader_resource));
-	} else {
-		HR(directx11.device->CreateShaderResourceView(texture->texture, NULL, &texture->shader_resource))
-	}
+	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
+	shader_resource_desc.Format = format;
+	shader_resource_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	shader_resource_desc.Texture2D.MostDetailedMip = 0;
+	shader_resource_desc.Texture2D.MipLevels = mip_levels == 1 ? 1 : (mip_levels == 0 ? -1 : mip_levels);
+
+	HR(directx11.device->CreateShaderResourceView(texture->texture, &shader_resource_desc, &texture->shader_resource));
+
+	//if (data && (mip_levels == 1)) {
+	//	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
+	//	shader_resource_desc.Format = format;
+	//	shader_resource_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	//	shader_resource_desc.Texture2D.MostDetailedMip = 0;
+	//	shader_resource_desc.Texture2D.MipLevels = mip_levels;
+	//	
+	//	HR(directx11.device->CreateShaderResourceView(texture->texture, &shader_resource_desc, &texture->shader_resource));
+	//} else {
+	//	HR(directx11.device->CreateShaderResourceView(texture->texture, NULL, &texture->shader_resource))
+	//}
 
 	if (data && (mip_levels == 0)) {
 		directx11.device_context->UpdateSubresource(texture->texture, 0, NULL, data, width * sizeof(u32), 0);
@@ -266,20 +274,16 @@ u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
 	u32 *new_data = new u32[width * height];
 
 	u8* pixels = (u8*)new_data;
-	for(u32 row = 0; row < height; row++)
-	{
+	for(u32 row = 0; row < height; row++) {
 		u32 row_start = row * (width * sizeof(u32));
 		u32 row_2 = row * (width * sizeof(u8));
 		
-		for(u32 col = 0; col < width; col++)
-		{
+		for(u32 col = 0; col < width; col++) {
 			u32 col_start = col * 4;
 			pixels[row_start + col_start + 0] = 255;
-			//pixels[row_start + col_start + 0] = data[row_2 + col];
 			pixels[row_start + col_start + 1] = 255;
 			pixels[row_start + col_start + 2] = 255;
 			pixels[row_start + col_start + 3] = data[row_2 + col];
-			//pixels[row_start + col_start + 3] = 255;
 		}
 	}
 	return new_data;
