@@ -62,6 +62,12 @@ inline void DirectX11::begin_draw()
 inline void DirectX11::end_draw()
 {
 	HR(swap_chain->Present(0, 0));
+	//HRESULT result = swap_chain->Present(0, 0);
+	//if (FAILED(result)) {
+	//	HRESULT error = device->GetDeviceRemovedReason();
+	//	char *str = get_str_error_message_from_hresult_description(error);
+	//	print("Faield:", str);
+	//}
 }
 
 typedef ID3D11DepthStencilState Stencil_Test;
