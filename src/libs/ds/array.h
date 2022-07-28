@@ -33,7 +33,7 @@ struct Array {
 	T &pop();
 	T &at(int index);
 	const T &at(int index) const;
-	T &last_item() { return items[count - 1]; }
+	T &get_last() { return items[count - 1]; }
 
 	void clear() 
 	{

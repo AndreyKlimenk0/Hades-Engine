@@ -8,6 +8,9 @@
 #include "../../sys/sys_local.h"
 #include "../../win32/win_types.h"
 
+
+u32 fast_hash(const char *data);
+
 inline u32 hash(char c, const int factor, const int table_count)
 {
 	return (u32)c % table_count;

@@ -109,9 +109,17 @@ struct Render_Entity {
 void make_render_entity(Entity *entity, const char *model_name);
 void make_render_entity(Entity *entity, Render_Model *render_model);
 
+struct Shadow_Map {
+	Light *light_entity;
+	Texture *depth_map;
+};
+
+Shadow_Map *make_shadow_map(Light *light);
+
 struct World {
 	Entity_Manager entity_manager;
 	Array<Render_Entity *> render_entities;
+	Array<Shadow_Map *> shadows_map;
 
 	void init();
 	void init_from_map(const char *map_name);
