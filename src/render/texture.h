@@ -44,9 +44,11 @@ struct Texture_Manager {
 	Texture default_texture;
 	
 	Hash_Table<String, Texture *> textures;
+	Array<Texture *> rest_textures;
 
 	void init();
 	Texture *get_texture(const char *texture_name);
+	Texture *create_texture(u32 width, u32 height, DXGI_FORMAT format, u32 mips_level = 1);
 };
 
 extern Texture_Manager texture_manager;

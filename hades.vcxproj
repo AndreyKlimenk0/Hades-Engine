@@ -151,6 +151,7 @@
     <ClCompile Include="src\editor\editor.cpp" />
     <ClCompile Include="src\editor\editor_init.cpp" />
     <ClCompile Include="src\game\world.cpp" />
+    <ClCompile Include="src\gui\gui.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\ds\dict.cpp" />
     <ClCompile Include="src\libs\os\camera.cpp" />
@@ -186,6 +187,7 @@
   <ItemGroup>
     <ClInclude Include="src\editor\editor.h" />
     <ClInclude Include="src\game\world.h" />
+    <ClInclude Include="src\gui\gui.h" />
     <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\ds\dict.h" />
     <ClInclude Include="src\libs\ds\linked_list.h" />
