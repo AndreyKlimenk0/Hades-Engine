@@ -26,6 +26,38 @@ Win32_State win32;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+void set_cursor(Cursor_Type type)
+{
+	HCURSOR cursor = LoadCursor(NULL, IDC_ARROW);
+	switch (type) {
+		case CURSOR_TYPE_ARROW: {
+			cursor = LoadCursor(NULL, IDC_ARROW);
+			break;
+		}
+		case CURSOR_TYPE_CROSS: {
+			cursor = LoadCursor(NULL, IDC_CROSS);
+			break;
+		}
+		case CURSOR_TYPE_RESIZE_LEFT_RIGHT: {
+			cursor = LoadCursor(NULL, IDC_SIZEWE);
+			break;
+		}
+		case CURSOR_TYPE_RESIZE_TOP_BUTTON: {
+			cursor = LoadCursor(NULL, IDC_SIZENS);
+			break;
+		}
+		case CURSOR_TYPE_RESIZE_TOP_RIGHT: {
+			cursor = LoadCursor(NULL, IDC_SIZENESW);
+			break;
+		}
+		case CURSOR_TYPE_RESIZE_TOP_LEFT: {
+			cursor = LoadCursor(NULL, IDC_SIZENWSE);
+			break;
+		}
+	}
+	SetCursor(cursor);
+}
+
 void create_and_show_window(int nCmdShow)
 {
 	const char CLASS_NAME[] = "Sample Window Class";
@@ -35,6 +67,7 @@ void create_and_show_window(int nCmdShow)
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = win32.hinstance;
 	wc.lpszClassName = CLASS_NAME;
+	wc.hCursor = LoadCursor(win32.hinstance, MAKEINTRESOURCE(32512));
 
 	RegisterClass(&wc);
 
@@ -69,6 +102,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 
 	create_and_show_window(nCmdShow);
+	set_cursor(CURSOR_TYPE_ARROW);
 
 	os_path.init();
 
@@ -119,11 +153,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		editor.update();
 
 		directx11.begin_draw();
-		//direct2d.begin_draw();
 		
 		render_sys.render_frame();	
-
-		//editor.draw();
 		
 		s64 result = milliseconds_counter() - last;
 		s64 r = microseconds_counter() - l;
@@ -194,6 +225,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case WM_MOUSEMOVE: {
 			int x = GET_X_LPARAM(lParam);
 			int y = GET_Y_LPARAM(lParam);
+
 			push_event(EVENT_TYPE_MOUSE, x, y);
 			break;
 		}

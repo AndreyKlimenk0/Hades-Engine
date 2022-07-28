@@ -69,6 +69,125 @@ static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *
 	return true;
 }
 
+static u32 size_of_dxgi_format(DXGI_FORMAT format)
+{
+	switch (static_cast<int>(format))
+	{
+		case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		case DXGI_FORMAT_R32G32B32A32_UINT:
+		case DXGI_FORMAT_R32G32B32A32_SINT:
+			return 16;
+
+		case DXGI_FORMAT_R32G32B32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32_FLOAT:
+		case DXGI_FORMAT_R32G32B32_UINT:
+		case DXGI_FORMAT_R32G32B32_SINT:
+			return 12;
+
+		case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+		case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		case DXGI_FORMAT_R16G16B16A16_UNORM:
+		case DXGI_FORMAT_R16G16B16A16_UINT:
+		case DXGI_FORMAT_R16G16B16A16_SNORM:
+		case DXGI_FORMAT_R16G16B16A16_SINT:
+		case DXGI_FORMAT_R32G32_TYPELESS:
+		case DXGI_FORMAT_R32G32_FLOAT:
+		case DXGI_FORMAT_R32G32_UINT:
+		case DXGI_FORMAT_R32G32_SINT:
+		case DXGI_FORMAT_R32G8X24_TYPELESS:
+		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+		case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+		case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+		case DXGI_FORMAT_Y416:
+		case DXGI_FORMAT_Y210:
+		case DXGI_FORMAT_Y216:
+			return 8;
+
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+		case DXGI_FORMAT_R10G10B10A2_UINT:
+		case DXGI_FORMAT_R11G11B10_FLOAT:
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		case DXGI_FORMAT_R8G8B8A8_UINT:
+		case DXGI_FORMAT_R8G8B8A8_SNORM:
+		case DXGI_FORMAT_R8G8B8A8_SINT:
+		case DXGI_FORMAT_R16G16_TYPELESS:
+		case DXGI_FORMAT_R16G16_FLOAT:
+		case DXGI_FORMAT_R16G16_UNORM:
+		case DXGI_FORMAT_R16G16_UINT:
+		case DXGI_FORMAT_R16G16_SNORM:
+		case DXGI_FORMAT_R16G16_SINT:
+		case DXGI_FORMAT_R32_TYPELESS:
+		case DXGI_FORMAT_D32_FLOAT:
+		case DXGI_FORMAT_R32_FLOAT:
+		case DXGI_FORMAT_R32_UINT:
+		case DXGI_FORMAT_R32_SINT:
+		case DXGI_FORMAT_R24G8_TYPELESS:
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
+		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+		case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+		case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+		case DXGI_FORMAT_R8G8_B8G8_UNORM:
+		case DXGI_FORMAT_G8R8_G8B8_UNORM:
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+		case DXGI_FORMAT_B8G8R8X8_UNORM:
+		case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
+		case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+		case DXGI_FORMAT_AYUV:
+		case DXGI_FORMAT_Y410:
+		case DXGI_FORMAT_YUY2:
+			return 4;
+
+		case DXGI_FORMAT_P010:
+		case DXGI_FORMAT_P016:
+			return 3;
+
+		case DXGI_FORMAT_R8G8_TYPELESS:
+		case DXGI_FORMAT_R8G8_UNORM:
+		case DXGI_FORMAT_R8G8_UINT:
+		case DXGI_FORMAT_R8G8_SNORM:
+		case DXGI_FORMAT_R8G8_SINT:
+		case DXGI_FORMAT_R16_TYPELESS:
+		case DXGI_FORMAT_R16_FLOAT:
+		case DXGI_FORMAT_D16_UNORM:
+		case DXGI_FORMAT_R16_UNORM:
+		case DXGI_FORMAT_R16_UINT:
+		case DXGI_FORMAT_R16_SNORM:
+		case DXGI_FORMAT_R16_SINT:
+		case DXGI_FORMAT_B5G6R5_UNORM:
+		case DXGI_FORMAT_B5G5R5A1_UNORM:
+		case DXGI_FORMAT_A8P8:
+		case DXGI_FORMAT_B4G4R4A4_UNORM:
+			return 2;
+
+		case DXGI_FORMAT_BC2_TYPELESS:
+		case DXGI_FORMAT_BC2_UNORM:
+		case DXGI_FORMAT_BC2_UNORM_SRGB:
+		case DXGI_FORMAT_BC3_TYPELESS:
+		case DXGI_FORMAT_BC3_UNORM:
+		case DXGI_FORMAT_BC3_UNORM_SRGB:
+		case DXGI_FORMAT_BC5_TYPELESS:
+		case DXGI_FORMAT_BC5_UNORM:
+		case DXGI_FORMAT_BC5_SNORM:
+		case DXGI_FORMAT_BC6H_TYPELESS:
+		case DXGI_FORMAT_BC6H_UF16:
+		case DXGI_FORMAT_BC6H_SF16:
+		case DXGI_FORMAT_BC7_TYPELESS:
+		case DXGI_FORMAT_BC7_UNORM:
+		case DXGI_FORMAT_BC7_UNORM_SRGB:
+			return 1;
+
+		default:
+			return 0;
+		}
+}
+
 static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void *data = NULL, u32 mip_levels = 0,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 {
 	texture->width = width;
@@ -86,7 +205,6 @@ static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void 
 	texture_2d_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	texture_2d_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-
 	u32 is_support_mips;
 	HR(directx11.device->CheckFormatSupport(format, &is_support_mips))
 	if ((mip_levels == 0) && (is_support_mips & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN)) {
@@ -98,7 +216,7 @@ static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void 
 		D3D11_SUBRESOURCE_DATA subresource_desc;
 		ZeroMemory(&subresource_desc, sizeof(D3D11_SUBRESOURCE_DATA));
 		subresource_desc.pSysMem = data;
-		subresource_desc.SysMemPitch = width * sizeof(u32);
+		subresource_desc.SysMemPitch = width * size_of_dxgi_format(format);
 		
 		HR(directx11.device->CreateTexture2D(&texture_2d_desc, &subresource_desc, (ID3D11Texture2D **)&texture->texture))
 	} else {
@@ -112,18 +230,6 @@ static Texture *create_texture_2d(Texture *texture, u32 width, u32 height, void 
 	shader_resource_desc.Texture2D.MipLevels = mip_levels == 1 ? 1 : (mip_levels == 0 ? -1 : mip_levels);
 
 	HR(directx11.device->CreateShaderResourceView(texture->texture, &shader_resource_desc, &texture->shader_resource));
-
-	//if (data && (mip_levels == 1)) {
-	//	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
-	//	shader_resource_desc.Format = format;
-	//	shader_resource_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	//	shader_resource_desc.Texture2D.MostDetailedMip = 0;
-	//	shader_resource_desc.Texture2D.MipLevels = mip_levels;
-	//	
-	//	HR(directx11.device->CreateShaderResourceView(texture->texture, &shader_resource_desc, &texture->shader_resource));
-	//} else {
-	//	HR(directx11.device->CreateShaderResourceView(texture->texture, NULL, &texture->shader_resource))
-	//}
 
 	if (data && (mip_levels == 0)) {
 		directx11.device_context->UpdateSubresource(texture->texture, 0, NULL, data, width * sizeof(u32), 0);
@@ -243,6 +349,11 @@ Texture_Manager::~Texture_Manager()
 			DELETE_PTR(textures.nodes[i]);
 		}
 	}
+
+	Texture *texture = NULL;
+	For(rest_textures, texture) {
+		DELETE_PTR(texture);
+	}
 }
 
 void Texture_Manager::init()
@@ -266,6 +377,13 @@ Texture *Texture_Manager::get_texture(const char *texture_name)
 		texture->name = texture_name;
 		textures.set(texture_name, texture);
 	}
+	return texture;
+}
+
+Texture *Texture_Manager::create_texture(u32 width, u32 height, DXGI_FORMAT format, u32 mips_level)
+{
+	Texture *texture = create_texture_2d(width, height, NULL, mips_level, D3D11_USAGE_DEFAULT, format);
+	rest_textures.push(texture);
 	return texture;
 }
 

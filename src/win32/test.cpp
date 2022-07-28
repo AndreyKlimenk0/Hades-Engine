@@ -133,6 +133,11 @@ struct Test {
 
 void test()
 {	
-	Font_Char c = font.characters['.'];
-	print("");
+	u32 x = 10;
+	u32 y = 11;
+	u32 result = x - y;
+	if ((result > x) && (result > y)) {
+		result = 0;
+	}
+	print("result = {} result 2 = {}", result, result + y);
 }

@@ -136,7 +136,7 @@ inline void place_in_center(int *x, int *y, int placed_element_width, int placed
 	*y = (height / 2) - (placed_element_height / 2);
 }
 
-void place_in_center(Rect_u32 *in_element_place, Rect_u32 *placed_element)
+inline void place_in_center(Rect_u32 *in_element_place, Rect_u32 *placed_element)
 {
 	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
 	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
@@ -435,7 +435,7 @@ void Panel_List_Box::add_item(const char *string, int enum_value, Picked_Panel *
 
 	List_Box::add_item(string, enum_value);
 
-	Text_Button &button = item_list.last_item();
+	Text_Button &button = item_list.get_last();
 	DELETE_PTR(button.callback);
 	button.callback = new Member_Callback<Panel_List_Box>(this, &Panel_List_Box::on_list_item_click);
 

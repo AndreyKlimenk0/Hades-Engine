@@ -1,9 +1,11 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#define KEY_NUMBER 255
-
 #include "../ds/array.h"
+#include "../../win32/win_types.h"
+
+const u32 KEY_NUMBER = 255;
+
 
 enum Keys {
 	Key_A = 0x41,
@@ -36,9 +38,8 @@ enum Keys {
 
 
 struct Mouse_Input {
-	static int x;
-	static int y;
-
+	static s32 x;
+	static s32 y;
 };
 
 struct Key_Input {

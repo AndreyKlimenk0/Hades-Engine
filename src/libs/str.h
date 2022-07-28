@@ -2,6 +2,7 @@
 #define STRING_H
 
 #include "ds/array.h"
+#include "../libs/math/common.h"
 #include "math/vector.h"
 #include "../win32/win_local.h"
 #include "../win32/win_types.h"
@@ -38,6 +39,7 @@ char *to_string(char c);
 char *to_string(String &string);
 char *to_string(String *string);
 char *to_string(Vector3 *vector);
+char *to_string(Rect_u32 *rect);
 
 int is_format_string(const char *string);
 

@@ -221,10 +221,9 @@ void Render_System::init(View_Info *view_info)
 	sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampler_desc.MipLODBias = 0.f;
-	sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-	sampler_desc.MinLOD = 0.f;
-	sampler_desc.MaxLOD = 0.f;
+	sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampler_desc.MinLOD = 0;
+	sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
 	HR(directx11.device->CreateSamplerState(&sampler_desc, &sampler));
 
@@ -347,6 +346,8 @@ void pack_rects(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
 	}
 }
 
+#include "../gui/gui.h"
+
 void Render_System::render_frame()
 {
 	//Array<rect_t> rects;
@@ -377,7 +378,7 @@ void Render_System::render_frame()
 	//rect_t r = rect_t(0, 0, 900, 900, Color::Red);
 	//pack_rects(&r, &rects);
 
-	//render_2d.clear();
+	render_2d.clear();
 
 
 	//render_2d.draw_texture(0, 0, 500, 500, render_2d.temp);
@@ -395,12 +396,14 @@ void Render_System::render_frame()
 	//	render_2d.draw_rect(rect->x, rect->y, rect->width, rect->height, rect->color);
 	//}
 
-	view_matrix = free_camera->get_view_matrix();
-	draw_world_entities(current_render_world);
+	//view_matrix = free_camera->get_view_matrix();
+	//draw_world_entities(current_render_world);
 	
 	//editor.draw();
 
-	//render_2d.draw_primitives();
+	draw_test_gui();
+
+	render_2d.draw_primitives();
 }
 
 View_Info *make_view_info(float near_plane, float far_plane)
@@ -759,14 +762,17 @@ void Render_2D::draw_text(int x, int y, const char *text)
 	}
 }
 
-void Render_2D::draw_rect(Rect_u32 *rect, const Color &color, u32 rounding, u32 flags)
-{
-	draw_rect((int)rect->x, (int)rect->y, (int)rect->width, (int)rect->height, color, rounding, flags);
-}
+//void Render_2D::draw_rect(Rect_u32 *rect, const Color &color, u32 rounding, u32 flags)
+//{
+//	draw_rect((int)rect->x, (int)rect->y, (int)rect->width, (int)rect->height, color, rounding, flags);
+//}
 
 void Render_2D::draw_rect(float x, float y, float width, float height, const Color &color, u32 rounding, u32 flags)
 {
-	String hash = String(width + height + (int)rounding);
+	//////////////////////////////////////////////////////////
+	// &Note I am not sure that chache works for primitives //
+	//////////////////////////////////////////////////////////
+	String hash = String((int)width) + String((int)height) + String((int)rounding) + String((int)flags);
 
 	Render_Primitive_2D_Info render_primitive;
 	render_primitive.position.x = x;
@@ -788,7 +794,7 @@ void Render_2D::draw_rect(float x, float y, float width, float height, const Col
 
 	if (rounding > 0) {
 		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)y));
+		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, 0.0f));
 		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)height));
 		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
 	} else {
@@ -802,15 +808,25 @@ void Render_2D::draw_rect(float x, float y, float width, float height, const Col
 	add_primitive(primitive);
 }
 
-void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
-{
-	float _x = static_cast<float>(x);
-	float _y = static_cast<float>(y);
-	float _width = static_cast<float>(width);
-	float _height = static_cast<float>(height);
-
-	draw_rect(_x, _y, _width, _height, color, rounding, flags);
-}
+//void Render_2D::draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding, u32 flags)
+//{
+//	float _x = static_cast<float>(x);
+//	float _y = static_cast<float>(y);
+//	float _width = static_cast<float>(width);
+//	float _height = static_cast<float>(height);
+//
+//	draw_rect(_x, _y, _width, _height, color, rounding, flags);
+//}
+//
+//void Render_2D::draw_rect(u32 x, u32 y, u32 width, u32 height, const Color & color, u32 rounding, u32 flags)
+//{
+//	float _x = static_cast<float>(x);
+//	float _y = static_cast<float>(y);
+//	float _width = static_cast<float>(width);
+//	float _height = static_cast<float>(height);
+//
+//	draw_rect(_x, _y, _width, _height, color, rounding, flags);
+//}
 
 void Render_2D::draw_texture(int x, int y, int width, int height, Texture *texture)
 {

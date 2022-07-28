@@ -67,8 +67,8 @@ struct Render_Primitive_2D_Info {
 };
 
 const u32 ROUND_TOP_LEFT_RECT = 0x1;
-const u32 ROUND_TOP_RIGHT_RECT = 0x4;
-const u32 ROUND_BOTTOM_LEFT_RECT = 0x2;
+const u32 ROUND_TOP_RIGHT_RECT = 0x2;
+const u32 ROUND_BOTTOM_LEFT_RECT = 0x4;
 const u32 ROUND_BOTTOM_RIGHT_RECT = 0x8;
 const u32 ROUND_TOP_RECT = ROUND_TOP_LEFT_RECT | ROUND_TOP_RIGHT_RECT;
 const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
@@ -103,24 +103,44 @@ struct Render_2D {
 	void init();
 	void init_font_rendering();
 	void init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
-	void clear();
+	void clear(); // @Clean up change name 
 	void add_primitive(Primitive_2D *primitive);
-	void draw_primitives();
+	void draw_primitives(); // @Clean up change name 
 	
 
 	void draw_text(Rect_u32 *rect, const char *text);
 	void draw_text(int x, int y, const char *text);
-	void draw_rect(Rect_u32 *rect, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
-	void draw_rect(int x, int y, int width, int height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
+	
+	template <typename T>
+	void draw_rect(Rect<T> *rect, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
+	template <typename T>
+	void draw_rect(T x, T y, T width, T height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
+	
 	void draw_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void draw_texture(int x, int y, int width, int height, Texture *texture);
 };
+
+template <typename T>
+inline void Render_2D::draw_rect(Rect<T> *rect, const Color &color, u32 rounding, u32 flags)
+{
+	draw_rect(rect->x, rect->y, rect->width, rect->height, color, rounding, flags);
+}
+
+template <typename T>
+inline void Render_2D::draw_rect(T x, T y, T width, T height, const Color &color, u32 rounding, u32 flags)
+{
+	float _x = static_cast<float>(x);
+	float _y = static_cast<float>(y);
+	float _width = static_cast<float>(width);
+	float _height = static_cast<float>(height);
+
+	draw_rect(_x, _y, _width, _height, color, rounding, flags);
+}
 
 inline void Render_2D::draw_text(Rect_u32 *rect, const char *text)
 {
 	draw_text((int)rect->x, (int)rect->y, text);
 }
-
 
 inline void Render_2D::clear()
 {

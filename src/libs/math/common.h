@@ -5,73 +5,114 @@
 
 //float Pi = 3.1415926535f;
 //
-//float clamp(float value, float min, float max)
-//{
-//	return value < min ? min : (value > max ? max : value);
-//}
 
-struct Size_u32 {
-	Size_u32() {}
-	Size_u32(u32 width, u32 height) : width(width), height(height) {}
+
+#ifdef max
+#undef max
+#endif
+
+namespace math {
+
+	template <typename T>
+	inline T clamp(T value, T min, T max)
+	{
+		return value < min ? min : (value > max ? max : value);
+	}
+	template <typename T>
+	inline T max(T x, T y)
+	{
+		return (x > y) ? x : y;
+	}
 	
-	u32 width = 0;
-	u32 height = 0;
+	template <typename T>
+	inline T abs(T value)
+	{
+		return (value > 0) ? value : -value;
+	}
 };
 
-struct Rect_u32 {
-	Rect_u32() {}
-	Rect_u32(u32 width, u32 height) : width(width), height(height) {}
-	Rect_u32(u32 x, u32 y, u32 width, u32 height) : x(x), y(y), width(width), height(height) {}
-	Rect_u32(Size_u32 &size) : width(size.width), height(size.height) {}
-	
-	u32 x = 0;
-	u32 y = 0;
-	u32 width = 0;
-	u32 height = 0;
+template <typename T>
+struct Size {
+	Size() {}
+	Size(T width, T height) : width(width), height(height) {}
 
-	void set(Size_u32 &size);
-	void set(u32 _x, u32 _y);
-	void set_wh(u32 _width, u32 _height);
-
-	u32 right();
-	u32 bottom();
+	T width = 0;
+	T height = 0;
 };
 
-inline void Rect_u32::set(Size_u32 &size)
+typedef Size<u32> Size_u32;
+typedef Size<s32> Size_s32;
+
+template <typename T>
+struct Pair {
+	Pair() {}
+	Pair(const T &first, const T &second) : first(first), second(second) {}
+	
+	T first;
+	T second;
+};
+
+typedef Pair<s32> Pair_s32;
+
+template <typename T>
+struct Point_V2 {
+	T x;
+	T y;
+};
+
+typedef Point_V2<s32> Point_s32;
+
+template <typename T>
+struct Rect {
+	Rect() {}
+	Rect(T width, T height) : width(width), height(height) {}
+	Rect(T x, T y, T width, T height) : x(x), y(y), width(width), height(height) {}
+	Rect(Size<T> &size) : width(size.width), height(size.height) {}
+	
+	T x = 0;
+	T y = 0;
+	T width = 0;
+	T height = 0;
+
+	void set(Size<T> &size);
+	void set(T _x, T _y);
+	void set_wh(T _width, T _height);
+
+	T right();
+	T bottom();
+};
+
+template <typename T>
+inline void Rect<T>::set(Size<T> &size)
 {
 	width = size.width;
 	height = size.height;
 }
-
-inline void Rect_u32::set(u32 _x, u32 _y)
+template <typename T>
+inline void Rect<T>::set(T _x, T _y)
 {
 	x = _x;
 	y = _y;
 }
-
-inline u32 Rect_u32::right()
+template <typename T>
+inline T Rect<T>::right()
 {
 	return x + width;
 }
-
-inline u32 Rect_u32::bottom()
+template <typename T>
+inline T Rect<T>::bottom()
 {
 	return y + height;
 }
-
-inline void Rect_u32::set_wh(u32 _width, u32 _height)
+template <typename T>
+inline void Rect<T>::set_wh(T _width, T _height)
 {
 	width = _width;
 	height = _height;
 }
 
-struct Rect_f32 {
-	Rect_f32() {}
-	Rect_f32(float x, float y, float width, float height) : x(x), y(y), width(width), height(height) {}
-	
-	float x = 0.0f;
-	float y = 0.0f;
-	float width = 0.0f;
-	float height = 0.0f;
-};
+typedef Rect<u32> Rect_u32;
+typedef Rect<s32> Rect_s32;
+typedef Rect<float> Rect_f32;
+
 #endif

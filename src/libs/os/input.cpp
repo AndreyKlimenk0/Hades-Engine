@@ -2,10 +2,9 @@
 
 #include "input.h"
 
-int Mouse_Input::x = 0;
-int Mouse_Input::y = 0;
 
-
+s32 Mouse_Input::x = 0;
+s32 Mouse_Input::y = 0;
 
 bool Key_Input::was_char_key_input;
 bool Key_Input::keys[KEY_NUMBER];

@@ -122,6 +122,14 @@ void make_render_entity(Entity *entity, Render_Model *render_model)
 	world.render_entities.push(render_entity);
 }
 
+Shadow_Map * make_shadow_map(Light * light)
+{
+	Shadow_Map *shadow_map = new Shadow_Map();
+	shadow_map->light_entity = light;
+	shadow_map->depth_map = texture_manager.create_texture(1024, 1024, DXGI_FORMAT_D32_FLOAT);
+	return shadow_map;
+}
+
 void World::init()
 {
 
@@ -135,4 +143,3 @@ void World::init()
 	entity_manager.make_sphere(Vector3(400, 100.0, 0.0), 100.0f, 100, 100);
 	entity_manager.make_grid(Vector3(0.0, 0.0, 0.0), 5000.0f, 5000.0f, 50, 50);
 }
-

@@ -47,4 +47,6 @@ void run_event_loop();
 
 bool was_click_by_left_mouse_button();
 bool is_left_mouse_button_down();
+bool was_left_mouse_button_just_pressed();
+
 #endif
