@@ -43,7 +43,7 @@ inline void View_Info::update_projection_matries(u32 new_window_width, u32 new_w
 
 View_Info *make_view_info(float near_plane, float far_plane);
 
-enum Rect_Side;
+
 typedef ID3D11Buffer Gpu_Buffer;
 
 struct Primitive_2D {

@@ -17,6 +17,8 @@ Color header_color = Color(74, 82, 90);
 Color Window_color = Color(36, 39, 43);
 
 const s32 MIN_WINDOW_WIDTH = 20;
+const s32 MIN_WINDOW_HEIGHT = 40;
+const Size_s32 MIN_WINDOW_SIZE = { 20 , 20 };
 
 static Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 
@@ -24,6 +26,35 @@ static Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 inline bool detect_collision(Rect_s32 *rect)
 {
 	if ((Mouse_Input::x > rect->x) && (Mouse_Input::x < (rect->x + rect->width)) && (Mouse_Input::y > rect->y) && (Mouse_Input::y < (rect->y + rect->height))) {
+		return true;
+	}
+	return false;
+}
+
+inline bool detect_collision(Vector2 *triangle_point1, Vector2 *triangle_point2, Vector2 *triangle_point3, Vector2 *point)
+{
+	float triangle_area = math::abs((triangle_point2->x - triangle_point1->x) * (triangle_point3->y - triangle_point1->y) - (triangle_point3->x - triangle_point1->x) * (triangle_point2->y - triangle_point1->y));
+	
+	float area1 = math::abs((triangle_point1->x - point->x) * (triangle_point2->y - point->y) - (triangle_point2->x - point->x) * (triangle_point1->y - point->y));
+	float area2 = math::abs((triangle_point2->x - point->x) * (triangle_point3->y - point->y) - (triangle_point3->x - point->x) * (triangle_point2->y - point->y));
+	float area3 = math::abs((triangle_point3->x - point->x) * (triangle_point1->y - point->y) - (triangle_point1->x - point->x) * (triangle_point3->y - point->y));
+
+	if (area1 + area2 + area3 == triangle_area) {
+		return true;
+	}
+	return false;
+}
+
+template <typename T>
+inline bool detect_collision(Triangle<T> *triangle, Point_V2<T> *point)
+{
+	T triangle_area = triangle->get_area();
+
+	T area1 = Triangle<T>(triangle->a, triangle->b, *point).get_area();
+	T area2 = Triangle<T>(*point, triangle->b, triangle->c).get_area();
+	T area3 = Triangle<T>(triangle->a, *point, triangle->c).get_area();
+
+	if (area1 + area2 + area3 == triangle_area) {
 		return true;
 	}
 	return false;
@@ -39,13 +70,6 @@ struct Gui_Window_Theme {
 Gui_Window_Theme window_theme;
 
 typedef u32 Gui_ID;
-
-enum Rect_Side {
-	RECT_SIDE_LEFT,
-	RECT_SIDE_RIGHT,
-	RECT_SIDE_TOP,
-	RECT_SIDE_BOTTOM,
-};
 
 struct Gui_Window {
 	u32 gui_id;
@@ -104,12 +128,12 @@ Gui_Window *Gui_Manager::create_or_find_window(const char *name)
 		}
 	}
 
-	Gui_Window new_window;
-	new_window.gui_id = window_id;
-	new_window.rect = default_window_rect;
-	windows.push(new_window);
-	default_window_rect.x += new_window.rect.width + 40;
-	return &windows.get_last();
+Gui_Window new_window;
+new_window.gui_id = window_id;
+new_window.rect = default_window_rect;
+windows.push(new_window);
+default_window_rect.x += new_window.rect.width + 40;
+return &windows.get_last();
 }
 
 inline u32 safe_sub_u32(u32 x, u32 y)
@@ -125,7 +149,6 @@ void Gui_Manager::begine_frame()
 	mouse_x_delta = mouse_x - last_mouse_x;
 	mouse_y_delta = mouse_y - last_mouse_y;
 	hot_item = 0;
-	//resizing_window = 0;
 }
 
 void Gui_Manager::end_frame()
@@ -133,7 +156,7 @@ void Gui_Manager::end_frame()
 	if (!is_left_mouse_button_down()) {
 		active_item = 0;
 		resizing_window = 0;
-	} 
+	}
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
 }
@@ -154,26 +177,53 @@ void Gui_Manager::begine_window(const char *name)
 		rect->y = math::clamp(rect->y + mouse_y_delta, 0, (s32)win32.window_height - rect->height);
 	}
 
-	Rect_Side rect_side;
-	if (detect_collision_window_borders(rect, &rect_side) || (resizing_window == window->gui_id) && is_left_mouse_button_down()) {
+	static Rect_Side rect_side;
+	if (((resizing_window == window->gui_id) && is_left_mouse_button_down()) || detect_collision_window_borders(rect, &rect_side)) {
+		active_item = 0;
 		probably_resizing_window = window->gui_id;
-		if (rect_side == RECT_SIDE_LEFT) {
+
+		if ((rect_side == RECT_SIDE_LEFT) || (rect_side == RECT_SIDE_RIGHT)) {
 			set_cursor(CURSOR_TYPE_RESIZE_LEFT_RIGHT);
+		} else if ((rect_side == RECT_SIDE_BOTTOM) || (rect_side == RECT_SIDE_TOP)) {
+			set_cursor(CURSOR_TYPE_RESIZE_TOP_BUTTOM);
+		} else if (rect_side == RECT_SIDE_RIGHT_BOTTOM) {
+			set_cursor(CURSOR_TYPE_RESIZE_TOP_LEFT);
+		} else if (rect_side == RECT_SIDE_LEFT_BOTTOM) {
+			set_cursor(CURSOR_TYPE_RESIZE_TOP_RIGHT);
 		}
+
 		if (was_left_mouse_button_just_pressed()) {
 			resizing_window = window->gui_id;
 		}
+
 		if ((resizing_window == window->gui_id) && is_left_mouse_button_down()) {
 
-			if ((mouse_x >= 0) && ((rect->width - mouse_x_delta) > MIN_WINDOW_WIDTH)) {
-				//rect->x = math::clamp(rect->x + mouse_x_delta, 0, rect->right());
-				rect->x = math::max(rect->x + mouse_x_delta, 0);
-				//rect->width = math::clamp(rect->width - mouse_x_delta, MIN_WINDOW_WIDTH, win32.window_width - rect->width);
-				rect->width = math::max(rect->width - mouse_x_delta, MIN_WINDOW_WIDTH);
+			if ((rect_side == RECT_SIDE_LEFT) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
+				if ((mouse_x >= 0) && ((rect->width - mouse_x_delta) > MIN_WINDOW_WIDTH)) {
+					rect->x = math::max(rect->x + mouse_x_delta, 0);
+					rect->width = math::max(rect->width - mouse_x_delta, MIN_WINDOW_WIDTH);
+				}
+			} 
+			if ((rect_side == RECT_SIDE_RIGHT) || (rect_side == RECT_SIDE_RIGHT_BOTTOM)) {
+				if ((rect->right() + mouse_x_delta) < win32.window_width) {
+					rect->width = math::max(rect->width + mouse_x_delta, MIN_WINDOW_WIDTH);
+				}
+			}
+			if ((rect_side == RECT_SIDE_BOTTOM) || (rect_side == RECT_SIDE_RIGHT_BOTTOM) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
+				if ((rect->bottom() + mouse_y_delta) < win32.window_height) {
+					rect->height = math::max(rect->height + mouse_y_delta, MIN_WINDOW_HEIGHT);
+				}
+			} 
+			if (rect_side == RECT_SIDE_TOP) {
+				if ((mouse_y >= 0) && ((rect->height - mouse_y_delta) > MIN_WINDOW_HEIGHT)) {
+					rect->y = math::max(rect->y + mouse_y_delta, 0);
+					rect->height = math::max(rect->height - mouse_y_delta, MIN_WINDOW_HEIGHT);
+				}
 			}
 		}
 	} else {
 		if (probably_resizing_window == window->gui_id) {
+			active_item = window->gui_id;
 			probably_resizing_window = 0;
 			set_cursor(CURSOR_TYPE_ARROW);
 		}
@@ -185,9 +235,30 @@ void Gui_Manager::begine_window(const char *name)
 
 bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side)
 {
-	static u32 offset_from_border = 10;
-	if ((mouse_x >= (rect->x - offset_from_border)) && (mouse_x <= rect->x) && ((mouse_y >= rect->y) && (mouse_y <= rect->bottom()))) {
+	static s32 offset_from_border = 5;
+	static s32 tri_size = 10;
+	
+	Point_s32 mouse = { mouse_x, mouse_y };
+	Triangle<s32> right_triangle = Triangle<s32>(Point_s32(rect->right() - tri_size, rect->bottom()), Point_s32(rect->right(), rect->bottom() - tri_size), Point_s32(rect->right(), rect->bottom()));
+	Triangle<s32> left_triangle = Triangle<s32>(Point_s32(rect->x, rect->bottom()), Point_s32(rect->x, rect->bottom() - tri_size), Point_s32(rect->x + tri_size, rect->bottom()));
+
+	if (detect_collision(&left_triangle, &mouse)) {
+		*rect_side = RECT_SIDE_LEFT_BOTTOM;
+		return true;
+	} else if (detect_collision(&right_triangle, &mouse)) {
+		*rect_side = RECT_SIDE_RIGHT_BOTTOM;
+		return true;
+	} else if ((mouse_x >= (rect->x - offset_from_border)) && (mouse_x <= rect->x) && ((mouse_y >= rect->y) && (mouse_y <= rect->bottom()))) {
 		*rect_side = RECT_SIDE_LEFT;
+		return true;
+	} else if ((mouse_x >= rect->right()) && (mouse_x <= (rect->right() + offset_from_border)) && ((mouse_y >= rect->y) && (mouse_y <= rect->bottom()))) {
+		*rect_side = RECT_SIDE_RIGHT;
+		return true;
+	} else if ((mouse_x >= rect->x) && (mouse_x <= rect->right() && (mouse_y >= rect->bottom()) && (mouse_y <= (rect->bottom() + offset_from_border)))) {
+		*rect_side = RECT_SIDE_BOTTOM;
+		return true;
+	} else if ((mouse_x >= rect->x) && (mouse_x <= rect->right()) && (mouse_y <= rect->y) && (mouse_y >= (rect->y - offset_from_border))) {
+		*rect_side = RECT_SIDE_TOP;
 		return true;
 	}
 	return false;
