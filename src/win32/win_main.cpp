@@ -42,7 +42,7 @@ void set_cursor(Cursor_Type type)
 			cursor = LoadCursor(NULL, IDC_SIZEWE);
 			break;
 		}
-		case CURSOR_TYPE_RESIZE_TOP_BUTTON: {
+		case CURSOR_TYPE_RESIZE_TOP_BUTTOM: {
 			cursor = LoadCursor(NULL, IDC_SIZENS);
 			break;
 		}

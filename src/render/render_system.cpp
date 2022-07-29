@@ -551,12 +551,6 @@ Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 	return (float)pow((1 - t), 2) * p0 + 2 * (1 - t) * t * p1 + (float)pow(t, 2) * p2;
 }
 
-enum Rect_Side {
-	RECT_SIDE_TOP_LEFT,
-	RECT_SIDE_TOP_RIGHT,
-	RECT_SIDE_BOTTOM_LEFT,
-	RECT_SIDE_BOTTOM_RIGHT,
-};
 
 void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)
 {
@@ -572,22 +566,22 @@ void Primitive_2D::add_rounded_points(float x, float y, float width, float heigh
 	}
 
 	Vector2 point0, point1, point2;
-	if (rect_side == RECT_SIDE_TOP_LEFT) {
+	if (rect_side == RECT_SIDE_LEFT_TOP) {
 		point0 = Vector2(x, y + rounding);
 		point1 = Vector2(x, y);
 		point2 = Vector2(x + rounding, y);
 	
-	} else if (rect_side == RECT_SIDE_TOP_RIGHT) {
+	} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
 		point0 = Vector2(x + width - rounding, y); 
 		point1 = Vector2(x + width, y); 
 		point2 = Vector2(x + width, y + rounding);
 	
-	} else if (rect_side == RECT_SIDE_BOTTOM_LEFT) {
+	} else if (rect_side == RECT_SIDE_LEFT_BOTTOM) {
 		point0 = Vector2(x + rounding, y + height); 
 		point1 = Vector2(x, y + height); 
 		point2 = Vector2(x, y + height - rounding);
 	
-	} else if (rect_side == RECT_SIDE_BOTTOM_RIGHT) {
+	} else if (rect_side == RECT_SIDE_RIGHT_BOTTOM) {
 		point0 = Vector2(x + width, y + height - rounding);
 		point1 = Vector2(x + width, y + height); 
 		point2 = Vector2(x + width - rounding, y + height);
@@ -793,10 +787,10 @@ void Render_2D::draw_rect(float x, float y, float width, float height, const Col
 	render_primitives.push(render_primitive);
 
 	if (rounding > 0) {
-		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_LEFT, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_TOP_RIGHT, rounding) : primitive->add_point(Vector2((float)width, 0.0f));
-		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_BOTTOM_RIGHT, rounding) : primitive->add_point(Vector2((float)width, (float)height));
-		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_BOTTOM_LEFT, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
+		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
+		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2((float)width, 0.0f));
+		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2((float)width, (float)height));
+		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
 	} else {
 		primitive->add_point(Vector2(0.0f, 0.0f));
 		primitive->add_point(Vector2((float)width, 0.0f));
