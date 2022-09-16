@@ -39,11 +39,11 @@ static void update_left_mouse_button_state(Event *event)
 			return;
 		}
 	}
-	click_by_left_mouse_button = false;
 }
 
 void pump_events()
 {
+	click_by_left_mouse_button = false;
 	if (left_mouse_button_just_pressed) {
 		left_mouse_button_just_pressed = false;
 	}
@@ -99,7 +99,7 @@ void run_event_loop()
 			Mouse_Input::x = event.mouse_info.x;
 			Mouse_Input::y = event.mouse_info.y;
 		}
-		handle_event_for_editor(&event);
+		//handle_event_for_editor(&event);
 	}
 }
 

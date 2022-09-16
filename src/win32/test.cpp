@@ -18,7 +18,6 @@
 #define TO_STRING(x) (#x)
 #define ADD_INFO(struct_info, member) struct_info.add_info(#member, offsetof(decltype(struct_info.type), member))
 
-
 template <typename T>
 struct Struct_Info {	
 	T type;
@@ -38,7 +37,7 @@ void Struct_Info<T>::add_info(const char *member_name, u32 offset)
 template<typename T>
 void Struct_Info<T>::fill_struct(u32 *struct_address, Void_Dict *dict)
 {
-		for (int i = 0; i < dict->storage.count; i++) {
+	for (int i = 0; i < dict->storage.count; i++) {
 		Hash_Node<String, Data_Ptr> *node = dict->storage.get_node(i);
 		String name = node->key;
 		Data_Ptr *data_ptr = &node->value;
@@ -124,20 +123,42 @@ void make_function_info(Function_Info *func_info)
 	
 }
 
-
 struct Test {
 	int i;
 	float f;
 	Vector3 v;
 };
 
+Struct_Info<Test> si;
+//Test test;
+//
+//Void_Dict dict;
+//dict.set("i", int(11));
+//dict.set("f", float(12.0f));
+//dict.set("v", Vector3(1.0f, 10.0f, 1.0f));
+//
+//Struct_Info<Test> si;
+//ADD_INFO(si, i);
+//ADD_INFO(si, f);
+//ADD_INFO(si, v);
+//
+//si.fill_struct((u32 *)&test, &dict);
+
 void test()
-{	
-	u32 x = 10;
-	u32 y = 11;
-	u32 result = x - y;
-	if ((result > x) && (result > y)) {
-		result = 0;
+{
+	Array<int> temp;
+	for (int i = 0; i < 16; i++) {
+		temp.push(i);
 	}
-	print("result = {} result 2 = {}", result, result + y);
+
+	int i = 0;
+	For(temp, i) {
+		print("value", i);
+	}
+	Array<int> other;
+	other = temp;
+	For(other, i) {
+		print("other value", i);
+	}
+	//print(test.i, test.f, &test.v);
 }

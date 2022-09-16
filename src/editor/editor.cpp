@@ -200,7 +200,7 @@ void Text::update_size()
 Caret::Caret(u32 x, u32 y, u32 height)
 {
 	rect.set(x, y);
-	rect.set_wh(1, height);
+	rect.set_size(1, height);
 }
 
 void Caret::draw()
@@ -368,7 +368,7 @@ void List_Box::add_item(const char *item_text)
 
 	list_box_size += button.get_height();
 
-	list_box_rect.set_wh(field_rect.width, list_box_size + theme.list_box_top_bottom_border);
+	list_box_rect.set_size(field_rect.width, list_box_size + theme.list_box_top_bottom_border);
 
 	if (item_list.count == 1) {
 		current_chosen_item_text = item_list[0].text.string;
@@ -435,7 +435,7 @@ void Panel_List_Box::add_item(const char *string, int enum_value, Picked_Panel *
 
 	List_Box::add_item(string, enum_value);
 
-	Text_Button &button = item_list.get_last();
+	Text_Button &button = item_list.last_item();
 	DELETE_PTR(button.callback);
 	button.callback = new Member_Callback<Panel_List_Box>(this, &Panel_List_Box::on_list_item_click);
 
@@ -525,7 +525,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	caret = Caret(x + theme.shift_caret_from_left, place_in_middle(*this, caret_height), caret_height);
 
-	field_rect.set_wh(theme.field_width, theme.field_height);
+	field_rect.set_size(theme.field_width, theme.field_height);
 
 
 	if (edit_data_type == EDIT_DATA_INT) {
@@ -579,7 +579,7 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 
 	char *float_str = to_string(*float_value);
 
-	field_rect.set_wh(theme.field_width, theme.field_height);
+	field_rect.set_size(theme.field_width, theme.field_height);
 
 	set_text(float_str);
 

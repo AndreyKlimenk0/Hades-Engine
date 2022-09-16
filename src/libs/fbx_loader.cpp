@@ -188,7 +188,7 @@ bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String 
 	} else {
 		split(&file_texture_name, "\\", &buffer);
 	}
-	*file_name = buffer.get_last();
+	*file_name = buffer.last_item();
 
 	return true;
 }

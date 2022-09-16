@@ -9,10 +9,12 @@
 #include "font.h"
 #include "../game/world.h"
 #include "../libs/math/matrix.h"
+#include "../libs/math/common.h"
 #include "../win32/win_types.h"
 #include "../libs/os/camera.h"
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/array.h"
+#include "../libs/ds/linked_list.h"
 
 
 struct View_Info {
@@ -57,14 +59,19 @@ struct Primitive_2D {
 	void add_point(const Vector2 &point, const Vector2 &uv = Vector2(0.0f, 0.0f)) { vertices.push(Vertex_X2UV(point, uv)); }
 	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding);
 	void make_triangle_polygon();
+	void make_outline_triangle_polygons();
 };
 
-struct Render_Primitive_2D_Info {
+struct Render_Primitive_2D {
 	Primitive_2D *primitive = NULL;
 	Texture *texture = NULL;
 	Vector2 position;
+	Rect_s32 clip_rect;
 	Color color;
 };
+
+typedef Array<Render_Primitive_2D> Render_Primitive_List;
+
 
 const u32 ROUND_TOP_LEFT_RECT = 0x1;
 const u32 ROUND_TOP_RIGHT_RECT = 0x2;
@@ -77,6 +84,7 @@ const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 struct Render_2D {
 	~Render_2D();
 
+	ID3D11RasterizerState * rasterization = NULL;
 	ID3D11DepthStencilState *depth_test = NULL;
 	ID3D11BlendState *blending_test = NULL;
 
@@ -96,19 +104,32 @@ struct Render_2D {
 
 	Matrix4 screen_postion;
 
+	Array<Render_Primitive_List> draw_list;
+
+	void new_render_primitive_list();
+	void add_render_primitive(Render_Primitive_2D *render_primitive);
+	
+	Array<Rect_s32> clip_rects;
 	Array<Primitive_2D *> primitives;
-	Array<Render_Primitive_2D_Info> render_primitives;
+	Array<Render_Primitive_2D> render_primitives;
 	Hash_Table<String, Primitive_2D *> lookup_table;
 
 	void init();
 	void init_font_rendering();
 	void init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
-	void clear(); // @Clean up change name 
 	void add_primitive(Primitive_2D *primitive);
-	void draw_primitives(); // @Clean up change name 
 	
+	void new_frame(); // @Clean up change name 
+	void render_frame(); // @Clean up change name 
 
-	void draw_text(Rect_u32 *rect, const char *text);
+	//@Note this method must be deleted	
+	void push_clip_rect(Rect_s32 *rect);
+	void pop_clip_rect();
+	void get_clip_rect(Rect_s32 *rect);
+
+	void draw_outlines(int x, int y, int width, int height, const Color &color, float outline_width = 1.0f, u32 rounding = 0, u32 flags = ROUND_RECT);
+
+	void draw_text(Rect_s32 *rect, const char *text);
 	void draw_text(int x, int y, const char *text);
 	
 	template <typename T>
@@ -119,6 +140,50 @@ struct Render_2D {
 	void draw_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void draw_texture(int x, int y, int width, int height, Texture *texture);
 };
+
+inline s32 get_right_size(s32 max_size, s32 min_size)
+{
+	return math::abs(max_size - math::abs(max_size - min_size));
+}
+
+inline void Render_2D::push_clip_rect(Rect_s32 *rect)
+{
+	//if (clip_rects.count > 0) {
+	//	Rect_s32 last = clip_rects.first_item();
+	//	//print(&last);
+	//	//if (((rect->x > last.right()) && (rect->x > last.x)) || ((rect->y > last.bottom()) && (rect->y > last.y))) {
+	//	//	return;
+	//	//}
+	//	Rect_s32 new_rect;
+	//	new_rect.x = rect->x < last.x ? last.x : rect->x;
+	//	new_rect.y = rect->y < last.y ? last.y : rect->y;
+	//	new_rect.width = rect->right() > last.right() ? last.width : rect->width;
+	//	new_rect.height = rect->bottom() > last.bottom() ? last.height : rect->height;
+	//	//new_rect.height = rect->bottom() > last.bottom() ? get_right_size(rect->bottom(), last.bottom()) : rect->height;
+	//	clip_rects.push(new_rect);
+	//	return;
+	//}
+	clip_rects.push(*rect);
+}
+
+inline void Render_2D::pop_clip_rect()
+{
+	if (clip_rects.count > 0) {
+		clip_rects.pop();
+	}
+}
+
+inline void Render_2D::get_clip_rect(Rect_s32 *rect)
+{
+	if (clip_rects.count > 0) {
+		*rect = clip_rects.last_item();
+	} else {
+		rect->x = 0;
+		rect->y = 0;
+		rect->width = win32.window_width;
+		rect->height = win32.window_height;
+	}
+}
 
 template <typename T>
 inline void Render_2D::draw_rect(Rect<T> *rect, const Color &color, u32 rounding, u32 flags)
@@ -137,13 +202,19 @@ inline void Render_2D::draw_rect(T x, T y, T width, T height, const Color &color
 	draw_rect(_x, _y, _width, _height, color, rounding, flags);
 }
 
-inline void Render_2D::draw_text(Rect_u32 *rect, const char *text)
+inline void Render_2D::draw_text(Rect_s32 *rect, const char *text)
 {
 	draw_text((int)rect->x, (int)rect->y, text);
 }
 
-inline void Render_2D::clear()
+inline void Render_2D::new_frame()
 {
+	clip_rects.clear();
+	Render_Primitive_List *list = NULL;
+	For(draw_list, list) {
+		list->count;
+	}
+	draw_list.count = 0;
 	render_primitives.count = 0;
 }
 
@@ -162,7 +233,6 @@ struct Render_System {
 	Render_2D render_2d;
 
 	Shader_Manager shader_manager;
-
 
 	ID3D11ShaderResourceView *shader_resource = NULL;
 
