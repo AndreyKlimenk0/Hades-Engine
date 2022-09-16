@@ -43,7 +43,7 @@ static bool get_shader_type_from_file_name(const char *file_name, Shader_Type *s
 		return false;
 	}
 
-	String type = strings.get_last();
+	String type = strings.last_item();
 
 	if (type == "vs") {
 		*shader_type = VERTEX_SHADER;
