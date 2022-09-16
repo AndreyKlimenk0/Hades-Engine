@@ -70,7 +70,16 @@ struct Point_V2 {
 	Point_V2(const T &x, const T &y) : x(x), y(y) {};
 	T x;
 	T y;
+
+	T &operator[](int index);
 };
+
+template <typename T>
+T &Point_V2<T>::operator[](int index)
+{
+	assert(index < 2);
+	return ((T *)&x)[index];
+}
 
 template <typename T>
 Point_V2<T> operator-(const Point_V2<T> &point1, const Point_V2<T> &point2)
@@ -123,7 +132,7 @@ struct Rect {
 
 	void set(Size<T> &size);
 	void set(T _x, T _y);
-	void set_wh(T _width, T _height);
+	void set_size(T _width, T _height);
 
 	T right();
 	T bottom();
@@ -152,7 +161,7 @@ inline T Rect<T>::bottom()
 	return y + height;
 }
 template <typename T>
-inline void Rect<T>::set_wh(T _width, T _height)
+inline void Rect<T>::set_size(T _width, T _height)
 {
 	width = _width;
 	height = _height;

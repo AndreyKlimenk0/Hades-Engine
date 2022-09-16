@@ -270,7 +270,12 @@ char *to_string(Vector3 *vector)
 
 char *to_string(Rect_u32 *rect)
 {
-	return format("Rect_u32: x = {}, y = {}", rect->x, rect->y);
+	return format("Rect_u32: x = {}, y = {}, width = {}, height = {}", rect->x, rect->y, rect->width, rect->height);
+}
+
+char *to_string(Rect_s32 *rect)
+{
+	return format("Rect_s32: x = {}, y = {}, width = {}, height = {}", rect->x, rect->y, rect->width, rect->height);
 }
 
 // Check the string has format braces if it has return number of braces 

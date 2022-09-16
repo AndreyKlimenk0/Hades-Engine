@@ -40,6 +40,7 @@ char *to_string(String &string);
 char *to_string(String *string);
 char *to_string(Vector3 *vector);
 char *to_string(Rect_u32 *rect);
+char *to_string(Rect_s32 *rect);
 
 int is_format_string(const char *string);
 

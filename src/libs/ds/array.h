@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include "../../win32/win_local.h"
 
 
 #define DO_STRING_JOIN(arg1, arg2) arg1 ## arg2
@@ -19,6 +20,9 @@ struct Array {
 	int count;
 	int size;
 
+	Array(const Array<T> &other);
+	Array<T> &operator=(const Array<T> &other);
+
 	bool is_empty();
 	void resize(int _size);
 	void set_count(int _count);
@@ -33,7 +37,17 @@ struct Array {
 	T &pop();
 	T &at(int index);
 	const T &at(int index) const;
-	T &get_last() { return items[count - 1]; }
+
+	T &first_item()
+	{
+		assert(count > 0);
+		return items[0];
+	}
+	T &last_item() 
+	{ 
+		assert(count > 0);
+		return items[count - 1]; 
+	}
 
 	void clear() 
 	{
@@ -146,6 +160,25 @@ void Array<T>::shutdown()
 
 	size = 0;
 	count = 0;
+}
+
+template<typename T>
+inline Array<T>::Array(const Array<T>& other)
+{
+	*this = other;
+}
+
+template<typename T>
+inline Array<T>& Array<T>::operator=(const Array<T>& other)
+{
+	count = other.count;
+	size = other.size;
+	if (items) delete[] items, items = NULL;
+	items = new T[other.size];
+	for (int i = 0; i < count; i++) {
+		items[i] = other.items[i];
+	}
+	return *this;
 }
 
 template <typename T>
