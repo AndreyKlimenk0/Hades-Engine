@@ -38,6 +38,7 @@ char *to_string(const char *string);
 char *to_string(char c);
 char *to_string(String &string);
 char *to_string(String *string);
+char *to_string(Vector2 *vector);
 char *to_string(Vector3 *vector);
 char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
