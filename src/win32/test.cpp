@@ -146,19 +146,19 @@ Struct_Info<Test> si;
 
 void test()
 {
-	Array<int> temp;
-	for (int i = 0; i < 16; i++) {
-		temp.push(i);
-	}
+	//Array<int> temp;
+	//for (int i = 0; i < 16; i++) {
+	//	temp.push(i);
+	//}
 
-	int i = 0;
-	For(temp, i) {
-		print("value", i);
-	}
-	Array<int> other;
-	other = temp;
-	For(other, i) {
-		print("other value", i);
-	}
+	//int i = 0;
+	//For(temp, i) {
+	//	print("value", i);
+	//}
+	//Array<int> other;
+	//other = temp;
+	//For(other, i) {
+	//	print("other value", i);
+	//}
 	//print(test.i, test.f, &test.v);
 }

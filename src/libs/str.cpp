@@ -263,6 +263,11 @@ char *to_string(String *string)
 	return str;
 }
 
+char *to_string(Vector2 *vector)
+{
+	return format("vec2 x = {} y = {}", vector->x, vector->y);
+}
+
 char *to_string(Vector3 *vector)
 {
 	return format("{} {} {}", vector->x, vector->y, vector->z);

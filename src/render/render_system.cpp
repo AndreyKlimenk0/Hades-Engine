@@ -401,11 +401,14 @@ void Render_System::render_frame()
 	
 	//editor.draw();
 
-	draw_test_gui();
+	//draw_test_gui();
 
 	//render_2d.new_render_primitive_list();
 	//render_2d.draw_outlines(100, 100, 200, 300, Color(92, 100, 107), 10.0f);
-	//render_2d.draw_rect(100, 100, 200, 300, Color(1, 100, 107, 30));
+	
+	render_2d.new_render_primitive_list();
+	render_2d.draw_rect(100, 100, 100, 100, Color::Red, 120, ROUND_TOP_RIGHT_RECT | ROUND_BOTTOM_RIGHT_RECT);
+	render_2d.draw_rect(100, 300, 100, 100, Color::Red, 120);
 
 
 	render_2d.render_frame();
@@ -553,51 +556,88 @@ static inline float degrees_to_radian(u32 degrees)
 
 Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 {
-	return (float)pow((1 - t), 2) * p0 + 2 * (1 - t) * t * p1 + (float)pow(t, 2) * p2;
+	return (float)pow((1.0f - t), 2.0f) * p0 + 2.0f * (1.0f - t) * t * p1 + (float)pow(t, 2.0f) * p2;
 }
 
 
 void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)
 {
-	if ((rounding >= width) || (rounding >= height)) {
-		int size;
-		
-		if (width > height) {
-			size = height;
-		} else {
-			size = width;
-		}
-		rounding = size / 2;
-	}
+	//if ((rounding >= width) || (rounding >= height)) {
+	//	int size;
+	//	
+	//	if (width > height) {
+	//		size = height;
+	//	} else {
+	//		size = width;
+	//	}
+	//	rounding = size / 2;
+	//}
+	//float x_rounding = (float)rounding > (width / 2.0f) ? (width / 2.0f) : rounding;
+	//float y_rounding = (float)rounding > (height / 2.0f) ? (height / 2.0f) : rounding;
+	float x_rounding = math::min((float)rounding, (width / 2.0f));
+	float y_rounding = math::min((float)rounding, (height / 2.0f));
 
 	Vector2 point0, point1, point2;
 	if (rect_side == RECT_SIDE_LEFT_TOP) {
-		point0 = Vector2(x, y + rounding);
+		point0 = Vector2(x, y + y_rounding);
 		point1 = Vector2(x, y);
-		point2 = Vector2(x + rounding, y);
-	
+		point2 = Vector2(x + x_rounding, y);
+
 	} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
-		point0 = Vector2(x + width - rounding, y); 
-		point1 = Vector2(x + width, y); 
-		point2 = Vector2(x + width, y + rounding);
-	
+		point0 = Vector2(x + width - x_rounding, y);
+		point1 = Vector2(x + width, y);
+		point2 = Vector2(x + width, y + y_rounding);
+
 	} else if (rect_side == RECT_SIDE_LEFT_BOTTOM) {
-		point0 = Vector2(x + rounding, y + height); 
-		point1 = Vector2(x, y + height); 
-		point2 = Vector2(x, y + height - rounding);
-	
+		point0 = Vector2(x + x_rounding, y + height);
+		point1 = Vector2(x, y + height);
+		point2 = Vector2(x, y + height - y_rounding);
+
 	} else if (rect_side == RECT_SIDE_RIGHT_BOTTOM) {
-		point0 = Vector2(x + width, y + height - rounding);
-		point1 = Vector2(x + width, y + height); 
-		point2 = Vector2(x + width - rounding, y + height);
+		point0 = Vector2(x + width, y + height - y_rounding);
+		point1 = Vector2(x + width, y + height);
+		point2 = Vector2(x + width - x_rounding, y + height);
 	}
 
-	u32 points_count_in_rounding = 10;
+	//Vector2 point0, point1, point2;
+	//if (rect_side == RECT_SIDE_LEFT_TOP) {
+	//	point0 = Vector2(x, y + rounding);
+	//	point1 = Vector2(x, y);
+	//	point2 = Vector2(x + rounding, y);
+	//
+	//} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
+	//	point0 = Vector2(x + width - rounding, y); 
+	//	point1 = Vector2(x + width, y); 
+	//	point2 = Vector2(x + width, y + rounding);
+	//
+	//} else if (rect_side == RECT_SIDE_LEFT_BOTTOM) {
+	//	point0 = Vector2(x + rounding, y + height); 
+	//	point1 = Vector2(x, y + height); 
+	//	point2 = Vector2(x, y + height - rounding);
+	//
+	//} else if (rect_side == RECT_SIDE_RIGHT_BOTTOM) {
+	//	point0 = Vector2(x + width, y + height - rounding);
+	//	point1 = Vector2(x + width, y + height); 
+	//	point2 = Vector2(x + width - rounding, y + height);
+	//}
+
+	u32 points_count_in_rounding = 20;
 	float point_count = 1.0f / (float)points_count_in_rounding;
 	float point_position = 0.0f;
+
+	if (rect_side == RECT_SIDE_LEFT_TOP) {
+		print("rect top left vec", &point0, &point1, &point2);
+	} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
+		print("rect top right vec", &point0, &point1, &point2);
+	}
 	
-	for (u32 i = 0; i < points_count_in_rounding; i++) {
+	for (u32 i = 0; i <= points_count_in_rounding; i++) {
 		Vector2 point = quad(point_position, point0, point1, point2);
+		if (rect_side == RECT_SIDE_LEFT_TOP) {
+			print("[{}] rect top left t = {} y = {}", i, point_position, point.y);
+		} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
+			print("[{}] rect right left t = {} y = {}", i, point_position, point.y);
+		}
 		add_point(point);
 		point_position += point_count;
 	}
@@ -606,13 +646,16 @@ void Primitive_2D::add_rounded_points(float x, float y, float width, float heigh
 void Primitive_2D::make_triangle_polygon()
 {
 	for (int i = 2; i < vertices.count; i++) {
-		//indices.push(0);
-		//indices.push(i);
-		//indices.push(i - 1);
+		indices.push(0);
 		indices.push(i - 1);
 		indices.push(i);
-		indices.push(0);
+		//indices.push(i - 1);
+		//indices.push(i);
+		//indices.push(0);
 	}
+	indices.push(0);
+	indices.push(vertices.count - 1);
+	indices.push(1);
 }
 
 void Primitive_2D::make_outline_triangle_polygons()
@@ -838,6 +881,7 @@ void Render_2D::draw_rect(float x, float y, float width, float height, const Col
 	render_primitive.primitive = primitive;
 	add_render_primitive(&render_primitive);
 
+	primitive->add_point(Vector2(width / 2.0f, height / 2.0f));
 	if (rounding > 0) {
 		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
 		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2(width, 0.0f));

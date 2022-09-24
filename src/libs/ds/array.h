@@ -43,10 +43,10 @@ struct Array {
 		assert(count > 0);
 		return items[0];
 	}
-	T &last_item() 
-	{ 
+	T &last_item()
+	{
 		assert(count > 0);
-		return items[count - 1]; 
+		return items[count - 1];
 	}
 
 	void clear() 
