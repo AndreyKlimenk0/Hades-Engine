@@ -407,8 +407,8 @@ void Render_System::render_frame()
 	//render_2d.draw_outlines(100, 100, 200, 300, Color(92, 100, 107), 10.0f);
 	
 	//render_2d.new_render_primitive_list();
-	render_2d.draw_rect(100, 100, 100, 100, Color::Red, 120, ROUND_TOP_RIGHT_RECT | ROUND_BOTTOM_RIGHT_RECT);
-	render_2d.draw_rect(100, 300, 100, 100, Color::Red, 120);
+	//render_2d.draw_rect(100, 100, 100, 100, Color::Red, 120, ROUND_TOP_RIGHT_RECT | ROUND_BOTTOM_RIGHT_RECT);
+	//render_2d.draw_rect(100, 300, 100, 100, Color::Red, 120);
 
 
 	render_2d.render_frame();
@@ -864,10 +864,10 @@ void Render_2D::draw_rect(float x, float y, float width, float height, const Col
 	float x_divisor = (!(flags & ROUND_LEFT_RECT) || !(flags & ROUND_RIGHT_RECT)) ? 1.0f : 2.0f;
 	float y_divisor = (!(flags & ROUND_TOP_RECT) || !(flags & ROUND_BOTTOM_RECT)) ? 1.0f : 2.0f;
 	
-	float x_rounding = math::min((float)rounding, (width / x_divisor));
-	float y_rounding = math::min((float)rounding, (height / y_divisor));
-	//float x_rounding = rounding;
-	//float y_rounding = rounding;
+	//float x_rounding = math::min((float)rounding, (width / x_divisor));
+	//float y_rounding = math::min((float)rounding, (height / y_divisor));
+	float x_rounding = rounding;
+	float y_rounding = rounding;
 	
 	if (rounding > 0) {
 		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, x_rounding, y_rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
