@@ -67,6 +67,11 @@ void DirectX11::init()
 	sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
+	HR(device->CheckMultisampleQualityLevels(
+		DXGI_FORMAT_R8G8B8A8_UNORM, 4, &quality_levels));
+	assert(quality_levels > 0);
+	
+
 	if (true) {
 		sd.SampleDesc.Count = 4;
 		sd.SampleDesc.Quality = quality_levels - 1;

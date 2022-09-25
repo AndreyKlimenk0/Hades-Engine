@@ -401,12 +401,12 @@ void Render_System::render_frame()
 	
 	//editor.draw();
 
-	//draw_test_gui();
+	draw_test_gui();
 
 	//render_2d.new_render_primitive_list();
 	//render_2d.draw_outlines(100, 100, 200, 300, Color(92, 100, 107), 10.0f);
 	
-	render_2d.new_render_primitive_list();
+	//render_2d.new_render_primitive_list();
 	render_2d.draw_rect(100, 100, 100, 100, Color::Red, 120, ROUND_TOP_RIGHT_RECT | ROUND_BOTTOM_RIGHT_RECT);
 	render_2d.draw_rect(100, 300, 100, 100, Color::Red, 120);
 
@@ -504,17 +504,17 @@ Gpu_Buffer *make_gpu_buffer(u32 data_size, u32 data_count, void *data, D3D11_USA
 
 void update_constant_buffer(Gpu_Buffer *buffer, void *data, u32 data_size)
 {
-	assert(buffer);
-	assert(data);
+assert(buffer);
+assert(data);
 
-	D3D11_MAPPED_SUBRESOURCE mapped_resource;
-	ZeroMemory(&mapped_resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+D3D11_MAPPED_SUBRESOURCE mapped_resource;
+ZeroMemory(&mapped_resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
-	HR(directx11.device_context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource));
+HR(directx11.device_context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource));
 
-	memcpy(mapped_resource.pData, data, data_size);
+memcpy(mapped_resource.pData, data, data_size);
 
-	directx11.device_context->Unmap(buffer, 0);
+directx11.device_context->Unmap(buffer, 0);
 }
 
 inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, Gpu_Buffer *indices, u32 index_count, u32 vertex_offset = 0, u32 index_offset = 0)
@@ -559,24 +559,13 @@ Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 	return (float)pow((1.0f - t), 2.0f) * p0 + 2.0f * (1.0f - t) * t * p1 + (float)pow(t, 2.0f) * p2;
 }
 
-
-void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)
+void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float rounding)
 {
-	//if ((rounding >= width) || (rounding >= height)) {
-	//	int size;
-	//	
-	//	if (width > height) {
-	//		size = height;
-	//	} else {
-	//		size = width;
-	//	}
-	//	rounding = size / 2;
-	//}
-	//float x_rounding = (float)rounding > (width / 2.0f) ? (width / 2.0f) : rounding;
-	//float y_rounding = (float)rounding > (height / 2.0f) ? (height / 2.0f) : rounding;
-	float x_rounding = math::min((float)rounding, (width / 2.0f));
-	float y_rounding = math::min((float)rounding, (height / 2.0f));
+	add_rounded_points(x, y, width, height, rect_side, rounding, rounding);
+}
 
+void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float x_rounding, float y_rounding)
+{
 	Vector2 point0, point1, point2;
 	if (rect_side == RECT_SIDE_LEFT_TOP) {
 		point0 = Vector2(x, y + y_rounding);
@@ -599,45 +588,34 @@ void Primitive_2D::add_rounded_points(float x, float y, float width, float heigh
 		point2 = Vector2(x + width - x_rounding, y + height);
 	}
 
-	//Vector2 point0, point1, point2;
-	//if (rect_side == RECT_SIDE_LEFT_TOP) {
-	//	point0 = Vector2(x, y + rounding);
-	//	point1 = Vector2(x, y);
-	//	point2 = Vector2(x + rounding, y);
-	//
-	//} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
-	//	point0 = Vector2(x + width - rounding, y); 
-	//	point1 = Vector2(x + width, y); 
-	//	point2 = Vector2(x + width, y + rounding);
-	//
-	//} else if (rect_side == RECT_SIDE_LEFT_BOTTOM) {
-	//	point0 = Vector2(x + rounding, y + height); 
-	//	point1 = Vector2(x, y + height); 
-	//	point2 = Vector2(x, y + height - rounding);
-	//
-	//} else if (rect_side == RECT_SIDE_RIGHT_BOTTOM) {
-	//	point0 = Vector2(x + width, y + height - rounding);
-	//	point1 = Vector2(x + width, y + height); 
-	//	point2 = Vector2(x + width - rounding, y + height);
-	//}
-
-	u32 points_count_in_rounding = 20;
+	u32 i = 0;
+	s32 points_count_in_rounding = 20;
+	s32 temp = 0;
 	float point_count = 1.0f / (float)points_count_in_rounding;
 	float point_position = 0.0f;
+	int l = points_count_in_rounding;
 
-	if (rect_side == RECT_SIDE_LEFT_TOP) {
-		print("rect top left vec", &point0, &point1, &point2);
-	} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
-		print("rect top right vec", &point0, &point1, &point2);
-	}
-	
-	for (u32 i = 0; i <= points_count_in_rounding; i++) {
-		Vector2 point = quad(point_position, point0, point1, point2);
-		if (rect_side == RECT_SIDE_LEFT_TOP) {
-			print("[{}] rect top left t = {} y = {}", i, point_position, point.y);
-		} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
-			print("[{}] rect right left t = {} y = {}", i, point_position, point.y);
+	if (x_rounding >= width) {
+		float r = (width / 2.0f) / x_rounding;
+		temp = (float)points_count_in_rounding * r;
+		s32 a = temp;
+		temp = math::abs(points_count_in_rounding - temp - 2);
+		//if ((temp != 0) && (rect_side == RECT_SIDE_LEFT_TOP) || (RECT_SIDE_RIGHT_TOP)) {
+		//if ((rect_side == RECT_SIDE_LEFT_TOP) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
+		//if ((rect_side == RECT_SIDE_RIGHT_TOP) || (rect_side == RECT_SIDE_RIGHT_BOTTOM)) {
+		//if ((rect_side == RECT_SIDE_RIGHT_TOP)) {
+		if ((rect_side == RECT_SIDE_LEFT_BOTTOM) || (rect_side == RECT_SIDE_RIGHT_TOP)) {
+			//point_position = point_count * math::abs(points_count_in_rounding - temp);
+			point_position = point_count * a;
 		}
+
+		if (temp != 0) {
+			l = temp;
+		}
+	}
+
+	for (; i <= l; i++) {
+		Vector2 point = quad(point_position, point0, point1, point2);
 		add_point(point);
 		point_position += point_count;
 	}
@@ -882,11 +860,20 @@ void Render_2D::draw_rect(float x, float y, float width, float height, const Col
 	add_render_primitive(&render_primitive);
 
 	primitive->add_point(Vector2(width / 2.0f, height / 2.0f));
+	
+	float x_divisor = (!(flags & ROUND_LEFT_RECT) || !(flags & ROUND_RIGHT_RECT)) ? 1.0f : 2.0f;
+	float y_divisor = (!(flags & ROUND_TOP_RECT) || !(flags & ROUND_BOTTOM_RECT)) ? 1.0f : 2.0f;
+	
+	float x_rounding = math::min((float)rounding, (width / x_divisor));
+	float y_rounding = math::min((float)rounding, (height / y_divisor));
+	//float x_rounding = rounding;
+	//float y_rounding = rounding;
+	
 	if (rounding > 0) {
-		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2(width, 0.0f));
-		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2(width, height));
-		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(0.0f, height));
+		(flags & ROUND_TOP_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, x_rounding, y_rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
+		(flags & ROUND_TOP_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_TOP, x_rounding, y_rounding) : primitive->add_point(Vector2(width, 0.0f));
+		(flags & ROUND_BOTTOM_RIGHT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_BOTTOM, x_rounding, y_rounding) : primitive->add_point(Vector2(width, height));
+		(flags & ROUND_BOTTOM_LEFT_RECT) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_BOTTOM, x_rounding, y_rounding) : primitive->add_point(Vector2(0.0f, height));
 	} else {
 		primitive->add_point(Vector2(0.0f, 0.0f));
 		primitive->add_point(Vector2(width, 0.0f));

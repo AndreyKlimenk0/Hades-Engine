@@ -57,7 +57,9 @@ struct Primitive_2D {
 	Array<u32> indices;
 
 	void add_point(const Vector2 &point, const Vector2 &uv = Vector2(0.0f, 0.0f)) { vertices.push(Vertex_X2UV(point, uv)); }
-	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding);
+	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float rounding);
+	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float x_rounding, float y_rounding);
+
 	void make_triangle_polygon();
 	void make_outline_triangle_polygons();
 };
@@ -77,6 +79,8 @@ const u32 ROUND_TOP_LEFT_RECT = 0x1;
 const u32 ROUND_TOP_RIGHT_RECT = 0x2;
 const u32 ROUND_BOTTOM_LEFT_RECT = 0x4;
 const u32 ROUND_BOTTOM_RIGHT_RECT = 0x8;
+const u32 ROUND_RIGHT_RECT = ROUND_TOP_RIGHT_RECT | ROUND_BOTTOM_RIGHT_RECT;
+const u32 ROUND_LEFT_RECT = ROUND_TOP_LEFT_RECT | ROUND_BOTTOM_LEFT_RECT;
 const u32 ROUND_TOP_RECT = ROUND_TOP_LEFT_RECT | ROUND_TOP_RIGHT_RECT;
 const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
 const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
