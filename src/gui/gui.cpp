@@ -594,7 +594,9 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis)
 	//place_in_middle_by_y(&scroll_bar, &scroll_rect);
 	//render_2d->push_clip_rect(&scroll_bar);
 	//render_2d->draw_rect(&scroll_rect, window_theme.background_color, window_theme.rounded_border);
-	render_2d->draw_rect(&scroll_rect, Color::White, window_theme.rounded_border - 5);
+	//scroll_rect.x = 0;
+	//scroll_rect.y = 0;
+	render_2d->draw_rect(&scroll_rect, Color::White, window_theme.rounded_border);
 
 	if (axis == Y_AXIS) {
 		window->scroll[axis] = scroll_rect.y;
