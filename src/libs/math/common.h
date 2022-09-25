@@ -1,6 +1,7 @@
 #ifndef COMMON_MATH_H
 #define COMMON_MATH_H
 
+#include <assert.h>
 #include "../../win32/win_types.h"
 
 //float Pi = 3.1415926535f;
@@ -48,7 +49,17 @@ struct Size {
 
 	T width = 0;
 	T height = 0;
+
+	T &operator[](u32 index);
 };
+
+template <typename T>
+inline T &Size<T>::operator[](u32 index)
+{
+	assert(index < 2);
+	return (&width)[index];
+}
+
 
 typedef Size<u32> Size_u32;
 typedef Size<s32> Size_s32;
@@ -130,13 +141,23 @@ struct Rect {
 	T width = 0;
 	T height = 0;
 
+	T &operator[](u32 index);
+
 	void set(Size<T> &size);
 	void set(T _x, T _y);
 	void set_size(T _width, T _height);
+	Size<T> get_size();
 
 	T right();
 	T bottom();
 };
+
+template <typename T>
+inline T &Rect<T>::operator[](u32 index)
+{
+	assert(index < 4);
+	return (&x)[index];
+}
 
 template <typename T>
 inline void Rect<T>::set(Size<T> &size)
@@ -165,6 +186,12 @@ inline void Rect<T>::set_size(T _width, T _height)
 {
 	width = _width;
 	height = _height;
+}
+
+template <typename T>
+inline Size<T> Rect<T>::get_size()
+{
+	return Size<T>(width, height);
 }
 
 typedef Rect<u32> Rect_u32;
