@@ -230,6 +230,9 @@
     <ClInclude Include="src\gui\gui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\libs\ds\stack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="tasks.txt" />

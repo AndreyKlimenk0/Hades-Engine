@@ -130,35 +130,52 @@ struct Test {
 };
 
 Struct_Info<Test> si;
-//Test test;
-//
-//Void_Dict dict;
-//dict.set("i", int(11));
-//dict.set("f", float(12.0f));
-//dict.set("v", Vector3(1.0f, 10.0f, 1.0f));
-//
-//Struct_Info<Test> si;
-//ADD_INFO(si, i);
-//ADD_INFO(si, f);
-//ADD_INFO(si, v);
-//
-//si.fill_struct((u32 *)&test, &dict);
+
+void test_something()
+{
+	//Test test;
+	//
+	//Void_Dict dict;
+	//dict.set("i", int(11));
+	//dict.set("f", float(12.0f));
+	//dict.set("v", Vector3(1.0f, 10.0f, 1.0f));
+	//
+	//Struct_Info<Test> si;
+	//ADD_INFO(si, i);
+	//ADD_INFO(si, f);
+	//ADD_INFO(si, v);
+	//
+	//si.fill_struct((u32 *)&test, &dict);
+
+		//Array<int> temp;
+		//for (int i = 0; i < 16; i++) {
+		//	temp.push(i);
+		//}
+
+		//int i = 0;
+		//For(temp, i) {
+		//	print("value", i);
+		//}
+		//Array<int> other;
+		//other = temp;
+		//For(other, i) {
+		//	print("other value", i);
+		//}
+		//print(test.i, test.f, &test.v);
+}
 
 void test()
 {
-	//Array<int> temp;
-	//for (int i = 0; i < 16; i++) {
-	//	temp.push(i);
+	//Stack<int> stask;
+
+	//for (int i = 0; i < 10; i++)
+	//{
+	//	stask.push(i);
 	//}
 
-	//int i = 0;
-	//For(temp, i) {
-	//	print("value", i);
+	//for (int i = 0; i < 10; i++) 
+	//{
+	//	print("[{}] Stask top", i, stask.top());
+	//	stask.pop();
 	//}
-	//Array<int> other;
-	//other = temp;
-	//For(other, i) {
-	//	print("other value", i);
-	//}
-	//print(test.i, test.f, &test.v);
 }

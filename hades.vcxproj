@@ -191,6 +191,7 @@
     <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\ds\dict.h" />
     <ClInclude Include="src\libs\ds\linked_list.h" />
+    <ClInclude Include="src\libs\ds\stack.h" />
     <ClInclude Include="src\libs\os\camera.h" />
     <ClInclude Include="src\libs\os\event.h" />
     <ClInclude Include="src\libs\os\file.h" />
