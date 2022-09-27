@@ -188,6 +188,9 @@ struct Gui_Manager {
 	s32 mouse_x_delta;
 	s32 mouse_y_delta;
 
+	u32 list_box_count;
+
+	Gui_ID active_list_box;
 	Gui_ID hot_item;
 	Gui_ID active_item;
 	Gui_ID resizing_window;
@@ -251,7 +254,7 @@ Gui_Window *Gui_Manager::get_window()
 
 bool Gui_Manager::check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)())
 {
-	u32 gui_id = 0;
+	Gui_ID gui_id = 0;
 	if (name) {
 		gui_id = fast_hash(name);
 	}
@@ -324,44 +327,66 @@ inline Rect_s32 get_text_rect(const char *text)
 	return text_rect;
 }
 
-void Gui_Manager::list_box(const char * strings[], u32 len, u32 * item_index)
+void Gui_Manager::list_box(const char * strings[], u32 len, u32 *item_index)
 {
-	static bool draw_list_box = false;
 	assert(len > 0);
 
-	u32 field_height = 20;
+	if (*item_index >= len) {
+		*item_index = 0;
+	}
+
+	static bool draw_list_box = true;
 	Rect_s32 list_box_rect = { 0, 0, 120, 20 };
+	
 	Gui_Window *window = get_window();
 	Point_s32 pos = window->get_place(&list_box_rect);
 	
 	list_box_rect.set(pos.x, pos.y);
 	
-	bool was_click = check_button_state(NULL, &list_box_rect);
-
+	String list_box_name = window->name + String("_list_box_") + String((int)list_box_count);
+	Gui_ID gui_id = fast_hash(list_box_name);
+	bool was_click = check_button_state(list_box_name, &list_box_rect);
+	
 	if (was_click) {
-		if (draw_list_box) {
-			draw_list_box = false;
+		if (active_item == active_list_box) {
+			active_list_box = 0;
 		} else {
-			draw_list_box = true;
+			active_list_box = active_item;
 		}
 	}
-	
-	if (draw_list_box) {
-		begin_window("list_box_window");
-		button("Other button");
-		end_window();
+
+	if (gui_id == active_list_box) {
+		//if (was_click) {
+		//	if (draw_list_box) {
+		//		draw_list_box = false;
+		//	} else {
+		//		draw_list_box = true;
+		//	}
+		//}
+
+		if (draw_list_box) {
+			begin_window("list_box_window");
+			for (u32 i = 0; i < len; i++) {
+				if (button(strings[i])) {
+					*item_index = i;
+				}
+			}
+			end_window();
+		}
 	}
 
 	if (must_item_be_drawn(&window->rect, &list_box_rect)) {
 		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &list_box_rect);
-		Rect_s32 text_rect = get_text_rect(strings[0]);
+		Rect_s32 text_rect = get_text_rect(strings[*item_index]);
 		place_in_center(&list_box_rect, &text_rect);
 		
 		render_2d->push_clip_rect(&clip_rect);
 		render_2d->draw_rect(&list_box_rect, Color(74, 82, 90), button_theme.rounded_border);
-		render_2d->draw_text(&text_rect, strings[0]);
+		render_2d->draw_text(&text_rect, strings[*item_index]);
 		render_2d->pop_clip_rect();
 	}
+
+	list_box_count++;
 }
 
 bool Gui_Manager::button(const char *name)
@@ -447,6 +472,7 @@ void Gui_Manager::new_frame()
 	mouse_x_delta = mouse_x - last_mouse_x;
 	mouse_y_delta = mouse_y - last_mouse_y;
 	hot_item = 0;
+	list_box_count = 0;
 }
 
 void Gui_Manager::end_frame()
@@ -746,11 +772,15 @@ void draw_test_gui()
 	if (begine_window("Test")) {
 
 		const char *str[] = { "first", "second", "third" };
-		u32 item_index = 0;
+		static u32 item_index = 123124;
 		list_box(str, 3, &item_index);
 		if (button("Click")) {
 			print("Was click by bottom");
 		}
+
+		const char *str2[] = { "first2", "second2", "third2" };
+		static u32 item_index2 = 0;
+		list_box(str2, 3, &item_index2);
 		//same_line();
 		//button("same line");
 		//button("same line1");
@@ -783,7 +813,16 @@ void draw_test_gui()
 
 	//set_next_window_pos(500, 300);
 	//set_next_window_size(1000, 700);
+	
 	//begine_window("temp");
+	//	if (button("temp buttom")) {
+	//		print("temp button was pressed");
+	//	}
+	//	begine_window("temp2");
+	//	if (button("temp buttom2")) {
+	//		print("temp button was pressed2");
+	//	}
+	//	end_window();
 	//end_window();
 
 	//begine_window("temp1");

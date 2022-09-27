@@ -403,7 +403,7 @@ void Render_System::render_frame()
 
 	draw_test_gui();
 
-	//render_2d.new_render_primitive_list();
+	render_2d.new_render_primitive_list();
 	//render_2d.draw_outlines(100, 100, 200, 300, Color(92, 100, 107), 10.0f);
 	
 	//render_2d.new_render_primitive_list();
