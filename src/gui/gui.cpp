@@ -1,10 +1,12 @@
 #include "gui.h"
 
 #include "../win32/win_local.h"
+#include "../sys/sys_local.h"
 
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/math/common.h"
+#include "../libs/ds/stack.h"
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/linked_list.h"
 
@@ -22,7 +24,8 @@ const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
 const Size_s32 MIN_WINDOW_SIZE = { 20 , 20 };
 
-static Rect_s32 default_window_rect = { 50, 50, 300, 300 };
+static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
+
 
 inline void place_in_middle_by_y(Rect_s32 *source, Rect_s32 *dest)
 {
@@ -40,7 +43,7 @@ struct Gui_Text_Button_Theme {
 
 struct Gui_Window_Theme {
 	s32 header_height = 20;
-	s32 rounded_border = 0;
+	s32 rounded_border = 6;
 	s32 place_between_elements = 10;
 	s32 shift_element_from_window_side = 20;
 	s32 scroll_bar_width = 15;
@@ -50,6 +53,13 @@ struct Gui_Window_Theme {
 
 Gui_Window_Theme window_theme;
 Gui_Text_Button_Theme button_theme;
+
+static void draw_debug_rect(Rect_s32 *rect)
+{
+	Color red = Color::Red;
+	red.value.w = 0.4f;
+	render_2d->draw_rect(rect, red);
+}
 
 inline bool detect_collision(Rect_s32 *rect)
 {
@@ -117,11 +127,10 @@ struct Gui_Window {
 
 	String name;
 
-	void calculate_current_place(Rect_s32 *rect);
-	void calculate_next_place(Rect_s32 *rect);
 
 	Point_s32 get_place(Rect_s32 *rect);
 	Point_s32 _get_place(Rect_s32 *rect);
+	Rect_s32 get_scrollbar_rect(Axis axis);
 };
 
 Point_s32 Gui_Window::_get_place(Rect_s32 *element_rect)
@@ -162,6 +171,15 @@ Point_s32 Gui_Window::get_place(Rect_s32 *rect)
 	return _get_place(rect);
 }
 
+Rect_s32 Gui_Window::get_scrollbar_rect(Axis axis)
+{
+	const static s32 scroll_bar_width = 8;
+	if (axis == Y_AXIS) {
+		return Rect_s32(rect.right() - scroll_bar_width, rect.y, scroll_bar_width, view_rect.height);
+	} 
+	return Rect_s32(rect.x, rect.bottom() - scroll_bar_width, view_rect.width, scroll_bar_width);
+}
+
 struct Gui_Manager {
 	s32 mouse_x;
 	s32 mouse_y;
@@ -175,25 +193,27 @@ struct Gui_Manager {
 	Gui_ID resizing_window;
 	Gui_ID probably_resizing_window;
 
-	Gui_Window *current_window;
-
 	Cursor_Type cursor_type;
+	Rect_s32 window_rect;
 	
+	Stack<Gui_Window *> window_stack;
 	Array<Gui_Window> windows;
 	Linked_List<Gui_Window> windows_order;
 
 	Gui_Window_Theme window_theme;
 	
-	void begine_frame();
+	void new_frame();
 	void end_frame();
 
-	void begine_window(const char *name);
+	void begin_window(const char *name);
+	void end_window();
 	void same_line();
 	void next_line();
-	void end_window();
+	void set_next_window_pos(s32 x, s32 y);
+	void set_next_window_size(s32 width, s32 height);
 
-	void scroll_bar(Gui_Window *window, Axis axis, s32 *scroll_bar_size);
-
+	void list_box(const char *strings[], u32 len, u32 *item_index);
+	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	bool button(const char *name);
 	
 	bool check_item(Gui_ID id, Rect_s32 *rect);
@@ -201,12 +221,32 @@ struct Gui_Manager {
 	bool check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)() = NULL);
 	
 	Rect_s32 get_win32_rect();
+	
+	Gui_Window *get_window();
 	Gui_Window *create_or_find_window(const char *name);
 };
+
+void Gui_Manager::set_next_window_pos(s32 x, s32 y)
+{
+	window_rect.set(x, y);
+}
+
+void Gui_Manager::set_next_window_size(s32 width, s32 height)
+{
+	window_rect.set_size(width, height);
+}
 
 Rect_s32 Gui_Manager::get_win32_rect()
 {
 	return Rect_s32(0, 0, win32.window_width, win32.window_height);
+}
+
+Gui_Window *Gui_Manager::get_window()
+{
+	if (window_stack.is_empty()) {
+		error("Hades gui error: Window stask is empty");
+	}
+	return window_stack.top();
 }
 
 bool Gui_Manager::check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)())
@@ -231,7 +271,6 @@ bool Gui_Manager::check_button_state(const char *name, Rect_s32 *rect, bool (*cl
 	return button_click;
 }
 
-
 inline bool must_item_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
 {
 	if ((item_rect->x > win_rect->right()) || (item_rect->y > win_rect->bottom())) {
@@ -239,7 +278,6 @@ inline bool must_item_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
 	}
 	return true;
 }
-
 
 Rect_s32 calcualte_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 {
@@ -286,24 +324,67 @@ inline Rect_s32 get_text_rect(const char *text)
 	return text_rect;
 }
 
+void Gui_Manager::list_box(const char * strings[], u32 len, u32 * item_index)
+{
+	static bool draw_list_box = false;
+	assert(len > 0);
+
+	u32 field_height = 20;
+	Rect_s32 list_box_rect = { 0, 0, 120, 20 };
+	Gui_Window *window = get_window();
+	Point_s32 pos = window->get_place(&list_box_rect);
+	
+	list_box_rect.set(pos.x, pos.y);
+	
+	bool was_click = check_button_state(NULL, &list_box_rect);
+
+	if (was_click) {
+		if (draw_list_box) {
+			draw_list_box = false;
+		} else {
+			draw_list_box = true;
+		}
+	}
+	
+	if (draw_list_box) {
+		begin_window("list_box_window");
+		button("Other button");
+		end_window();
+	}
+
+	if (must_item_be_drawn(&window->rect, &list_box_rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &list_box_rect);
+		Rect_s32 text_rect = get_text_rect(strings[0]);
+		place_in_center(&list_box_rect, &text_rect);
+		
+		render_2d->push_clip_rect(&clip_rect);
+		render_2d->draw_rect(&list_box_rect, Color(74, 82, 90), button_theme.rounded_border);
+		render_2d->draw_text(&text_rect, strings[0]);
+		render_2d->pop_clip_rect();
+	}
+}
+
 bool Gui_Manager::button(const char *name)
 {
 	bool button_click = false;
 	Rect_s32 button_rect{ 0, 0, 123, 20 };
-	Point_s32 pos = current_window->get_place(&button_rect);
+	Gui_Window *window = get_window();
+	Point_s32 pos = window->get_place(&button_rect);
 
 	button_rect.x = pos.x;
 	button_rect.y = pos.y;
 
 	bool button_down = check_button_state(NULL, &button_rect);
 
-	if (must_item_be_drawn(&current_window->rect, &button_rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&current_window->rect, &button_rect);
+	Color button_color = detect_collision(&button_rect) ? button_theme.hover_color : button_theme.color;
+
+	if (must_item_be_drawn(&window->rect, &button_rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &button_rect);
 		Rect_s32 text_rect = get_text_rect(name);
 		place_in_center(&button_rect, &text_rect);
 
 		render_2d->push_clip_rect(&clip_rect);
-		render_2d->draw_rect(&button_rect, button_theme.color, button_theme.rounded_border);
+		render_2d->draw_rect(&button_rect, button_color, button_theme.rounded_border);
 		render_2d->draw_text(&text_rect, name);
 		render_2d->pop_clip_rect();
 	}
@@ -333,8 +414,8 @@ Gui_Window *Gui_Manager::create_or_find_window(const char *name)
 
 	Gui_Window new_window;
 	new_window.gui_id = window_id;
-	new_window.rect = default_window_rect;
-	new_window.view_rect = default_window_rect;
+	new_window.rect = window_rect;
+	new_window.view_rect = window_rect;
 	new_window.place = PLACE_VERTICALLY;
 	new_window.alignment = LEFT_ALIGNMENT;
 	new_window._alignment = 0;
@@ -346,12 +427,8 @@ Gui_Window *Gui_Manager::create_or_find_window(const char *name)
 
 	new_window.name = name;
 
-	s32 scroll_bar_width = window_theme.scroll_bar_width > 7 ? window_theme.scroll_bar_width : 10;
-	//new_window.view_rect.width -= scroll_bar_width;
-	//new_window.view_rect.height -= scroll_bar_width;
-
 	windows.push(new_window);
-	default_window_rect.x += new_window.rect.width + 40;
+	window_rect.x += new_window.rect.width + 40;
 	return &windows.last_item();
 }
 
@@ -361,8 +438,10 @@ inline u32 safe_sub_u32(u32 x, u32 y)
 	return ((result > x) && (result > y)) ? result : 0;
 }
 
-void Gui_Manager::begine_frame()
+void Gui_Manager::new_frame()
 {
+	window_rect = default_window_rect;
+	
 	mouse_x = Mouse_Input::x;
 	mouse_y = Mouse_Input::y;
 	mouse_x_delta = mouse_x - last_mouse_x;
@@ -380,10 +459,11 @@ void Gui_Manager::end_frame()
 	last_mouse_y = Mouse_Input::y;
 }
 
-
-void Gui_Manager::begine_window(const char *name)
+void Gui_Manager::begin_window(const char *name)
 {
 	Gui_Window *window = create_or_find_window(name);
+	window_stack.push(window);
+
 	s32 old_win_y = window->rect.y;
 	s32 old_win_x = window->rect.x;
 	
@@ -392,7 +472,7 @@ void Gui_Manager::begine_window(const char *name)
 	window->_alignment = 0;
 	window->_alignment |= ALIGNMENT_VERTICALLY;
 
-	current_window = window;
+	//current_window = window;
 
 	Rect_s32  *rect = &window->rect;
 	if (check_item(window->gui_id, rect) && was_left_mouse_button_just_pressed()) {
@@ -475,81 +555,80 @@ void Gui_Manager::begine_window(const char *name)
 
 	render_2d->draw_outlines(rect->x, rect->y, rect->width, rect->height, Color(92, 100, 107), 2.0f, window_theme.rounded_border);
 	render_2d->draw_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
-
-	//scroll_bar(current_window, Y_AXIS);
-
-	//current_window->items_rect.set_wh(0, 0);
-}
-
-void Gui_Manager::same_line()
-{
-	if (current_window->_alignment & ALIGNMENT_VERTICALLY) {
-		current_window->_alignment &= ~ALIGNMENT_VERTICALLY;
-	}
-	current_window->_alignment |= ALIGNMENT_HORIZONTALLY;
-}
-
-void Gui_Manager::next_line()
-{
-	if (current_window->_alignment & ALIGNMENT_HORIZONTALLY) {
-		current_window->_alignment &= ~ALIGNMENT_HORIZONTALLY;
-	}
-	current_window->_alignment |= ALIGNMENT_VERTICALLY;
 }
 
 void Gui_Manager::end_window()
 {
-	current_window->content_rect.height += window_theme.place_between_elements;
-	current_window->content_rect.width += window_theme.place_between_elements;
-	//Color red = Color::Red;
-	//red.value.w = 0.4f;
-	//render_2d->draw_rect(&current_window->content_rect, red);
-
-	Gui_Window *window = current_window;
+	Gui_Window *window = get_window();
 	
-	s32 scroll_bar_size;
+	window->content_rect.height += window_theme.place_between_elements;
+	window->content_rect.width += window_theme.place_between_elements;
+	
+	bool draw_right_scroll_bar = false;
+	bool draw_bottom_scroll_bar = false;
+	Rect_s32 right_scroll_bar;
+	Rect_s32 bottom_scroll_bar;
+	
 	if ((window->content_rect.height > window->view_rect.height) || (window->scroll[Y_AXIS] > window->view_rect.y)) {
-		scroll_bar(current_window, Y_AXIS, &scroll_bar_size);
-		window->view_rect.height -= scroll_bar_size;
+		right_scroll_bar = window->get_scrollbar_rect(Y_AXIS);
+		window->view_rect.width -= right_scroll_bar.width;
+		draw_right_scroll_bar = true;
 	}
 
 	if ((window->content_rect.width > window->view_rect.width) || (window->scroll[X_AXIS] > window->view_rect.x)) {
-		scroll_bar(current_window, X_AXIS, &scroll_bar_size);
-		window->view_rect.width -= scroll_bar_size;
+		bottom_scroll_bar = window->get_scrollbar_rect(X_AXIS);
+		window->view_rect.height -= bottom_scroll_bar.height;
+		draw_bottom_scroll_bar = true;
 	}
-	//scroll_bar(current_window, X_AXIS);
 
-	current_window->content_rect.set_size(0, 0);
+	if (draw_right_scroll_bar) {
+		scroll_bar(window, Y_AXIS, &right_scroll_bar);
+	}
+	if (draw_bottom_scroll_bar) {
+		scroll_bar(window, X_AXIS, &bottom_scroll_bar);
+	}
+	
+	window->content_rect.set_size(0, 0);
+	window_rect = default_window_rect;
 
-	//Color red = Color::Red;
-	//red.value.w = 0.6f;
-	//render_2d->draw_rect(&current_window->view_rect, red);
-
-	Rect_s32 *rect = &current_window->rect;
-	//render_2d->draw_outlines(rect->x, rect->y, rect->width, rect->height, Color(92, 100, 107), 10.0f, window_theme.rounded_border);
-	//render_2d->draw_outlines(rect->x, rect->y, rect->width, rect->height, Color::Red, 10.0f, window_theme.rounded_border);
+	window_stack.pop();
 }
 
-void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, s32 *scroll_bar_size)
+void Gui_Manager::same_line()
+{
+	Gui_Window *window = get_window();
+	if (window->_alignment & ALIGNMENT_VERTICALLY) {
+		window->_alignment &= ~ALIGNMENT_VERTICALLY;
+	}
+	window->_alignment |= ALIGNMENT_HORIZONTALLY;
+}
+
+void Gui_Manager::next_line()
+{
+	Gui_Window *window = get_window();
+	if (window->_alignment & ALIGNMENT_HORIZONTALLY) {
+		window->_alignment &= ~ALIGNMENT_HORIZONTALLY;
+	}
+	window->_alignment |= ALIGNMENT_VERTICALLY;
+}
+
+void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar)
 {
 	s32 window_size = window->view_rect.get_size()[axis];
 	s32 content_size = window->content_rect.get_size()[axis];
 
 	float ratio = (float)(window_size) / (float)content_size;
-	s32 scroll_size = (ratio < 1.0f) ? window_size  * ratio : window_size;
+	s32 scroll_size = (ratio < 1.0f) ? (float)window_size  * ratio : window_size;
 
 	s32 scroll_bar_width = 8;
 	s32 scroll_offset = math::abs(window->scroll[axis] - window->view_rect[axis]);
 	scroll_size = math::clamp(scroll_size, 10, math::abs(window->view_rect.get_size()[axis] - scroll_offset));
 
-	Rect_s32 scroll_bar;
 	Rect_s32 scroll_rect;
 	if (axis == Y_AXIS) {
-		scroll_bar = Rect_s32(window->rect.right() - scroll_bar_width, window->rect.y, scroll_bar_width, window_size);
-		scroll_rect = Rect_s32(scroll_bar.x, window->scroll[axis], scroll_bar_width, scroll_size);
+		scroll_rect = Rect_s32(scroll_bar->x, window->scroll[axis], scroll_bar_width, scroll_size);
 	} else {
-		scroll_bar = Rect_s32(window->rect.x, window->rect.bottom() - scroll_bar_width, window->rect.width, scroll_bar_width);
-		scroll_rect = Rect_s32(window->scroll[axis], scroll_bar.y, scroll_size, scroll_bar_width);
+		scroll_rect = Rect_s32(window->scroll[axis], scroll_bar->y, scroll_size, scroll_bar_width);
 	}
 
 	String scroller = window->name;
@@ -570,10 +649,9 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, s32 *scroll_bar_size
 		window->content_rect[axis] = window->view_rect[axis] - result;
 	}
 	u32 flag = (axis == Y_AXIS) ? ROUND_RIGHT_RECT : ROUND_BOTTOM_RECT;
-	render_2d->draw_rect(&scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
-	render_2d->draw_rect(&scroll_rect, Color(107, 114, 120), window_theme.rounded_border);
+	render_2d->draw_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
+	render_2d->draw_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
 
-	*scroll_bar_size = scroll_bar.get_size()[axis];
 	window->scroll[axis] = scroll_rect[axis];
 }
 
@@ -626,9 +704,14 @@ bool button(const char *name)
 	return gui_manager.button(name);
 }
 
+void list_box(const char *strings[], u32 len, u32 *item_index)
+{
+	gui_manager.list_box(strings, len, item_index);
+}
+
 void begine_frame()
 {
-	gui_manager.begine_frame();
+	gui_manager.new_frame();
 }
 
 void end_frame()
@@ -638,12 +721,22 @@ void end_frame()
 
 bool begine_window(const char *name)
 {
-	gui_manager.begine_window(name);
+	gui_manager.begin_window(name);
 	return true;
 }
 void end_window()
 {
 	gui_manager.end_window();
+}
+
+void set_next_window_size(s32 width, s32 height)
+{
+	gui_manager.set_next_window_size(width, height);
+}
+
+void set_next_window_pos(s32 x, s32 y)
+{
+	gui_manager.set_next_window_pos(x, y);
 }
 
 void draw_test_gui()
@@ -652,41 +745,48 @@ void draw_test_gui()
 	
 	if (begine_window("Test")) {
 
+		const char *str[] = { "first", "second", "third" };
+		u32 item_index = 0;
+		list_box(str, 3, &item_index);
+		if (button("Click")) {
+			print("Was click by bottom");
+		}
 		//same_line();
-		//button("AAAAAAAAAAAA");
-		//button("Test button3");
-		//button("Test button4");
-		same_line();
-		button("same line");
-		button("same line1");
-		button("same line2");
-		button("same line3");
-		button("same line4");
-		next_line();
-		button("next line1");
-		button("next line2");
-		button("next line3");
-		button("next line4");
-		button("next line5");
-		button("next line6");
-		button("next line7");
-		button("next line8");
-		button("next line9");
-		button("next line10");
-		button("next line11");
-		button("next line12");
-		button("next line13");
-		button("next line14");
-		button("next line15");
-		button("next line16");
-		button("next line17");
-		button("next line18");
-		button("next line19");
+		//button("same line");
+		//button("same line1");
+		//button("same line2");
+		//button("same line3");
+		//button("same line4");
+		//next_line();
+		//button("next line1");
+		//button("next line2");
+		//button("next line3");
+		//button("next line4");
+		//button("next line5");
+		//button("next line6");
+		//button("next line7");
+		//button("next line8");
+		//button("next line9");
+		//button("next line10");
+		//button("next line11");
+		//button("next line12");
+		//button("next line13");
+		//button("next line14");
+		//button("next line15");
+		//button("next line16");
+		//button("next line17");
+		//button("next line18");
+		//button("next line19");
 
 	}
 	end_window();
 
+	//set_next_window_pos(500, 300);
+	//set_next_window_size(1000, 700);
 	//begine_window("temp");
+	//end_window();
+
+	//begine_window("temp1");
 	//end_window();
 
 	end_frame();
