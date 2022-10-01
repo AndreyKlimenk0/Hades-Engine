@@ -166,16 +166,4 @@ void test_something()
 
 void test()
 {
-	//Stack<int> stask;
-
-	//for (int i = 0; i < 10; i++)
-	//{
-	//	stask.push(i);
-	//}
-
-	//for (int i = 0; i < 10; i++) 
-	//{
-	//	print("[{}] Stask top", i, stask.top());
-	//	stask.pop();
-	//}
 }

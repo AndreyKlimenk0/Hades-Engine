@@ -42,6 +42,8 @@ struct Linked_List {
 	void remove(Node<T> *node);
 	
 	void delete_node(Node<T> *node);
+
+	void clear();
 	
 	void set_pointer_to_item(T *ptr, u32 index);
 	void set_pointer_to_item(T **ptr, u32 index);
@@ -98,6 +100,20 @@ void Linked_List<T>::delete_node(Node<T> *node)
 	} else {
 		DELETE_PTR(node);
 	}
+}
+
+template<typename T>
+inline void Linked_List<T>::clear()
+{
+	Node<T> *node = first_node;
+	while (node != NULL) {
+		Node<T> *next = node->next;
+		delete node;
+		node = next;
+	}
+	count = 0;
+	first_node = NULL;
+	last_node = NULL;
 }
 
 template <typename T>
