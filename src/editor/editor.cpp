@@ -163,7 +163,7 @@ void inline place_by_left(Rect_u32 *element, Rect_u32 *point, int offset_from_le
 static void draw_debug_rect(Rect_u32 *rect)
 {
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_rect(rect, Color::Red);
+	//render_2d->draw_rect(rect, Color::Red);
 }
 
 Text::Text(const char *text)
@@ -183,7 +183,7 @@ void Text::operator=(const char *text)
 void Text::draw()
 {
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_text(rect.x, rect.y, string);
+	//render_2d->draw_text(rect.x, rect.y, string);
 }
 
 void Text::set_position(u32 x, u32 y)
@@ -223,7 +223,7 @@ void Caret::draw()
 	if (show) {
 		show_time_accumulator += elapsed_time;
 		if (show_time_accumulator < show_time) {
-			render_2d->draw_rect(&rect, Color::White);
+			//render_2d->draw_rect(&rect, Color::White);
 		} else {
 			show = false;
 			show_time_accumulator = 0;
@@ -312,13 +312,13 @@ void List_Box::draw()
 	label.draw();
 
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
+	//render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
 
 	drop_button.draw();
 	current_chosen_item_text.draw();
 
 	if (list_state == LIST_BOX_IS_DROPPED) {
-		render_2d->draw_rect(&list_box_rect, theme.color, theme.rounded_border);
+		//render_2d->draw_rect(&list_box_rect, theme.color, theme.rounded_border);
 		
 		for (int i = 0; i < item_list.count; i++) {
 			item_list[i].draw();
@@ -699,7 +699,7 @@ void Edit_Field::draw()
 {
 	Render_2D *render_2d = get_render_2d();
 	
-	render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
+	//render_2d->draw_rect(&field_rect, theme.color, theme.rounded_border);
 
 	label.draw();
 
@@ -1300,20 +1300,20 @@ void Window::draw()
 
 	Render_2D *render_2d = render_sys.get_render_2d();
 	
-	render_2d->draw_rect(&rect, window_theme.color);
+	//render_2d->draw_rect(&rect, window_theme.color);
 	//direct2d.draw_rect(x, y, width, height, window_theme.header_color, 3.0f);
 
 	if (flags & WINDOW_WITH_HEADER) {
 
 		Rect_u32 header_rect = Rect_u32(rect.x, rect.y, rect.width, window_theme.header_height);
 		if (flags & ELEMENT_FOCUSED) {
-			render_2d->draw_rect(&header_rect, Color(26, 26, 26));
+			//render_2d->draw_rect(&header_rect, Color(26, 26, 26));
 		} else {
-			render_2d->draw_rect(&header_rect, window_theme.header_color);
+			//render_2d->draw_rect(&header_rect, window_theme.header_color);
 		}
 
 		if (theme.draw_window_name_in_header && !name.is_empty()) {
-			render_2d->draw_text(header_text_position.x, header_text_position.y, name);
+			//render_2d->draw_text(header_text_position.x, header_text_position.y, name);
 			//direct2d.draw_text(header_text_position.x, header_text_position.y, name);
 		}
 	}
@@ -1715,9 +1715,9 @@ void Text_Button::draw()
 	Render_2D *render_2d = get_render_2d();
 	
 	if (flags & ELEMENT_HOVER) {
-		render_2d->draw_rect(&rect, theme.hover_color, theme.rounded_border);
+		//render_2d->draw_rect(&rect, theme.hover_color, theme.rounded_border);
 	} else {
-		render_2d->draw_rect(&rect, theme.color, theme.rounded_border);
+		//render_2d->draw_rect(&rect, theme.color, theme.rounded_border);
 	}
 	
 	text.draw();
@@ -1754,7 +1754,7 @@ Texture_Button::Texture_Button(Texture *_texture, float scale)
 void Texture_Button::draw()
 {
 	Render_2D *render_2d = get_render_2d();
-	render_2d->draw_texture(rect.x, rect.y, rect.width, rect.height, texture);
+	//render_2d->draw_texture(rect.x, rect.y, rect.width, rect.height, texture);
 }
 
 void Texture_Button::set_position(u32 x, u32 y)

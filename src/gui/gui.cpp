@@ -26,6 +26,8 @@ const Size_s32 MIN_WINDOW_SIZE = { 20 , 20 };
 
 static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 
+#define GET_RENDER_LIST() (&window->render_list)
+
 
 inline void place_in_middle_by_y(Rect_s32 *source, Rect_s32 *dest)
 {
@@ -58,7 +60,7 @@ static void draw_debug_rect(Rect_s32 *rect)
 {
 	Color red = Color::Red;
 	red.value.w = 0.4f;
-	render_2d->draw_rect(rect, red);
+	//render_2d->draw_rect(rect, red);
 }
 
 inline bool detect_collision(Rect_s32 *rect)
@@ -116,6 +118,9 @@ const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
 struct Gui_Window {
 	Gui_ID gui_id;
 
+	bool focused;
+	bool was_focused;
+
 	Place place;
 	Alignment alignment;
 	Element_Alignment _alignment;
@@ -127,6 +132,7 @@ struct Gui_Window {
 
 	String name;
 
+	Render_Primitive_List render_list;
 
 	Point_s32 get_place(Rect_s32 *rect);
 	Point_s32 _get_place(Rect_s32 *rect);
@@ -200,8 +206,8 @@ struct Gui_Manager {
 	Rect_s32 window_rect;
 	
 	Stack<Gui_Window *> window_stack;
+	Array<Gui_Window *> windows_order;
 	Array<Gui_Window> windows;
-	Linked_List<Gui_Window> windows_order;
 
 	Gui_Window_Theme window_theme;
 	
@@ -226,7 +232,8 @@ struct Gui_Manager {
 	Rect_s32 get_win32_rect();
 	
 	Gui_Window *get_window();
-	Gui_Window *create_or_find_window(const char *name);
+	Gui_Window *find_window(const char *name, int *window_index);
+	Gui_Window *create_window(const char *name);
 };
 
 void Gui_Manager::set_next_window_pos(s32 x, s32 y)
@@ -250,6 +257,45 @@ Gui_Window *Gui_Manager::get_window()
 		error("Hades gui error: Window stask is empty");
 	}
 	return window_stack.top();
+}
+
+Gui_Window *Gui_Manager::find_window(const char *name, int *window_index)
+{
+	Gui_ID window_id = fast_hash(name);
+
+	for (int i = 0; i < windows_order.count; i++) {
+		if (window_id == windows_order[i]->gui_id) {
+			*window_index = i;
+			return windows_order[i];
+		}
+	}
+	return NULL;
+}
+
+Gui_Window *Gui_Manager::create_window(const char *name)
+{
+	Gui_ID window_id = fast_hash(name);
+	
+	Gui_Window new_window;
+	new_window.gui_id = window_id;
+	new_window.rect = window_rect;
+	new_window.view_rect = window_rect;
+	new_window.place = PLACE_VERTICALLY;
+	new_window.alignment = LEFT_ALIGNMENT;
+	new_window._alignment = 0;
+	new_window._alignment |= ALIGNMENT_VERTICALLY;
+	new_window.content_rect.set(new_window.rect.x, new_window.rect.y);
+
+	new_window.scroll.x = new_window.rect.x;
+	new_window.scroll.y = new_window.rect.y;
+
+	new_window.name = name;
+	new_window.render_list.render_2d = render_2d;
+
+	windows.push(new_window);
+	window_rect.x += new_window.rect.width + 40;
+
+	return &windows.last_item();
 }
 
 bool Gui_Manager::check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)())
@@ -356,16 +402,10 @@ void Gui_Manager::list_box(const char * strings[], u32 len, u32 *item_index)
 	}
 
 	if (gui_id == active_list_box) {
-		//if (was_click) {
-		//	if (draw_list_box) {
-		//		draw_list_box = false;
-		//	} else {
-		//		draw_list_box = true;
-		//	}
-		//}
-
 		if (draw_list_box) {
-			begin_window("list_box_window");
+			set_next_window_pos(list_box_rect.x, list_box_rect.bottom());
+			set_next_window_size(list_box_rect.width, 200);
+			begin_window(list_box_name);
 			for (u32 i = 0; i < len; i++) {
 				if (button(strings[i])) {
 					*item_index = i;
@@ -380,10 +420,11 @@ void Gui_Manager::list_box(const char * strings[], u32 len, u32 *item_index)
 		Rect_s32 text_rect = get_text_rect(strings[*item_index]);
 		place_in_center(&list_box_rect, &text_rect);
 		
-		render_2d->push_clip_rect(&clip_rect);
-		render_2d->draw_rect(&list_box_rect, Color(74, 82, 90), button_theme.rounded_border);
-		render_2d->draw_text(&text_rect, strings[*item_index]);
-		render_2d->pop_clip_rect();
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_rect(&list_box_rect, Color(74, 82, 90), button_theme.rounded_border);
+		render_list->add_text(&text_rect, strings[*item_index]);
+		render_list->pop_clip_rect();
 	}
 
 	list_box_count++;
@@ -408,10 +449,11 @@ bool Gui_Manager::button(const char *name)
 		Rect_s32 text_rect = get_text_rect(name);
 		place_in_center(&button_rect, &text_rect);
 
-		render_2d->push_clip_rect(&clip_rect);
-		render_2d->draw_rect(&button_rect, button_color, button_theme.rounded_border);
-		render_2d->draw_text(&text_rect, name);
-		render_2d->pop_clip_rect();
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_rect(&button_rect, button_color, button_theme.rounded_border);
+		render_list->add_text(&text_rect, name);
+		render_list->pop_clip_rect();
 	}
 	return button_down;
 }
@@ -426,36 +468,6 @@ bool Gui_Manager::check_item(Gui_ID id, Rect_s32 *rect)
 	return result;
 }
 
-Gui_Window *Gui_Manager::create_or_find_window(const char *name)
-{
-	u32 window_id = fast_hash(name);
-	
-	Gui_Window *window = NULL;
-	For(windows, window) {
-		if (window_id == window->gui_id) {
-			return window;
-		}
-	}
-
-	Gui_Window new_window;
-	new_window.gui_id = window_id;
-	new_window.rect = window_rect;
-	new_window.view_rect = window_rect;
-	new_window.place = PLACE_VERTICALLY;
-	new_window.alignment = LEFT_ALIGNMENT;
-	new_window._alignment = 0;
-	new_window._alignment |= ALIGNMENT_VERTICALLY;
-	new_window.content_rect.set(new_window.rect.x, new_window.rect.y);
-
-	new_window.scroll.x = new_window.rect.x;
-	new_window.scroll.y = new_window.rect.y;
-
-	new_window.name = name;
-
-	windows.push(new_window);
-	window_rect.x += new_window.rect.width + 40;
-	return &windows.last_item();
-}
 
 inline u32 safe_sub_u32(u32 x, u32 y)
 {
@@ -483,11 +495,25 @@ void Gui_Manager::end_frame()
 	}
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
+
+	Gui_Window *window = NULL;
+	For(windows_order, window) {
+		render_2d->add_render_primitive_list(&window->render_list);
+	}
 }
 
 void Gui_Manager::begin_window(const char *name)
 {
-	Gui_Window *window = create_or_find_window(name);
+	int window_index;
+	
+	bool window_just_created = false;
+	Gui_Window *window = find_window(name, &window_index);
+	if (!window) {
+		window = create_window(name);
+		windows_order.push(window);
+		window_just_created = true;
+	}
+	
 	window_stack.push(window);
 
 	s32 old_win_y = window->rect.y;
@@ -498,11 +524,22 @@ void Gui_Manager::begin_window(const char *name)
 	window->_alignment = 0;
 	window->_alignment |= ALIGNMENT_VERTICALLY;
 
-	//current_window = window;
 
+	bool became_just_focused = false;
 	Rect_s32  *rect = &window->rect;
 	if (check_item(window->gui_id, rect) && was_left_mouse_button_just_pressed()) {
 		active_item = window->gui_id;
+		became_just_focused = true;
+	}
+
+	if (window_just_created) {
+		windows_order.push(window);
+	} else {
+		if (became_just_focused) {
+			windows_order.remove(window_index);
+			windows_order.push(window);
+		}
+
 	}
 
 	if (active_item == window->gui_id && is_left_mouse_button_down()) {
@@ -577,10 +614,10 @@ void Gui_Manager::begin_window(const char *name)
 	}
 	window->view_rect = *rect;
 
-	render_2d->new_render_primitive_list();
 
-	render_2d->draw_outlines(rect->x, rect->y, rect->width, rect->height, Color(92, 100, 107), 2.0f, window_theme.rounded_border);
-	render_2d->draw_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
+	Render_Primitive_List *render_list = GET_RENDER_LIST();
+	render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, Color(92, 100, 107), 2.0f, window_theme.rounded_border);
+	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
 }
 
 void Gui_Manager::end_window()
@@ -675,8 +712,10 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 		window->content_rect[axis] = window->view_rect[axis] - result;
 	}
 	u32 flag = (axis == Y_AXIS) ? ROUND_RIGHT_RECT : ROUND_BOTTOM_RECT;
-	render_2d->draw_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
-	render_2d->draw_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
+
+	Render_Primitive_List *render_list = GET_RENDER_LIST();
+	render_list->add_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
+	render_list->add_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
 
 	window->scroll[axis] = scroll_rect[axis];
 }
@@ -735,7 +774,7 @@ void list_box(const char *strings[], u32 len, u32 *item_index)
 	gui_manager.list_box(strings, len, item_index);
 }
 
-void begine_frame()
+void begin_frame()
 {
 	gui_manager.new_frame();
 }
@@ -745,7 +784,7 @@ void end_frame()
 	gui_manager.end_frame();
 }
 
-bool begine_window(const char *name)
+bool begin_window(const char *name)
 {
 	gui_manager.begin_window(name);
 	return true;
@@ -767,9 +806,23 @@ void set_next_window_pos(s32 x, s32 y)
 
 void draw_test_gui()
 {
-	begine_frame();
+
+	begin_frame();
+
+	//begin_window("Window1");
+	//button("Window1");
+	//end_window();
+
+	//begin_window("Window2");
+	//button("Window2");
+	//end_window();
 	
-	if (begine_window("Test")) {
+	begin_window("Window3");
+	button("Window3");
+	end_window();
+
+	
+	if (begin_window("Test")) {
 
 		const char *str[] = { "first", "second", "third" };
 		static u32 item_index = 123124;
@@ -777,10 +830,12 @@ void draw_test_gui()
 		if (button("Click")) {
 			print("Was click by bottom");
 		}
+		end_window();
+	}
 
-		const char *str2[] = { "first2", "second2", "third2" };
-		static u32 item_index2 = 0;
-		list_box(str2, 3, &item_index2);
+	//	const char *str2[] = { "first2", "second2", "third2" };
+	//	static u32 item_index2 = 0;
+	//	list_box(str2, 3, &item_index2);
 		//same_line();
 		//button("same line");
 		//button("same line1");
@@ -808,8 +863,8 @@ void draw_test_gui()
 		//button("next line18");
 		//button("next line19");
 
-	}
-	end_window();
+	//}
+	//end_window();
 
 	//set_next_window_pos(500, 300);
 	//set_next_window_size(1000, 700);

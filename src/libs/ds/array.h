@@ -25,6 +25,7 @@ struct Array {
 
 	bool is_empty();
 	void resize(int _size);
+	void remove(int index);
 	void set_count(int _count);
 	void shutdown();
 	void push(const T &item);
@@ -132,6 +133,30 @@ void Array<T>::resize(int new_size)
 
 	size = new_size;
 	delete[] temp_array;
+}
+
+template<typename T>
+inline void Array<T>::remove(int index)
+{
+	assert(count > index);
+
+
+	T *new_data = new T[size];
+
+	void *first_part_dest_str = new_data;
+	void *first_part_src_str = items;
+
+	memcpy(first_part_dest_str, first_part_src_str, sizeof(T) * index);
+
+	void *second_part_dest_str = &new_data[index];
+	void *second_part_src_str = &items[index + 1];
+
+	memcpy(second_part_dest_str, second_part_src_str, sizeof(T) * (count - index - 1));
+
+	delete[] items;
+	
+	count -= 1;
+	items = new_data;
 }
 
 template <typename T>
