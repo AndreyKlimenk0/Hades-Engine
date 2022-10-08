@@ -2,6 +2,7 @@
 #define FILE_H
 
 #include <stdio.h>
+#include <windows.h>
 
 #include "../../win32/win_types.h"
 #include "../str.h"
@@ -30,4 +31,34 @@ double read_real64(FILE *file);
 
 char *read_string(FILE *file, int len);
 char *read_entire_file(const char *name, const char *mode = "r", int *file_size = NULL);
+
+
+enum File_Mode {
+	FILE_MODE_READ,
+	FILE_MODE_WRITE,
+};
+
+enum File_Creation {
+	FILE_CREATE_ALWAYS,
+	FILE_CREATE_NEW,
+	FILE_OPEN_ALWAYS,
+	FILE_OPEN_EXISTING
+};
+
+struct File {
+	File() {}
+	~File();
+
+	bool is_file_open = false;
+	HANDLE file_handle = NULL;
+	String file_name;
+
+	bool open(const char *path_to_file, File_Mode mode, File_Creation file_creation);
+	void read(void *data, u32 data_size);
+	void write(void *data, u32 data_size);
+	void write(const char *string, bool new_line = true);
+
+};
+
+
 #endif

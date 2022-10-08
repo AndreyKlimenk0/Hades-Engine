@@ -18,6 +18,7 @@
 #include "../render/render_system.h"
 
 #include "../editor/editor.h"
+#include "../gui/gui.h"
 
 #include "test.h"
 
@@ -137,6 +138,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	Input_Layout::init();
 
+	gui::init_gui();
+
 	// Test
 	test();
 
@@ -175,13 +178,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		//direct2d.end_draw();
 		directx11.end_draw();
 	}
-
 	return 0;
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg) {
+		case  WM_CLOSE: {
+			gui::shutdown();
+			ExitProcess(0);
+			break;
+		}
 		case WM_DESTROY: {
 			PostQuitMessage(0);
 			break;
@@ -249,6 +256,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			char c;
 			wcstombs((char *)&c, (wchar_t *)&wParam, sizeof(char));
 			push_event(EVENT_TYPE_CHAR, c, 0);
+			break;
 		}
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
