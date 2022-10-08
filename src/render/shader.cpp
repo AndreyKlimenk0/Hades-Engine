@@ -207,7 +207,7 @@ void Shader_Manager::init()
 	for (int i = 0; i < file_names.count; i++) {
 		
 		Shader_Type shader_type;
-		if (!get_shader_type_from_file_name(file_names[i].to_str(), &shader_type)) {
+		if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
 			continue;
 		}		
 		
@@ -222,7 +222,7 @@ void Shader_Manager::init()
 		}
 		
 		String shader_name;		
-		get_shader_name_from_file(file_names[i].to_str(), shader_name);
+		get_shader_name_from_file(file_names[i].c_str(), shader_name);
 
 		
 		Shader *existing_shader = NULL;

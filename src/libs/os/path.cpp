@@ -17,18 +17,21 @@ void Path::init()
 	char *model_dir = format("{}\\{}\\{}", base_path, DATA_DIR_NAME, "models");
 	char *editor_dir = format("{}\\{}\\{}", base_path, DATA_DIR_NAME, "editor");
 	char *maps_dir = format("{}\\{}\\{}", base_path, DATA_DIR_NAME, "maps");
+	char *gui_dir = format("{}\\{}\\{}", base_path, DATA_DIR_NAME, "gui");
 
 	data_dir_paths.set("texture", texture_dir);
 	data_dir_paths.set("shader", shader_dir);
 	data_dir_paths.set("model", model_dir);
 	data_dir_paths.set("editor", editor_dir);
 	data_dir_paths.set("maps", maps_dir);
+	data_dir_paths.set("gui", gui_dir);
 
 	free_string(texture_dir);
 	free_string(shader_dir);
 	free_string(model_dir);
 	free_string(editor_dir);
 	free_string(maps_dir);
+	free_string(gui_dir);
 }
 
 void Path::init_base_path()

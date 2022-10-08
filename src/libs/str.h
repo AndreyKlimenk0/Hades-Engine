@@ -42,6 +42,8 @@ char *to_string(Vector2 *vector);
 char *to_string(Vector3 *vector);
 char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
+char *to_string(Point_s32 *point);
+
 
 int is_format_string(const char *string);
 
@@ -103,7 +105,7 @@ struct String {
 	
 	int find_text(const char *text, int start = 0);
 
-	const char *to_str() { return data; }
+	const char *c_str() { return data; }
 	
 	String *copy();
 };

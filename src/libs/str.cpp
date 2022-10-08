@@ -265,22 +265,27 @@ char *to_string(String *string)
 
 char *to_string(Vector2 *vector)
 {
-	return format("vec2 x = {} y = {}", vector->x, vector->y);
+	return format("vec2({}, {})", vector->x, vector->y);
 }
 
 char *to_string(Vector3 *vector)
 {
-	return format("{} {} {}", vector->x, vector->y, vector->z);
+	return format("vec3({}, {}, {})", vector->x, vector->y, vector->z);
 }
 
 char *to_string(Rect_u32 *rect)
 {
-	return format("Rect_u32: x = {}, y = {}, width = {}, height = {}", rect->x, rect->y, rect->width, rect->height);
+	return format("Rect_u32({}, {}, {}, {})", rect->x, rect->y, rect->width, rect->height);
 }
 
 char *to_string(Rect_s32 *rect)
 {
-	return format("Rect_s32: x = {}, y = {}, width = {}, height = {}", rect->x, rect->y, rect->width, rect->height);
+	return format("Rect_s32({}, {}, {}, {})", rect->x, rect->y, rect->width, rect->height);
+}
+
+char *to_string(Point_s32 *point)
+{
+	return format("Point_s32({}, {})", point->x, point->y);
 }
 
 // Check the string has format braces if it has return number of braces 
@@ -543,10 +548,10 @@ void String::allocate_and_copy_string(const char *string)
 	assert(string);
 	assert(data == NULL);
 
-	int l = strlen(string);
-	len = l;
-	data = new char[l + 1];
-	memcpy(data, string, sizeof(char) * (l + 1));
+	int string_len = strlen(string);
+	len = string_len;
+	data = new char[string_len + 1];
+	memcpy(data, string, sizeof(char) * (string_len + 1));
 }
 
 int String::find_text(const char *text, int start)
