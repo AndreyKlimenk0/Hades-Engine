@@ -13,12 +13,14 @@ struct Path {
 
 	void init();
 	void init_base_path();
-	bool build_correct_base_path(Array<String> *splitted_wrong_path, String *base_path);
 
-	void build_full_path_to_texture_file(const char *file_name, String &full_path);
 	void build_full_path_to_map_file(const char *file_name, String &full_path);
+	void build_full_path_to_gui_file(const char *file_name, String &full_path);
+	void build_full_path_to_texture_file(const char *file_name, String &full_path);
 	void build_full_path_to_editor_file(const char *file_name, String &full_path);
 	void build_full_path_to_shader_file(const char *file_name, String &full_path);
+	
+	bool build_correct_base_path(Array<String> *splitted_wrong_path, String *base_path);
 
 	String *build_full_path_to_texture_file(const String *file_name);
 	String *build_full_path_to_model_file(const String *file_name);
@@ -37,6 +39,12 @@ inline void Path::build_full_path_to_texture_file(const char *file_name, String 
 inline void Path::build_full_path_to_map_file(const char *file_name, String &full_path)
 {
 	String &value = data_dir_paths["maps"];
+	full_path = value + "\\" + file_name;
+}
+
+inline void Path::build_full_path_to_gui_file(const char * file_name, String &full_path)
+{
+	String &value = data_dir_paths["gui"];
 	full_path = value + "\\" + file_name;
 }
 

@@ -2,10 +2,11 @@
 #define HADES_GUI_H
 
 
-bool button(const char *text);
+namespace gui {
+	bool button(const char *text);
 
-void init_gui();
-void shutdown_gui();
-void draw_test_gui();
-
+	void init_gui();
+	void shutdown();
+	void draw_test_gui();
+}
 #endif

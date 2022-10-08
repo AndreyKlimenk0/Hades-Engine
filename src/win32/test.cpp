@@ -4,6 +4,7 @@
 
 #include "../libs/spng.h"
 #include "../libs/os/file.h"
+#include "../libs/os/path.h"
 #include "../libs/ds/linked_list.h"
 #include "../libs/ds/hash_table.h"
 #include <string.h>
@@ -135,7 +136,7 @@ void test_something()
 {
 	//Test test;
 	//
-	//Void_Dict dict;
+	Void_Dict dict;
 	//dict.set("i", int(11));
 	//dict.set("f", float(12.0f));
 	//dict.set("v", Vector3(1.0f, 10.0f, 1.0f));
