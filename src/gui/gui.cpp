@@ -19,30 +19,29 @@ typedef u32 Gui_ID;
 
 Render_2D *render_2d = get_render_2d();
 
-Color header_color = Color(74, 82, 90);
-Color Window_color = Color(36, 39, 43);
+
+typedef u32 Element_Alignment;
+const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
+const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
+const Element_Alignment ALIGNMENT_RIGHT = 0x04;
+const Element_Alignment ALIGNMENT_LEFT = 0x08;
 
 const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
-const Size_s32 MIN_WINDOW_SIZE = { 20 , 20 };
 
 static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 
 #define GET_RENDER_LIST() (&window->render_list)
 
 
-inline void place_in_middle_by_y(Rect_s32 *source, Rect_s32 *dest)
-{
-	assert(dest->height > 2);
-	dest->y = source->y + (source->height / 2) - (dest->height / 2);
-}
-
 struct Gui_Text_Button_Theme {
-	s32 border_about_text = 10;
+	u32 aligment = 0;
+	u32 shift_from_size = 10;
 	s32 rounded_border = 5;
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
 	Color hover_color = Color(0, 60, 168);
+	Rect_s32 default_rect{ 0, 0, 123, 20 };
 };
 
 struct Gui_Window_Theme {
@@ -51,12 +50,14 @@ struct Gui_Window_Theme {
 	s32 place_between_elements = 10;
 	s32 shift_element_from_window_side = 20;
 	s32 scroll_bar_width = 15;
+	float outlines_width = 2.0f;
 	Color header_color = Color::White;
 	Color background_color = Color(36, 39, 43);
+	Color outlines_color = Color(92, 100, 107);
 };
 
-Gui_Window_Theme window_theme;
-Gui_Text_Button_Theme button_theme;
+Gui_Window_Theme default_window_theme;
+Gui_Text_Button_Theme default_button_theme;
 
 static void draw_debug_rect(Rect_s32 *rect)
 {
@@ -88,41 +89,55 @@ inline bool detect_collision(Triangle<T> *triangle, Point_V2<T> *point)
 	return false;
 }
 
-inline u32 place_in_middle(Rect_s32 *dest, Rect_s32 *source)
-{
-	return (dest->y + dest->height / 2) - (source->height / 2);
-}
-
-enum Alignment {
-	LEFT_ALIGNMENT,
-	RIGHT_ALIGNMENT
-};
-
-enum Place {
-	PLACE_HORIZONTALLY,
-	PLACE_VERTICALLY,
-	PLACE_HORIZONTALLY_AND_IN_MIDDLE,
-};
-
 enum Axis {
 	X_AXIS = 0,
 	Y_AXIS = 1,
+	BOTH_AXIS = 2
 };
 
-#define UPDATE_VIEW_RECT(filed, value) (window->view_rect.filed += value)
+inline void place_in_center(Rect_s32 *in_element_place, Rect_s32 *placed_element, Axis axis)
+{
+	if ((axis == X_AXIS) || (axis == BOTH_AXIS)) {
+		placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
+	}
+
+	if ((axis == Y_AXIS) || (axis == BOTH_AXIS)) {
+		placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
+	}
+}
+inline void place_in_middle_and_by_left(Rect_s32 *placing_element, Rect_s32 *placed_element, int offset_from_left = 0)
+{
+	placed_element->x = placing_element->x + offset_from_left;
+	place_in_center(placing_element, placed_element, Y_AXIS);
+}
+
+inline void place_in_middle_and_by_right(Rect_s32 *placing_element, Rect_s32 *placed_element, int offset_from_right = 0)
+{
+	placed_element->x = placing_element->x + placing_element->width - placed_element->width - offset_from_right;
+	place_in_center(placing_element, placed_element, Y_AXIS);
+}
 
 
-typedef u32 Element_Alignment;
+inline Rect_s32 get_text_rect(const char *text)
+{
+	Rect_s32 text_rect;
+	Size_u32 size = font.get_text_size(text);
+	text_rect.width = (s32)size.width;
+	text_rect.height = (s32)size.height;
+	return text_rect;
+}
 
-const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
-const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
-
+enum Window_Type {
+	WINDOW_TYPE_PARENT,
+	WINDOW_TYPE_CHILD,
+};
 
 struct Gui_Window {
 	Gui_ID gui_id;
 
+	Window_Type type;
 	Element_Alignment alignment;
-	
+
 	Rect_s32 rect;
 	Rect_s32 view_rect;
 	Rect_s32 content_rect;
@@ -134,41 +149,26 @@ struct Gui_Window {
 	Array<Gui_Window *> child_windows;
 	Render_Primitive_List render_list;
 
-	Point_s32 get_place(Rect_s32 *rect);
+	void set_position(s32 x, s32 y);
 	Rect_s32 get_scrollbar_rect(Axis axis);
 };
 
-Point_s32 Gui_Window::get_place(Rect_s32 *element_rect)
+void Gui_Window::set_position(s32 x, s32 y)
 {
-	assert(!((alignment & ALIGNMENT_VERTICALLY) && (alignment & ALIGNMENT_HORIZONTALLY)));
+	s32 old_win_y = rect.y;
+	s32 old_win_x = rect.x;
 
-	Point_s32 position = { 0, 0 };
-	static bool reset_x_position = false;
-	static s32 prev_rect_height = 0;
-	static u32 offset = window_theme.place_between_elements;
+	rect.set(x, y);
+	view_rect.set(x, y);
 
-	if (alignment & ALIGNMENT_VERTICALLY) {
-		if (reset_x_position) {
-			next_place.x = content_rect.x;
-			reset_x_position = false;
-			next_place.y += prev_rect_height + offset;
-			content_rect.height += prev_rect_height + offset;
-		}
-		position.y = next_place.y + offset;
-		position.x = next_place.x + offset;
-		next_place.y += element_rect->height + offset;
-		content_rect.height += element_rect->height + offset;
-	}
+	content_rect.x += rect.x - old_win_x;
+	content_rect.y += rect.y - old_win_y;
 
-	if (alignment & ALIGNMENT_HORIZONTALLY) {
-		reset_x_position = true;
-		prev_rect_height = element_rect->height;
-		position.x = next_place.x + offset;
-		position.y = next_place.y + offset;
-		next_place.x += element_rect->width + offset;
-		content_rect.width += element_rect->width + offset;
-	}
-	return position;
+	next_place.x = content_rect.x;
+	next_place.y = content_rect.y;
+
+	scroll.x += rect.x - old_win_x;
+	scroll.y += rect.y - old_win_y;
 }
 
 Rect_s32 Gui_Window::get_scrollbar_rect(Axis axis)
@@ -180,6 +180,10 @@ Rect_s32 Gui_Window::get_scrollbar_rect(Axis axis)
 	return Rect_s32(rect.x, rect.bottom() - scroll_bar_width, view_rect.width, scroll_bar_width);
 }
 
+const u32 SET_WINDOW_POSITION = 0x1;
+const u32 SET_WINDOW_SIZE = 0x2;
+const u32 SET_WINDOW_THEME = 0x4;
+
 struct Gui_Manager {
 	s32 mouse_x;
 	s32 mouse_y;
@@ -188,11 +192,14 @@ struct Gui_Manager {
 	s32 mouse_x_delta;
 	s32 mouse_y_delta;
 
+	u32 reset_window_params;
 	u32 list_box_count;
+	u32 window_parent_count;
 
-	Gui_ID active_list_box;
 	Gui_ID hot_item;
 	Gui_ID active_item;
+	Gui_ID active_list_box;
+	Gui_ID became_just_focused; //window
 	Gui_ID resizing_window;
 	Gui_ID probably_resizing_window;
 
@@ -204,6 +211,7 @@ struct Gui_Manager {
 	Array<Gui_Window> windows;
 
 	Gui_Window_Theme window_theme;
+	Gui_Text_Button_Theme button_theme;
 
 	void init();
 	void shutdown();
@@ -211,39 +219,80 @@ struct Gui_Manager {
 	void new_frame();
 	void end_frame();
 
-	void begin_window(const char *name);
+	void begin_window(const char *name, Window_Type window_type);
 	void end_window();
 	void same_line();
 	void next_line();
 	void set_next_window_pos(s32 x, s32 y);
 	void set_next_window_size(s32 width, s32 height);
+	void set_next_window_theme(Gui_Window_Theme *theme);
+	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
 
-	void list_box(const char *strings[], u32 len, u32 *item_index);
+	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	bool button(const char *name);
-	
+
 	bool check_item(Gui_ID id, Rect_s32 *rect);
 	bool detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side);
 	bool check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)() = NULL);
-	
+
 	Rect_s32 get_win32_rect();
-	
+
 	Gui_Window *get_window();
 	Gui_Window *find_window(const char *name);
 	Gui_Window *find_window_in_order(const char *name, int *window_index);
-	
-	Gui_Window *create_window(const char *name);
+
+	Gui_Window *create_window(const char *name, Window_Type window_type);
 	Gui_Window *create_window(const char *name, Rect_s32 *rect);
 };
 
 void Gui_Manager::set_next_window_pos(s32 x, s32 y)
 {
 	window_rect.set(x, y);
+	reset_window_params |= SET_WINDOW_POSITION;
 }
 
 void Gui_Manager::set_next_window_size(s32 width, s32 height)
 {
 	window_rect.set_size(width, height);
+	reset_window_params |= SET_WINDOW_SIZE;
+}
+
+void Gui_Manager::set_next_window_theme(Gui_Window_Theme *theme)
+{
+	window_theme = *theme;
+	reset_window_params |= SET_WINDOW_THEME;;
+}
+
+void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
+{
+	assert(!((window->alignment & ALIGNMENT_VERTICALLY) && (window->alignment & ALIGNMENT_HORIZONTALLY)));
+
+	static bool reset_x_position = false;
+	static s32 prev_rect_height = 0;
+	u32 offset = window_theme.place_between_elements;
+
+	if (window->alignment & ALIGNMENT_VERTICALLY) {
+		if (reset_x_position) {
+			window->next_place.x = window->content_rect.x;
+			reset_x_position = false;
+			window->next_place.y += prev_rect_height + offset;
+			window->content_rect.height += prev_rect_height + offset;
+		}
+		rect->y = window->next_place.y + offset;
+		rect->x = window->next_place.x + offset;
+		window->next_place.y += rect->height + offset;
+		window->content_rect.height += rect->height + offset;
+	}
+
+	if (window->alignment & ALIGNMENT_HORIZONTALLY) {
+		reset_x_position = true;
+		prev_rect_height = rect->height;
+		rect->x = window->next_place.x + offset;
+		rect->y = window->next_place.y + offset;
+		window->next_place.x += rect->width + offset;
+		window->content_rect.width += rect->width + offset;
+	}
 }
 
 Rect_s32 Gui_Manager::get_win32_rect()
@@ -284,12 +333,13 @@ Gui_Window *Gui_Manager::find_window_in_order(const char *name, int *window_inde
 	return NULL;
 }
 
-Gui_Window *Gui_Manager::create_window(const char *name)
+Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type)
 {
 	Gui_ID window_id = fast_hash(name);
 	
 	Gui_Window new_window;
 	new_window.gui_id = window_id;
+	new_window.type = window_type;
 	new_window.rect = window_rect;
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
@@ -305,6 +355,10 @@ Gui_Window *Gui_Manager::create_window(const char *name)
 	windows.push(new_window);
 	window_rect.x += new_window.rect.width + 40;
 
+	if (window_type == WINDOW_TYPE_PARENT) {
+		window_parent_count++;
+	}
+
 	return &windows.last_item();
 }
 
@@ -314,6 +368,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 
 	Gui_Window new_window;
 	new_window.gui_id = window_id;
+	new_window.type = WINDOW_TYPE_PARENT;
 	new_window.rect = *rect;
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
@@ -328,6 +383,8 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 
 	windows.push(new_window);
 	windows_order.push(&windows.last_item());
+
+	window_parent_count += 1;
 
 	return &windows.last_item();
 }
@@ -392,35 +449,19 @@ Rect_s32 calcualte_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 	return clip_rect;
 }
 
-inline void place_in_center(Rect_s32 *in_element_place, Rect_s32 *placed_element)
+void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_index)
 {
-	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
-	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
-}
+	assert(item_count > 0);
 
-inline Rect_s32 get_text_rect(const char *text)
-{
-	Rect_s32 text_rect;
-	Size_u32 size = font.get_text_size(text);
-	text_rect.width = (s32)size.width;
-	text_rect.height = (s32)size.height;
-	return text_rect;
-}
-
-void Gui_Manager::list_box(const char * strings[], u32 len, u32 *item_index)
-{
-	assert(len > 0);
-
-	if (*item_index >= len) {
+	if (*item_index >= item_count) {
 		*item_index = 0;
 	}
 
-	Rect_s32 list_box_rect = { 0, 0, 120, 20 };
+	Rect_s32 list_box_rect = { 0, 0, 220, 20 };
 	
 	Gui_Window *window = get_window();
-	Point_s32 pos = window->get_place(&list_box_rect);
-	
-	list_box_rect.set(pos.x, pos.y);
+	place_rect_in_window(window, &list_box_rect);
+
 	
 	String list_box_name = window->name + String("_list_box_") + String((int)list_box_count);
 	if (check_button_state(list_box_name, &list_box_rect)) {
@@ -431,24 +472,46 @@ void Gui_Manager::list_box(const char * strings[], u32 len, u32 *item_index)
 		}
 	}
 
+	u32 alignment = ALIGNMENT_LEFT;
 	Gui_ID gui_id = fast_hash(list_box_name);
 	if (gui_id == active_list_box) {
-		set_next_window_pos(list_box_rect.x, list_box_rect.bottom());
-		set_next_window_size(list_box_rect.width, 200);
-		begin_window(list_box_name);
+		Gui_Window_Theme win_theme;
+		win_theme.shift_element_from_window_side = 0;
+		win_theme.outlines_width = 1.0f;
+		win_theme.place_between_elements = 0;
+		set_next_window_theme(&win_theme);
 		
-		for (u32 i = 0; i < len; i++) {
+		set_next_window_pos(list_box_rect.x, list_box_rect.bottom() + 5);
+		set_next_window_size(list_box_rect.width, item_count * button_theme.default_rect.height);
+		
+		begin_window(list_box_name, WINDOW_TYPE_CHILD);
+
+		Gui_Text_Button_Theme theme;
+		theme.default_rect.width = list_box_rect.width;
+		theme.color = window_theme.background_color;
+		theme.aligment |= alignment;
+
+		button_theme = theme;
+		for (u32 i = 0; i < item_count; i++) {
 			if (button(strings[i])) {
 				*item_index = i;
 			}
 		}
+		button_theme = default_button_theme;
 		end_window();
 	}
 
 	if (must_item_be_drawn(&window->rect, &list_box_rect)) {
 		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &list_box_rect);
 		Rect_s32 text_rect = get_text_rect(strings[*item_index]);
-		place_in_center(&list_box_rect, &text_rect);
+		
+		if (alignment & ALIGNMENT_RIGHT) {
+			place_in_middle_and_by_right(&list_box_rect, &text_rect, button_theme.shift_from_size);
+		} else if (alignment & ALIGNMENT_LEFT) {
+			place_in_middle_and_by_left(&list_box_rect, &text_rect, button_theme.shift_from_size);
+		} else {
+			place_in_center(&list_box_rect, &text_rect, BOTH_AXIS);
+		}
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
@@ -463,12 +526,10 @@ void Gui_Manager::list_box(const char * strings[], u32 len, u32 *item_index)
 bool Gui_Manager::button(const char *name)
 {
 	bool button_click = false;
-	Rect_s32 button_rect{ 0, 0, 123, 20 };
+	Rect_s32 button_rect = button_theme.default_rect;
+	
 	Gui_Window *window = get_window();
-	Point_s32 pos = window->get_place(&button_rect);
-
-	button_rect.x = pos.x;
-	button_rect.y = pos.y;
+	place_rect_in_window(window, &button_rect);
 
 	bool button_down = check_button_state(NULL, &button_rect);
 
@@ -477,7 +538,14 @@ bool Gui_Manager::button(const char *name)
 	if (must_item_be_drawn(&window->rect, &button_rect)) {
 		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &button_rect);
 		Rect_s32 text_rect = get_text_rect(name);
-		place_in_center(&button_rect, &text_rect);
+
+		if (button_theme.aligment & ALIGNMENT_RIGHT) {
+			place_in_middle_and_by_right(&button_rect, &text_rect, button_theme.shift_from_size);
+		} else if (button_theme.aligment & ALIGNMENT_LEFT) {
+			place_in_middle_and_by_left(&button_rect, &text_rect, button_theme.shift_from_size);
+		} else {
+			place_in_center(&button_rect, &text_rect, BOTH_AXIS);
+		}
 
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
@@ -507,6 +575,10 @@ inline u32 safe_sub_u32(u32 x, u32 y)
 
 void Gui_Manager::init()
 {
+	window_parent_count = 0;
+	reset_window_params = 0;
+	window_theme = default_window_theme;
+
 	String path_to_save_file;
 	os_path.build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
 
@@ -529,9 +601,9 @@ void Gui_Manager::init()
 		Rect_s32 rect;
 		save_file.read((void *)&rect, sizeof(Rect_s32));
 
-		print("Gui Window");
-		print("name ", string);
-		print("rect ", &rect);
+		print("[{}] Gui Window", i);
+		print("name:", string);
+		print("rect:", &rect);
 
 		create_window(string, &rect);
 		free_string(string);
@@ -549,14 +621,17 @@ void Gui_Manager::shutdown()
 		return;
 	}
 
-	save_file.write((void *)&windows.count, sizeof(int));
+	save_file.write((void *)&window_parent_count, sizeof(int));
 
 	Gui_Window *window = NULL;
+	int i = 0;
 	For(windows, window) {
+		if (window->type == WINDOW_TYPE_PARENT) {
 
-		save_file.write((void *)&window->name.len, sizeof(int));
-		save_file.write((void *)&window->name.data[0], window->name.len);
-		save_file.write((void *)&window->rect, sizeof(Rect_s32));
+			save_file.write((void *)&window->name.len, sizeof(int));
+			save_file.write((void *)&window->name.data[0], window->name.len);
+			save_file.write((void *)&window->rect, sizeof(Rect_s32));
+		}
 	}
 }
 
@@ -570,6 +645,7 @@ void Gui_Manager::new_frame()
 	mouse_y_delta = mouse_y - last_mouse_y;
 	hot_item = 0;
 	list_box_count = 0;
+	became_just_focused = 0;
 }
 
 void Gui_Manager::end_frame()
@@ -587,57 +663,37 @@ void Gui_Manager::end_frame()
 	}
 }
 
-void Gui_Manager::begin_window(const char *name)
-{
-	int window_index = 0;
-	
+void Gui_Manager::begin_window(const char *name, Window_Type window_type)
+{	
 	Gui_Window *window = NULL;
-	window = find_window_in_order(name, &window_index);
+	window = find_window(name);
 	
 	if (!window) {
-		window = create_window(name);
-		windows_order.push(window);
+		window = create_window(name, window_type);
+		became_just_focused = window->gui_id;
+		
+		if (window_type == WINDOW_TYPE_CHILD) {
+			Gui_Window *parent_window = get_window();
+			parent_window->child_windows.push(window);
+		}
 	}
-	
 	window_stack.push(window);
-
-	s32 old_win_y = window->rect.y;
-	s32 old_win_x = window->rect.x;
 	
 	window->next_place.x = window->content_rect.x;
 	window->next_place.y = window->content_rect.y;
 	window->alignment = 0;
 	window->alignment |= ALIGNMENT_VERTICALLY;
 
-
-	bool became_just_focused = false;
 	Rect_s32  *rect = &window->rect;
 	if (check_item(window->gui_id, rect) && was_left_mouse_button_just_pressed()) {
 		active_item = window->gui_id;
-		became_just_focused = true;
-	}
-
-
-	if (became_just_focused) {
-		windows_order.remove(window_index);
-		windows_order.push(window);
+		became_just_focused = window->gui_id;
 	}
 
 	if (active_item == window->gui_id && is_left_mouse_button_down()) {
-		rect->x = math::clamp(rect->x + mouse_x_delta, 0, (s32)win32.window_width - rect->width);
-		rect->y = math::clamp(rect->y + mouse_y_delta, 0, (s32)win32.window_height - rect->height);
-
-		window->view_rect.x = rect->x;
-		window->view_rect.y = rect->y;
-
-		window->content_rect.x += rect->x - old_win_x;
-		window->content_rect.y += rect->y - old_win_y;
-
-		window->next_place.x = window->content_rect.x;
-		window->next_place.y = window->content_rect.y;
-
-		window->scroll.x += rect->x - old_win_x;
-		window->scroll.y += rect->y - old_win_y;
+		s32 x = math::clamp(rect->x + mouse_x_delta, 0, (s32)win32.window_width - rect->width);
+		s32 y = math::clamp(rect->y + mouse_y_delta, 0, (s32)win32.window_height - rect->height);
+		window->set_position(x, y);
 	}
 
 	static Rect_Side rect_side;
@@ -693,17 +749,50 @@ void Gui_Manager::begin_window(const char *name)
 			set_cursor(CURSOR_TYPE_ARROW);
 		}
 	}
+
+	if (reset_window_params & SET_WINDOW_POSITION) {
+		window->set_position(window_rect.x, window_rect.y);
+		reset_window_params &= ~SET_WINDOW_POSITION;
+	}
+
+	if (reset_window_params & SET_WINDOW_SIZE) {
+		rect->set_size(window_rect.width, window_rect.height);
+		reset_window_params &= ~SET_WINDOW_SIZE;
+	}
+	
 	window->view_rect = *rect;
 
-
 	Render_Primitive_List *render_list = GET_RENDER_LIST();
-	render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, Color(92, 100, 107), 2.0f, window_theme.rounded_border);
+	render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width, window_theme.rounded_border);
 	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
 }
 
 void Gui_Manager::end_window()
 {
 	Gui_Window *window = get_window();
+
+	if (window->type == WINDOW_TYPE_PARENT) {
+		int window_index;
+		if (find_window_in_order(window->name, &window_index) == NULL) {
+			windows_order.push(window);
+			Gui_Window *child = NULL;
+			For(window->child_windows, child) {
+				windows_order.push(child);
+			}
+		} else {
+			if (became_just_focused == window->gui_id) {
+				windows_order.remove(window_index);
+				windows_order.push(window);
+			
+				Gui_Window *child = NULL;
+				For(window->child_windows, child) {
+					windows_order.remove(window_index++);
+					windows_order.push(child);
+				}
+			}
+		}
+	}
+
 	
 	window->content_rect.height += window_theme.place_between_elements;
 	window->content_rect.width += window_theme.place_between_elements;
@@ -734,6 +823,10 @@ void Gui_Manager::end_window()
 	
 	window->content_rect.set_size(0, 0);
 	window_rect = default_window_rect;
+	if (reset_window_params & SET_WINDOW_THEME) {
+		reset_window_params &= ~SET_WINDOW_THEME;
+		window_theme = default_window_theme;
+	}
 
 	window_stack.pop();
 }
@@ -850,22 +943,6 @@ bool gui::button(const char *text)
 	return gui_manager.button(text);
 }
 
-String write_filed(const char *field_name, const char *string)
-{
-	String result;
-	result.append(field_name);
-	result.append(" ");
-	result.append(string);
-	
-	free_string(string);
-	return result;
-}
-
-struct Window_Save_Data {
-	String name;
-	Rect_s32 rect;
-};
-
 void gui::init_gui()
 {
 	gui_manager.init();
@@ -893,7 +970,7 @@ void end_frame()
 
 bool begin_window(const char *name)
 {
-	gui_manager.begin_window(name);
+	gui_manager.begin_window(name, WINDOW_TYPE_PARENT);
 	return true;
 }
 void end_window()
@@ -931,9 +1008,9 @@ void gui::draw_test_gui()
 	
 	if (begin_window("Test")) {
 
-		const char *str[] = { "first", "second", "third" };
+		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
 		static u32 item_index = 123124;
-		list_box(str, 3, &item_index);
+		list_box(str, 7, &item_index);
 		if (button("Click")) {
 			print("Was click by bottom");
 		}
