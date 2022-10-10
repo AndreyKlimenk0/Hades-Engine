@@ -33,6 +33,15 @@ static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 
 #define GET_RENDER_LIST() (&window->render_list)
 
+struct Gui_Radio_Button_Theme {
+	s32 rounded_border = 5;
+	s32 text_shift = 5;
+	Color default_color = Color(74, 82, 90);
+	Color color_for_true = Color(0, 75, 168);
+	Rect_s32 true_rect = { 0, 0, 15, 15 };
+	Rect_s32 radio_rect = { 0, 0, 20, 20 };
+	Rect_s32 default_rect = { 0, 0, 220, 20 };
+};
 
 struct Gui_Text_Button_Theme {
 	u32 aligment = 0;
@@ -212,6 +221,7 @@ struct Gui_Manager {
 
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme button_theme;
+	Gui_Radio_Button_Theme radio_button_theme;
 
 	void init();
 	void shutdown();
@@ -228,6 +238,7 @@ struct Gui_Manager {
 	void set_next_window_theme(Gui_Window_Theme *theme);
 	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
 
+	void radio_button(const char *name, bool *state);
 	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	bool button(const char *name);
@@ -447,6 +458,43 @@ Rect_s32 calcualte_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 		clip_rect.height = item_rect->height;
 	}
 	return clip_rect;
+}
+
+void Gui_Manager::radio_button(const char *name, bool *state)
+{
+	Rect_s32 true_rect = radio_button_theme.true_rect;
+	Rect_s32 radio_rect = radio_button_theme.radio_rect;
+	Rect_s32 rect = radio_button_theme.default_rect;
+	Rect_s32 text_rect = get_text_rect(name);
+	rect.width = text_rect.width + radio_rect.width + radio_button_theme.text_shift;
+	
+	Gui_Window *window = get_window();
+	place_rect_in_window(window, &rect);
+
+	if (must_item_be_drawn(&window->rect, &rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &rect);
+		
+		place_in_middle_and_by_left(&rect, &text_rect, radio_rect.width + radio_button_theme.text_shift);
+		place_in_middle_and_by_left(&rect, &radio_rect, 0);
+		place_in_center(&radio_rect, &true_rect, BOTH_AXIS);
+
+		if (check_button_state(NULL, &radio_rect)) {
+			if (*state) {
+				*state = false;
+			} else {
+				*state = true;
+			}
+		}
+
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_rect(&radio_rect, radio_button_theme.default_color, radio_button_theme.rounded_border);
+		if (*state) {
+			render_list->add_rect(&true_rect, radio_button_theme.color_for_true, radio_button_theme.rounded_border);
+		}
+		render_list->add_text(&text_rect, name);
+		render_list->pop_clip_rect();
+	}
 }
 
 void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_index)
@@ -958,6 +1006,11 @@ void list_box(const char *strings[], u32 len, u32 *item_index)
 	gui_manager.list_box(strings, len, item_index);
 }
 
+void radio_button(const char *name, bool *state)
+{
+	gui_manager.radio_button(name, state);
+}
+
 void begin_frame()
 {
 	gui_manager.new_frame();
@@ -1011,9 +1064,26 @@ void gui::draw_test_gui()
 		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
 		static u32 item_index = 123124;
 		list_box(str, 7, &item_index);
-		if (button("Click")) {
-			print("Was click by bottom");
-		}
+
+		static bool state = false;
+		radio_button("Render Shadows", &state);
+		//if (button("Click")) {
+		//	print("Was click by bottom");
+		//}
+		button("next line1");
+		button("next line2");
+		button("next line3");
+		button("next line4");
+		button("next line5");
+		button("next line6");
+		button("next line7");
+		button("next line8");
+		button("next line9");
+
+		//const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+		//static u32 item_index1 = 123124;
+		//list_box(str1, 7, &item_index1);
+
 		end_window();
 	}
 
