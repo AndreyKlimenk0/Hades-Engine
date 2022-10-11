@@ -1,8 +1,10 @@
 #include "gui.h"
 
 #include "../win32/win_local.h"
+#include "../win32/win_time.h"
 #include "../sys/sys_local.h"
 
+#include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/os/input.h"
@@ -33,6 +35,14 @@ static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 
 #define GET_RENDER_LIST() (&window->render_list)
 
+struct Gui_Edit_Field_Theme {
+	s32 rounded_border = 5;
+	s32 text_shift = 5;
+	Rect_s32 edit_field_rect = { 0, 0, 100, 20 };
+	Rect_s32 default_rect = { 0, 0, 220, 20 };
+	Color color = Color(74, 82, 90);
+};
+
 struct Gui_Radio_Button_Theme {
 	s32 rounded_border = 5;
 	s32 text_shift = 5;
@@ -45,7 +55,7 @@ struct Gui_Radio_Button_Theme {
 
 struct Gui_Text_Button_Theme {
 	u32 aligment = 0;
-	u32 shift_from_size = 10;
+	s32 shift_from_size = 10;
 	s32 rounded_border = 5;
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
@@ -203,11 +213,13 @@ struct Gui_Manager {
 
 	u32 reset_window_params;
 	u32 list_box_count;
+	u32 edit_field_count;
 	u32 window_parent_count;
 
 	Gui_ID hot_item;
 	Gui_ID active_item;
 	Gui_ID active_list_box;
+	Gui_ID focused_edit_field;
 	Gui_ID became_just_focused; //window
 	Gui_ID resizing_window;
 	Gui_ID probably_resizing_window;
@@ -219,6 +231,7 @@ struct Gui_Manager {
 	Array<Gui_Window *> windows_order;
 	Array<Gui_Window> windows;
 
+	Gui_Edit_Field_Theme edit_field_theme;
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme button_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
@@ -238,14 +251,15 @@ struct Gui_Manager {
 	void set_next_window_theme(Gui_Window_Theme *theme);
 	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
 
-	void radio_button(const char *name, bool *state);
 	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
+	void radio_button(const char *name, bool *state);
+	void edit_field(const char *name, int *value);
 	bool button(const char *name);
 
 	bool check_item(Gui_ID id, Rect_s32 *rect);
 	bool detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side);
-	bool check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)() = NULL);
+	bool check_rect_state(const char *name, Rect_s32 *rect, bool (*click_callback)() = NULL);
 
 	Rect_s32 get_win32_rect();
 
@@ -400,7 +414,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	return &windows.last_item();
 }
 
-bool Gui_Manager::check_button_state(const char *name, Rect_s32 *rect, bool (*click_callback)())
+bool Gui_Manager::check_rect_state(const char *name, Rect_s32 *rect, bool (*click_callback)())
 {
 	Gui_ID gui_id = 0;
 	if (name) {
@@ -478,7 +492,7 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 		place_in_middle_and_by_left(&rect, &radio_rect, 0);
 		place_in_center(&radio_rect, &true_rect, BOTH_AXIS);
 
-		if (check_button_state(NULL, &radio_rect)) {
+		if (check_rect_state(NULL, &radio_rect)) {
 			if (*state) {
 				*state = false;
 			} else {
@@ -497,6 +511,141 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 	}
 }
 
+//Rect_s32 set_caret_position_on_mouse_click(const char *text, int mouse_x, int mouse_y, Rect_s32 *field_rect, Rect_s32 *rect)
+//{
+//	Rect_s32 caret_rect = { 0, 0, 1, 20 };
+//	
+//	Size_u32 size = font.get_text_size(text);
+//	int text_width = size.width;
+//	
+//	int shift_caret_from_left = 5;
+//	//int mouse_x_relative_text = mouse_x - rect.x - theme.shift_caret_from_left;
+//	int mouse_x_relative_text = mouse_x - rect->x - shift_caret_from_left;
+//
+//	if (mouse_x_relative_text > text_width) {
+//		caret_rect.x = field_rect->x + shift_caret_from_left + text_width;
+//		return;
+//	}
+//
+//	float caret_temp_x = caret_rect.x;
+//	float characters_width = 0.0f;
+//
+//	int len = strlen(text);
+//	for (int i = 0; i < len; i++) {
+//		char c = text[i];
+//		u32 char_width = font.get_char_width(c);
+//		float mouse_x_relative_character = mouse_x_relative_text - characters_width;
+//
+//		float pad = 0.5f;
+//		if ((mouse_x_relative_character >= 0.0f) && ((mouse_x_relative_character + pad) <= char_width)) {
+//
+//			float characters_width = 0.0f;
+//			for (int j = 0; j < i; j++) {
+//				char _char = text[j];
+//				u32 char_width = font.get_char_width(c);
+//				characters_width += char_width;
+//			}
+//
+//			caret_rect.x = rect->x + shift_caret_from_left + characters_width;
+//			caret_index_for_inserting = i;
+//			caret_index_in_text = i - 1;
+//			break;
+//		}
+//
+//		characters_width += char_width;
+//		caret.rect.x = caret_temp_x;
+//	}
+//}
+
+bool is_draw_caret(s32 blink_time)
+{
+	static bool show = true;
+	static s64 show_time = blink_time;
+	static s64 hidding_time = blink_time;
+	static s64 show_time_accumulator = 0;
+	static s64 hidding_time_accumulator = 0;
+
+	static s64 current_time = 0;
+	static s64 last_time = 0;
+
+	current_time = milliseconds_counter();
+
+	s64 elapsed_time = current_time - last_time;
+
+	if (show) {
+		show_time_accumulator += elapsed_time;
+		if (show_time_accumulator <= show_time) {
+			return true;
+		} else {
+			show = false;
+			show_time_accumulator = 0;
+		}
+	} else {
+		hidding_time_accumulator += elapsed_time;
+		if (hidding_time_accumulator >= hidding_time) {
+			show = true;
+			hidding_time_accumulator = 0;
+		}
+	}
+
+	last_time = milliseconds_counter();
+	return false;
+}
+
+void Gui_Manager::edit_field(const char *name, int *value)
+{
+	char *str_value = to_string(*value);
+	
+	Rect_s32 caret_rect{ 0, 0, 1, 14 };
+	
+	Rect_s32 rect = edit_field_theme.default_rect;
+	Rect_s32 edit_field_rect = edit_field_theme.edit_field_rect;
+	Rect_s32 text_rect = get_text_rect(name);
+	Rect_s32 value_rect = get_text_rect(str_value);
+	rect.width = text_rect.width + edit_field_rect.width + edit_field_theme.text_shift;
+
+	Gui_Window *window = get_window();
+	place_rect_in_window(window, &rect);
+
+	if (must_item_be_drawn(&window->rect, &rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &rect);
+		Rect_s32 text_rect = get_text_rect(name);
+
+		place_in_middle_and_by_left(&rect, &edit_field_rect, 0);
+		place_in_middle_and_by_left(&rect, &text_rect, edit_field_rect.width + edit_field_theme.text_shift);
+		place_in_center(&edit_field_rect, &value_rect, BOTH_AXIS);
+		place_in_middle_and_by_left(&value_rect, &caret_rect, value_rect.width);
+
+		String edit_field_name = window->name + String("_edit_field_") + String((int)edit_field_count);
+		Gui_ID edit_field_id = fast_hash(edit_field_name);
+		if (check_rect_state(edit_field_name, &edit_field_rect)) {
+			if (active_item == edit_field_id) {
+				focused_edit_field = edit_field_id;
+			}
+		} else {
+			if (was_click_by_left_mouse_button()) {
+				focused_edit_field = 0;
+			}
+		}
+
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_rect(&edit_field_rect, edit_field_theme.color, edit_field_theme.rounded_border);
+		render_list->add_text(&text_rect, name);
+		render_list->add_text(&value_rect, str_value);
+		
+		if (focused_edit_field == edit_field_id) {
+			if (is_draw_caret(1000)) {
+				render_list->add_rect(&caret_rect, Color::White);
+			}
+		}
+		render_list->pop_clip_rect();
+	}
+
+	free_string(str_value);
+	edit_field_count++;
+}
+
 void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_index)
 {
 	assert(item_count > 0);
@@ -509,10 +658,9 @@ void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_ind
 	
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &list_box_rect);
-
 	
 	String list_box_name = window->name + String("_list_box_") + String((int)list_box_count);
-	if (check_button_state(list_box_name, &list_box_rect)) {
+	if (check_rect_state(list_box_name, &list_box_rect)) {
 		if (active_item == active_list_box) {
 			active_list_box = 0;
 		} else {
@@ -579,7 +727,7 @@ bool Gui_Manager::button(const char *name)
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &button_rect);
 
-	bool button_down = check_button_state(NULL, &button_rect);
+	bool button_down = check_rect_state(NULL, &button_rect);
 
 	Color button_color = detect_collision(&button_rect) ? button_theme.hover_color : button_theme.color;
 
@@ -625,6 +773,7 @@ void Gui_Manager::init()
 {
 	window_parent_count = 0;
 	reset_window_params = 0;
+	edit_field_count = 0;
 	window_theme = default_window_theme;
 
 	String path_to_save_file;
@@ -693,6 +842,7 @@ void Gui_Manager::new_frame()
 	mouse_y_delta = mouse_y - last_mouse_y;
 	hot_item = 0;
 	list_box_count = 0;
+	edit_field_count = 0;
 	became_just_focused = 0;
 }
 
@@ -921,7 +1071,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 
 	Gui_ID scroller_id = fast_hash(scroller);
 
-	if ((active_item == scroller_id) || check_button_state(scroller, &scroll_rect, is_left_mouse_button_down)) {
+	if ((active_item == scroller_id) || check_rect_state(scroller, &scroll_rect, is_left_mouse_button_down)) {
 
 		s32 window_side = (axis == Y_AXIS) ? window->view_rect.bottom() : window->view_rect.right();
 		s32 mouse_delta = (axis == Y_AXIS) ? mouse_y_delta : mouse_x_delta;
@@ -1011,6 +1161,11 @@ void radio_button(const char *name, bool *state)
 	gui_manager.radio_button(name, state);
 }
 
+void edit_field(const char *name, int *value)
+{
+	gui_manager.edit_field(name, value);
+}
+
 void begin_frame()
 {
 	gui_manager.new_frame();
@@ -1070,6 +1225,12 @@ void gui::draw_test_gui()
 		//if (button("Click")) {
 		//	print("Was click by bottom");
 		//}
+		static int position = 12345;
+		edit_field("Position: x", &position);
+
+		static int position1 = 85959;
+		edit_field("Position: y", &position1);
+		
 		button("next line1");
 		button("next line2");
 		button("next line3");
