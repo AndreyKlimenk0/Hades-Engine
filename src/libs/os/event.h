@@ -44,6 +44,17 @@ struct Event {
 void pump_events();
 void push_event(Event_Type type, int first_value, int second_value);
 void run_event_loop();
+void clear_event_queue();
+
+Queue<Event> *get_event_queue();
+template<typename T>
+inline void handle_events(T *object, void(T::*handler)(Event *event))
+{
+	Queue<Event> *event_queue = get_event_queue();
+	for (Queue_Node<Event> *node = event_queue->first; node != NULL; node = node->next) {
+		(object->*handler)((Event *)&node->item);
+	}
+}
 
 bool was_click_by_left_mouse_button();
 bool is_left_mouse_button_down();

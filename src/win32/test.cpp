@@ -7,6 +7,7 @@
 #include "../libs/os/path.h"
 #include "../libs/ds/linked_list.h"
 #include "../libs/ds/hash_table.h"
+#include "../libs/ds/queue.h"
 #include <string.h>
 #include <stdlib.h>
 #include "../game/world.h"
@@ -167,4 +168,32 @@ void test_something()
 
 void test()
 {
+	//Queue<int> temp;
+	//for (int i = 0; i < 10; i++) {
+	//	temp.push(i);
+	//}
+
+	//for (Queue_Node<int> *node = temp.first; node != NULL; node = node->next) {
+	//	print("node = ", node->item);
+	//}
+
+	//while (!temp.is_empty()) {
+	//	print("pop node = ", temp.pop());
+	//}
+
+	//temp.clear();
+	//print("clear Queue");
+
+	//for (int i = 10; i < 20; i++) {
+	//	temp.push(i);
+	//}
+
+	//for (Queue_Node<int> *node = temp.first; node != NULL; node = node->next) {
+	//	print("node = ", node->item);
+	//}
+
+	//while (!temp.is_empty()) {
+	//	print("pop node = ", temp.pop());
+	//}
+
 }
