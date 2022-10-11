@@ -177,6 +177,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		
 		//direct2d.end_draw();
 		directx11.end_draw();
+
+		clear_event_queue();
 	}
 	return 0;
 }

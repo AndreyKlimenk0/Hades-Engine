@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "gui.h"
 
 #include "../win32/win_local.h"
@@ -236,6 +237,20 @@ struct Gui_Manager {
 	Gui_Text_Button_Theme button_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
 
+	struct Edit_Field_State {
+		Edit_Field_State() {};
+		Edit_Field_State(const char *str_value, s32 caret_x_posiiton, int text_width);
+		
+		String data;
+		s32 caret_x_posiiton;
+		int text_width;
+		int max_text_width;
+		int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
+		int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
+
+		void handle_event(Event *event);
+	} edit_field_state;
+
 	void init();
 	void shutdown();
 	
@@ -255,6 +270,7 @@ struct Gui_Manager {
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	void radio_button(const char *name, bool *state);
 	void edit_field(const char *name, int *value);
+	void handle_event_for_edit_field(Event *event);
 	bool button(const char *name);
 
 	bool check_item(Gui_ID id, Rect_s32 *rect);
@@ -609,41 +625,225 @@ void Gui_Manager::edit_field(const char *name, int *value)
 
 	if (must_item_be_drawn(&window->rect, &rect)) {
 		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &rect);
-		Rect_s32 text_rect = get_text_rect(name);
+		Rect_s32 label_rect = get_text_rect(name);
 
 		place_in_middle_and_by_left(&rect, &edit_field_rect, 0);
-		place_in_middle_and_by_left(&rect, &text_rect, edit_field_rect.width + edit_field_theme.text_shift);
-		place_in_center(&edit_field_rect, &value_rect, BOTH_AXIS);
+		place_in_middle_and_by_left(&rect, &label_rect, edit_field_rect.width + edit_field_theme.text_shift);
+		place_in_middle_and_by_left(&edit_field_rect, &value_rect, edit_field_theme.text_shift);
 		place_in_middle_and_by_left(&value_rect, &caret_rect, value_rect.width);
 
+		bool is_new_session = false;
 		String edit_field_name = window->name + String("_edit_field_") + String((int)edit_field_count);
 		Gui_ID edit_field_id = fast_hash(edit_field_name);
 		if (check_rect_state(edit_field_name, &edit_field_rect)) {
 			if (active_item == edit_field_id) {
 				focused_edit_field = edit_field_id;
+				is_new_session = true;
 			}
 		} else {
-			if (was_click_by_left_mouse_button()) {
+			if (was_click_by_left_mouse_button() && !detect_collision(&edit_field_rect) && (focused_edit_field == edit_field_id)) {
 				focused_edit_field = 0;
 			}
 		}
 
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
+		if (focused_edit_field == edit_field_id) {
+			render_list->add_rect(&rect, Color::Red, edit_field_theme.rounded_border);
+		}
 		render_list->add_rect(&edit_field_rect, edit_field_theme.color, edit_field_theme.rounded_border);
-		render_list->add_text(&text_rect, name);
+		render_list->add_text(&label_rect, name);
 		render_list->add_text(&value_rect, str_value);
 		
 		if (focused_edit_field == edit_field_id) {
-			if (is_draw_caret(1000)) {
+			if (is_new_session) {
+				edit_field_state = Edit_Field_State(str_value, caret_rect.x, label_rect.width);
+			}
+			if (is_draw_caret(900)) {
+				caret_rect.x = edit_field_state.caret_x_posiiton;
 				render_list->add_rect(&caret_rect, Color::White);
 			}
+
+			handle_events(&edit_field_state, &Gui_Manager::Edit_Field_State::handle_event);
+			*value = atoi(edit_field_state.data.c_str());
 		}
 		render_list->pop_clip_rect();
 	}
 
 	free_string(str_value);
 	edit_field_count++;
+}
+
+Gui_Manager::Edit_Field_State::Edit_Field_State(const char *str_value, s32 caret_x_posiiton, int text_width) : data(str_value), caret_x_posiiton(caret_x_posiiton), text_width(text_width)
+{
+	caret_index_for_inserting = data.len;
+	caret_index_in_text = data.len - 1;
+	max_text_width = 300;
+}
+
+void Gui_Manager::Edit_Field_State::handle_event(Event * event)
+{
+	if (event->type == EVENT_TYPE_KEY) {
+		//if (flags & ELEMENT_HOVER) {
+		//	if (was_click_by_left_mouse_button()) {
+		//		set_caret_position_on_mouse_click(last_mouse_x, last_mouse_y);
+		//		flags |= ELEMENT_FOCUSED;
+		//	}
+		//} else {
+		//	if (was_click_by_left_mouse_button()) {
+		//		flags &= ~ELEMENT_FOCUSED;
+		//	}
+		//}
+
+		if (event->is_key_down(VK_BACK)) {
+			if (caret_index_in_text > -1) {
+
+				char c = data[caret_index_in_text];
+				data.remove(caret_index_in_text);
+
+				u32 char_width = font.get_char_width(c);
+				caret_x_posiiton -= (float)char_width;
+				text_width -= char_width;
+
+				caret_index_in_text -= 1;
+				caret_index_for_inserting -= 1;
+			}
+
+		} else if (event->is_key_down(VK_LEFT)) {
+			if (caret_index_in_text > -1) {
+
+				char c = data[caret_index_in_text];
+				u32 char_width = font.get_char_width(c);
+				caret_x_posiiton -= (float)char_width;
+				text_width -= char_width;
+
+				caret_index_in_text -= 1;
+				caret_index_for_inserting -= 1;
+			}
+		} else if (event->is_key_down(VK_RIGHT)) {
+			if (caret_index_in_text < data.len) {
+
+				caret_index_in_text += 1;
+				caret_index_for_inserting += 1;
+
+				char c = data[caret_index_in_text];
+				u32 char_width = font.get_char_width(c);
+				caret_x_posiiton += (float)char_width;
+				text_width += char_width;
+			}
+		}
+	} else if (event->type == EVENT_TYPE_CHAR) {
+			if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
+
+				if (caret_index_in_text == (data.len - 1)) {
+					data.append(event->char_key);
+				} else {
+					data.insert(caret_index_for_inserting, event->char_key);
+				}
+				caret_index_in_text += 1;
+				caret_index_for_inserting += 1;
+
+				u32 char_width = font.get_char_width(event->char_key);
+				caret_x_posiiton += (float)char_width;
+				text_width += char_width;
+			}
+	}
+}
+
+void Gui_Manager::handle_event_for_edit_field(Event *event)
+{
+
+	//if (!edit_itself_data) {
+	//	char *str_value = NULL;
+
+	//	if (edit_data_type == EDIT_DATA_INT) {
+	//		str_value = to_string(*edit_data.not_itself_data.int_value);
+	//	} else if (edit_data_type == EDIT_DATA_FLOAT) {
+	//		str_value = to_string(*edit_data.not_itself_data.float_value);
+	//	}
+
+	//	if (text.string != str_value) {
+	//		set_text(str_value);
+	//	}
+	//	free_string(str_value);
+	//}
+
+	//static int last_mouse_x;
+	//static int last_mouse_y;
+
+	//if (event->type == EVENT_TYPE_KEY) {
+	//	//if (flags & ELEMENT_HOVER) {
+	//	//	if (was_click_by_left_mouse_button()) {
+	//	//		set_caret_position_on_mouse_click(last_mouse_x, last_mouse_y);
+	//	//		flags |= ELEMENT_FOCUSED;
+	//	//	}
+	//	//} else {
+	//	//	if (was_click_by_left_mouse_button()) {
+	//	//		flags &= ~ELEMENT_FOCUSED;
+	//	//	}
+	//	//}
+
+	//	if (event->is_key_down(VK_BACK)) {
+	//		if (caret_index_in_text > -1) {
+
+	//			char c = text.string[caret_index_in_text];
+	//			text.string.remove(caret_index_in_text);
+	//			text.update_size();
+
+	//			u32 char_width = font.get_char_width(c);
+	//			caret.rect.x -= (float)char_width;
+	//			text_width -= char_width;
+
+	//			caret_index_in_text -= 1;
+	//			caret_index_for_inserting -= 1;
+
+	//			update_edit_data(text.string);
+	//		}
+
+	//	} else if (event->is_key_down(VK_LEFT)) {
+	//		if (caret_index_in_text > -1) {
+
+	//			char c = text.string[caret_index_in_text];
+	//			u32 char_width = font.get_char_width(c);
+	//			caret.rect.x -= (float)char_width;
+	//			text_width -= char_width;
+
+	//			caret_index_in_text -= 1;
+	//			caret_index_for_inserting -= 1;
+	//		}
+	//	} else if (event->is_key_down(VK_RIGHT)) {
+	//		if (caret_index_in_text < text.string.len) {
+
+	//			caret_index_in_text += 1;
+	//			caret_index_for_inserting += 1;
+
+	//			char c = text.string[caret_index_in_text];
+	//			u32 char_width = font.get_char_width(c);
+	//			caret.rect.x += (float)char_width;
+	//			text_width += char_width;
+	//		}
+	//	}
+	//} else if (event->type == EVENT_TYPE_CHAR) {
+	//		if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
+
+	//			if (caret_index_in_text == (text.string.len - 1)) {
+	//				text.string.append(event->char_key);
+	//			} else {
+	//				text.string.insert(caret_index_for_inserting, event->char_key);
+	//			}
+	//			text.update_size();
+
+	//			caret_index_in_text += 1;
+	//			caret_index_for_inserting += 1;
+
+	//			u32 char_width = font.get_char_width(event->char_key);
+	//			caret.rect.x += (float)char_width;
+	//			text_width += char_width;
+
+	//			update_edit_data(text.string);
+
+	//		}
+	//}
 }
 
 void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_index)
@@ -1300,3 +1500,4 @@ void gui::draw_test_gui()
 
 	end_frame();
 }
+
