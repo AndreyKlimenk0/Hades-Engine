@@ -57,41 +57,34 @@ void pump_events()
 
 void push_event(Event_Type type, int first_value, int second_value)
 {
-	Event *event = new Event();
-	event->type = type;
+	Event event;
+	event.type = type;
 
 	switch (type) {
 		case EVENT_TYPE_KEY: {
-			event->key_info.key = first_value;
-			event->key_info.is_pressed = second_value;
-			update_left_mouse_button_state(event);
+			event.key_info.key = first_value;
+			event.key_info.is_pressed = second_value;
+			update_left_mouse_button_state(&event);
 			break;
 		}
 		case EVENT_TYPE_MOUSE: {
-			event->mouse_info.x = first_value;
-			event->mouse_info.y = second_value;
+			event.mouse_info.x = first_value;
+			event.mouse_info.y = second_value;
 			break;
 		}
 		case EVENT_TYPE_CHAR: {
-			event->char_key = first_value;
+			event.char_key = first_value;
 			break;
 		}
 	}
-	update_just_pressed_left_mouse_button(event);
-	event_queue.push(*event);
-}
-
-void event_handler(void (*handler)(Event *event))
-{
-	for (Queue_Node<Event> *item = event_queue.first; item != NULL; item = item->next) {
-		handler((Event *)&item->item);
-	}
+	update_just_pressed_left_mouse_button(&event);
+	event_queue.push(event);
 }
 
 void run_event_loop()
 {
-	while (!event_queue.is_empty()) {
-		Event event = event_queue.pop();
+	for (Queue_Node<Event> *node = event_queue.first; node != NULL; node = node->next) {
+		Event event = node->item;
 
 		if (event.is_key_event()) {
 			if (event.key_info.is_pressed) {
@@ -103,8 +96,17 @@ void run_event_loop()
 			Mouse_Input::x = event.mouse_info.x;
 			Mouse_Input::y = event.mouse_info.y;
 		}
-		//handle_event_for_editor(&event);
 	}
+}
+
+void clear_event_queue()
+{
+	event_queue.clear();
+}
+
+Queue<Event>* get_event_queue()
+{
+	return &event_queue;
 }
 
 bool was_click_by_left_mouse_button()
