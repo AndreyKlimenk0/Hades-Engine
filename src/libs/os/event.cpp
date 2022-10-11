@@ -81,6 +81,13 @@ void push_event(Event_Type type, int first_value, int second_value)
 	event_queue.push(*event);
 }
 
+void event_handler(void (*handler)(Event *event))
+{
+	for (Queue_Node<Event> *item = event_queue.first; item != NULL; item = item->next) {
+		handler((Event *)&item->item);
+	}
+}
+
 void run_event_loop()
 {
 	while (!event_queue.is_empty()) {
