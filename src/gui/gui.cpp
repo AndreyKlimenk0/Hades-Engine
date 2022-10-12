@@ -39,7 +39,7 @@ static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 struct Gui_Edit_Field_Theme {
 	s32 rounded_border = 5;
 	s32 text_shift = 5;
-	Rect_s32 edit_field_rect = { 0, 0, 100, 20 };
+	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 default_rect = { 0, 0, 220, 20 };
 	Color color = Color(74, 82, 90);
 };
@@ -61,7 +61,7 @@ struct Gui_Text_Button_Theme {
 	Color stroke_color = Color::Black;
 	Color color = Color(0, 75, 168);
 	Color hover_color = Color(0, 60, 168);
-	Rect_s32 default_rect{ 0, 0, 123, 20 };
+	Rect_s32 default_rect{ 0, 0, 125, 20 };
 };
 
 struct Gui_Window_Theme {
@@ -239,16 +239,19 @@ struct Gui_Manager {
 
 	struct Edit_Field_State {
 		Edit_Field_State() {};
-		Edit_Field_State(const char *str_value, s32 caret_x_posiiton, int text_width);
 		
-		String data;
+		bool(*is_symbol_valid)(char symbol);
+		
 		s32 caret_x_posiiton;
 		int text_width;
 		int max_text_width;
 		int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
 		int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
+		String data;
 
 		void handle_event(Event *event);
+		void set_params(const char *_str_value, s32 _caret_x_posiiton, int _text_width, int _max_text_width);
+
 	} edit_field_state;
 
 	void init();
@@ -269,8 +272,12 @@ struct Gui_Manager {
 	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	void radio_button(const char *name, bool *state);
+	
 	void edit_field(const char *name, int *value);
+	void edit_field(const char *name, float *value);
+	void edit_field(const char *name, String *value);
 	void handle_event_for_edit_field(Event *event);
+	
 	bool button(const char *name);
 
 	bool check_item(Gui_ID id, Rect_s32 *rect);
@@ -657,7 +664,8 @@ void Gui_Manager::edit_field(const char *name, int *value)
 		
 		if (focused_edit_field == edit_field_id) {
 			if (is_new_session) {
-				edit_field_state = Edit_Field_State(str_value, caret_rect.x, label_rect.width);
+				//edit_field_state.set_params(str_value, caret_rect.x, label_rect.width, edit_field_theme.edit_field_rect.width);
+				edit_field_state.set_params(str_value, caret_rect.x, label_rect.width, 10);
 			}
 			if (is_draw_caret(900)) {
 				caret_rect.x = edit_field_state.caret_x_posiiton;
@@ -674,11 +682,22 @@ void Gui_Manager::edit_field(const char *name, int *value)
 	edit_field_count++;
 }
 
-Gui_Manager::Edit_Field_State::Edit_Field_State(const char *str_value, s32 caret_x_posiiton, int text_width) : data(str_value), caret_x_posiiton(caret_x_posiiton), text_width(text_width)
+bool is_symbol_int_valid(char symbol)
 {
-	caret_index_for_inserting = data.len;
-	caret_index_in_text = data.len - 1;
-	max_text_width = 300;
+	return (isdigit(symbol) || (symbol == '-'));
+}
+
+bool is_symbol_int_float(char symbol)
+{
+	return (isdigit(symbol) || (symbol == '-') || (symbol == '.'));
+}
+
+void Gui_Manager::edit_field(const char *name, float *value)
+{
+}
+
+void Gui_Manager::edit_field(const char *name, String *value)
+{
 }
 
 void Gui_Manager::Edit_Field_State::handle_event(Event * event)
@@ -733,7 +752,8 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 			}
 		}
 	} else if (event->type == EVENT_TYPE_CHAR) {
-			if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
+			//if ((max_text_width > text_width) && !(isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
+			if ((max_text_width > data.len) && (isdigit(event->char_key) || (event->char_key == '-'))) {
 
 				if (caret_index_in_text == (data.len - 1)) {
 					data.append(event->char_key);
@@ -748,6 +768,16 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 				text_width += char_width;
 			}
 	}
+}
+
+void Gui_Manager::Edit_Field_State::set_params(const char *_str_value, s32 _caret_x_posiiton, int _text_width, int _max_text_width)
+{
+	data = _str_value;
+	caret_x_posiiton = _caret_x_posiiton;
+	max_text_width = _max_text_width;
+	text_width = _text_width;
+	caret_index_for_inserting = data.len;
+	caret_index_in_text = data.len - 1;
 }
 
 void Gui_Manager::handle_event_for_edit_field(Event *event)
@@ -1421,7 +1451,9 @@ void gui::draw_test_gui()
 		list_box(str, 7, &item_index);
 
 		static bool state = false;
-		radio_button("Render Shadows", &state);
+		static bool state1 = false;
+		radio_button("Trun on light", &state1);
+		radio_button("Render shadows", &state);
 		//if (button("Click")) {
 		//	print("Was click by bottom");
 		//}
