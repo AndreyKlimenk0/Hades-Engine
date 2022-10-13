@@ -18,6 +18,9 @@
 #include "../render/font.h"
 #include "../render/render_system.h"
 
+//@Note included for testing
+#include "../game/world.h"
+
 typedef u32 Gui_ID;
 
 Render_2D *render_2d = get_render_2d();
@@ -45,7 +48,7 @@ struct Gui_Edit_Field_Theme {
 };
 
 struct Gui_Radio_Button_Theme {
-	s32 rounded_border = 5;
+	s32 rounded_border = 10;
 	s32 text_shift = 5;
 	Color default_color = Color(74, 82, 90);
 	Color color_for_true = Color(0, 75, 168);
@@ -240,17 +243,16 @@ struct Gui_Manager {
 	struct Edit_Field_State {
 		Edit_Field_State() {};
 		
-		bool(*is_symbol_valid)(char symbol);
+		bool (*is_symbol_valid)(char symbol);
 		
 		s32 caret_x_posiiton;
-		int text_width;
-		int max_text_width;
+		int max_symbol_number;
 		int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
 		int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
 		String data;
 
 		void handle_event(Event *event);
-		void set_params(const char *_str_value, s32 _caret_x_posiiton, int _text_width, int _max_text_width);
+		void set_params(const char *_str_value, s32 _caret_x_posiiton, int _max_text_width, bool(*is_symbol_valid)(char symbol));
 
 	} edit_field_state;
 
@@ -276,7 +278,7 @@ struct Gui_Manager {
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *value);
-	void handle_event_for_edit_field(Event *event);
+	bool edit_field(const char *name, const char *value, u32 max_symbols_number, bool(*is_symbol_valid)(char symbol));
 	
 	bool button(const char *name);
 
@@ -615,16 +617,51 @@ bool is_draw_caret(s32 blink_time)
 	return false;
 }
 
+static bool is_symbol_int_valid(char symbol)
+{
+	return (isdigit(symbol) || (symbol == '-'));
+}
+
+static bool is_symbol_float_valid(char symbol)
+{
+	return (isdigit(symbol) || (symbol == '-') || (symbol == '.'));
+}
+
 void Gui_Manager::edit_field(const char *name, int *value)
 {
 	char *str_value = to_string(*value);
-	
+	bool is_focused = edit_field(name, str_value, 10, &is_symbol_int_valid);
+	free_string(str_value);
+	if (is_focused) {
+		*value = atoi(edit_field_state.data.c_str());
+	}
+}
+
+void Gui_Manager::edit_field(const char *name, float *value)
+{
+	char *str_value = to_string(*value);
+	int len = strlen(str_value);
+	String str(str_value, 0, len - 4);
+	bool is_focused = edit_field(name, str.c_str(), 15, &is_symbol_float_valid);
+	free_string(str_value);
+	if (is_focused) {
+		*value = (float)atof(edit_field_state.data.c_str());
+	}
+}
+
+void Gui_Manager::edit_field(const char *name, String *value)
+{
+}
+
+bool Gui_Manager::edit_field(const char *name, const char *value, u32 max_symbol_number, bool(*is_symbol_valid)(char symbol))
+{
+	bool is_focused = false;
 	Rect_s32 caret_rect{ 0, 0, 1, 14 };
-	
+
 	Rect_s32 rect = edit_field_theme.default_rect;
 	Rect_s32 edit_field_rect = edit_field_theme.edit_field_rect;
 	Rect_s32 text_rect = get_text_rect(name);
-	Rect_s32 value_rect = get_text_rect(str_value);
+	Rect_s32 value_rect = get_text_rect(value);
 	rect.width = text_rect.width + edit_field_rect.width + edit_field_theme.text_shift;
 
 	Gui_Window *window = get_window();
@@ -655,49 +692,29 @@ void Gui_Manager::edit_field(const char *name, int *value)
 
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
-		if (focused_edit_field == edit_field_id) {
-			render_list->add_rect(&rect, Color::Red, edit_field_theme.rounded_border);
-		}
 		render_list->add_rect(&edit_field_rect, edit_field_theme.color, edit_field_theme.rounded_border);
 		render_list->add_text(&label_rect, name);
-		render_list->add_text(&value_rect, str_value);
-		
+
 		if (focused_edit_field == edit_field_id) {
+			is_focused = true;
 			if (is_new_session) {
-				//edit_field_state.set_params(str_value, caret_rect.x, label_rect.width, edit_field_theme.edit_field_rect.width);
-				edit_field_state.set_params(str_value, caret_rect.x, label_rect.width, 10);
+				edit_field_state.set_params(value, caret_rect.x, max_symbol_number, is_symbol_valid);
 			}
+			if (value != edit_field_state.data) {
+				edit_field_state.data = value;
+			}
+			handle_events(&edit_field_state, &Gui_Manager::Edit_Field_State::handle_event);
+
+			caret_rect.x = edit_field_state.caret_x_posiiton;
 			if (is_draw_caret(900)) {
-				caret_rect.x = edit_field_state.caret_x_posiiton;
 				render_list->add_rect(&caret_rect, Color::White);
 			}
-
-			handle_events(&edit_field_state, &Gui_Manager::Edit_Field_State::handle_event);
-			*value = atoi(edit_field_state.data.c_str());
 		}
+		render_list->add_text(&value_rect, value);
 		render_list->pop_clip_rect();
 	}
-
-	free_string(str_value);
 	edit_field_count++;
-}
-
-bool is_symbol_int_valid(char symbol)
-{
-	return (isdigit(symbol) || (symbol == '-'));
-}
-
-bool is_symbol_int_float(char symbol)
-{
-	return (isdigit(symbol) || (symbol == '-') || (symbol == '.'));
-}
-
-void Gui_Manager::edit_field(const char *name, float *value)
-{
-}
-
-void Gui_Manager::edit_field(const char *name, String *value)
-{
+	return is_focused;
 }
 
 void Gui_Manager::Edit_Field_State::handle_event(Event * event)
@@ -721,8 +738,7 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 				data.remove(caret_index_in_text);
 
 				u32 char_width = font.get_char_width(c);
-				caret_x_posiiton -= (float)char_width;
-				text_width -= char_width;
+				caret_x_posiiton -= (s32)char_width;
 
 				caret_index_in_text -= 1;
 				caret_index_for_inserting -= 1;
@@ -733,8 +749,10 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 
 				char c = data[caret_index_in_text];
 				u32 char_width = font.get_char_width(c);
-				caret_x_posiiton -= (float)char_width;
-				text_width -= char_width;
+				if (c == '.') {
+					char_width = font.get_char_advance(c);
+				}
+				caret_x_posiiton -= (s32)char_width;
 
 				caret_index_in_text -= 1;
 				caret_index_for_inserting -= 1;
@@ -747,13 +765,11 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 
 				char c = data[caret_index_in_text];
 				u32 char_width = font.get_char_width(c);
-				caret_x_posiiton += (float)char_width;
-				text_width += char_width;
+				caret_x_posiiton += (s32)char_width;
 			}
 		}
 	} else if (event->type == EVENT_TYPE_CHAR) {
-			//if ((max_text_width > text_width) && !(isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
-			if ((max_text_width > data.len) && (isdigit(event->char_key) || (event->char_key == '-'))) {
+			if ((max_symbol_number > data.len) && is_symbol_valid(event->char_key)) {
 
 				if (caret_index_in_text == (data.len - 1)) {
 					data.append(event->char_key);
@@ -764,116 +780,19 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 				caret_index_for_inserting += 1;
 
 				u32 char_width = font.get_char_width(event->char_key);
-				caret_x_posiiton += (float)char_width;
-				text_width += char_width;
+				caret_x_posiiton += (s32)char_width;
 			}
 	}
 }
 
-void Gui_Manager::Edit_Field_State::set_params(const char *_str_value, s32 _caret_x_posiiton, int _text_width, int _max_text_width)
+void Gui_Manager::Edit_Field_State::set_params(const char *_str_value, s32 _caret_x_posiiton, int _max_text_width, bool(*_is_symbol_valid)(char symbol))
 {
 	data = _str_value;
 	caret_x_posiiton = _caret_x_posiiton;
-	max_text_width = _max_text_width;
-	text_width = _text_width;
+	max_symbol_number = _max_text_width;
 	caret_index_for_inserting = data.len;
 	caret_index_in_text = data.len - 1;
-}
-
-void Gui_Manager::handle_event_for_edit_field(Event *event)
-{
-
-	//if (!edit_itself_data) {
-	//	char *str_value = NULL;
-
-	//	if (edit_data_type == EDIT_DATA_INT) {
-	//		str_value = to_string(*edit_data.not_itself_data.int_value);
-	//	} else if (edit_data_type == EDIT_DATA_FLOAT) {
-	//		str_value = to_string(*edit_data.not_itself_data.float_value);
-	//	}
-
-	//	if (text.string != str_value) {
-	//		set_text(str_value);
-	//	}
-	//	free_string(str_value);
-	//}
-
-	//static int last_mouse_x;
-	//static int last_mouse_y;
-
-	//if (event->type == EVENT_TYPE_KEY) {
-	//	//if (flags & ELEMENT_HOVER) {
-	//	//	if (was_click_by_left_mouse_button()) {
-	//	//		set_caret_position_on_mouse_click(last_mouse_x, last_mouse_y);
-	//	//		flags |= ELEMENT_FOCUSED;
-	//	//	}
-	//	//} else {
-	//	//	if (was_click_by_left_mouse_button()) {
-	//	//		flags &= ~ELEMENT_FOCUSED;
-	//	//	}
-	//	//}
-
-	//	if (event->is_key_down(VK_BACK)) {
-	//		if (caret_index_in_text > -1) {
-
-	//			char c = text.string[caret_index_in_text];
-	//			text.string.remove(caret_index_in_text);
-	//			text.update_size();
-
-	//			u32 char_width = font.get_char_width(c);
-	//			caret.rect.x -= (float)char_width;
-	//			text_width -= char_width;
-
-	//			caret_index_in_text -= 1;
-	//			caret_index_for_inserting -= 1;
-
-	//			update_edit_data(text.string);
-	//		}
-
-	//	} else if (event->is_key_down(VK_LEFT)) {
-	//		if (caret_index_in_text > -1) {
-
-	//			char c = text.string[caret_index_in_text];
-	//			u32 char_width = font.get_char_width(c);
-	//			caret.rect.x -= (float)char_width;
-	//			text_width -= char_width;
-
-	//			caret_index_in_text -= 1;
-	//			caret_index_for_inserting -= 1;
-	//		}
-	//	} else if (event->is_key_down(VK_RIGHT)) {
-	//		if (caret_index_in_text < text.string.len) {
-
-	//			caret_index_in_text += 1;
-	//			caret_index_for_inserting += 1;
-
-	//			char c = text.string[caret_index_in_text];
-	//			u32 char_width = font.get_char_width(c);
-	//			caret.rect.x += (float)char_width;
-	//			text_width += char_width;
-	//		}
-	//	}
-	//} else if (event->type == EVENT_TYPE_CHAR) {
-	//		if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
-
-	//			if (caret_index_in_text == (text.string.len - 1)) {
-	//				text.string.append(event->char_key);
-	//			} else {
-	//				text.string.insert(caret_index_for_inserting, event->char_key);
-	//			}
-	//			text.update_size();
-
-	//			caret_index_in_text += 1;
-	//			caret_index_for_inserting += 1;
-
-	//			u32 char_width = font.get_char_width(event->char_key);
-	//			caret.rect.x += (float)char_width;
-	//			text_width += char_width;
-
-	//			update_edit_data(text.string);
-
-	//		}
-	//}
+	is_symbol_valid = _is_symbol_valid;
 }
 
 void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_index)
@@ -1396,6 +1315,16 @@ void edit_field(const char *name, int *value)
 	gui_manager.edit_field(name, value);
 }
 
+void edit_field(const char *name, float *value)
+{
+	gui_manager.edit_field(name, value);
+}
+
+void edit_field(const char *name, String *value)
+{
+	gui_manager.edit_field(name, value);
+}
+
 void begin_frame()
 {
 	gui_manager.new_frame();
@@ -1426,6 +1355,16 @@ void set_next_window_pos(s32 x, s32 y)
 	gui_manager.set_next_window_pos(x, y);
 }
 
+struct Enum_String {
+	s32 enum_id;
+	String string_enum;
+};
+
+inline void handle_click(bool *state)
+{
+	*state = *state ? false : true;
+}
+
 void gui::draw_test_gui()
 {
 
@@ -1439,9 +1378,9 @@ void gui::draw_test_gui()
 	//button("Window2");
 	//end_window();
 	
-	begin_window("Window3");
-	button("Window3");
-	end_window();
+	//begin_window("Window3");
+	//button("Window3");
+	//end_window();
 
 	
 	if (begin_window("Test")) {
@@ -1462,6 +1401,18 @@ void gui::draw_test_gui()
 
 		static int position1 = 85959;
 		edit_field("Position: y", &position1);
+
+		static float temp = 2345.234f;
+		edit_field("Float x posiiton", &temp);
+
+		static float temp1 = 0.0;
+		edit_field("Float x0 posiiton", &temp1);
+
+		static float temp2 = 10000.0;
+		edit_field("Float x2 posiiton", &temp2);
+
+		static float temp3 = 10000.1;
+		edit_field("Float x3 posiiton", &temp3);
 		
 		button("next line1");
 		button("next line2");
@@ -1480,55 +1431,42 @@ void gui::draw_test_gui()
 		end_window();
 	}
 
+	//static u32 id = 0;
+	//static bool entity_window = false;
+	//if (begin_window("Entities")) {
+
+	//	Entity_Manager *manager = &world.entity_manager;
+	//	Entity *entity = NULL;
+	//	
+	//	#define to_string(x) #x
+	//	
+	//	For(manager->entities, entity) {
+	//		String name = "entity id = " + String((int)entity->id);
+	//		
+	//		if (button(name.c_str())) {
+	//			id = entity->id;
+	//			handle_click(&entity_window);
+	//		}
+
+	//		if (entity_window) {
+	//			begin_window("Entity");
+	//			Entity *e = manager->find_entity(id);
+	//			if (e) {
+	//				edit_field("Entity position x", &e->position.x);
+	//				edit_field("Entity position y", &e->position.y);
+	//				edit_field("Entity position z", &e->position.z);
+	//			}
+	//			end_window();
+	//		}
+	//	}
+
+	//	end_window();
+	//}
+
+
 	//	const char *str2[] = { "first2", "second2", "third2" };
 	//	static u32 item_index2 = 0;
 	//	list_box(str2, 3, &item_index2);
-		//same_line();
-		//button("same line");
-		//button("same line1");
-		//button("same line2");
-		//button("same line3");
-		//button("same line4");
-		//next_line();
-		//button("next line1");
-		//button("next line2");
-		//button("next line3");
-		//button("next line4");
-		//button("next line5");
-		//button("next line6");
-		//button("next line7");
-		//button("next line8");
-		//button("next line9");
-		//button("next line10");
-		//button("next line11");
-		//button("next line12");
-		//button("next line13");
-		//button("next line14");
-		//button("next line15");
-		//button("next line16");
-		//button("next line17");
-		//button("next line18");
-		//button("next line19");
-
-	//}
-	//end_window();
-
-	//set_next_window_pos(500, 300);
-	//set_next_window_size(1000, 700);
-	
-	//begine_window("temp");
-	//	if (button("temp buttom")) {
-	//		print("temp button was pressed");
-	//	}
-	//	begine_window("temp2");
-	//	if (button("temp buttom2")) {
-	//		print("temp button was pressed2");
-	//	}
-	//	end_window();
-	//end_window();
-
-	//begine_window("temp1");
-	//end_window();
 
 	end_frame();
 }
