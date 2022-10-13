@@ -69,6 +69,11 @@ u32 Font::get_char_width(char c)
 	return characters[c].size.width;
 }
 
+u32 Font::get_char_advance(char c)
+{
+	return characters[c].advance >> 6;
+}
+
 u32 Font::get_text_width(const char *text)
 {
 	Size_u32 size = font.get_text_size(text);

@@ -517,7 +517,7 @@ Edit_Field::Edit_Field(const char *_label_text, Edit_Data_Type _edit_data_type, 
 
 	edit_itself_data = true;
 
-	max_text_width = (theme.field_width - theme.shift_caret_from_left * 3 - 10);
+	max_symbol_number = (theme.field_width - theme.shift_caret_from_left * 3 - 10);
 
 	edit_data_type = _edit_data_type;
 
@@ -567,7 +567,7 @@ Edit_Field::Edit_Field(const char * _label_text, float *float_value, Edit_Field_
 
 	edit_itself_data = false;
 
-	max_text_width = (theme.field_width - theme.shift_caret_from_left * 3);
+	max_symbol_number = (theme.field_width - theme.shift_caret_from_left * 3);
 
 	edit_data_type = EDIT_DATA_FLOAT;
 
@@ -672,7 +672,7 @@ void Edit_Field::handle_event(Event *event)
 		}
 	} else if (event->type == EVENT_TYPE_CHAR) {
 		if (flags & ELEMENT_FOCUSED) {
-			if ((max_text_width > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
+			if ((max_symbol_number > text_width) && (isalnum(event->char_key) || isspace(event->char_key) || (event->char_key == '.') || (event->char_key == '-'))) {
 
 				if (caret_index_in_text == (text.string.len - 1)) {
 					text.string.append(event->char_key);

@@ -278,7 +278,7 @@ struct Edit_Field : Input_Field {
 	bool edit_itself_data;
 
 	int text_width;
-	int max_text_width;
+	int max_symbol_number;
 	int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
 	int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
 

@@ -84,6 +84,8 @@ struct Entity_Manager {
 
 	void add_entity(Entity *entity);
 
+	Entity *find_entity(u32 id);
+
 	Entity *make_grid(const Vector3 &position, float width, float depth, int m, int n);
 	Entity *make_box(const Vector3 &position, float width, float height, float depth);
 	Entity *make_sphere(const Vector3 &position, float radius, u32 slice_count, u32 stack_count);
@@ -94,6 +96,17 @@ struct Entity_Manager {
 
 	Mutant *make_mutant(const Vector3 &position);
 };
+
+inline Entity *Entity_Manager::find_entity(u32 id)
+{
+	Entity *entity = NULL;
+	For(entities, entity) {
+		if (entity->id == id) {
+			return entity;
+		}
+	}
+	return NULL;
+}
 
 struct Render_Entity {
 	u32 stencil_ref_value = 0;
