@@ -43,6 +43,7 @@ struct Font {
 	
 	void init(int font_size);
 	u32 get_char_width(char c);
+	u32 get_char_advance(char c);
 	u32 get_text_width(const char *text);
 	Size_u32 get_text_size(const char *text);
 };
