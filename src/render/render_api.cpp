@@ -65,10 +65,17 @@ void Gpu_Device::create_gpu_buffer(Gpu_Buffer *gpu_buffer)
 		ZeroMemory(&resource_data_desc, sizeof(D3D11_SUBRESOURCE_DATA));
 		resource_data_desc.pSysMem = (void *)gpu_buffer->data;
 		HR(device->CreateBuffer(&buffer_desc, &resource_data_desc, gpu_buffer->get_buffer_ptr()));
-	}
-	else {
+	} else {
 		HR(device->CreateBuffer(&buffer_desc, NULL, gpu_buffer->get_buffer_ptr()));
 	}
+}
+
+void Gpu_Device::create_shader()
+{
+}
+
+void Gpu_Device::create_stencil_text()
+{
 }
 
 void *Render_Pipeline::map(Gpu_Buffer *gpu_buffer)
@@ -125,7 +132,8 @@ void Render_Pipeline::set_shader(Shader *shader)
 void Render_Pipeline::set_vertex_shader(Shader *shader)
 {
 	if (!shader->vertex_shader) {
-		print("Vertex shader with name [] with NULL and can be set to render pipeline");
+		print("Vertex shader with name [] is NULL, the shader can not be set to render pipeline");
+		return;
 	}
 	pipeline->VSSetShader(shader->vertex_shader, 0, 0);
 }

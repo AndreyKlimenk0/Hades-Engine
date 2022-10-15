@@ -584,16 +584,15 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 
 bool is_draw_caret(s32 blink_time)
 {
+	s64 show_time = blink_time;
+	s64 hidding_time = blink_time;
+	
 	static bool show = true;
-	static s64 show_time = blink_time;
-	static s64 hidding_time = blink_time;
 	static s64 show_time_accumulator = 0;
 	static s64 hidding_time_accumulator = 0;
-
-	static s64 current_time = 0;
 	static s64 last_time = 0;
 
-	current_time = milliseconds_counter();
+	s64 current_time = milliseconds_counter();
 
 	s64 elapsed_time = current_time - last_time;
 
@@ -765,8 +764,13 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 
 				char c = data[caret_index_in_text];
 				u32 char_width = font.get_char_width(c);
+				if (c == '.') {
+					char_width = font.get_char_advance(c);
+				}
 				caret_x_posiiton += (s32)char_width;
 			}
+		} else if (event->is_key_down(VK_HOME)) {
+				
 		}
 	} else if (event->type == EVENT_TYPE_CHAR) {
 			if ((max_symbol_number > data.len) && is_symbol_valid(event->char_key)) {

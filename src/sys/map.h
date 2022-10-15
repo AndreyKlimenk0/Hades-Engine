@@ -5,5 +5,4 @@
 
 void save_world_in_map(World *world, const char *map_name = NULL);
 
-
 #endif
