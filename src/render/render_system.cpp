@@ -504,17 +504,17 @@ Gpu_Buffer *make_gpu_buffer(u32 data_size, u32 data_count, void *data, D3D11_USA
 
 void update_constant_buffer(Gpu_Buffer *buffer, void *data, u32 data_size)
 {
-assert(buffer);
-assert(data);
+	assert(buffer);
+	assert(data);
 
-D3D11_MAPPED_SUBRESOURCE mapped_resource;
-ZeroMemory(&mapped_resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	D3D11_MAPPED_SUBRESOURCE mapped_resource;
+	ZeroMemory(&mapped_resource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
-HR(directx11.device_context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource));
+	HR(directx11.device_context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource));
 
-memcpy(mapped_resource.pData, data, data_size);
+	memcpy(mapped_resource.pData, data, data_size);
 
-directx11.device_context->Unmap(buffer, 0);
+	directx11.device_context->Unmap(buffer, 0);
 }
 
 inline void draw_indexed_traingles(Gpu_Buffer *vertices, u32 vertex_size, const char *vertex_name, Gpu_Buffer *indices, u32 index_count, u32 vertex_offset = 0, u32 index_offset = 0)
