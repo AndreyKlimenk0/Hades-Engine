@@ -97,7 +97,7 @@ LRESULT CALLBACK console_input_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	return CallWindowProc(win_console.input_edit_proc, hwnd, uMsg, wParam, lParam);;
 }
 
-void create_console()
+bool create_console(Win32_State *win32_state)
 {
 	win_console.text_buffer_background_color = RGB(30,  30,  30);
 	win_console.text_buffer_text_color       = RGB(255, 255, 255);
@@ -109,31 +109,35 @@ void create_console()
 	ZeroMemory(&wc, sizeof(WNDCLASS));
 
 	wc.lpfnWndProc = (WNDPROC)console_winproc;
-	wc.hInstance = win32.hinstance;
+	wc.hInstance = win32_state->hinstance;
 	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wc.lpszClassName = class_name;
 
-	if (!RegisterClass(&wc))
-		return;
+	if (!RegisterClass(&wc)) {
+		return false;
+	}
 
-	win_console.window = CreateWindow(class_name, "Console", WS_OVERLAPPEDWINDOW, 10, 10, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32.hinstance, NULL);
-	if (!win_console.window)
-		return;
+	win_console.window = CreateWindow(class_name, "Console", WS_OVERLAPPEDWINDOW, 10, 10, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, win32_state->hinstance, NULL);
+	if (!win_console.window) {
+		return false;
+	}
 
 	int text_buffer_width;
 	int text_buffer_height;
 	get_window_size(win_console.window, &text_buffer_width, &text_buffer_height);
 	
-	win_console.text_buffer = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL  | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY, 0, 0, text_buffer_width, text_buffer_height - INPUT_LINE_HEIGHT, win_console.window, (HMENU)EDIT_ID, win32.hinstance, NULL);
+	win_console.text_buffer = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL  | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY, 0, 0, text_buffer_width, text_buffer_height - INPUT_LINE_HEIGHT, win_console.window, (HMENU)EDIT_ID, win32_state->hinstance, NULL);
 
 	int input_line_width;
 	int input_line_height;
 	get_window_size(win_console.text_buffer, &input_line_width, &input_line_height);
 
-	win_console.input_line_buffer = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_OEMCONVERT, 0, text_buffer_height - INPUT_LINE_HEIGHT, input_line_width, INPUT_LINE_HEIGHT, win_console.window, (HMENU)INPUT_ID, win32.hinstance, NULL);
+	win_console.input_line_buffer = CreateWindow("edit", NULL, WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_OEMCONVERT, 0, text_buffer_height - INPUT_LINE_HEIGHT, input_line_width, INPUT_LINE_HEIGHT, win_console.window, (HMENU)INPUT_ID, win32_state->hinstance, NULL);
 	
 
-	ShowWindow(win_console.window, SW_SHOWDEFAULT);
+	if (!ShowWindow(win_console.window, SW_SHOWDEFAULT)) {
+		return false;
+	}
 	UpdateWindow(win_console.window);
 	SetFocus(win_console.input_line_buffer);
 	
@@ -143,6 +147,7 @@ void create_console()
 	HFONT intput_line_font = create_font(11, "Consolas");
 	SendMessage(win_console.text_buffer, WM_SETFONT, (WPARAM)text_buffer_font, 0);
 	SendMessage(win_console.input_line_buffer, WM_SETFONT, (WPARAM)intput_line_font, 0);
+	return true;
 }
 
 void append_text_to_text_buffer(const char *text)
