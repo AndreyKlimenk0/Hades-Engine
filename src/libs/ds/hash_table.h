@@ -75,6 +75,7 @@ struct Hash_Table {
 	u32 hash_factor1 = 7;
 	u32 hash_facotr2 = 11;
 
+	void clear();
 	void rehash();
 	void insert_entry(Table_Entry *entry);
 	void free_table(Table_Entry **table, u32 _table_size);
@@ -181,6 +182,18 @@ Hash_Node<_Key_, _Value_> *Hash_Table<_Key_, _Value_>::get_table_entry(const _Ke
 	return NULL;
 }
 
+
+template<typename _Key_, typename _Value_>
+inline void Hash_Table<_Key_, _Value_>::clear()
+{
+	Table_Entry *table_entry = NULL;
+	For(nodes, table_entry) {
+		if (table_entry) {
+			DELETE_PTR(table_entry);
+		}
+	}
+	nodes.clear();
+}
 
 template<typename _Key_, typename _Value_>
 void Hash_Table<_Key_, _Value_>::rehash()

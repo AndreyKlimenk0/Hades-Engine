@@ -18,6 +18,11 @@ void Engine::init()
 	//render.render_sys->init();
 }
 
+void Engine::init(Win32_State *win32_state)
+{
+
+}
+
 void Engine::shutdown()
 {
 }
