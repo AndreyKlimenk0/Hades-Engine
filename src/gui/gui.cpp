@@ -16,15 +16,12 @@
 #include "../libs/ds/linked_list.h"
 
 #include "../render/font.h"
-#include "../render/render_system.h"
 
 //@Note included for testing
 #include "../game/world.h"
 
+
 typedef u32 Gui_ID;
-
-Render_2D *render_2d = get_render_2d();
-
 
 typedef u32 Element_Alignment;
 const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
@@ -240,6 +237,9 @@ struct Gui_Manager {
 	Gui_Text_Button_Theme button_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
 
+	//2D render api
+	Render_2D *render_2d = NULL;
+
 	struct Edit_Field_State {
 		Edit_Field_State() {};
 		
@@ -256,7 +256,7 @@ struct Gui_Manager {
 
 	} edit_field_state;
 
-	void init();
+	void init(Render_2D *_render_2d);
 	void shutdown();
 	
 	void new_frame();
@@ -400,7 +400,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	new_window.scroll.y = new_window.rect.y;
 
 	new_window.name = name;
-	new_window.render_list.render_2d = render_2d;
+	new_window.render_list = Render_Primitive_List(render_2d);
 
 	windows.push(new_window);
 	window_rect.x += new_window.rect.width + 40;
@@ -429,7 +429,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	new_window.scroll.y = new_window.rect.y;
 
 	new_window.name = name;
-	new_window.render_list.render_2d = render_2d;
+	new_window.render_list= Render_Primitive_List(render_2d);
 
 	windows.push(new_window);
 	windows_order.push(&windows.last_item());
@@ -922,8 +922,10 @@ inline u32 safe_sub_u32(u32 x, u32 y)
 	return ((result > x) && (result > y)) ? result : 0;
 }
 
-void Gui_Manager::init()
+void Gui_Manager::init(Render_2D *_render_2d)
 {
+	render_2d = _render_2d;
+
 	window_parent_count = 0;
 	reset_window_params = 0;
 	edit_field_count = 0;
@@ -1294,9 +1296,9 @@ bool gui::button(const char *text)
 	return gui_manager.button(text);
 }
 
-void gui::init_gui()
+void gui::init_gui(Render_2D *render_2d)
 {
-	gui_manager.init();
+	gui_manager.init(render_2d);
 }
 
 void gui::shutdown()

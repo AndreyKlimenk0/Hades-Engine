@@ -4,9 +4,6 @@
 #include "../game/world.h"
 #include "../libs/os/path.h"
 #include "../render/model.h"
-#include "../render/texture.h"
-#include "../render/shader.h"
-#include "../editor/editor.h"
 #include "../render/render_system.h"
 
 
@@ -27,13 +24,10 @@ struct Engine {
 	
 	struct Libs {
 		Path *os_path = NULL;
-		Editor *editor = NULL;
 		Event_Handler *event_handler = NULL;
 	} libs;
 	
 	struct Render {
-		Shader_Manager *shader_manager = NULL;
-		Texture_Manager *texture_manager = NULL;
 		Render_Model_Manager *model_manager = NULL;
 		Render_System *render_sys = NULL;
 	} render;
