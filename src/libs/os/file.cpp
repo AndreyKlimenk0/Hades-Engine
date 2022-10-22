@@ -166,9 +166,8 @@ static DWORD file_mode_to_win32(File_Mode file_mode)
 			return GENERIC_READ;
 		case FILE_MODE_WRITE:
 			return GENERIC_WRITE;
-		default:
-			assert(false);
 	}
+	assert(false);
 }
 
 static DWORD file_creation_to_win32(File_Creation file_creation)
@@ -183,9 +182,8 @@ static DWORD file_creation_to_win32(File_Creation file_creation)
 			return OPEN_ALWAYS;
 		case FILE_OPEN_EXISTING:
 			return OPEN_EXISTING;
-		default:
-			assert(false);
 	}
+	assert(false);
 }
 
 File::~File()

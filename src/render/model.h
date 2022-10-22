@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include "mesh.h"
-#include "texture.h"
+#include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/color.h"
 #include "../libs/math/vector.h"

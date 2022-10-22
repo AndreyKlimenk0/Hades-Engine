@@ -18,7 +18,7 @@ void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh)
 	float du = 1.0f / (n - 1);
 	float dv = 1.0f / (m - 1);
 
-	mesh->allocate_vertices(vertex_count);
+	//mesh->allocate_vertices(vertex_count);
 	for (int i = 0; i < m; ++i) {
 		float z = half_depth - i * dz;
 		for (int j = 0; j < n; ++j) {
@@ -31,7 +31,7 @@ void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh)
 		}
 	}
 
-	mesh->allocate_indices(index_count * 3);
+	//mesh->allocate_indices(index_count * 3);
 
 	int k = 0;
 	for (int i = 0; i < m - 1; ++i) {
@@ -48,7 +48,7 @@ void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh)
 		}
 	}
 
-	mesh->allocate_static_buffer();
+	//mesh->allocate_static_buffer();
 }
 
 void generate_box(float width, float height, float depth, Triangle_Mesh *mesh)
@@ -57,7 +57,7 @@ void generate_box(float width, float height, float depth, Triangle_Mesh *mesh)
 	float h = 0.5f * height;
 	float d = 0.5f * depth;
 
-	mesh->allocate_vertices(24);
+	//mesh->allocate_vertices(24);
 
 	mesh->vertices[0]  = Vertex(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 1.0f));
 	mesh->vertices[1]  = Vertex(Vector3(-w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 0.0f));
@@ -89,7 +89,7 @@ void generate_box(float width, float height, float depth, Triangle_Mesh *mesh)
 	mesh->vertices[22] = Vertex(Vector3(+w, +h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
 	mesh->vertices[23] = Vertex(Vector3(+w, -h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
 
-	mesh->allocate_indices(36);
+	//mesh->allocate_indices(36);
 	u32 *i = mesh->indices;
 	i[0] = 0;   i[1] = 1;   i[2] = 2;
 	i[3] = 0;   i[4] = 2;   i[5] = 3;
@@ -214,7 +214,7 @@ void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Me
 		indices.push(baseIndex + i + 1);
 	}
 
-	mesh->copy_vertices(vertices.items, vertices.count);
-	mesh->copy_indices(indices.items, indices.count);
-	mesh->allocate_static_buffer();
+	//mesh->copy_vertices(vertices.items, vertices.count);
+	//mesh->copy_indices(indices.items, indices.count);
+	//mesh->allocate_static_buffer();
 }

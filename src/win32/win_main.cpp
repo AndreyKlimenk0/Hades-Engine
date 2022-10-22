@@ -13,11 +13,8 @@
 #include "../libs/os/path.h"
 
 #include "../render/font.h"
-#include "../render/directx.h"
-#include "../render/texture.h"
 #include "../render/render_system.h"
 
-#include "../editor/editor.h"
 #include "../gui/gui.h"
 
 #include "test.h"
@@ -106,80 +103,63 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	set_cursor(CURSOR_TYPE_ARROW);
 
 	os_path.init();
-
-	
-	directx11.init();
-	
-	//direct_write.init("Consolas", 11, Color::Red);
-	//direct_write.init_characters();
-	
-	//direct2d.init(directx11.swap_chain);
 	
 	font.init(11);
-
-
-	texture_manager.init();
-
 
 	ShowWindow(win32.window, nCmdShow);
 
 	Key_Input::init();
 
-	editor.init();
+	////World world;
+	////world.init();
+	//
+	Render_System render_sys;
+	render_sys.init(&win32);
+	//render_sys.current_render_world = &world;
+	////render_sys.free_camera = &editor.free_camera;
 
-	//World world;
-	world.init();
-	
-	View_Info *view_info = make_view_info(1.0f, 10000.0f);
-	
-	render_sys.init(view_info);
-	render_sys.current_render_world = &world;
-	render_sys.free_camera = &editor.free_camera;
-
-	Input_Layout::init();
-
-	gui::init_gui();
+	//gui::init_gui(&render_sys.render_2d);
 
 	// Test
 	test();
 
 	s64 count_per_s = cpu_ticks_per_second();
-
 	while (1) {
-		s64 t = cpu_ticks_counter();
-		s64 last = milliseconds_counter();
-		s64 l = microseconds_counter();
-
-		pump_events();
-		run_event_loop();
-		
-		editor.update();
-
-		directx11.begin_draw();
-		
-		render_sys.render_frame();	
-		
-		s64 result = milliseconds_counter() - last;
-		s64 r = microseconds_counter() - l;
-		s64 x = cpu_ticks_counter() - t;
-		s64 fps = cpu_ticks_per_second() / x;
-		
-		char *s = format("fps{}", fps);
-		draw_text(700, 0, s);
-		free_string(s);
-		//display_text(700, 70, "Fps {} ms", fps);
-		//display_text(700, 90, "Microseconds elapsed {} ms", r);
-		//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
-		
-		//draw_text(0, 0, "dotaISNOTGAMEJ");
-		//draw_text(10, 70, "ahrgpbqy");
-		//draw_text(10, 150, "klimenko");
-		
-		//direct2d.end_draw();
-		directx11.end_draw();
-
-		clear_event_queue();
+		Sleep(1000);
 	}
+
+	//while (1) {
+	//	s64 t = cpu_ticks_counter();
+	//	s64 last = milliseconds_counter();
+	//	s64 l = microseconds_counter();
+
+	//	pump_events();
+	//	run_event_loop();
+	//	
+	//	render_sys.new_frame();
+	//	render_sys.render_frame();
+	//	render_sys.end_frame();
+	//	
+	//	s64 result = milliseconds_counter() - last;
+	//	s64 r = microseconds_counter() - l;
+	//	s64 x = cpu_ticks_counter() - t;
+	//	s64 fps = cpu_ticks_per_second() / x;
+	//	
+	//	char *s = format("fps{}", fps);
+	//	draw_text(700, 0, s);
+	//	free_string(s);
+	//	//display_text(700, 70, "Fps {} ms", fps);
+	//	//display_text(700, 90, "Microseconds elapsed {} ms", r);
+	//	//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
+	//	
+	//	//draw_text(0, 0, "dotaISNOTGAMEJ");
+	//	//draw_text(10, 70, "ahrgpbqy");
+	//	//draw_text(10, 150, "klimenko");
+	//	
+	//	//direct2d.end_draw();
+
+	//	clear_event_queue();
+	//}
 	return 0;
 }
 
@@ -205,9 +185,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE: {
 			win32.window_width = LOWORD(lParam);
 			win32.window_height = HIWORD(lParam);
-			
-			directx11.resize();
-			render_sys.resize();
 			
 			break;
 		}

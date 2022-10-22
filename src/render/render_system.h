@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <DirectXMath.h>
 
-#include "directx.h"
-#include "shader.h"
 #include "font.h"
 #include "../game/world.h"
 #include "../libs/math/matrix.h"
@@ -15,38 +13,12 @@
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/array.h"
 #include "../libs/ds/linked_list.h"
+#include "render_api.h"
 
 
-struct View_Info {
-	int window_width;
-	int window_height;
+struct Render_System;
+struct Render_2D;
 
-	float window_ratio;
-	float fov_y_ratio;
-	float near_plane;
-	float far_plane;
-
-	Matrix4 perspective_matrix;
-	Matrix4 orthogonal_matrix;
-
-	Matrix4 test_matrix;
-
-	void update_projection_matries(u32 new_window_width, u32 new_window_height);
-};
-
-inline void View_Info::update_projection_matries(u32 new_window_width, u32 new_window_height)
-{
-	window_width = new_window_width;
-	window_height = new_window_height;
-	window_ratio = (float)window_width / (float)window_height;
-	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, window_ratio, near_plane, far_plane);
-	orthogonal_matrix =  XMMatrixOrthographicOffCenterLH(0.0f, (float)window_width, (float)window_height, 0.0f, near_plane, far_plane);
-}
-
-View_Info *make_view_info(float near_plane, float far_plane);
-
-
-typedef ID3D11Buffer Gpu_Buffer;
 
 struct Primitive_2D {
 	//Vars is set by Render_2D
@@ -66,13 +38,11 @@ struct Primitive_2D {
 
 struct Render_Primitive_2D {
 	Primitive_2D *primitive = NULL;
-	Texture *texture = NULL;
+	Texture *gpu_resource = NULL;
 	Vector2 position;
 	Rect_s32 clip_rect;
 	Color color;
 };
-
-//typedef Array<Render_Primitive_2D> Render_Primitive_List;
 
 const u32 ROUND_TOP_LEFT_RECT = 0x1;
 const u32 ROUND_TOP_RIGHT_RECT = 0x2;
@@ -84,9 +54,9 @@ const u32 ROUND_TOP_RECT = ROUND_TOP_LEFT_RECT | ROUND_TOP_RIGHT_RECT;
 const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
 const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 
-struct Render_2D;
-
 struct Render_Primitive_List {	
+	Render_Primitive_List() {}
+	Render_Primitive_List(Render_2D *render_2d);
 	Render_2D *render_2d = NULL;
 	
 	Array<Rect_s32> clip_rects;
@@ -107,22 +77,16 @@ struct Render_Primitive_List {
 	void add_rect(T x, T y, T width, T height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 
 	void add_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
-	void add_texture(int x, int y, int width, int height, Texture *texture);
-};
-
-
-enum Render_2D_Type {
-	LOW_LEVEL_2D_RENDERING,
-	HIGH_LEVEL_2D_RENDERING,
+	void add_texture(int x, int y, int width, int height, Texture *gpu_resource);
 };
 
 struct Render_2D {
 	~Render_2D();
 
-	ID3D11RasterizerState * rasterization = NULL;
-	ID3D11DepthStencilState *depth_test = NULL;
-	ID3D11BlendState *blending_test = NULL;
-
+	Texture *font_atlas = NULL;
+	Texture *default_texture = NULL;
+	Texture *temp = NULL;
+	
 	Gpu_Buffer *constant_buffer = NULL;
 	Gpu_Buffer *vertex_buffer = NULL;
 	Gpu_Buffer *index_buffer = NULL;
@@ -130,132 +94,88 @@ struct Render_2D {
 	Gpu_Buffer *font_vertex_buffer = NULL;
 	Gpu_Buffer *font_index_buffer = NULL;
 
-	Texture font_atlas;
-	Texture default_texture;
-	Texture *temp = NULL;
+	Rasterizer *rasterizer = NULL;
+	Blending_Test *blending_test = NULL;
+	Depth_Stencil_Test *depth_test = NULL;
+
+	Shader *render_2d = NULL;
+	
+	Gpu_Device *gpu_device = NULL;
+	Render_Pipeline *render_pipeline = NULL;
+	Render_System *render_system = NULL;
 
 	u32 total_vertex_count = 0;
 	u32 total_index_count = 0;
 
 	Matrix4 screen_postion;
 
-	Array<Render_Primitive_List *> draw_list;
-	
 	Array<Primitive_2D *> primitives;
+	Array<Render_Primitive_List *> draw_list;
 	Hash_Table<String, Primitive_2D *> lookup_table;
 
-	void init();
+	void init(Render_System *_render_system, Shader *_render_2d);
 	void init_font_rendering();
 	void init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
 	void add_primitive(Primitive_2D *primitive);
 	void add_render_primitive_list(Render_Primitive_List *render_primitive_list);
 	
-	void new_frame(); // @Clean up change name 
+	void new_frame();
 	void render_frame(); // @Clean up change name 
-
-	//@Note this method must be deleted	
-	//void push_clip_rect(Rect_s32 *rect);
-	//void pop_clip_rect();
-	//void get_clip_rect(Rect_s32 *rect);
-
-	//void draw_outlines(int x, int y, int width, int height, const Color &color, float outline_width = 1.0f, u32 rounding = 0, u32 flags = ROUND_RECT);
-
-	//void draw_text(Rect_s32 *rect, const char *text);
-	//void draw_text(int x, int y, const char *text);
-	//
-	//template <typename T>
-	//void draw_rect(Rect<T> *rect, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
-	//template <typename T>
-	//void draw_rect(T x, T y, T width, T height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
-	//
-	//void draw_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
-	//void draw_texture(int x, int y, int width, int height, Texture *texture);
 };
 
-inline s32 get_right_size(s32 max_size, s32 min_size)
-{
-	return math::abs(max_size - math::abs(max_size - min_size));
-}
+struct View_Info {
+	u32 width;
+	u32 height;
 
-inline void Render_2D::new_frame()
-{
-	Render_Primitive_List *list = NULL;
-	For(draw_list, list) {
-		list->render_primitives.count = 0;
-	}
-	draw_list.count = 0;
-}
+	float ratio;
+	float fov_y_ratio;
+	float near_plane;
+	float far_plane;
+
+	Matrix4 perspective_matrix;
+	Matrix4 orthogonal_matrix;
+
+	void init(u32 _width, u32 _height, float _near_plane, float _far_plane);
+	void update_projection_matries(u32 new_window_width, u32 new_window_height);
+};
 
 struct Render_System {
 	~Render_System();
 
 	World  *current_render_world = NULL;
 	
-	View_Info *view_info = NULL;
+	View_Info view_info;
 	Free_Camera *free_camera = NULL;
 
-	ID3D11SamplerState *sampler = NULL;
+	Texture_Sampler *sampler = NULL;
 
 	Matrix4 view_matrix;
 
 	Render_2D render_2d;
 
-	Shader_Manager shader_manager;
-
 	ID3D11ShaderResourceView *shader_resource = NULL;
 
-	void init(View_Info *_view_info);
+	Hash_Table<String, Shader *> shaders;
+
+	Gpu_Device gpu_device;
+	Render_Pipeline render_pipeline;
+
+	void init(Win32_State *win32_state);
+	void init_shaders();
 	void resize();
 	void shutdown();
+
+	void new_frame();
+	void end_frame();
 	
 	void render_frame();
 	void draw_world_entities(World *world);
 
 	Render_2D *get_render_2d();
-	Shader_Manager *get_shader_manager();
 };
-
-inline Render_2D *Render_System::get_render_2d()
-{
-	return &render_2d;
-}
-
-inline Shader_Manager *Render_System::get_shader_manager()
-{
-	return &shader_manager;
-}
-
-extern Render_System render_sys;
-
-inline Render_2D *get_render_2d()
-{
-	return render_sys.get_render_2d();
-}
 
 void make_outlining(Render_Entity *render_entity);
 void free_outlining(Render_Entity *render_entity);
-//void draw_texture_on_screen(s32 x, s32 y, Texture *texture, float _width = 0.0f, float _height = 0.0f);
-
-Gpu_Buffer *make_gpu_buffer(u32 data_size, u32 data_count, void *data, D3D11_USAGE usage, u32 bind_flags, u32 cpu_access);
-
-inline Gpu_Buffer *make_vertex_buffer(u32 vertex_size, u32 vertex_count, void *vertex_data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, u32 cpu_access = 0)
-{
-	return make_gpu_buffer(vertex_size, vertex_count, vertex_data, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access);
-}
-
-inline Gpu_Buffer *make_index_buffer(u32 index_count, u32 *index_data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, u32 cpu_access = 0)
-{
-	return make_gpu_buffer(sizeof(u32), index_count, index_data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access);
-}
-
-inline Gpu_Buffer *make_constant_buffer(u32 buffer_size, void *data = NULL)
-{
-	assert((buffer_size % 16) == 0);
-	return make_gpu_buffer(buffer_size, 1, data, D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE);
-}
-
-void update_constant_buffer(Gpu_Buffer *buffer, void *data, u32 data_size);
-#endif
 
 template<typename T>
 inline void Render_Primitive_List::add_rect(Rect<T>* rect, const Color & color, u32 rounding, u32 flags)
@@ -273,3 +193,4 @@ inline void Render_Primitive_List::add_rect(T x, T y, T width, T height, const C
 
 	add_rect(_x, _y, _width, _height, color, rounding, flags);
 }
+#endif
