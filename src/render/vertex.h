@@ -31,18 +31,4 @@ struct Vertex {
 	Vector3 normal;
 	Vector2 uv;
 };
-
-struct Input_Layout {
-	~Input_Layout();
-	
-	static ID3D11InputLayout *vertex_color;
-	static ID3D11InputLayout *vertex;
-	static ID3D11InputLayout *vertex_xuv;
-	static const D3D11_INPUT_ELEMENT_DESC vertex_col_desc[2];
-	static const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2];
-	static const D3D11_INPUT_ELEMENT_DESC vertex_desc[3];
-	
-	static Hash_Table<String, ID3D11InputLayout *> table;
-	static void init();
-};
 #endif

@@ -110,7 +110,7 @@ inline Entity *Entity_Manager::find_entity(u32 id)
 
 struct Render_Entity {
 	u32 stencil_ref_value = 0;
-	Stencil_Test *stencil_test = NULL;
+	//Stencil_Test *stencil_test = NULL;
 
 	Entity *entity = NULL;
 	Render_Model *render_model = NULL;

@@ -5,7 +5,6 @@
 #include "mesh.h"
 #include "font.h"
 #include "vertex.h"
-#include "directx.h"
 #include "render_system.h"
 #include "../win32/win_types.h"
 #include <string.h>
@@ -33,10 +32,10 @@ void Font::init(int font_size)
 			continue;
 		}
 
-		//if (!face->glyph->bitmap.buffer) {
-		//	print("Font::init: Failed to load the face bitmap of char {} index {}", (char)c, (int)c);
-		//	continue;
-		//}
+		if (!face->glyph->bitmap.buffer) {
+			print("Font::init: Failed to load the face bitmap of char {} index {}", (char)c, (int)c);
+			continue;
+		}
 
 		Font_Char font_char;
 		font_char.advance_y = face->glyph->advance.y;

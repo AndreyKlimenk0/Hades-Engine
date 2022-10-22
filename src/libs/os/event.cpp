@@ -7,7 +7,6 @@
 #include <stdio.h>
 
 #include "../../sys/sys_local.h"
-#include "../../editor/editor.h"
 
 static Queue<Event> event_queue;
 

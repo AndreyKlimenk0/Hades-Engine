@@ -128,15 +128,15 @@ static FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
 					FbxLayeredTexture* layered_texture = FbxCast<FbxLayeredTexture>(prop.GetSrcObject<FbxLayeredTexture>(j));
 					int lcount = layered_texture->GetSrcObjectCount<FbxTexture>();
 					for (int k = 0; k < lcount; k++) {
-						FbxTexture* texture = FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
-						return texture;
+						FbxTexture* gpu_resource = FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
+						return gpu_resource;
 					}
 				}
 			} else {
 				int texture_count = prop.GetSrcObjectCount<FbxTexture>();
 				for (int j = 0; j < texture_count; j++) {
-					FbxTexture* texture = FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
-					return texture;
+					FbxTexture* gpu_resource = FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
+					return gpu_resource;
 				}
 			}
 		}
@@ -172,13 +172,13 @@ void find_and_copy_material(FbxNode *mesh_node, Render_Mesh *sub_model)
 
 bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 {
-	FbxTexture *texture = find_texture(mesh_node, texture_type);
-	if (!texture) {
+	FbxTexture *gpu_resource = find_texture(mesh_node, texture_type);
+	if (!gpu_resource) {
 		print("FbxTexture of type {} was not found in the file", texture_type, fbx_file_name);
 		return false;
 	}
 
-	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(texture);
+	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(gpu_resource);
 	String file_texture_name = file_texture->GetRelativeFileName();
 
 	Array<String> buffer;
@@ -226,7 +226,7 @@ void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 		return;
 	}
 
-	mesh->allocate_vertices(position_count);
+	//mesh->allocate_vertices(position_count);
 
 	for (int i = 0; i < position_count; i++) {
 
@@ -278,7 +278,7 @@ void copy_fbx_mesh_to_triangle_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 		}
 	}
 
-	mesh->copy_indices(indices.items, indices.count);
+	//mesh->copy_indices(indices.items, indices.count);
 
 	fbx_mesh->Destroy();
 	m_count++;
@@ -392,7 +392,7 @@ void load_fbx_model(const char *file_name, Render_Model *model)
 		get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
 		get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
 
-		render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
+		//render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
 
 		find_and_copy_material(fbx_mesh_node, render_mesh);
 

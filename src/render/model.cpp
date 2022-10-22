@@ -3,7 +3,6 @@
 
 #include "mesh.h"
 #include "model.h"
-#include "directx.h"
 
 #include "../sys/sys_local.h"
 
@@ -33,7 +32,7 @@ void Render_Model::init(const char *render_model_name, u32 render_mesh_count)
 		render_mesh->scale.indentity();
 		render_mesh->orientation.indentity();
 		render_mesh->material = make_default_material();
-		render_mesh->diffuse_texture = &texture_manager.default_texture;
+		//render_mesh->diffuse_texture = &texture_manager.default_texture;
 	}
 }
 
@@ -85,7 +84,7 @@ void Render_Model::load_fbx_model(const char *file_name)
 		get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
 		get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
 
-		render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
+		//render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
 
 		find_and_copy_material(fbx_mesh_node, render_mesh);
 
@@ -93,7 +92,7 @@ void Render_Model::load_fbx_model(const char *file_name)
 		
 		get_position_rotation_scale_matrix(fbx_mesh_node, render_mesh);
 		
-		render_mesh->mesh.allocate_static_buffer();
+		//render_mesh->mesh.allocate_static_buffer();
 	}
 }
 

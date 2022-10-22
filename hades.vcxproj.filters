@@ -21,9 +21,6 @@
     <ClCompile Include="src\win32\win_console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\vertex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\libs\ds\hash_table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -75,13 +72,7 @@
     <ClCompile Include="src\render\render_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\directx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\libs\color.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\editor\editor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\render\font.cpp">
@@ -93,19 +84,10 @@
     <ClCompile Include="src\libs\ds\dict.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\editor\editor_init.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\texture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\libs\spng.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\sys\map.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\libs\os\path.cpp">
@@ -188,13 +170,7 @@
     <ClInclude Include="src\render\render_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\directx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\libs\color.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\editor\editor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\font.h">
@@ -209,16 +185,10 @@
     <ClInclude Include="src\sys\sys_engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\texture.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\libs\spng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\sys\map.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\render\shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\libs\os\path.h">

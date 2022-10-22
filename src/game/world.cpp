@@ -2,7 +2,6 @@
 #include "../libs/color.h"
 #include "../libs/geometry_generator.h"
 
-#include "../render/directx.h"
 
 World world;
 
@@ -65,7 +64,7 @@ Entity *Entity_Manager::make_grid(const Vector3 &position, float width, float de
 	Render_Model *render_model = model_manager.make_render_model(model_name);
 	Render_Mesh *render_mesh = render_model->get_render_mesh();
 	render_mesh->material.specular = Vector4(0.1f, 0.1f, 0.1f, 4.0f);
-	render_mesh->diffuse_texture = texture_manager.get_texture("floor.png");
+	//render_mesh->diffuse_texture = texture_manager.get_texture("floor.png");
 
 	generate_grid(width, depth, m, n, render_model->get_triangle_mesh());
 
@@ -126,7 +125,7 @@ Shadow_Map * make_shadow_map(Light * light)
 {
 	Shadow_Map *shadow_map = new Shadow_Map();
 	shadow_map->light_entity = light;
-	shadow_map->depth_map = texture_manager.create_texture(1024, 1024, DXGI_FORMAT_D32_FLOAT);
+	//shadow_map->depth_map = texture_manager.create_texture(1024, 1024, DXGI_FORMAT_D32_FLOAT);
 	return shadow_map;
 }
 
