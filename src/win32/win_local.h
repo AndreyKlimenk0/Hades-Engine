@@ -8,11 +8,13 @@ struct Win32_State {
 	int window_width;
 	int window_height;
 	HINSTANCE hinstance;
+
+	static LRESULT CALLBACK win32_procedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 
-extern Win32_State win32;
+//extern Win32_State win32;
 
-void create_console();
+bool create_console(Win32_State *win32_state);
 void append_text_to_text_buffer(const char *text);
 void get_window_size(HWND window, int *width, int *height);
 
@@ -26,4 +28,5 @@ enum Cursor_Type {
 };
 
 void set_cursor(Cursor_Type type);
+
 #endif
