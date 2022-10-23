@@ -49,6 +49,4 @@ struct Font {
 };
 
 extern Font font;
-
-void draw_text(int x, int y, const char *text);
 #endif
