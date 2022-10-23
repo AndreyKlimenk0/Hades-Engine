@@ -5,6 +5,7 @@
 #include "../libs/os/path.h"
 #include "../render/model.h"
 #include "../render/render_system.h"
+#include "../win32/win_local.h"
 
 
 struct Event_Handler;
@@ -16,6 +17,7 @@ enum Engine_Mode {
 
 struct Engine {
 	Engine_Mode engine_mode;
+	Win32_State win32_state;
 	
 	struct Game {
 		World *world = NULL;
@@ -23,7 +25,6 @@ struct Engine {
 	} game;
 	
 	struct Libs {
-		Path *os_path = NULL;
 		Event_Handler *event_handler = NULL;
 	} libs;
 	

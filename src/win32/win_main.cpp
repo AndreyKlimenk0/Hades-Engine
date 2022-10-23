@@ -20,7 +20,7 @@
 #include "test.h"
 
 
-Win32_State win32;
+//Win32_State win32;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -56,33 +56,32 @@ void set_cursor(Cursor_Type type)
 	SetCursor(cursor);
 }
 
-void create_and_show_window(int nCmdShow)
+bool create_win32_window(Win32_State *win32_state)
 {
 	const char CLASS_NAME[] = "Sample Window Class";
 
 	WNDCLASS wc = { };
 
 	wc.lpfnWndProc = WindowProc;
-	wc.hInstance = win32.hinstance;
+	wc.hInstance = win32_state->hinstance;
 	wc.lpszClassName = CLASS_NAME;
-	wc.hCursor = LoadCursor(win32.hinstance, MAKEINTRESOURCE(32512));
+	wc.hCursor = LoadCursor(win32_state->hinstance, MAKEINTRESOURCE(32512));
 
 	RegisterClass(&wc);
 
-	HWND hwnd = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
-		10, 10, 1900, 980, NULL, NULL, win32.hinstance, NULL
+	win32_state->window = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
+		10, 10, 1900, 980, NULL, NULL, win32_state->hinstance, NULL
 	);
 
-	if (hwnd == NULL) {
-		return;
+	if (win32_state->window == NULL) {
+		return false;
 	}
 	
-	win32.window = hwnd;
 	RECT rect;
-	GetWindowRect(hwnd, &rect);
-	win32.window_height = rect.bottom - rect.top;
-	win32.window_width = rect.right - rect.left;
-
+	GetWindowRect(win32_state->window, &rect);
+	win32_state->window_width = rect.right - rect.left;
+	win32_state->window_height = rect.bottom - rect.top;
+	return true;
 }
 
 template <typename... Args>
@@ -93,20 +92,28 @@ void display_text(int x, int y, Args... args)
 	DELETE_ARRAY(formatted_text);
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR pCmdLine, int nCmdShow)
 {
-	win32.hinstance = hInstance;
+	Win32_State win32_state;
+	win32_state.hinstance = hInstance;
+
+	if (!create_win32_window(&win32_state)) {
+		error("Failed to create main win32 window.");
+	}
+
+	if (!ShowWindow(win32_state.window, nCmdShow)) {
+		error("Failed to show main win32 window.");
+	}
+
 	create_console();
-
-
-	create_and_show_window(nCmdShow);
 	set_cursor(CURSOR_TYPE_ARROW);
 
 	os_path.init();
 	
 	font.init(11);
 
-	ShowWindow(win32.window, nCmdShow);
+
+	ShowWindow(win32_state.window, nCmdShow);
 
 	Key_Input::init();
 
