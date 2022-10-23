@@ -32,11 +32,6 @@ void Font::init(int font_size)
 			continue;
 		}
 
-		//if (!face->glyph->bitmap.buffer) {
-		//	print("Font::init: Failed to load the face bitmap of char {} index {}", (char)c, (int)c);
-		//	continue;
-		//}
-
 		Font_Char font_char;
 		font_char.advance_y = face->glyph->advance.y;
 		font_char.advance = face->glyph->advance.x;
@@ -110,22 +105,6 @@ Size_u32 Font::get_text_size(const char *text)
 	}
 	
 	return result;
-}
-
-inline float x_to_screen_space(float x)
-{
-	 return 2 * x / (win32.window_width - 0) - (win32.window_width + 0) / (win32.window_width - 0); 
-}
-
-inline float y_to_screen_space(float y)
-{
-	return 2 * y / (0 - win32.window_height) - (0 + win32.window_height) / (0 - win32.window_height); 
-}
-
-
-void draw_text(int x, int y, const char *text)
-{
-
 }
 
 Font_Char::~Font_Char()

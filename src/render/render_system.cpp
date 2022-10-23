@@ -994,13 +994,6 @@ void Render_2D::render_frame()
 		for (int j = 0; j < list->render_primitives.count; j++) {
 			render_primitive = &list->render_primitives[j];
 		//For((*list), render_primitive) {
-			//Rect_s32 clip_rect = clip_rects[index++];
-
-			//D3D11_RECT rects[1];
-			//rects[0].left = clip_rect.x;
-			//rects[0].right = clip_rect.right();
-			//rects[0].top = clip_rect.y;
-			//rects[0].bottom = clip_rect.bottom();
 
 			render_pipeline->set_scissor(&render_primitive->clip_rect);
 
@@ -1011,15 +1004,11 @@ void Render_2D::render_frame()
 			render_pipeline->update_constant_buffer(constant_buffer, &cb_render_info);
 			render_pipeline->set_veretex_shader_resource(constant_buffer);
 			render_pipeline->set_pixel_shader_resource(constant_buffer);
-			//directx11.device_context->VSSetConstantBuffers(0, 1, &constant_buffer);
-			//directx11.device_context->PSSetConstantBuffers(0, 1, &constant_buffer);
 			if (render_primitive->gpu_resource) {
-				//directx11.device_context->PSSetShaderResources(0, 1, &render_primitive->gpu_resource->shader_resource);
 				render_pipeline->set_pixel_shader_resource(render_primitive->gpu_resource->shader_resource);
 			}
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
-			//directx11.device_context->DrawIndexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
 		}
 	}
 

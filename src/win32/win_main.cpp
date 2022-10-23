@@ -143,17 +143,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		s64 fps = cpu_ticks_per_second() / x;
 		
 		char *s = format("fps{}", fps);
-		draw_text(700, 0, s);
 		free_string(s);
-		//display_text(700, 70, "Fps {} ms", fps);
-		//display_text(700, 90, "Microseconds elapsed {} ms", r);
-		//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
-		
-		//draw_text(0, 0, "dotaISNOTGAMEJ");
-		//draw_text(10, 70, "ahrgpbqy");
-		//draw_text(10, 150, "klimenko");
-		
-		//direct2d.end_draw();
 
 		clear_event_queue();
 	}

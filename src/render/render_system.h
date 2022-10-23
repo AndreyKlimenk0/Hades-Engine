@@ -57,6 +57,7 @@ const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 struct Render_Primitive_List {	
 	Render_Primitive_List() {}
 	Render_Primitive_List(Render_2D *render_2d);
+	
 	Render_2D *render_2d = NULL;
 	
 	Array<Rect_s32> clip_rects;
