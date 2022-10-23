@@ -275,6 +275,26 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 	}
 }
 
+void Render_Primitive_List::add_rect(Rect_s32 *rect, const Color &color, u32 rounding, u32 flags)
+{
+	float _x = static_cast<float>(rect->x);
+	float _y = static_cast<float>(rect->y);
+	float _width = static_cast<float>(rect->width);
+	float _height = static_cast<float>(rect->height);
+
+	add_rect(_x, _y, _width, _height, color, rounding, flags);
+}
+
+void Render_Primitive_List::add_rect(s32 x, s32 y, s32 width, s32 height, const Color & color, u32 rounding, u32 flags)
+{
+	float _x = static_cast<float>(x);
+	float _y = static_cast<float>(y);
+	float _width = static_cast<float>(width);
+	float _height = static_cast<float>(height);
+
+	add_rect(_x, _y, _width, _height, color, rounding, flags);
+}
+
 void Render_Primitive_List::add_rect(float x, float y, float width, float height, const Color &color, u32 rounding, u32 flags)
 {
 	//////////////////////////////////////////////////////////
