@@ -720,7 +720,7 @@ void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
 	unmap(gpu_buffer);
 }
 
-void Render_Pipeline::update_subresource(Texture *texture, void *data, Rect_u32 *rect)
+void Render_Pipeline::update_subresource(Texture *texture, void *data, u32 row_pitch, Rect_u32 *rect)
 {
 	if (rect) {
 		D3D11_BOX box;
@@ -730,10 +730,10 @@ void Render_Pipeline::update_subresource(Texture *texture, void *data, Rect_u32 
 		box.bottom = rect->y + rect->height;
 		box.front = 0;
 		box.back = 1;
-		pipeline->UpdateSubresource(texture->gpu_resource, 0, &box, (const void *)data, texture->width * texture->format_size, 0);
+		pipeline->UpdateSubresource(texture->gpu_resource, 0, &box, (const void *)data, row_pitch, 0);
 		return;
 	}
-	pipeline->UpdateSubresource(texture->gpu_resource, 0, NULL, (const void *)data, texture->width * texture->format_size, 0);
+	pipeline->UpdateSubresource(texture->gpu_resource, 0, NULL, (const void *)data, row_pitch, 0);
 }
 
 void Render_Pipeline::generate_mips(Shader_Resource_View *shader_resource)
@@ -755,7 +755,7 @@ void Render_Pipeline::set_vertex_buffer(Gpu_Buffer *gpu_buffer)
 {
 	u32 strides = gpu_buffer->data_size;
 	u32 offsets = 0;
-	pipeline->IASetVertexBuffers(0, 0, gpu_buffer->get_buffer_ptr(), &strides, &offsets);
+	pipeline->IASetVertexBuffers(0, 1, gpu_buffer->get_buffer_ptr(), &strides, &offsets);
 }
 
 void Render_Pipeline::set_index_buffer(Gpu_Buffer *gpu_buffer)
@@ -933,6 +933,11 @@ Depth_Stencil_Test_Desc::Depth_Stencil_Test_Desc(Stencil_Operation _stencil_fail
 	depth_failed = _depth_failed;
 	pass = _pass;
 	compare_func = _compare_func;
+}
+
+u32 Texture::get_row_pitch()
+{
+	return width * format_size;
 }
 
 u32 *create_color_buffer(u32 width, u32 height, const Color &color)

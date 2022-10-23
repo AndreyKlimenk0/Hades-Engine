@@ -207,6 +207,8 @@ struct Texture {
 	Shader_Resource_View *shader_resource = NULL;
 
 	String name;
+
+	u32 get_row_pitch();
 };
 
 u32 *create_color_buffer(u32 width, u32 height, const Color &color);
@@ -256,7 +258,7 @@ struct Render_Pipeline {
 	void unmap(Gpu_Buffer *gpu_buffer);
 
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
-	void update_subresource(Texture *gpu_resource, void *data, Rect_u32 *rect = NULL);
+	void update_subresource(Texture *gpu_resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
 	void generate_mips(Shader_Resource_View *shader_resource);
 	
 	void set_input_layout(Input_Layout *input_layout);

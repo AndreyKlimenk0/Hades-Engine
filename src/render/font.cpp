@@ -32,10 +32,10 @@ void Font::init(int font_size)
 			continue;
 		}
 
-		if (!face->glyph->bitmap.buffer) {
-			print("Font::init: Failed to load the face bitmap of char {} index {}", (char)c, (int)c);
-			continue;
-		}
+		//if (!face->glyph->bitmap.buffer) {
+		//	print("Font::init: Failed to load the face bitmap of char {} index {}", (char)c, (int)c);
+		//	continue;
+		//}
 
 		Font_Char font_char;
 		font_char.advance_y = face->glyph->advance.y;
