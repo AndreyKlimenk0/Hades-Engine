@@ -302,9 +302,9 @@ void Render_System::init(Win32_State *win32_state)
 	Shader *render_2d_shader = shaders["render_2d"];
 	render_2d.init(this, render_2d_shader);
 	
-	//sampler = gpu_device.create_sampler();
+	sampler = gpu_device.create_sampler();
 
-	//gpu_device.create_input_layouts(shaders);
+	gpu_device.create_input_layouts(shaders);
 }
 
 void Render_System::init_shaders()
@@ -542,17 +542,16 @@ void Render_System::render_frame()
 	
 	//editor.draw();
 
-	//gui::draw_test_gui();
+	gui::draw_test_gui();
 
-	static Render_Primitive_List list = Render_Primitive_List(&render_2d);
-	render_2d.add_render_primitive_list(&list);
-	list.add_rect(0, 0, 300, 300, Color::Yellow, 0);
+	//static Render_Primitive_List list = Render_Primitive_List(&render_2d);
+	//render_2d.add_render_primitive_list(&list);
+	//list.add_rect(0, 0, 300, 300, Color::Yellow, 0);
 	//render_2d.draw_outlines(100, 100, 200, 300, Color(92, 100, 107), 10.0f);
 	
 	//render_2d.new_render_primitive_list();
 	//render_2d.draw_rect(100, 100, 100, 100, Color::Red, 120, ROUND_TOP_RIGHT_RECT | ROUND_BOTTOM_RIGHT_RECT);
 	//render_2d.draw_rect(100, 300, 100, 100, Color::Red, 120);
-
 
 	render_2d.render_frame();
 }
@@ -825,7 +824,7 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d)
 	default_texture = gpu_device->create_texture_2d(100, 100, NULL, 1);
 
 	u32 *pixel_buffer = create_color_buffer(default_texture->width, default_texture->height, Color::White);
-	render_pipeline->update_subresource(default_texture, (void *)pixel_buffer);
+	render_pipeline->update_subresource(default_texture, (void *)pixel_buffer, default_texture->get_row_pitch());
 	DELETE_PTR(pixel_buffer);
 
 	Rasterizer_Desc rasterizer_desc;
@@ -859,26 +858,26 @@ void Render_2D::init_font_rendering()
 	Hash_Table<char, Rect_f32> uvs;
 	init_font_atlas(&font, &uvs);
 
-	//for (char c = 32; c < 127; c++) {
+	for (char c = 32; c < 127; c++) {
 
-	//	if (font.characters.key_in_table(c)) {
-	//		Font_Char &font_char = font.characters[c];
-	//		Size_u32 &size = font_char.size;
-	//		Rect_f32 &uv = uvs[c];
+		if (font.characters.key_in_table(c)) {
+			Font_Char &font_char = font.characters[c];
+			Size_u32 &size = font_char.size;
+			Rect_f32 &uv = uvs[c];
 
-	//		Primitive_2D *primitive = new Primitive_2D();
+			Primitive_2D *primitive = new Primitive_2D();
 
-	//		primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
-	//		primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.x + uv.width, uv.y));
-	//		primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.x + uv.width, uv.y + uv.height));
-	//		primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.y + uv.height));
+			primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
+			primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.x + uv.width, uv.y));
+			primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.x + uv.width, uv.y + uv.height));
+			primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.y + uv.height));
 
-	//		primitive->make_triangle_polygon();
-	//		add_primitive(primitive);
+			primitive->make_triangle_polygon();
+			add_primitive(primitive);
 
-	//		lookup_table.set(String(c), primitive);
-	//	}
-	//}
+			lookup_table.set(String(c), primitive);
+		}
+	}
 }
 
 void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs)
@@ -886,7 +885,7 @@ void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs
 	font_atlas = gpu_device->create_texture_2d(200, 200, NULL, 1);
 
 	u32 *pixel_buffer = create_color_buffer(font_atlas->width, font_atlas->height, Color::White);
-	render_pipeline->update_subresource(font_atlas, (void *)pixel_buffer, NULL);
+	render_pipeline->update_subresource(font_atlas, (void *)pixel_buffer, font_atlas->get_row_pitch());
 	DELETE_PTR(pixel_buffer);
 
 	Array<Rect_u32 *> rects;
@@ -917,7 +916,7 @@ void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs
 
 			font_uvs->set((char)i, uv);
 
-			render_pipeline->update_subresource(font_atlas, (void *)character.bitmap, &rect);
+			render_pipeline->update_subresource(font_atlas, (void *)character.bitmap, sizeof(u32) * character.size.width, &rect);
 		}
 	}
 }

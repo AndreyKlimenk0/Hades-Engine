@@ -118,48 +118,45 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	//render_sys.current_render_world = &world;
 	////render_sys.free_camera = &editor.free_camera;
 
-	//gui::init_gui(&render_sys.render_2d);
+	gui::init_gui(&render_sys.render_2d);
 
 	// Test
 	test();
 
 	s64 count_per_s = cpu_ticks_per_second();
+
 	while (1) {
-		Sleep(1000);
+		s64 t = cpu_ticks_counter();
+		s64 last = milliseconds_counter();
+		s64 l = microseconds_counter();
+
+		pump_events();
+		run_event_loop();
+		
+		render_sys.new_frame();
+		render_sys.render_frame();
+		render_sys.end_frame();
+		
+		s64 result = milliseconds_counter() - last;
+		s64 r = microseconds_counter() - l;
+		s64 x = cpu_ticks_counter() - t;
+		s64 fps = cpu_ticks_per_second() / x;
+		
+		char *s = format("fps{}", fps);
+		draw_text(700, 0, s);
+		free_string(s);
+		//display_text(700, 70, "Fps {} ms", fps);
+		//display_text(700, 90, "Microseconds elapsed {} ms", r);
+		//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
+		
+		//draw_text(0, 0, "dotaISNOTGAMEJ");
+		//draw_text(10, 70, "ahrgpbqy");
+		//draw_text(10, 150, "klimenko");
+		
+		//direct2d.end_draw();
+
+		clear_event_queue();
 	}
-
-	//while (1) {
-	//	s64 t = cpu_ticks_counter();
-	//	s64 last = milliseconds_counter();
-	//	s64 l = microseconds_counter();
-
-	//	pump_events();
-	//	run_event_loop();
-	//	
-	//	render_sys.new_frame();
-	//	render_sys.render_frame();
-	//	render_sys.end_frame();
-	//	
-	//	s64 result = milliseconds_counter() - last;
-	//	s64 r = microseconds_counter() - l;
-	//	s64 x = cpu_ticks_counter() - t;
-	//	s64 fps = cpu_ticks_per_second() / x;
-	//	
-	//	char *s = format("fps{}", fps);
-	//	draw_text(700, 0, s);
-	//	free_string(s);
-	//	//display_text(700, 70, "Fps {} ms", fps);
-	//	//display_text(700, 90, "Microseconds elapsed {} ms", r);
-	//	//display_text(700, 60, "Mouse X {} and Y {}", Mouse_Input::x, Mouse_Input::y);
-	//	
-	//	//draw_text(0, 0, "dotaISNOTGAMEJ");
-	//	//draw_text(10, 70, "ahrgpbqy");
-	//	//draw_text(10, 150, "klimenko");
-	//	
-	//	//direct2d.end_draw();
-
-	//	clear_event_queue();
-	//}
 	return 0;
 }
 
