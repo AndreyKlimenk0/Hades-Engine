@@ -137,16 +137,6 @@ inline void place_in_middle_and_by_right(Rect_s32 *placing_element, Rect_s32 *pl
 	place_in_center(placing_element, placed_element, Y_AXIS);
 }
 
-
-inline Rect_s32 get_text_rect(const char *text)
-{
-	Rect_s32 text_rect;
-	Size_u32 size = font.get_text_size(text);
-	text_rect.width = (s32)size.width;
-	text_rect.height = (s32)size.height;
-	return text_rect;
-}
-
 enum Window_Type {
 	WINDOW_TYPE_PARENT,
 	WINDOW_TYPE_CHILD,
@@ -205,6 +195,7 @@ const u32 SET_WINDOW_SIZE = 0x2;
 const u32 SET_WINDOW_THEME = 0x4;
 
 struct Gui_Manager {
+
 	s32 mouse_x;
 	s32 mouse_y;
 	s32 last_mouse_x;
@@ -225,6 +216,12 @@ struct Gui_Manager {
 	Gui_ID resizing_window;
 	Gui_ID probably_resizing_window;
 
+	Font *font = NULL;
+	Win32_Info *win32_info = NULL;
+
+	//2D render api
+	Render_2D *render_2d = NULL;
+
 	Cursor_Type cursor_type;
 	Rect_s32 window_rect;
 	
@@ -237,12 +234,10 @@ struct Gui_Manager {
 	Gui_Text_Button_Theme button_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
 
-	//2D render api
-	Render_2D *render_2d = NULL;
-
 	struct Edit_Field_State {
 		Edit_Field_State() {};
-		
+		//@Cleanup: font member must be deleted
+		Font *font = NULL;
 		bool (*is_symbol_valid)(char symbol);
 		
 		s32 caret_x_posiiton;
@@ -256,7 +251,7 @@ struct Gui_Manager {
 
 	} edit_field_state;
 
-	void init(Render_2D *_render_2d);
+	void init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font);
 	void shutdown();
 	
 	void new_frame();
@@ -287,6 +282,7 @@ struct Gui_Manager {
 	bool check_rect_state(const char *name, Rect_s32 *rect, bool (*click_callback)() = NULL);
 
 	Rect_s32 get_win32_rect();
+	Rect_s32 get_text_rect(const char *text);
 
 	Gui_Window *get_window();
 	Gui_Window *find_window(const char *name);
@@ -295,6 +291,15 @@ struct Gui_Manager {
 	Gui_Window *create_window(const char *name, Window_Type window_type);
 	Gui_Window *create_window(const char *name, Rect_s32 *rect);
 };
+
+Rect_s32 Gui_Manager::get_text_rect(const char *text)
+{
+	Rect_s32 text_rect;
+	Size_u32 size = font->get_text_size(text);
+	text_rect.width = (s32)size.width;
+	text_rect.height = (s32)size.height;
+	return text_rect;
+}
 
 void Gui_Manager::set_next_window_pos(s32 x, s32 y)
 {
@@ -347,7 +352,7 @@ void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 
 Rect_s32 Gui_Manager::get_win32_rect()
 {
-	return Rect_s32(0, 0, win32.window_width, win32.window_height);
+	return Rect_s32(0, 0, win32_info->window_width, win32_info->window_height);
 }
 
 Gui_Window *Gui_Manager::get_window()
@@ -719,24 +724,13 @@ bool Gui_Manager::edit_field(const char *name, const char *value, u32 max_symbol
 void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 {
 	if (event->type == EVENT_TYPE_KEY) {
-		//if (flags & ELEMENT_HOVER) {
-		//	if (was_click_by_left_mouse_button()) {
-		//		set_caret_position_on_mouse_click(last_mouse_x, last_mouse_y);
-		//		flags |= ELEMENT_FOCUSED;
-		//	}
-		//} else {
-		//	if (was_click_by_left_mouse_button()) {
-		//		flags &= ~ELEMENT_FOCUSED;
-		//	}
-		//}
-
 		if (event->is_key_down(VK_BACK)) {
 			if (caret_index_in_text > -1) {
 
 				char c = data[caret_index_in_text];
 				data.remove(caret_index_in_text);
 
-				u32 char_width = font.get_char_width(c);
+				u32 char_width = font->get_char_width(c);
 				caret_x_posiiton -= (s32)char_width;
 
 				caret_index_in_text -= 1;
@@ -747,9 +741,9 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 			if (caret_index_in_text > -1) {
 
 				char c = data[caret_index_in_text];
-				u32 char_width = font.get_char_width(c);
+				u32 char_width = font->get_char_width(c);
 				if (c == '.') {
-					char_width = font.get_char_advance(c);
+					char_width = font->get_char_advance(c);
 				}
 				caret_x_posiiton -= (s32)char_width;
 
@@ -763,9 +757,9 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 				caret_index_for_inserting += 1;
 
 				char c = data[caret_index_in_text];
-				u32 char_width = font.get_char_width(c);
+				u32 char_width = font->get_char_width(c);
 				if (c == '.') {
-					char_width = font.get_char_advance(c);
+					char_width = font->get_char_advance(c);
 				}
 				caret_x_posiiton += (s32)char_width;
 			}
@@ -783,7 +777,7 @@ void Gui_Manager::Edit_Field_State::handle_event(Event * event)
 				caret_index_in_text += 1;
 				caret_index_for_inserting += 1;
 
-				u32 char_width = font.get_char_width(event->char_key);
+				u32 char_width = font->get_char_width(event->char_key);
 				caret_x_posiiton += (s32)char_width;
 			}
 	}
@@ -922,9 +916,12 @@ inline u32 safe_sub_u32(u32 x, u32 y)
 	return ((result > x) && (result > y)) ? result : 0;
 }
 
-void Gui_Manager::init(Render_2D *_render_2d)
+void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font)
 {
 	render_2d = _render_2d;
+	win32_info = _win32_info;
+	font = _font;
+	edit_field_state.font = font;
 
 	window_parent_count = 0;
 	reset_window_params = 0;
@@ -932,7 +929,7 @@ void Gui_Manager::init(Render_2D *_render_2d)
 	window_theme = default_window_theme;
 
 	String path_to_save_file;
-	os_path.build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
+	build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
 
 	File save_file;
 	if (!save_file.open(path_to_save_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
@@ -965,7 +962,7 @@ void Gui_Manager::init(Render_2D *_render_2d)
 void Gui_Manager::shutdown()
 {
 	String path_to_save_file;
-	os_path.build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
+	build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
 
 	File save_file;
 	if (!save_file.open(path_to_save_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
@@ -1044,8 +1041,8 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 	}
 
 	if (active_item == window->gui_id && is_left_mouse_button_down()) {
-		s32 x = math::clamp(rect->x + mouse_x_delta, 0, (s32)win32.window_width - rect->width);
-		s32 y = math::clamp(rect->y + mouse_y_delta, 0, (s32)win32.window_height - rect->height);
+		s32 x = math::clamp(rect->x + mouse_x_delta, 0, (s32)win32_info->window_width - rect->width);
+		s32 y = math::clamp(rect->y + mouse_y_delta, 0, (s32)win32_info->window_height - rect->height);
 		window->set_position(x, y);
 	}
 
@@ -1079,12 +1076,12 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 				}
 			} 
 			if ((rect_side == RECT_SIDE_RIGHT) || (rect_side == RECT_SIDE_RIGHT_BOTTOM)) {
-				if ((rect->right() + mouse_x_delta) < win32.window_width) {
+				if ((rect->right() + mouse_x_delta) < win32_info->window_width) {
 					rect->width = math::max(rect->width + mouse_x_delta, MIN_WINDOW_WIDTH);
 				}
 			}
 			if ((rect_side == RECT_SIDE_BOTTOM) || (rect_side == RECT_SIDE_RIGHT_BOTTOM) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
-				if ((rect->bottom() + mouse_y_delta) < win32.window_height) {
+				if ((rect->bottom() + mouse_y_delta) < win32_info->window_height) {
 					rect->height = math::max(rect->height + mouse_y_delta, MIN_WINDOW_HEIGHT);
 				}
 			} 
@@ -1296,9 +1293,9 @@ bool gui::button(const char *text)
 	return gui_manager.button(text);
 }
 
-void gui::init_gui(Render_2D *render_2d)
+void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font)
 {
-	gui_manager.init(render_2d);
+	gui_manager.init(render_2d, win32_info, font);
 }
 
 void gui::shutdown()

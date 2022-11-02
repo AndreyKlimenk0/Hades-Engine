@@ -33,11 +33,14 @@ void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *ex
 	}
 }
 
+void report_info(const char *info_message)
+{
+	int button = MessageBox(NULL, info_message, "Error", MB_OK | MB_ICONERROR | MB_APPLMODAL);
+}
+
 void report_error(const char *error_message)
 {
 	int button = MessageBox(NULL, error_message, "Error", MB_OK | MB_ICONERROR | MB_APPLMODAL);
-	DELETE_PTR(error_message);
-
 	if (IDOK) {
 		ExitProcess(1);
 	}

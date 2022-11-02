@@ -3,18 +3,20 @@
 
 #include <windows.h>
 
-struct Win32_State {
+struct Render_System;
+
+struct Win32_Info {
 	HWND window;
 	int window_width;
 	int window_height;
 	HINSTANCE hinstance;
 
+	Render_System *render_sys = NULL;
+
 	static LRESULT CALLBACK win32_procedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 
-//extern Win32_State win32;
-
-bool create_console(Win32_State *win32_state);
+bool create_console(Win32_Info *win32_state);
 void append_text_to_text_buffer(const char *text);
 void get_window_size(HWND window, int *width, int *height);
 

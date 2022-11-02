@@ -171,7 +171,7 @@
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\sys\map.cpp" />
     <ClCompile Include="src\sys\sys_debug.cpp" />
-    <ClCompile Include="src\sys\sys_engine.cpp" />
+    <ClCompile Include="src\sys\engine.cpp" />
     <ClCompile Include="src\sys\sys_output_info.cpp" />
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
@@ -207,7 +207,7 @@
     <ClInclude Include="src\render\render_system.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\sys\map.h" />
-    <ClInclude Include="src\sys\sys_engine.h" />
+    <ClInclude Include="src\sys\engine.h" />
     <ClInclude Include="src\sys\sys_local.h" />
     <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_local.h" />

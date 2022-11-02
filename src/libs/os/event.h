@@ -56,8 +56,8 @@ inline void handle_events(T *object, void(T::*handler)(Event *event))
 	}
 }
 
-bool was_click_by_left_mouse_button();
 bool is_left_mouse_button_down();
+bool was_click_by_left_mouse_button();
 bool was_left_mouse_button_just_pressed();
 
 #endif

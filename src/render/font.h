@@ -47,6 +47,4 @@ struct Font {
 	u32 get_text_width(const char *text);
 	Size_u32 get_text_size(const char *text);
 };
-
-extern Font font;
 #endif

@@ -247,9 +247,9 @@ struct Render_Pipeline {
 	ID3D11DeviceContext *pipeline = NULL;
 
 	//@Note can I these fields not use in this struct ?
+	ID3D11Texture2D *depth_stencil_buffer = NULL;
 	ID3D11RenderTargetView *render_target_view = NULL;
 	ID3D11DepthStencilView *depth_stencil_view = NULL;
-	ID3D11Texture2D *depth_stencil_buffer = NULL;
 
 	void resize(Gpu_Device *gpu_device, u32 window_width, u32 window_height);
 	void shutdown();
@@ -291,7 +291,7 @@ struct Render_Pipeline {
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 };
 
-void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_State *win32_state);
+void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_Info *win32_state);
 u32 *r8_to_rgba32(u8 *data, u32 width, u32 height);
 
 #endif
