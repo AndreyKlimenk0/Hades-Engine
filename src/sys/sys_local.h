@@ -6,6 +6,7 @@
 #include "../win32/win_types.h"
 //#include "../libs/ds/dict.h"
 
+void report_info(const char *info_message);
 void report_error(const char *error_message);
 void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *expr);
 char *get_str_error_message_from_hresult_description(HRESULT hr);
@@ -68,10 +69,19 @@ void print(Args... args)
 }
 
 template <typename... Args>
+void info(Args... args)
+{
+	char *formatted_string = format(args...);
+	report_info(formatted_string);
+	DELETE_PTR(formatted_string);
+}
+
+template <typename... Args>
 void error(Args... args)
 {
 	char *formatted_string = format(args...);
 	report_error(formatted_string);
+	DELETE_PTR(formatted_string);
 }
 
 #define DELETE_COPING(class_name) \

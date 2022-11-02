@@ -219,8 +219,8 @@ void Render_Primitive_List::get_clip_rect(Rect_s32 * rect)
 	} else {
 		rect->x = 0;
 		rect->y = 0;
-		rect->width = win32.window_width;
-		rect->height = win32.window_height;
+		rect->width = render_2d->render_system->win32_info->window_width;
+		rect->height = render_2d->render_system->win32_info->window_height;
 	}
 }
 
@@ -255,12 +255,12 @@ void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text)
 void Render_Primitive_List::add_text(int x, int y, const char *text)
 {
 	u32 len = strlen(text);
-	u32 max_height = font.get_text_size(text).height;
+	u32 max_height = render_2d->font->get_text_size(text).height;
 
 	for (u32 i = 0; i < len; i++) {
 
 		char c = text[i];
-		Font_Char &font_char = font.characters[c];
+		Font_Char &font_char = render_2d->font->characters[c];
 
 		Render_Primitive_2D info;
 		info.gpu_resource = render_2d->font_atlas;
@@ -351,7 +351,7 @@ Primitive_2D *Render_Primitive_List::make_or_find_primitive(float x, float y, Te
 	render_primitive.gpu_resource = render_2d->default_texture;
 	get_clip_rect(&render_primitive.clip_rect);
 
-	// if we found primitve I can just push it in render primitives array
+	// if we found primitve we can just push it in render primitives array
 	Primitive_2D *found_primitive = NULL;
 	if (render_2d->lookup_table.get(primitve_hash, found_primitive)) {
 		render_primitive.primitive = found_primitive;
@@ -378,12 +378,13 @@ Render_2D::~Render_2D()
 	new_frame();
 }
 
-void Render_2D::init(Render_System *_render_system, Shader *_render_2d)
+void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_font)
 {
 	render_system = _render_system;
 	gpu_device = &render_system->gpu_device;
 	render_pipeline = &render_system->render_pipeline;
 	render_2d = _render_2d;
+	font = _font;
 	
 	constant_buffer = gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info));
 	default_texture = gpu_device->create_texture_2d(100, 100, NULL, 1);
@@ -421,12 +422,12 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d)
 void Render_2D::init_font_rendering()
 {
 	Hash_Table<char, Rect_f32> uvs;
-	init_font_atlas(&font, &uvs);
+	init_font_atlas(font, &uvs);
 
 	for (char c = 32; c < 127; c++) {
 
-		if (font.characters.key_in_table(c)) {
-			Font_Char &font_char = font.characters[c];
+		if (font->characters.key_in_table(c)) {
+			Font_Char &font_char = font->characters[c];
 			Size_u32 &size = font_char.size;
 			Rect_f32 &uv = uvs[c];
 
@@ -592,10 +593,8 @@ void Render_2D::render_frame()
 	render_pipeline->reset_depth_stencil_test();
 }
 
-void View_Info::init(u32 _width, u32 _height, float _near_plane, float _far_plane)
+void View_Info::init(u32 width, u32 height, float _near_plane, float _far_plane)
 {
-	width = _width;
-	height = _height;
 	ratio = (float)width / (float)height;
 	fov_y_ratio = XMConvertToRadians(45);
 	near_plane = _near_plane;
@@ -606,11 +605,9 @@ void View_Info::init(u32 _width, u32 _height, float _near_plane, float _far_plan
 
 void View_Info::update_projection_matries(u32 new_window_width, u32 new_window_height)
 {
-	width = new_window_width;
-	height = new_window_height;
-	ratio = (float)width / (float)height;
+	ratio = (float)new_window_width / (float)new_window_height;
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, ratio, near_plane, far_plane);
-	orthogonal_matrix =  XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
+	orthogonal_matrix =  XMMatrixOrthographicOffCenterLH(0.0f, (float)new_window_width, (float)new_window_height, 0.0f, near_plane, far_plane);
 }
 
 
@@ -619,15 +616,18 @@ Render_System::~Render_System()
 	shutdown();
 }
 
-void Render_System::init(Win32_State *win32_state)
+void Render_System::init(Win32_Info *_win32_info, Font *font)
 {
-	view_info.init(win32_state->window_width, win32_state->window_height, 1.0f, 10000.0f);
+	win32_info = _win32_info;
+	win32_info->render_sys = this;
+	
+	view_info.init(win32_info->window_width, win32_info->window_height, 1.0f, 10000.0f);
 
-	init_render_api(&gpu_device, &render_pipeline, win32_state);
+	init_render_api(&gpu_device, &render_pipeline, win32_info);
 	init_shaders();
 
 	Shader *render_2d_shader = shaders["render_2d"];
-	render_2d.init(this, render_2d_shader);
+	render_2d.init(this, render_2d_shader, font);
 
 	sampler = gpu_device.create_sampler();
 
@@ -639,7 +639,7 @@ void Render_System::init_shaders()
 	Array<String> file_names;
 
 	String path_to_shader_dir;
-	os_path.data_dir_paths.get("shader", path_to_shader_dir);
+	get_path_to_data_dir("shader", path_to_shader_dir);
 
 	bool success = get_file_names_from_dir(path_to_shader_dir + "\\", &file_names);
 	if (file_names.is_empty() || !success) {
@@ -654,7 +654,7 @@ void Render_System::init_shaders()
 		}
 
 		String path_to_shader_file;
-		os_path.build_full_path_to_shader_file(file_names[i], path_to_shader_file);
+		build_full_path_to_shader_file(file_names[i], path_to_shader_file);
 
 
 		int file_size;

@@ -16,13 +16,9 @@
 #include "../render/render_system.h"
 
 #include "../gui/gui.h"
+#include "../sys/engine.h"
 
 #include "test.h"
-
-
-//Win32_State win32;
-
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void set_cursor(Cursor_Type type)
 {
@@ -56,24 +52,22 @@ void set_cursor(Cursor_Type type)
 	SetCursor(cursor);
 }
 
-bool create_win32_window(Win32_State *win32_state)
+bool create_win32_window(Win32_Info *win32_state)
 {
 	const char CLASS_NAME[] = "Sample Window Class";
 
 	WNDCLASS wc = { };
 
-	wc.lpfnWndProc = WindowProc;
+	wc.lpfnWndProc = Win32_Info::win32_procedure;
 	wc.hInstance = win32_state->hinstance;
 	wc.lpszClassName = CLASS_NAME;
 	wc.hCursor = LoadCursor(win32_state->hinstance, MAKEINTRESOURCE(32512));
 
 	RegisterClass(&wc);
 
-	win32_state->window = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW,
-		10, 10, 1900, 980, NULL, NULL, win32_state->hinstance, NULL
-	);
+	win32_state->window = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW, 10, 10, 1900, 980, NULL, NULL, win32_state->hinstance, (void *)win32_state);
 
-	if (win32_state->window == NULL) {
+	if (!win32_state->window) {
 		return false;
 	}
 	
@@ -84,82 +78,95 @@ bool create_win32_window(Win32_State *win32_state)
 	return true;
 }
 
-template <typename... Args>
-void display_text(int x, int y, Args... args)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line, int cmd_show)
 {
-	char *formatted_text = format(args...);
-	draw_text(x, y, formatted_text);
-	DELETE_ARRAY(formatted_text);
-}
+	Win32_Info win32_info;
+	win32_info.hinstance = hInstance;
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR pCmdLine, int nCmdShow)
-{
-	Win32_State win32_state;
-	win32_state.hinstance = hInstance;
-
-	if (!create_win32_window(&win32_state)) {
+	if (!create_console(&win32_info)) {
+		info("Faield to create win32 console.");
+	}
+	
+	if (!create_win32_window(&win32_info)) {
 		error("Failed to create main win32 window.");
 	}
-
-	if (!ShowWindow(win32_state.window, nCmdShow)) {
-		error("Failed to show main win32 window.");
-	}
-
-	create_console();
+	
+	ShowWindow(win32_info.window, cmd_show);
 	set_cursor(CURSOR_TYPE_ARROW);
 
-	os_path.init();
-	
-	font.init(11);
-
-
-	ShowWindow(win32_state.window, nCmdShow);
-
-	Key_Input::init();
-
-	////World world;
-	////world.init();
-	//
-	Render_System render_sys;
-	render_sys.init(&win32);
-	//render_sys.current_render_world = &world;
-	////render_sys.free_camera = &editor.free_camera;
-
-	gui::init_gui(&render_sys.render_2d);
-
-	// Test
-	test();
-
-	s64 count_per_s = cpu_ticks_per_second();
+	Engine engine;
+	engine.init(&win32_info);
 
 	while (1) {
-		s64 t = cpu_ticks_counter();
-		s64 last = milliseconds_counter();
-		s64 l = microseconds_counter();
-
-		pump_events();
-		run_event_loop();
-		
-		render_sys.new_frame();
-		render_sys.render_frame();
-		render_sys.end_frame();
-		
-		s64 result = milliseconds_counter() - last;
-		s64 r = microseconds_counter() - l;
-		s64 x = cpu_ticks_counter() - t;
-		s64 fps = cpu_ticks_per_second() / x;
-		
-		char *s = format("fps{}", fps);
-		free_string(s);
-
-		clear_event_queue();
+		engine.frame();
 	}
+
+	engine.shutdown();
+
+	//init_os_path();
+	//
+	//font.init(11);
+
+	//Key_Input::init();
+
+	//////World world;
+	//////world.init();
+	////
+	//Render_System render_sys;
+	//render_sys.init(&win32_info);
+	////render_sys.current_render_world = &world;
+	//////render_sys.free_camera = &editor.free_camera;
+
+	//gui::init_gui(&render_sys.render_2d, &win32_info);
+
+	//// Test
+	//test();
+
+	//s64 count_per_s = cpu_ticks_per_second();
+
+	//while (1) {
+	//	s64 t = cpu_ticks_counter();
+	//	s64 last = milliseconds_counter();
+	//	s64 l = microseconds_counter();
+
+	//	pump_events();
+	//	run_event_loop();
+	//	
+	//	render_sys.new_frame();
+	//	render_sys.render_frame();
+	//	render_sys.end_frame();
+	//	
+	//	s64 result = milliseconds_counter() - last;
+	//	s64 r = microseconds_counter() - l;
+	//	s64 x = cpu_ticks_counter() - t;
+	//	s64 fps = cpu_ticks_per_second() / x;
+	//	
+	//	char *s = format("fps{}", fps);
+	//	free_string(s);
+
+	//	clear_event_queue();
+	//}
 	return 0;
 }
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg) {
+LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+{	
+	Win32_Info *win32_info = NULL;
+	if (message == WM_NCCREATE) {
+		CREATESTRUCT *cs = (CREATESTRUCT*)lparam;
+		win32_info = (Win32_Info *)cs->lpCreateParams;
+
+		SetLastError(0);
+		if (SetWindowLongPtr(hwnd, GWL_USERDATA, (LONG_PTR)win32_info) == 0) {
+			if (GetLastError() != 0) {
+				return FALSE;
+			}
+		}
+	} else {
+		win32_info = (Win32_Info *)GetWindowLongPtr(hwnd, GWL_USERDATA);
+	}
+
+	switch (message) {
 		case  WM_CLOSE: {
 			gui::shutdown();
 			ExitProcess(0);
@@ -177,13 +184,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case WM_SIZE: {
-			win32.window_width = LOWORD(lParam);
-			win32.window_height = HIWORD(lParam);
-			
+			win32_info->window_width = LOWORD(lparam);
+			win32_info->window_height = HIWORD(lparam);
 			break;
 		}
 		case WM_LBUTTONDOWN: {
-			SetCapture(win32.window);
+			SetCapture(win32_info->window);
 			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 1);
 			break;
 		}
@@ -193,7 +199,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case WM_RBUTTONDOWN: {
-			SetCapture(win32.window);
+			SetCapture(win32_info->window);
 			push_event(EVENT_TYPE_KEY, VK_RBUTTON, 1);
 			break;
 		}
@@ -203,35 +209,34 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		case WM_MOUSEMOVE: {
-			int x = GET_X_LPARAM(lParam);
-			int y = GET_Y_LPARAM(lParam);
+			int x = GET_X_LPARAM(lparam);
+			int y = GET_Y_LPARAM(lparam);
 
 			push_event(EVENT_TYPE_MOUSE, x, y);
 			break;
 		}
 		case WM_SYSKEYDOWN: {
-			push_event(EVENT_TYPE_KEY, wParam, 1);
+			push_event(EVENT_TYPE_KEY, wparam, 1);
 			break;
 		}
 		case WM_SYSKEYUP: {
-			push_event(EVENT_TYPE_KEY, wParam, 0);
+			push_event(EVENT_TYPE_KEY, wparam, 0);
 			break;
 		}
 		case WM_KEYDOWN: {
-			push_event(EVENT_TYPE_KEY, wParam, 1);
+			push_event(EVENT_TYPE_KEY, wparam, 1);
 			break;
 		}
 		case WM_KEYUP:{
-			push_event(EVENT_TYPE_KEY, wParam, 0);
+			push_event(EVENT_TYPE_KEY, wparam, 0);
 			break;
 		}
 		case WM_CHAR:{
 			char c;
-			wcstombs((char *)&c, (wchar_t *)&wParam, sizeof(char));
+			wcstombs((char *)&c, (wchar_t *)&wparam, sizeof(char));
 			push_event(EVENT_TYPE_CHAR, c, 0);
 			break;
 		}
 	}
-	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+	return DefWindowProc(hwnd, message, wparam, lparam);
 }
-

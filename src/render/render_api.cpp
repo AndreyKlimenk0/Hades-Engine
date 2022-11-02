@@ -637,7 +637,6 @@ void Render_Pipeline::resize(Gpu_Device *gpu_device, u32 window_width, u32 windo
 	RELEASE_COM(depth_stencil_view);
 	RELEASE_COM(depth_stencil_buffer);
 
-
 	HR(swap_chain->ResizeBuffers(1, window_width, window_height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 
 	ID3D11Texture2D* back_buffer = NULL;
@@ -960,7 +959,7 @@ u32 *create_color_buffer(u32 width, u32 height, const Color &color)
 	return data;
 }
 
-void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_State *win32_state)
+void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_Info *win32_info)
 {
 	UINT create_device_flag = 0;
 
@@ -983,8 +982,8 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, W
 	}
 
 	DXGI_SWAP_CHAIN_DESC sd;
-	sd.BufferDesc.Width = win32_state->window_width;
-	sd.BufferDesc.Height = win32_state->window_height;
+	sd.BufferDesc.Width = win32_info->window_width;
+	sd.BufferDesc.Height = win32_info->window_height;
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
 	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -1004,7 +1003,7 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, W
 
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.BufferCount = 1;
-	sd.OutputWindow = win32.window;
+	sd.OutputWindow = win32_info->window;
 	sd.Windowed = true;
 	sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 	sd.Flags = 0;
@@ -1024,7 +1023,7 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, W
 	RELEASE_COM(dxgi_adapter);
 	RELEASE_COM(dxgi_factory);
 
-	render_pipeline->resize(gpu_device, win32_state->window_width, win32_state->window_height);
+	render_pipeline->resize(gpu_device, win32_info->window_width, win32_info->window_height);
 }
 
 u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
