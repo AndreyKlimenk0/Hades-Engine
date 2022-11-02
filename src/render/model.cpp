@@ -55,8 +55,9 @@ void Render_Model::init_from_file(const char *file_name)
 
 void Render_Model::load_fbx_model(const char *file_name)
 {
-	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
-	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file);
+	String path_to_model_file;
+	build_full_path_to_model_file(file_name, path_to_model_file);
+	FbxScene *scene = load_scene_from_fbx_file(&path_to_model_file);
 
 	if (!scene) {
 		print("The scene was not found in file {}", file_name);

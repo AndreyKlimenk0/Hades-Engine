@@ -101,6 +101,8 @@ struct Render_2D {
 
 	Shader *render_2d = NULL;
 	
+	Font *font = NULL;
+	
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
 	Render_System *render_system = NULL;
@@ -114,7 +116,7 @@ struct Render_2D {
 	Array<Render_Primitive_List *> draw_list;
 	Hash_Table<String, Primitive_2D *> lookup_table;
 
-	void init(Render_System *_render_system, Shader *_render_2d);
+	void init(Render_System *_render_system, Shader *_render_2d, Font *_font);
 	void init_font_rendering();
 	void init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
 	void add_primitive(Primitive_2D *primitive);
@@ -125,9 +127,6 @@ struct Render_2D {
 };
 
 struct View_Info {
-	u32 width;
-	u32 height;
-
 	float ratio;
 	float fov_y_ratio;
 	float near_plane;
@@ -136,32 +135,27 @@ struct View_Info {
 	Matrix4 perspective_matrix;
 	Matrix4 orthogonal_matrix;
 
-	void init(u32 _width, u32 _height, float _near_plane, float _far_plane);
+	void init(u32 width, u32 height, float _near_plane, float _far_plane);
 	void update_projection_matries(u32 new_window_width, u32 new_window_height);
 };
 
 struct Render_System {
 	~Render_System();
 
-	World  *current_render_world = NULL;
-	
-	View_Info view_info;
-	Free_Camera *free_camera = NULL;
+	Win32_Info *win32_info;
 
 	Texture_Sampler *sampler = NULL;
-
-	Matrix4 view_matrix;
-
-	Render_2D render_2d;
-
 	ID3D11ShaderResourceView *shader_resource = NULL;
 
+	View_Info view_info;
+	
+	Render_2D render_2d;
 	Hash_Table<String, Shader *> shaders;
 
 	Gpu_Device gpu_device;
 	Render_Pipeline render_pipeline;
 
-	void init(Win32_State *win32_state);
+	void init(Win32_Info *_win32_Info, Font *font);
 	void init_shaders();
 	void resize();
 	void shutdown();

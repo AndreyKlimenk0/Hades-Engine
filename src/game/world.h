@@ -129,12 +129,28 @@ struct Shadow_Map {
 
 Shadow_Map *make_shadow_map(Light *light);
 
+
+enum Game_Event_Type {
+	GAME_EVENT_TYPE_MOVE_FORWAR,
+	GAME_EVENT_TYPE_MOVE_BACK,
+	GAME_EVENT_TYPE_MOVE_LEFT,
+	GAME_EVENT_TYPE_MOVE_RIGHT,
+	GAME_EVENT_TYPE_ROTATE_BY_X,
+	GAME_EVENT_TYPE_ROTATE_BY_Y,
+};
+
+struct Game_Event {
+	Game_Event_Type type;
+	void *args;
+};
+
 struct World {
 	Entity_Manager entity_manager;
 	Array<Render_Entity *> render_entities;
 	Array<Shadow_Map *> shadows_map;
 
 	void init();
+	void generage_game_events();
 	void init_from_map(const char *map_name);
 };
 

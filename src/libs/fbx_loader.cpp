@@ -361,9 +361,10 @@ void get_position_rotation_scale_matrix(FbxNode *fbx_node, Render_Mesh *render_m
 
 void load_fbx_model(const char *file_name, Render_Model *model)
 {
-	String *path_to_model_file = os_path.build_full_path_to_model_file(&String(file_name));
+	String path_to_model_file;
+	build_full_path_to_model_file(file_name, path_to_model_file);
 
-	FbxScene *scene = load_scene_from_fbx_file(path_to_model_file);
+	FbxScene *scene = load_scene_from_fbx_file(&path_to_model_file);
 
 	fbx_file_name = file_name;
 
