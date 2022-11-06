@@ -254,6 +254,8 @@ void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text)
 
 void Render_Primitive_List::add_text(int x, int y, const char *text)
 {
+	assert(text);
+
 	u32 len = strlen(text);
 	u32 max_height = render_2d->font->get_text_size(text).height;
 

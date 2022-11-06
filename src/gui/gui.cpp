@@ -31,14 +31,17 @@ const Element_Alignment ALIGNMENT_LEFT = 0x08;
 
 const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
+const u32 FLOAT_PRECISION = 6;
 
 static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
 
 #define GET_RENDER_LIST() (&window->render_list)
 
 struct Gui_Edit_Field_Theme {
-	s32 rounded_border = 5;
+	u32 float_precision = 2;
 	s32 text_shift = 5;
+	s32 rounded_border = 5;
+	s32 caret_blink_time = 900;
 	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 default_rect = { 0, 0, 220, 20 };
 	Color color = Color(74, 82, 90);
@@ -137,6 +140,7 @@ inline void place_in_middle_and_by_right(Rect_s32 *placing_element, Rect_s32 *pl
 	place_in_center(placing_element, placed_element, Y_AXIS);
 }
 
+
 enum Window_Type {
 	WINDOW_TYPE_PARENT,
 	WINDOW_TYPE_CHILD,
@@ -190,6 +194,28 @@ Rect_s32 Gui_Window::get_scrollbar_rect(Axis axis)
 	return Rect_s32(rect.x, rect.bottom() - scroll_bar_width, view_rect.width, scroll_bar_width);
 }
 
+struct Edit_Field_State {
+	bool(*is_symbol_valid)(char symbol);
+	s32 caret_x_posiiton;
+	s32 max_symbol_number;
+	s32 caret_index_in_text; // this caret index specifies at character is placed befor the caret.
+	s32 caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
+	String data;
+};
+
+Edit_Field_State make_edit_field(const char *str_value, s32 caret_x_posiiton, int max_text_width, bool(*is_symbol_valid)(char symbol))
+{
+	Edit_Field_State edit_field;
+	edit_field.data = str_value;
+	edit_field.caret_x_posiiton = caret_x_posiiton;
+	edit_field.max_symbol_number = max_text_width;
+	edit_field.caret_index_for_inserting = edit_field.data.len;
+	edit_field.caret_index_in_text = edit_field.data.len - 1;
+	edit_field.is_symbol_valid = is_symbol_valid;
+	return edit_field;
+}
+
+
 const u32 SET_WINDOW_POSITION = 0x1;
 const u32 SET_WINDOW_SIZE = 0x2;
 const u32 SET_WINDOW_THEME = 0x4;
@@ -234,22 +260,9 @@ struct Gui_Manager {
 	Gui_Text_Button_Theme button_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
 
-	struct Edit_Field_State {
-		Edit_Field_State() {};
-		//@Cleanup: font member must be deleted
-		Font *font = NULL;
-		bool (*is_symbol_valid)(char symbol);
-		
-		s32 caret_x_posiiton;
-		int max_symbol_number;
-		int caret_index_in_text; // this caret index specifies at character is placed befor the caret.
-		int caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
-		String data;
+	Edit_Field_State edit_field_state;
 
-		void handle_event(Event *event);
-		void set_params(const char *_str_value, s32 _caret_x_posiiton, int _max_text_width, bool(*is_symbol_valid)(char symbol));
-
-	} edit_field_state;
+	void handle_events(Queue<Event> *events, bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
 	void init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font);
 	void shutdown();
@@ -265,6 +278,8 @@ struct Gui_Manager {
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_theme(Gui_Window_Theme *theme);
 	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
+
+	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
 	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
@@ -541,52 +556,6 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 	}
 }
 
-//Rect_s32 set_caret_position_on_mouse_click(const char *text, int mouse_x, int mouse_y, Rect_s32 *field_rect, Rect_s32 *rect)
-//{
-//	Rect_s32 caret_rect = { 0, 0, 1, 20 };
-//	
-//	Size_u32 size = font.get_text_size(text);
-//	int text_width = size.width;
-//	
-//	int shift_caret_from_left = 5;
-//	//int mouse_x_relative_text = mouse_x - rect.x - theme.shift_caret_from_left;
-//	int mouse_x_relative_text = mouse_x - rect->x - shift_caret_from_left;
-//
-//	if (mouse_x_relative_text > text_width) {
-//		caret_rect.x = field_rect->x + shift_caret_from_left + text_width;
-//		return;
-//	}
-//
-//	float caret_temp_x = caret_rect.x;
-//	float characters_width = 0.0f;
-//
-//	int len = strlen(text);
-//	for (int i = 0; i < len; i++) {
-//		char c = text[i];
-//		u32 char_width = font.get_char_width(c);
-//		float mouse_x_relative_character = mouse_x_relative_text - characters_width;
-//
-//		float pad = 0.5f;
-//		if ((mouse_x_relative_character >= 0.0f) && ((mouse_x_relative_character + pad) <= char_width)) {
-//
-//			float characters_width = 0.0f;
-//			for (int j = 0; j < i; j++) {
-//				char _char = text[j];
-//				u32 char_width = font.get_char_width(c);
-//				characters_width += char_width;
-//			}
-//
-//			caret_rect.x = rect->x + shift_caret_from_left + characters_width;
-//			caret_index_for_inserting = i;
-//			caret_index_in_text = i - 1;
-//			break;
-//		}
-//
-//		characters_width += char_width;
-//		caret.rect.x = caret_temp_x;
-//	}
-//}
-
 bool is_draw_caret(s32 blink_time)
 {
 	s64 show_time = blink_time;
@@ -634,9 +603,9 @@ static bool is_symbol_float_valid(char symbol)
 void Gui_Manager::edit_field(const char *name, int *value)
 {
 	char *str_value = to_string(*value);
-	bool is_focused = edit_field(name, str_value, 10, &is_symbol_int_valid);
+	bool update_editing_value = edit_field(name, str_value, 10, &is_symbol_int_valid);
 	free_string(str_value);
-	if (is_focused) {
+	if (update_editing_value) {
 		*value = atoi(edit_field_state.data.c_str());
 	}
 }
@@ -645,27 +614,69 @@ void Gui_Manager::edit_field(const char *name, float *value)
 {
 	char *str_value = to_string(*value);
 	int len = strlen(str_value);
-	String str(str_value, 0, len - 4);
-	bool is_focused = edit_field(name, str.c_str(), 15, &is_symbol_float_valid);
+	String str(str_value, 0, len - (FLOAT_PRECISION - edit_field_theme.float_precision));
+	bool update_editing_value = edit_field(name, str.c_str(), 15, &is_symbol_float_valid);
 	free_string(str_value);
-	if (is_focused) {
+	if (update_editing_value) {
 		*value = (float)atof(edit_field_state.data.c_str());
 	}
 }
 
 void Gui_Manager::edit_field(const char *name, String *value)
 {
+	assert(false);
 }
 
-bool Gui_Manager::edit_field(const char *name, const char *value, u32 max_symbol_number, bool(*is_symbol_valid)(char symbol))
+void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	bool is_focused = false;
-	Rect_s32 caret_rect{ 0, 0, 1, 14 };
+	int shift_caret_from_left = -1;
+	int text_width = font->get_text_size(edit_field_state.data).width;
+	int mouse_x_relative_text = mouse_x - rect->x - shift_caret_from_left;
 
+	if (mouse_x_relative_text > text_width) {
+		edit_field_state.caret_x_posiiton = editing_value_rect->x + shift_caret_from_left + text_width;
+		return;
+	}
+
+	float caret_temp_x = (float)edit_field_state.caret_x_posiiton;
+	float characters_width = 0.0f;
+
+	String *text = &edit_field_state.data;
+	for (int i = 0; i < text->len; i++) {
+		char c = text->data[i];
+		u32 char_width = font->get_char_width(c);
+		float mouse_x_relative_character = mouse_x_relative_text - characters_width;
+
+		float pad = 0.1f;
+		if ((mouse_x_relative_character >= 0.0f) && ((mouse_x_relative_character + pad) <= char_width)) {
+
+			float characters_width = 0.0f;
+			for (int j = 0; j < i; j++) {
+				char _char = text->data[j];
+				u32 char_width = font->get_char_width(c);
+				characters_width += char_width;
+			}
+
+			edit_field_state.caret_x_posiiton = rect->x + shift_caret_from_left + characters_width;
+			edit_field_state.caret_index_for_inserting = i -1;
+			edit_field_state.caret_index_in_text = i - 1;
+			break;
+		}
+
+		characters_width += char_width;
+		edit_field_state.caret_x_posiiton = (s32)caret_temp_x;
+	}
+}
+
+bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 max_symbol_number, bool(*is_symbol_valid)(char symbol))
+{
+	static bool update_next_time_editing_value = false;
+	bool update_editing_value = false;
+	Rect_s32 caret_rect{ 0, 0, 1, 14 };
 	Rect_s32 rect = edit_field_theme.default_rect;
 	Rect_s32 edit_field_rect = edit_field_theme.edit_field_rect;
 	Rect_s32 text_rect = get_text_rect(name);
-	Rect_s32 value_rect = get_text_rect(value);
+	Rect_s32 value_rect = get_text_rect(editing_value);
 	rect.width = text_rect.width + edit_field_rect.width + edit_field_theme.text_shift;
 
 	Gui_Window *window = get_window();
@@ -681,6 +692,7 @@ bool Gui_Manager::edit_field(const char *name, const char *value, u32 max_symbol
 		place_in_middle_and_by_left(&value_rect, &caret_rect, value_rect.width);
 
 		bool is_new_session = false;
+		//@Note: May be I should cache window name and edit field strings and don't cast int to string in order to speed up the program.
 		String edit_field_name = window->name + String("_edit_field_") + String((int)edit_field_count);
 		Gui_ID edit_field_id = fast_hash(edit_field_name);
 		if (check_rect_state(edit_field_name, &edit_field_rect)) {
@@ -691,6 +703,7 @@ bool Gui_Manager::edit_field(const char *name, const char *value, u32 max_symbol
 		} else {
 			if (was_click_by_left_mouse_button() && !detect_collision(&edit_field_rect) && (focused_edit_field == edit_field_id)) {
 				focused_edit_field = 0;
+				update_editing_value = true;
 			}
 		}
 
@@ -700,100 +713,120 @@ bool Gui_Manager::edit_field(const char *name, const char *value, u32 max_symbol
 		render_list->add_text(&label_rect, name);
 
 		if (focused_edit_field == edit_field_id) {
-			is_focused = true;
 			if (is_new_session) {
-				edit_field_state.set_params(value, caret_rect.x, max_symbol_number, is_symbol_valid);
+				edit_field_state = make_edit_field(editing_value, caret_rect.x, max_symbol_number, is_symbol_valid);
 			}
-			if (value != edit_field_state.data) {
-				edit_field_state.data = value;
+			if (update_next_time_editing_value) {
+				edit_field_state.data = editing_value;
+				update_next_time_editing_value = false;
 			}
-			handle_events(&edit_field_state, &Gui_Manager::Edit_Field_State::handle_event);
-
+			handle_events(get_event_queue(), &update_editing_value, &update_next_time_editing_value, &rect, &value_rect);
+			
 			caret_rect.x = edit_field_state.caret_x_posiiton;
-			if (is_draw_caret(900)) {
+			if (true) {
+			//if (is_draw_caret(edit_field_theme.caret_blink_time)) {
 				render_list->add_rect(&caret_rect, Color::White);
 			}
 		}
-		render_list->add_text(&value_rect, value);
+		if (!edit_field_state.data.is_empty() && (focused_edit_field == edit_field_id)) {
+			render_list->add_text(&value_rect, edit_field_state.data);
+		} else {
+			render_list->add_text(&value_rect, editing_value);
+		}
 		render_list->pop_clip_rect();
 	}
 	edit_field_count++;
-	return is_focused;
+	return update_editing_value;
 }
 
-void Gui_Manager::Edit_Field_State::handle_event(Event * event)
+void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	if (event->type == EVENT_TYPE_KEY) {
-		if (event->is_key_down(VK_BACK)) {
-			if (caret_index_in_text > -1) {
-
-				char c = data[caret_index_in_text];
-				data.remove(caret_index_in_text);
-
-				u32 char_width = font->get_char_width(c);
-				caret_x_posiiton -= (s32)char_width;
-
-				caret_index_in_text -= 1;
-				caret_index_for_inserting -= 1;
+	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+		Event *event = &node->item;
+		
+		if (event->type == EVENT_TYPE_KEY) {
+			if (was_click_by_left_mouse_button()) {
+				set_caret_position_on_mouse_click(rect, editing_value_rect);
 			}
+			if (event->is_key_down(VK_BACK)) {
+				if (edit_field_state.caret_index_in_text > -1) {
 
-		} else if (event->is_key_down(VK_LEFT)) {
-			if (caret_index_in_text > -1) {
+					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
+					edit_field_state.data.remove(edit_field_state.caret_index_in_text);
 
-				char c = data[caret_index_in_text];
-				u32 char_width = font->get_char_width(c);
-				if (c == '.') {
-					char_width = font->get_char_advance(c);
+					u32 char_width = font->get_char_width(c);
+					edit_field_state.caret_x_posiiton -= (s32)char_width;
+
+					edit_field_state.caret_index_in_text -= 1;
+					edit_field_state.caret_index_for_inserting -= 1;
 				}
-				caret_x_posiiton -= (s32)char_width;
 
-				caret_index_in_text -= 1;
-				caret_index_for_inserting -= 1;
-			}
-		} else if (event->is_key_down(VK_RIGHT)) {
-			if (caret_index_in_text < data.len) {
+			} else if (event->is_key_down(VK_LEFT)) {
+				if (edit_field_state.caret_index_in_text > -1) {
 
-				caret_index_in_text += 1;
-				caret_index_for_inserting += 1;
+					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
+					u32 char_width = font->get_char_width(c);
+					if (c == '.') {
+						char_width = font->get_char_advance(c);
+					}
+					edit_field_state.caret_x_posiiton -= (s32)char_width;
 
-				char c = data[caret_index_in_text];
-				u32 char_width = font->get_char_width(c);
-				if (c == '.') {
-					char_width = font->get_char_advance(c);
+					edit_field_state.caret_index_in_text -= 1;
+					edit_field_state.caret_index_for_inserting -= 1;
 				}
-				caret_x_posiiton += (s32)char_width;
-			}
-		} else if (event->is_key_down(VK_HOME)) {
-				
-		}
-	} else if (event->type == EVENT_TYPE_CHAR) {
-			if ((max_symbol_number > data.len) && is_symbol_valid(event->char_key)) {
+			} else if (event->is_key_down(VK_RIGHT)) {
+				if (edit_field_state.caret_index_in_text < edit_field_state.data.len) {
 
-				if (caret_index_in_text == (data.len - 1)) {
-					data.append(event->char_key);
+					edit_field_state.caret_index_in_text += 1;
+					edit_field_state.caret_index_for_inserting += 1;
+
+					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
+					u32 char_width = font->get_char_width(c);
+					if (c == '.') {
+						char_width = font->get_char_advance(c);
+					}
+					edit_field_state.caret_x_posiiton += (s32)char_width;
+				}
+			} else if (event->is_key_down(VK_HOME)) {
+				Size_u32 size = font->get_text_size(edit_field_state.data);
+				edit_field_state.caret_x_posiiton = editing_value_rect->x;
+				edit_field_state.caret_index_for_inserting = 0;
+				edit_field_state.caret_index_in_text = -1;
+
+			} else if (event->is_key_down(VK_END)) {
+				Size_u32 size = font->get_text_size(edit_field_state.data);
+				edit_field_state.caret_x_posiiton = editing_value_rect->x + size.width;
+				edit_field_state.caret_index_for_inserting = edit_field_state.data.len;
+				edit_field_state.caret_index_in_text = edit_field_state.data.len - 1;
+
+			} else if (event->is_key_down(VK_RETURN)) {
+				*update_editing_value = true;
+				*update_next_time_editing_value = true;
+			}
+		} else if (event->type == EVENT_TYPE_CHAR) {
+			if ((edit_field_state.max_symbol_number > edit_field_state.data.len) && edit_field_state.is_symbol_valid(event->char_key)) {
+
+				int point_index = edit_field_state.data.find_text(".");
+				if ((point_index != -1) && ((edit_field_state.data.len - (point_index + 1)) == edit_field_theme.float_precision) && (edit_field_state.caret_index_in_text == (edit_field_state.data.len - 1))) {
+					return;
+				}
+
+				if (edit_field_state.caret_index_in_text == (edit_field_state.data.len - 1)) {
+					edit_field_state.data.append(event->char_key);
 				} else {
-					data.insert(caret_index_for_inserting, event->char_key);
+					edit_field_state.data.insert(edit_field_state.caret_index_for_inserting, event->char_key);
 				}
-				caret_index_in_text += 1;
-				caret_index_for_inserting += 1;
+				edit_field_state.caret_index_in_text += 1;
+				edit_field_state.caret_index_for_inserting += 1;
 
 				u32 char_width = font->get_char_width(event->char_key);
-				caret_x_posiiton += (s32)char_width;
+				edit_field_state.caret_x_posiiton += (s32)char_width;
 			}
+		}
 	}
 }
 
-void Gui_Manager::Edit_Field_State::set_params(const char *_str_value, s32 _caret_x_posiiton, int _max_text_width, bool(*_is_symbol_valid)(char symbol))
-{
-	data = _str_value;
-	caret_x_posiiton = _caret_x_posiiton;
-	max_symbol_number = _max_text_width;
-	caret_index_for_inserting = data.len;
-	caret_index_in_text = data.len - 1;
-	is_symbol_valid = _is_symbol_valid;
-}
-
-void Gui_Manager::list_box(const char * strings[], u32 item_count, u32 *item_index)
+void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_index)
 {
 	assert(item_count > 0);
 
@@ -921,7 +954,6 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	render_2d = _render_2d;
 	win32_info = _win32_info;
 	font = _font;
-	edit_field_state.font = font;
 
 	window_parent_count = 0;
 	reset_window_params = 0;
@@ -1035,6 +1067,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 	window->alignment |= ALIGNMENT_VERTICALLY;
 
 	Rect_s32  *rect = &window->rect;
+
 	if (check_item(window->gui_id, rect) && was_left_mouse_button_just_pressed()) {
 		active_item = window->gui_id;
 		became_just_focused = window->gui_id;
@@ -1381,9 +1414,9 @@ void gui::draw_test_gui()
 	//button("Window2");
 	//end_window();
 	
-	//begin_window("Window3");
-	//button("Window3");
-	//end_window();
+	begin_window("Window3");
+	button("Window3");
+	end_window();
 
 	
 	if (begin_window("Test")) {
