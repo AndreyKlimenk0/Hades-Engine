@@ -68,6 +68,18 @@ void print(Args... args)
 	DELETE_PTR(formatted_string);
 }
 
+bool is_string_unique(const char *string);
+
+template <typename... Args>
+void loop_print(Args... args)
+{
+	char *formatted_string = format(args...);
+	if (is_string_unique(formatted_string)) {
+		append_text_to_text_buffer(formatted_string);
+	}
+	DELETE_PTR(formatted_string);
+}
+
 template <typename... Args>
 void info(Args... args)
 {

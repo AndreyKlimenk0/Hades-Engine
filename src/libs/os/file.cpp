@@ -202,6 +202,8 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	if (file_handle == INVALID_HANDLE_VALUE) {
 		DWORD error_id = GetLastError();
 		char *error_message = get_str_error_message_from_hresult_description(error_id);
+		int len = strlen(error_message);
+		error_message[len - 1] = '\0';
 		print("[Error] File::open: ", error_message);
 		is_file_open = false;
 		free_string(error_message);
