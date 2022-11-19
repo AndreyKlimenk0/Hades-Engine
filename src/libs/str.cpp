@@ -352,6 +352,7 @@ String::String(const char *string, int start, int end)
 	c += start;
 
 	data = new char[l + 1];
+	len = l;
 	memcpy(data, c, sizeof(char) * l);
 	data[l] = '\0';
 }

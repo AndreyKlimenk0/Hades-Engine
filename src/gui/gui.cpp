@@ -194,6 +194,7 @@ enum Window_Type {
 
 struct Gui_Window {
 	Gui_ID gui_id;
+	s32 index_in_windows_order = -1;
 
 	Window_Type type;
 	Element_Alignment alignment;
@@ -281,11 +282,15 @@ struct Gui_Manager {
 	u32 reset_window_params;
 	u32 window_parent_count;
 
+	s32 curr_parent_windows_index_sum;
+	s32 prev_parent_windows_index_sum;
+
 	Gui_ID hot_item;
 	Gui_ID active_item;
 	Gui_ID resizing_window;
 	Gui_ID active_list_box;
 	Gui_ID active_edit_field;
+	Gui_ID focused_window;
 	Gui_ID became_just_focused; //window
 	Gui_ID probably_resizing_window;
 
@@ -300,6 +305,7 @@ struct Gui_Manager {
 	Array<Gui_Window> windows;
 	Stack<Gui_Window *> window_stack;
 	Array<Gui_Window *> windows_order;
+	
 
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme button_theme;
@@ -501,7 +507,6 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	new_window.render_list = Render_Primitive_List(render_2d);
 
 	windows.push(new_window);
-	windows_order.push(&windows.last_item());
 
 	window_parent_count += 1;
 
@@ -887,11 +892,21 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 		Gui_ID list_box_gui_id = GET_LIST_BOX_GUI_ID();
 		update_active_and_hot_state(list_box_gui_id, &list_box_rect);
 
-		if (was_click_by_left_mouse_button() && (hot_item == list_box_gui_id)) {
-			if (active_list_box == active_item) {
-				active_list_box = 0;
+		Rect_s32 drop_window_rect;
+		drop_window_rect.set(list_box_rect.x, list_box_rect.bottom() + 5);
+		drop_window_rect.set_size(list_box_rect.width, item_count * button_theme.default_rect.height);
+
+		if (was_click_by_left_mouse_button()) {
+			if (hot_item == list_box_gui_id) {
+				if (active_list_box != active_item) {
+					active_list_box = active_item;
+				} else {
+					active_list_box = 0;
+				}
 			} else {
-				active_list_box = active_item;
+				if ((active_list_box == list_box_gui_id) && !detect_collision(&drop_window_rect)) {
+					active_list_box = 0;
+				}
 			}
 		}
 
@@ -903,8 +918,8 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			win_theme.place_between_elements = 0;
 			set_next_window_theme(&win_theme);
 
-			set_next_window_pos(list_box_rect.x, list_box_rect.bottom() + 5);
-			set_next_window_size(list_box_rect.width, item_count * button_theme.default_rect.height);
+			set_next_window_pos(drop_window_rect.x, drop_window_rect.y);
+			set_next_window_size(drop_window_rect.width, drop_window_rect.height);
 
 			//@Note: May be create string for list_box_gui_id is a temporary decision.
 			// I will refactoring this code when make normal working child windows.
@@ -919,6 +934,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			for (u32 i = 0; i < item_count; i++) {
 				if (button(strings[i])) {
 					*item_index = i;
+					active_list_box = 0;
 				}
 			}
 			button_theme = default_button_theme;
@@ -1005,9 +1021,11 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	win32_info = _win32_info;
 	font = _font;
 
+	edit_field_count = 0;
 	window_parent_count = 0;
 	reset_window_params = 0;
-	edit_field_count = 0;
+	curr_parent_windows_index_sum = -1;
+	prev_parent_windows_index_sum = -1;
 	window_theme = default_window_theme;
 
 	String path_to_save_file;
@@ -1080,6 +1098,8 @@ void Gui_Manager::new_frame()
 	list_box_count = 0;
 	edit_field_count = 0;
 	became_just_focused = 0;
+	
+	curr_parent_windows_index_sum = -1;
 }
 
 void Gui_Manager::end_frame()
@@ -1090,6 +1110,18 @@ void Gui_Manager::end_frame()
 	}
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
+
+	if ((prev_parent_windows_index_sum - curr_parent_windows_index_sum) > 0) {
+		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum;
+		windows_order[window_index]->index_in_windows_order = -1;
+		print("Remove window at all = ", windows_order[window_index]->name);
+		windows_order.remove(window_index);
+		for (int i = 0; i < windows_order.count; i++) {
+			windows_order[i]->index_in_windows_order = i;
+		}
+	}
+
+	prev_parent_windows_index_sum = curr_parent_windows_index_sum;
 
 	Gui_Window *window = NULL;
 	For(windows_order, window) {
@@ -1105,11 +1137,18 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 	if (!window) {
 		window = create_window(name, window_type);
 		became_just_focused = window->gui_id;
+		if (window->type != WINDOW_TYPE_CHILD) {
+			focused_window = window->gui_id;
+		}
 		
 		if (window_type == WINDOW_TYPE_CHILD) {
 			Gui_Window *parent_window = get_window();
 			parent_window->child_windows.push(window);
 		}
+	}
+	
+	if (window_type == WINDOW_TYPE_PARENT) {
+
 	}
 	window_stack.push(window);
 	
@@ -1120,10 +1159,14 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 
 	Rect_s32  *rect = &window->rect;
 
-	if (check_item(window->gui_id, rect) && was_left_mouse_button_just_pressed() && (active_item == 0)) {
-		active_item = window->gui_id;
+	if (check_item(window->gui_id, rect) && was_left_mouse_button_just_pressed() && (focused_window != window->gui_id)) {
 		became_just_focused = window->gui_id;
+		if (window->type != WINDOW_TYPE_CHILD) {
+			focused_window = window->gui_id;
+		}
 	}
+
+	update_active_and_hot_state(window->gui_id, rect);
 
 	if ((active_item == window->gui_id) && is_left_mouse_button_down() && !was_left_mouse_button_just_pressed()) {
 		s32 x = math::clamp(rect->x + mouse_x_delta, 0, (s32)win32_info->window_width - rect->width);
@@ -1201,28 +1244,19 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 void Gui_Manager::end_window()
 {
 	Gui_Window *window = get_window();
-	if (window->type == WINDOW_TYPE_PARENT) {
-		int window_index;
-		if (find_window_in_order(window->name, &window_index) == NULL) {
-			windows_order.push(window);
-			Gui_Window *child = NULL;
-			For(window->child_windows, child) {
-				windows_order.push(child);
-			}
-		} else {
-			if (became_just_focused == window->gui_id) {
-				windows_order.remove(window_index);
-				windows_order.push(window);
-			
-				Gui_Window *child = NULL;
-				For(window->child_windows, child) {
-					windows_order.remove(window_index++);
-					windows_order.push(child);
-				}
-			}
+
+	if (window->index_in_windows_order < 0) {
+		window->index_in_windows_order = windows_order.count;
+		windows_order.push(window);
+	} else if ((became_just_focused == window->gui_id) && (window->index_in_windows_order != -1)) {
+		windows_order.remove(window->index_in_windows_order);
+		windows_order.push(window);
+		for (int i = 0; i < windows_order.count; i++) {
+			windows_order[i]->index_in_windows_order = i;
 		}
 	}
 
+	curr_parent_windows_index_sum += 1;
 	
 	window->content_rect.height += window_theme.place_between_elements;
 	window->content_rect.width += window_theme.place_between_elements;
@@ -1302,7 +1336,6 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 	update_active_and_hot_state(scroll_bar_gui_id, &scroll_rect);
 
 	if ((active_item == scroll_bar_gui_id) && is_left_mouse_button_down()) {
-	//if ((active_item == scroller_id) || check_rect_state(scroller, &scroll_rect, is_left_mouse_button_down)) {
 
 		s32 window_side = (axis == Y_AXIS) ? window->view_rect.bottom() : window->view_rect.right();
 		s32 mouse_delta = (axis == Y_AXIS) ? mouse_y_delta : mouse_x_delta;
@@ -1452,17 +1485,17 @@ void gui::draw_test_gui()
 
 	begin_frame();
 
-	//begin_window("Window1");
-	//button("Window1");
-	//end_window();
-
-	//begin_window("Window2");
-	//button("Window2");
-	//end_window();
-	
-	begin_window("Window3");
-	button("Window3");
+	begin_window("Window1");
+	button("Window1");
 	end_window();
+
+	begin_window("Window2");
+	button("Window2");
+	end_window();
+	
+	//begin_window("Window3");
+	//button("Window3");
+	//end_window();
 
 	
 	if (begin_window("Test")) {
@@ -1471,42 +1504,47 @@ void gui::draw_test_gui()
 		static u32 item_index = 123124;
 		list_box(str, 7, &item_index);
 
-		static bool state = false;
-		static bool state1 = false;
-		radio_button("Trun on light", &state1);
-		radio_button("Render shadows", &state);
-		//if (button("Click")) {
-		//	print("Was click by bottom");
+		const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
+		static u32 item_index2 = 123124;
+		list_box(str2, 7, &item_index2);
+
+
+		//static bool state = false;
+		//static bool state1 = false;
+		//radio_button("Trun on light", &state1);
+		//radio_button("Render shadows", &state);
+		////if (button("Click")) {
+		////	print("Was click by bottom");
+		////}
+		//static int position = 12345;
+		//edit_field("Position: x", &position);
+
+		//static int position1 = 85959;
+		//edit_field("Position: y", &position1);
+
+		//static float temp = 2345.234f;
+		//edit_field("Float x posiiton", &temp);
+
+		//static float temp1 = 0.0;
+		//edit_field("Float x0 posiiton", &temp1);
+
+		//static float temp2 = 10000.0;
+		//edit_field("Float x2 posiiton", &temp2);
+
+		//static float temp3 = 10000.1;
+		//edit_field("Float x3 posiiton", &temp3);
+
+		//if (button("next line1")) {
+		//	print("Was click next line 1");
 		//}
-		static int position = 12345;
-		edit_field("Position: x", &position);
-
-		static int position1 = 85959;
-		edit_field("Position: y", &position1);
-
-		static float temp = 2345.234f;
-		edit_field("Float x posiiton", &temp);
-
-		static float temp1 = 0.0;
-		edit_field("Float x0 posiiton", &temp1);
-
-		static float temp2 = 10000.0;
-		edit_field("Float x2 posiiton", &temp2);
-
-		static float temp3 = 10000.1;
-		edit_field("Float x3 posiiton", &temp3);
-
-		if (button("next line1")) {
-			print("Was click next line 1");
-		}
-		button("next line2");
-		button("next line3");
-		button("next line4");
-		button("next line5");
-		button("next line6");
-		button("next line7");
-		button("next line8");
-		button("next line9");
+		//button("next line2");
+		//button("next line3");
+		//button("next line4");
+		//button("next line5");
+		//button("next line6");
+		//button("next line7");
+		//button("next line8");
+		//button("next line9");
 
 		//const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
 		//static u32 item_index1 = 123124;

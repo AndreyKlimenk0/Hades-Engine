@@ -102,50 +102,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line
 	}
 
 	engine.shutdown();
-
-	//init_os_path();
-	//
-	//font.init(11);
-
-	//Key_Input::init();
-
-	//////World world;
-	//////world.init();
-	////
-	//Render_System render_sys;
-	//render_sys.init(&win32_info);
-	////render_sys.current_render_world = &world;
-	//////render_sys.free_camera = &editor.free_camera;
-
-	//gui::init_gui(&render_sys.render_2d, &win32_info);
-
-	//// Test
-	//test();
-
-	//s64 count_per_s = cpu_ticks_per_second();
-
-	//while (1) {
-	//	s64 t = cpu_ticks_counter();
-	//	s64 last = milliseconds_counter();
-	//	s64 l = microseconds_counter();
-
-	//	pump_events();
-	//	run_event_loop();
-	//	
-	//	render_sys.new_frame();
-	//	render_sys.render_frame();
-	//	render_sys.end_frame();
-	//	
-	//	s64 result = milliseconds_counter() - last;
-	//	s64 r = microseconds_counter() - l;
-	//	s64 x = cpu_ticks_counter() - t;
-	//	s64 fps = cpu_ticks_per_second() / x;
-	//	
-	//	char *s = format("fps{}", fps);
-	//	free_string(s);
-
-	//	clear_event_queue();
-	//}
 	return 0;
 }
 

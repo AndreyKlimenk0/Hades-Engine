@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include "sys_local.h"
+#include "../libs/ds/hash_table.h"
 
 
 char *get_str_error_message_from_hresult_description(HRESULT hr)
@@ -17,6 +18,19 @@ char *get_str_error_message_from_hresult_description(HRESULT hr)
 		return NULL;
 	}
 	return _strdup(error_message);
+}
+
+bool is_string_unique(const char *string)
+{
+	//@Note: Use set data struct when it will be implemented.
+	static Hash_Table<int, u8> unique_string;
+
+	int key = fast_hash(string);
+	if (!unique_string.key_in_table(key)) {
+		unique_string.set(fast_hash(string), 0);
+		return true;
+	}
+	return false;
 }
 
 void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *expr)
