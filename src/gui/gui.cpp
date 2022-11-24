@@ -35,6 +35,8 @@ const u32 SCROLL_BAR_HASH = fast_hash("scroll_bar");
 #define GET_RADIO_BUTTON_GUI_ID() (window->gui_id + RADIO_BUTTON_HASH + radio_button_count)
 #define GET_SCROLL_BAR_GUI_ID() (window->gui_id + SCROLL_BAR_HASH)
 
+#define GET_RENDER_LIST() (&window->render_list)
+
 typedef u32 Element_Alignment;
 const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
 const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
@@ -46,8 +48,6 @@ const s32 MIN_WINDOW_HEIGHT = 40;
 const u32 FLOAT_PRECISION = 6;
 
 static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
-
-#define GET_RENDER_LIST() (&window->render_list)
 
 struct Gui_Edit_Field_Theme {
 	u32 float_precision = 2;
@@ -267,6 +267,7 @@ const u32 SET_WINDOW_SIZE = 0x2;
 const u32 SET_WINDOW_THEME = 0x4;
 
 struct Gui_Manager {
+	bool handle_events_for_one_window;
 
 	s32 mouse_x;
 	s32 mouse_y;
@@ -293,6 +294,7 @@ struct Gui_Manager {
 	Gui_ID focused_window;
 	Gui_ID became_just_focused; //window
 	Gui_ID probably_resizing_window;
+	Gui_ID window_events_handler_id;
 
 	Font *font = NULL;
 	Win32_Info *win32_info = NULL;
@@ -305,7 +307,6 @@ struct Gui_Manager {
 	Array<Gui_Window> windows;
 	Stack<Gui_Window *> window_stack;
 	Array<Gui_Window *> windows_order;
-	
 
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme button_theme;
@@ -890,7 +891,13 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 	if (must_item_be_drawn(&window->rect, &list_box_rect)) {
 
 		Gui_ID list_box_gui_id = GET_LIST_BOX_GUI_ID();
-		update_active_and_hot_state(list_box_gui_id, &list_box_rect);
+		if (handle_events_for_one_window) {
+			if (window->gui_id == window_events_handler_id) {
+				update_active_and_hot_state(list_box_gui_id, &list_box_rect);
+			}
+		} else {
+			update_active_and_hot_state(list_box_gui_id, &list_box_rect);
+		}
 
 		Rect_s32 drop_window_rect;
 		drop_window_rect.set(list_box_rect.x, list_box_rect.bottom() + 5);
@@ -972,7 +979,14 @@ bool Gui_Manager::button(const char *name)
 	bool mouse_hover = false;
 	if (must_item_be_drawn(&window->rect, &button_rect)) {
 		u32 button_gui_id = GET_BUTTON_GUI_ID();
-		update_active_and_hot_state(button_gui_id, &button_rect);
+
+		if (handle_events_for_one_window) {
+			if (window->gui_id == window_events_handler_id) {
+				update_active_and_hot_state(button_gui_id, &button_rect);
+			}
+		} else {
+			update_active_and_hot_state(button_gui_id, &button_rect);
+		}
 
 		mouse_hover = (hot_item == button_gui_id);
 
@@ -1021,6 +1035,7 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	win32_info = _win32_info;
 	font = _font;
 
+	handle_events_for_one_window = false;
 	edit_field_count = 0;
 	window_parent_count = 0;
 	reset_window_params = 0;
@@ -1100,6 +1115,28 @@ void Gui_Manager::new_frame()
 	became_just_focused = 0;
 	
 	curr_parent_windows_index_sum = -1;
+
+	u32 max_windows_order_index = 0;
+	u32 mouse_interception_count = 0;
+	Gui_ID first_drawing_window_id;
+	for (int i = 0; i < windows_order.count; i++) {
+		Gui_Window *window = windows_order[i];
+		if (detect_collision(&window->rect)) {
+			if (window->index_in_windows_order > max_windows_order_index) {
+				max_windows_order_index = window->index_in_windows_order;
+				first_drawing_window_id = window->gui_id;
+			}
+			mouse_interception_count++;
+		}
+	}
+
+	if (mouse_interception_count > 1) {
+		window_events_handler_id = first_drawing_window_id;
+		handle_events_for_one_window = true;
+	} else {
+		window_events_handler_id = 0;
+		handle_events_for_one_window = false;
+	}
 }
 
 void Gui_Manager::end_frame()
@@ -1111,10 +1148,15 @@ void Gui_Manager::end_frame()
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
 
+	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
+		print("curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
+		print("prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
+	}
+
 	if ((prev_parent_windows_index_sum - curr_parent_windows_index_sum) > 0) {
 		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum;
 		windows_order[window_index]->index_in_windows_order = -1;
-		print("Remove window at all = ", windows_order[window_index]->name);
+		print("Remove window with name = {}; window index = {}", windows_order[window_index]->name, window_index);
 		windows_order.remove(window_index);
 		for (int i = 0; i < windows_order.count; i++) {
 			windows_order[i]->index_in_windows_order = i;
@@ -1145,10 +1187,6 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 			Gui_Window *parent_window = get_window();
 			parent_window->child_windows.push(window);
 		}
-	}
-	
-	if (window_type == WINDOW_TYPE_PARENT) {
-
 	}
 	window_stack.push(window);
 	
@@ -1256,7 +1294,7 @@ void Gui_Manager::end_window()
 		}
 	}
 
-	curr_parent_windows_index_sum += 1;
+	curr_parent_windows_index_sum += window->index_in_windows_order;
 	
 	window->content_rect.height += window_theme.place_between_elements;
 	window->content_rect.width += window_theme.place_between_elements;
@@ -1486,12 +1524,17 @@ void gui::draw_test_gui()
 	begin_frame();
 
 	begin_window("Window1");
-	button("Window1");
+	if (button("Window1")) {
+		print("Window1 button was pressed");
+	}
 	end_window();
 
-	begin_window("Window2");
-	button("Window2");
-	end_window();
+	//begin_window("Window2");
+	//if (button("Window2")) {
+	//	print("Window2 button was pressed");
+	//}
+
+	//end_window();
 	
 	//begin_window("Window3");
 	//button("Window3");
