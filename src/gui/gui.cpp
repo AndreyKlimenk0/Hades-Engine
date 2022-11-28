@@ -1116,27 +1116,27 @@ void Gui_Manager::new_frame()
 	
 	curr_parent_windows_index_sum = -1;
 
-	u32 max_windows_order_index = 0;
-	u32 mouse_interception_count = 0;
-	Gui_ID first_drawing_window_id;
-	for (int i = 0; i < windows_order.count; i++) {
-		Gui_Window *window = windows_order[i];
-		if (detect_collision(&window->rect)) {
-			if (window->index_in_windows_order > max_windows_order_index) {
-				max_windows_order_index = window->index_in_windows_order;
-				first_drawing_window_id = window->gui_id;
-			}
-			mouse_interception_count++;
-		}
-	}
+	//u32 max_windows_order_index = 0;
+	//u32 mouse_interception_count = 0;
+	//Gui_ID first_drawing_window_id;
+	//for (int i = 0; i < windows_order.count; i++) {
+	//	Gui_Window *window = windows_order[i];
+	//	if (detect_collision(&window->rect)) {
+	//		if (window->index_in_windows_order > max_windows_order_index) {
+	//			max_windows_order_index = window->index_in_windows_order;
+	//			first_drawing_window_id = window->gui_id;
+	//		}
+	//		mouse_interception_count++;
+	//	}
+	//}
 
-	if (mouse_interception_count > 1) {
-		window_events_handler_id = first_drawing_window_id;
-		handle_events_for_one_window = true;
-	} else {
+	//if (mouse_interception_count > 1) {
+	//	window_events_handler_id = first_drawing_window_id;
+	//	handle_events_for_one_window = true;
+	//} else {
 		window_events_handler_id = 0;
 		handle_events_for_one_window = false;
-	}
+	//}
 }
 
 void Gui_Manager::end_frame()
@@ -1148,15 +1148,19 @@ void Gui_Manager::end_frame()
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
 
+	for (int i = 0; i < windows_order.count; i++) {
+		curr_parent_windows_index_sum += windows_order[i]->index_in_windows_order;
+	}
+
 	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
-		print("curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
-		print("prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
+		print("Gui_Manager::end_frame: curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
+		print("Gui_Manager::end_frame: prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
 	}
 
 	if ((prev_parent_windows_index_sum - curr_parent_windows_index_sum) > 0) {
 		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum;
 		windows_order[window_index]->index_in_windows_order = -1;
-		print("Remove window with name = {}; window index = {}", windows_order[window_index]->name, window_index);
+		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", windows_order[window_index]->name, window_index);
 		windows_order.remove(window_index);
 		for (int i = 0; i < windows_order.count; i++) {
 			windows_order[i]->index_in_windows_order = i;
@@ -1286,15 +1290,18 @@ void Gui_Manager::end_window()
 	if (window->index_in_windows_order < 0) {
 		window->index_in_windows_order = windows_order.count;
 		windows_order.push(window);
+		print("Gui_Manager::end_window: Window [{}] was pushed with index = {}", window->name, window->index_in_windows_order);
 	} else if ((became_just_focused == window->gui_id) && (window->index_in_windows_order != -1)) {
 		windows_order.remove(window->index_in_windows_order);
+		print("Gui_Manager::end_window: Window [{}] was removed window with index = ", window->name, window->index_in_windows_order);
 		windows_order.push(window);
 		for (int i = 0; i < windows_order.count; i++) {
 			windows_order[i]->index_in_windows_order = i;
+			print("Gui_Manager::end_window: Updated window: name = {}; index = ", windows_order[i]->name, windows_order[i]->index_in_windows_order);
 		}
 	}
 
-	curr_parent_windows_index_sum += window->index_in_windows_order;
+	//curr_parent_windows_index_sum += window->index_in_windows_order;
 	
 	window->content_rect.height += window_theme.place_between_elements;
 	window->content_rect.width += window_theme.place_between_elements;
@@ -1529,27 +1536,27 @@ void gui::draw_test_gui()
 	}
 	end_window();
 
-	//begin_window("Window2");
-	//if (button("Window2")) {
-	//	print("Window2 button was pressed");
-	//}
+	begin_window("Window2");
+	if (button("Window2")) {
+		print("Window2 button was pressed");
+	}
 
-	//end_window();
+	end_window();
 	
-	//begin_window("Window3");
-	//button("Window3");
-	//end_window();
+	begin_window("Window3");
+	button("Window3");
+	end_window();
 
 	
-	if (begin_window("Test")) {
+	//if (begin_window("Test")) {
 
-		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-		static u32 item_index = 123124;
-		list_box(str, 7, &item_index);
+	//	const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+	//	static u32 item_index = 123124;
+	//	list_box(str, 7, &item_index);
 
-		const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
-		static u32 item_index2 = 123124;
-		list_box(str2, 7, &item_index2);
+	//	const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
+	//	static u32 item_index2 = 123124;
+	//	list_box(str2, 7, &item_index2);
 
 
 		//static bool state = false;
@@ -1593,8 +1600,8 @@ void gui::draw_test_gui()
 		//static u32 item_index1 = 123124;
 		//list_box(str1, 7, &item_index1);
 
-		end_window();
-	}
+	//	end_window();
+	//}
 
 	//static u32 id = 0;
 	//static bool entity_window = false;
