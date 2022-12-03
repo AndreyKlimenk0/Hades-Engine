@@ -20,6 +20,7 @@
 //@Note included for testing
 #include "../game/world.h"
 
+#define PRINT_INFO
 
 typedef u32 Gui_ID;
 
@@ -228,10 +229,12 @@ struct Gui_Window {
 	Render_Primitive_List render_list;
 
 	void set_position(s32 x, s32 y);
+	void set_index_with_offset(s32 index);
+	u32 get_index_with_offset();
 	Rect_s32 get_scrollbar_rect(Axis axis);
 };
 
-void Gui_Window::set_position(s32 x, s32 y)
+inline void Gui_Window::set_position(s32 x, s32 y)
 {
 	s32 old_win_y = rect.y;
 	s32 old_win_x = rect.x;
@@ -249,7 +252,17 @@ void Gui_Window::set_position(s32 x, s32 y)
 	scroll.y += rect.y - old_win_y;
 }
 
-Rect_s32 Gui_Window::get_scrollbar_rect(Axis axis)
+inline void Gui_Window::set_index_with_offset(s32 index)
+{
+	index_in_windows_order = index + 1;
+}
+
+inline u32 Gui_Window::get_index_with_offset()
+{
+	return index_in_windows_order - 1;;
+}
+
+inline Rect_s32 Gui_Window::get_scrollbar_rect(Axis axis)
 {
 	const static s32 scroll_bar_width = 8;
 	if (axis == Y_AXIS) {
@@ -287,6 +300,7 @@ const u32 SET_WINDOW_THEME = 0x4;
 #define METHOD_PTR(method_name) (Gui_Manager::*method_name)
 
 struct Gui_Manager {
+	bool is_window_order_update;
 	bool any_window_was_moved;
 	bool handle_events_for_one_window;
 
@@ -346,6 +360,7 @@ struct Gui_Manager {
 
 	void update_active_and_hot_state(const char *name, Rect_s32 *rect);
 	void update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect);
+	void update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect);
 
 	void begin_window(const char *name, Window_Type window_type);
 	void end_window();
@@ -558,6 +573,26 @@ void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
 		if (was_left_mouse_button_just_pressed()) {
 			active_item = gui_id;
 		}
+	}
+}
+
+void Gui_Manager::update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect)
+{
+	if (handle_events_for_one_window) {
+		if (rect_gui_id == 2932684847) {
+			//print("point 1");
+		}
+		if (window->gui_id == window_events_handler_id) {
+			if (rect_gui_id == 2932684847) {
+				//print("point 2");
+			}
+			update_active_and_hot_state(rect_gui_id, rect);
+		} 
+	} else {
+		if (rect_gui_id == 2932684847) {
+			//print("point 3");
+		}
+		update_active_and_hot_state(rect_gui_id, rect);
 	}
 }
 
@@ -914,7 +949,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 	if (must_item_be_drawn(&window->rect, &list_box_rect)) {
 
 		Gui_ID list_box_gui_id = GET_LIST_BOX_GUI_ID();
-		UPDATE_ACTIVE_AND_HOT_STATE(window, list_box_gui_id, list_box_rect);
+		update_active_and_hot_state(window, list_box_gui_id, &list_box_rect);
 
 		Rect_s32 drop_window_rect;
 		drop_window_rect.set(list_box_rect.x, list_box_rect.bottom() + 5);
@@ -942,7 +977,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			win_theme.place_between_elements = 0;
 			set_next_window_theme(&win_theme);
 
-			set_next_window_pos(drop_window_rect.x, drop_window_rect.y);
+			set_next_window_pos(drop_window_rect.x - 30, drop_window_rect.y);
 			set_next_window_size(drop_window_rect.width, drop_window_rect.height);
 
 			//@Note: May be create string for list_box_gui_id is a temporary decision.
@@ -1063,8 +1098,8 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	edit_field_count = 0;
 	window_parent_count = 0;
 	reset_window_params = 0;
-	curr_parent_windows_index_sum = -1;
-	prev_parent_windows_index_sum = -1;
+	curr_parent_windows_index_sum = 0;
+	prev_parent_windows_index_sum = 0;
 	window_theme = default_window_theme;
 
 	String path_to_save_file;
@@ -1130,6 +1165,7 @@ void Gui_Manager::new_frame()
 
 	window_rect = default_window_rect;
 
+	is_window_order_update = false;
 	mouse_x = Mouse_Input::x;
 	mouse_y = Mouse_Input::y;
 	mouse_x_delta = mouse_x - last_mouse_x;
@@ -1141,7 +1177,7 @@ void Gui_Manager::new_frame()
 	edit_field_count = 0;
 	became_just_focused = 0;
 
-	curr_parent_windows_index_sum = -1;
+	curr_parent_windows_index_sum = 0;
 
 	frame_count++;
 	// Using frame_count in order to update collided windows in not moved windows.
@@ -1196,17 +1232,23 @@ void Gui_Manager::end_frame()
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
 
-	//TODO: I think I can not use loop here.
-	for (int i = 0; i < windows_order.count; i++) {
-		curr_parent_windows_index_sum += windows_order[i]->index_in_windows_order;
+#ifdef PRINT_INFO
+	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
+		print("Gui_Manager::end_frame: curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
+		print("Gui_Manager::end_frame: prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
 	}
+#endif
 
 	if ((prev_parent_windows_index_sum - curr_parent_windows_index_sum) > 0) {
-		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum;
+		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum - 1;
 		windows_order[window_index]->index_in_windows_order = -1;
+
+#ifdef PRINT_INFO
+		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", windows_order[window_index]->name, window_index);
+#endif
 		windows_order.remove(window_index);
 		for (int i = 0; i < windows_order.count; i++) {
-			windows_order[i]->index_in_windows_order = i;
+			windows_order[i]->set_index_with_offset(i);
 		}
 	}
 
@@ -1330,16 +1372,22 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 void Gui_Manager::end_window()
 {
 	Gui_Window *window = get_window();
-
 	if (window->index_in_windows_order < 0) {
-		window->index_in_windows_order = windows_order.count;
+		window->set_index_with_offset(windows_order.count);
 		windows_order.push(window);
 	} else if ((became_just_focused == window->gui_id) && (window->index_in_windows_order != -1)) {
-		windows_order.remove(window->index_in_windows_order);
+		windows_order.remove(window->get_index_with_offset());
 		windows_order.push(window);
+		curr_parent_windows_index_sum = 0;
 		for (int i = 0; i < windows_order.count; i++) {
-			windows_order[i]->index_in_windows_order = i;
+			windows_order[i]->set_index_with_offset(i);
+			curr_parent_windows_index_sum += windows_order[i]->index_in_windows_order;
 		}
+		is_window_order_update = true;
+	}
+
+	if (!is_window_order_update) {
+		curr_parent_windows_index_sum += window->index_in_windows_order;
 	}
 	
 	window->content_rect.height += window_theme.place_between_elements;
@@ -1569,22 +1617,22 @@ void gui::draw_test_gui()
 
 	begin_frame();
 
-	//begin_window("Window1");
-	//if (button("Window1")) {
-	//	print("Window1 button was pressed");
-	//}
-	//end_window();
+	begin_window("Window1");
+	if (button("Window1")) {
+		print("Window1 button was pressed");
+	}
+	end_window();
 
-	//begin_window("Window2");
-	//if (button("Window2")) {
-	//	print("Window2 button was pressed");
-	//}
+	begin_window("Window2");
+	if (button("Window2")) {
+		print("Window2 button was pressed");
+	}
 
-	//end_window();
-	//
-	//begin_window("Window3");
-	//button("Window3");
-	//end_window();
+	end_window();
+	
+	begin_window("Window3");
+	button("Window3");
+	end_window();
 
 	
 	if (begin_window("Test")) {
@@ -1597,6 +1645,11 @@ void gui::draw_test_gui()
 		static u32 item_index2 = 123124;
 		list_box(str2, 7, &item_index2);
 
+		button("seperating button");
+
+		const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
+		static u32 item_index3 = 0;
+		list_box(str3, 7, &item_index3);
 
 		static bool state = false;
 		static bool state1 = false;
