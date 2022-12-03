@@ -20,7 +20,7 @@
 //@Note included for testing
 #include "../game/world.h"
 
-#define PRINT_INFO
+//#define PRINT_INFO
 
 typedef u32 Gui_ID;
 
@@ -37,15 +37,6 @@ const u32 SCROLL_BAR_HASH = fast_hash("scroll_bar");
 #define GET_SCROLL_BAR_GUI_ID() (window->gui_id + SCROLL_BAR_HASH)
 
 #define GET_RENDER_LIST() (&window->render_list)
-#define UPDATE_ACTIVE_AND_HOT_STATE(window, rect_gui_id, rect) \
-		if (handle_events_for_one_window) { \
-			if (window->gui_id == window_events_handler_id) { \
-				update_active_and_hot_state(rect_gui_id, &rect); \
-			} \
-		} \
-		else { \
-			update_active_and_hot_state(rect_gui_id, &rect); \
-		} \
 
 typedef u32 Element_Alignment;
 const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
@@ -358,7 +349,6 @@ struct Gui_Manager {
 	void new_frame();
 	void end_frame();
 
-	void update_active_and_hot_state(const char *name, Rect_s32 *rect);
 	void update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect);
 	void update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect);
 
@@ -385,9 +375,7 @@ struct Gui_Manager {
 	bool button(const char *name);
 
 	bool can_window_be_resized(Gui_Window *window);
-	bool check_item(Gui_ID id, Rect_s32 *rect);
 	bool detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side);
-	bool check_rect_state(const char *name, Rect_s32 *rect, bool (*click_callback)() = NULL);
 
 	Rect_s32 get_win32_rect();
 	Rect_s32 get_text_rect(const char *text);
@@ -551,21 +539,6 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	return &windows.last_item();
 }
 
-void Gui_Manager::update_active_and_hot_state(const char *name, Rect_s32 *rect)
-{
-	Gui_ID gui_id = 0;
-	if (name) {
-		gui_id = fast_hash(name);
-	}
-
-	if (detect_collision(rect)) {
-		hot_item = gui_id;
-		if (was_left_mouse_button_just_pressed()) {
-			active_item = gui_id;
-		}
-	}
-}
-
 void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
 {
 	if (detect_collision(rect)) {
@@ -579,43 +552,12 @@ void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
 void Gui_Manager::update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect)
 {
 	if (handle_events_for_one_window) {
-		if (rect_gui_id == 2932684847) {
-			//print("point 1");
-		}
 		if (window->gui_id == window_events_handler_id) {
-			if (rect_gui_id == 2932684847) {
-				//print("point 2");
-			}
 			update_active_and_hot_state(rect_gui_id, rect);
 		} 
 	} else {
-		if (rect_gui_id == 2932684847) {
-			//print("point 3");
-		}
 		update_active_and_hot_state(rect_gui_id, rect);
 	}
-}
-
-bool Gui_Manager::check_rect_state(const char *name, Rect_s32 *rect, bool (*click_callback)())
-{
-	Gui_ID gui_id = 0;
-	if (name) {
-		gui_id = fast_hash(name);
-	}
-	if (!click_callback) {
-		click_callback = was_left_mouse_button_just_pressed;
-	}
-
-	bool button_click = false;
-	bool result = detect_collision(rect);
-	if (result) {
-		hot_item = gui_id;
-		if (click_callback()) {
-			active_item = gui_id;
-			button_click = true;
-		}
-	}
-	return button_click;
 }
 
 inline bool must_item_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
@@ -675,7 +617,7 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 		place_in_center(&radio_rect, &true_rect, BOTH_AXIS);
 
 		Gui_ID radio_button_gui_id = GET_RADIO_BUTTON_GUI_ID();
-		UPDATE_ACTIVE_AND_HOT_STATE(window, radio_button_gui_id, radio_rect);
+		update_active_and_hot_state(window, radio_button_gui_id, &radio_rect);
 
 		if ((hot_item == radio_button_gui_id) && (was_click_by_left_mouse_button())) {
 			if (*state) {
@@ -736,42 +678,43 @@ void Gui_Manager::edit_field(const char *name, String *value)
 
 void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	int shift_caret_from_left = -1;
-	int text_width = font->get_text_size(edit_field_state.data).width;
-	int mouse_x_relative_text = mouse_x - rect->x - shift_caret_from_left;
+	s32 text_width = font->get_text_size(edit_field_state.data).width;
+	s32 mouse_x_relative_text = mouse_x - rect->x - edit_field_theme.text_shift;
 
 	if (mouse_x_relative_text > text_width) {
-		edit_field_state.caret_x_posiiton = editing_value_rect->x + shift_caret_from_left + text_width;
+		edit_field_state.caret_x_posiiton = editing_value_rect->x + text_width;
+		edit_field_state.caret_index_for_inserting = edit_field_state.data.len;
+		edit_field_state.caret_index_in_text = edit_field_state.data.len - 1;
 		return;
 	}
 
-	float caret_temp_x = (float)edit_field_state.caret_x_posiiton;
-	float characters_width = 0.0f;
+	if ((mouse_x >= rect->x) && (mouse_x <= (rect->x + edit_field_theme.text_shift))) {
+		edit_field_state.caret_x_posiiton = rect->x + edit_field_theme.text_shift;
+		edit_field_state.caret_index_for_inserting = 1;
+		edit_field_state.caret_index_in_text = 0;
+		return;
+	}
+
+	u32 chars_width = 0;
+	u32 chars_advance_width = 0;
+	u32 prev_chars_advance_width = 0;
 
 	String *text = &edit_field_state.data;
-	for (int i = 0; i < text->len; i++) {
+	for (u32 i = 0; i < text->len; i++) {
 		char c = text->data[i];
-		u32 char_width = font->get_char_width(c);
-		float mouse_x_relative_character = mouse_x_relative_text - characters_width;
+		if (c == '.') {
+			chars_width += font->get_char_advance(c);
+		} else {
+			chars_width += font->get_char_width(c);
+		}
+		chars_advance_width += font->get_char_advance(c);
 
-		float pad = 0.1f;
-		if ((mouse_x_relative_character >= 0.0f) && ((mouse_x_relative_character + pad) <= char_width)) {
-
-			float characters_width = 0.0f;
-			for (int j = 0; j < i; j++) {
-				char _char = text->data[j];
-				u32 char_width = font->get_char_width(c);
-				characters_width += char_width;
-			}
-
-			edit_field_state.caret_x_posiiton = rect->x + shift_caret_from_left + characters_width;
-			edit_field_state.caret_index_for_inserting = i -1;
-			edit_field_state.caret_index_in_text = i - 1;
+		if ((mouse_x_relative_text >= prev_chars_advance_width) && (mouse_x_relative_text <= chars_advance_width)) {
+			edit_field_state.caret_x_posiiton = rect->x + edit_field_theme.text_shift + chars_width;
+			edit_field_state.caret_index_for_inserting = i + 1;
+			edit_field_state.caret_index_in_text = i;
 			break;
 		}
-
-		characters_width += char_width;
-		edit_field_state.caret_x_posiiton = (s32)caret_temp_x;
 	}
 }
 
@@ -800,7 +743,7 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 
 		bool is_new_session = false;
 		Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
-		UPDATE_ACTIVE_AND_HOT_STATE(window, edit_field_gui_id, rect);
+		update_active_and_hot_state(window, edit_field_gui_id, &rect);
 
 		if (was_click_by_left_mouse_button()) {
 			if (hot_item == edit_field_gui_id) {
@@ -977,7 +920,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			win_theme.place_between_elements = 0;
 			set_next_window_theme(&win_theme);
 
-			set_next_window_pos(drop_window_rect.x - 30, drop_window_rect.y);
+			set_next_window_pos(drop_window_rect.x, drop_window_rect.y);
 			set_next_window_size(drop_window_rect.width, drop_window_rect.height);
 
 			//@Note: May be create string for list_box_gui_id is a temporary decision.
@@ -1032,7 +975,7 @@ bool Gui_Manager::button(const char *name)
 	if (must_item_be_drawn(&window->rect, &button_rect)) {
 		
 		u32 button_gui_id = GET_BUTTON_GUI_ID();
-		UPDATE_ACTIVE_AND_HOT_STATE(window, button_gui_id, button_rect);
+		update_active_and_hot_state(window, button_gui_id, &button_rect);
 
 		mouse_hover = (hot_item == button_gui_id);
 
@@ -1068,23 +1011,6 @@ bool Gui_Manager::can_window_be_resized(Gui_Window *window)
 		}
 	}
 	return true;
-}
-
-bool Gui_Manager::check_item(Gui_ID id, Rect_s32 *rect)
-{
-	bool result = false;
-	if (detect_collision(rect)) {
-		result = true;
-		hot_item = id;
-	} 
-	return result;
-}
-
-
-inline u32 safe_sub_u32(u32 x, u32 y)
-{
-	u32 result = x - y;
-	return ((result > x) && (result > y)) ? result : 0;
 }
 
 void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font)
@@ -1231,18 +1157,15 @@ void Gui_Manager::end_frame()
 	}
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
-
 #ifdef PRINT_INFO
 	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
 		print("Gui_Manager::end_frame: curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
 		print("Gui_Manager::end_frame: prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
 	}
 #endif
-
 	if ((prev_parent_windows_index_sum - curr_parent_windows_index_sum) > 0) {
 		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum - 1;
 		windows_order[window_index]->index_in_windows_order = -1;
-
 #ifdef PRINT_INFO
 		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", windows_order[window_index]->name, window_index);
 #endif
@@ -1285,8 +1208,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 	window->alignment |= ALIGNMENT_VERTICALLY;
 
 	Rect_s32  *rect = &window->rect;
-
-	UPDATE_ACTIVE_AND_HOT_STATE(window, window->gui_id, window->rect);
+	update_active_and_hot_state(window, window->gui_id, &window->rect);
 
 	if ((hot_item == window->gui_id) && was_left_mouse_button_just_pressed() && (focused_window != window->gui_id)) {
 		became_just_focused = window->gui_id;
@@ -1465,7 +1387,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 	}
 	
 	Gui_ID scroll_bar_gui_id = GET_SCROLL_BAR_GUI_ID();
-	UPDATE_ACTIVE_AND_HOT_STATE(window, scroll_bar_gui_id, scroll_rect);
+	update_active_and_hot_state(window, scroll_bar_gui_id, &scroll_rect);
 
 	if ((active_item == scroll_bar_gui_id) && is_left_mouse_button_down()) {
 
@@ -1617,22 +1539,22 @@ void gui::draw_test_gui()
 
 	begin_frame();
 
-	begin_window("Window1");
-	if (button("Window1")) {
-		print("Window1 button was pressed");
-	}
-	end_window();
+	//begin_window("Window1");
+	//if (button("Window1")) {
+	//	print("Window1 button was pressed");
+	//}
+	//end_window();
 
-	begin_window("Window2");
-	if (button("Window2")) {
-		print("Window2 button was pressed");
-	}
+	//begin_window("Window2");
+	//if (button("Window2")) {
+	//	print("Window2 button was pressed");
+	//}
 
-	end_window();
-	
-	begin_window("Window3");
-	button("Window3");
-	end_window();
+	//end_window();
+	//
+	//begin_window("Window3");
+	//button("Window3");
+	//end_window();
 
 	
 	if (begin_window("Test")) {
