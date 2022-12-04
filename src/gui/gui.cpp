@@ -54,7 +54,7 @@ struct Gui_Edit_Field_Theme {
 	u32 float_precision = 2;
 	s32 text_shift = 5;
 	s32 rounded_border = 5;
-	s32 caret_blink_time = 900;
+	s32 caret_blink_time = 3000;
 	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 default_rect = { 0, 0, 220, 20 };
 	Color color = Color(74, 82, 90);
@@ -135,7 +135,7 @@ inline bool detect_collision(Triangle<T> *triangle, Point_V2<T> *point)
 
 inline bool is_draw_caret(s32 blink_time)
 {
-	s64 show_time = blink_time;
+	s64 show_time = blink_time / 2;
 	s64 hidding_time = blink_time;
 
 	static bool show = true;
@@ -773,8 +773,7 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 			handle_events(get_event_queue(), &update_editing_value, &update_next_time_editing_value, &rect, &value_rect);
 			
 			caret_rect.x = edit_field_state.caret_x_posiiton;
-			if (true) {
-			//if (is_draw_caret(edit_field_theme.caret_blink_time)) {
+			if (is_draw_caret(edit_field_theme.caret_blink_time)) {
 				render_list->add_rect(&caret_rect, Color::White);
 			}
 		}
