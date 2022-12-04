@@ -7,6 +7,7 @@
 
 enum Event_Type {
 	EVENT_TYPE_MOUSE,
+	EVENT_TYPE_MOUSE_WHEEL,
 	EVENT_TYPE_KEY,
 	EVENT_TYPE_CHAR,
 };
@@ -29,7 +30,7 @@ struct Event {
 
 	char char_key;
 	Key_Info key_info;
-	Mouse_Info    mouse_info;
+	Mouse_Info mouse_info;
 
 	bool is_key_event() { return type == EVENT_TYPE_KEY; }
 	bool is_mouse_event() { return type == EVENT_TYPE_MOUSE; }
