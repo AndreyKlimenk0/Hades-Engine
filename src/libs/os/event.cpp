@@ -58,6 +58,8 @@ void push_event(Event_Type type, int first_value, int second_value)
 {
 	Event event;
 	event.type = type;
+	event.first_value = first_value;
+	event.second_value = second_value;
 
 	switch (type) {
 		case EVENT_TYPE_KEY: {

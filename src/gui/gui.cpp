@@ -81,6 +81,7 @@ struct Gui_Text_Button_Theme {
 };
 
 struct Gui_Window_Theme {
+	s32 mouse_wheel_spped = 20;
 	s32 header_height = 20;
 	s32 rounded_border = 6;
 	s32 place_between_elements = 10;
@@ -1388,25 +1389,45 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 	Gui_ID scroll_bar_gui_id = GET_SCROLL_BAR_GUI_ID();
 	update_active_and_hot_state(window, scroll_bar_gui_id, &scroll_rect);
 
-	if ((active_item == scroll_bar_gui_id) && is_left_mouse_button_down()) {
 
+	s32 mouse_delta = 0;
+	bool update_scroll_position = false;
+	if ((active_item == scroll_bar_gui_id) && is_left_mouse_button_down()) {
+		
+		mouse_delta = (axis == Y_AXIS) ? mouse_y_delta : mouse_x_delta;
+		update_scroll_position = true;
+	
+	} else if ((focused_window == window->gui_id) && (axis == Y_AXIS)) {
+		
+		Queue<Event> *events = get_event_queue();
+		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+			Event *event = &node->item;
+			if (event->type == EVENT_TYPE_MOUSE_WHEEL) {
+				mouse_delta = (event->first_value > 0) ? -window_theme.mouse_wheel_spped : window_theme.mouse_wheel_spped;
+				update_scroll_position = true;
+			}
+		
+		}
+	}
+
+	if (update_scroll_position) {
 		s32 window_side = (axis == Y_AXIS) ? window->view_rect.bottom() : window->view_rect.right();
-		s32 mouse_delta = (axis == Y_AXIS) ? mouse_y_delta : mouse_x_delta;
 
 		scroll_rect[axis] = math::clamp(scroll_rect[axis] + mouse_delta, window->view_rect[axis], window_side - scroll_rect.get_size()[axis]);
-		
+
 		s32 scroll_pos = scroll_rect[axis] - window->view_rect[axis];
 		float scroll_ration = (float)scroll_pos / window->view_rect.get_size()[axis];
 		s32 result = window->content_rect.get_size()[axis] * scroll_ration;
 		window->content_rect[axis] = window->view_rect[axis] - result;
 	}
-	u32 flag = (axis == Y_AXIS) ? ROUND_RIGHT_RECT : ROUND_BOTTOM_RECT;
 
-	Render_Primitive_List *render_list = GET_RENDER_LIST();
-	render_list->add_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
-	render_list->add_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
+		u32 flag = (axis == Y_AXIS) ? ROUND_RIGHT_RECT : ROUND_BOTTOM_RECT;
 
-	window->scroll[axis] = scroll_rect[axis];
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->add_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
+		render_list->add_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
+
+		window->scroll[axis] = scroll_rect[axis];
 }
 
 bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side)

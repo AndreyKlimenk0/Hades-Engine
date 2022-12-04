@@ -171,6 +171,10 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 			push_event(EVENT_TYPE_MOUSE, x, y);
 			break;
 		}
+		case WM_MOUSEWHEEL: {
+			push_event(EVENT_TYPE_MOUSE_WHEEL, GET_WHEEL_DELTA_WPARAM(wparam), 0);
+			break;
+		}
 		case WM_SYSKEYDOWN: {
 			push_event(EVENT_TYPE_KEY, wparam, 1);
 			break;
