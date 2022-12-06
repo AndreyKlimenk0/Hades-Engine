@@ -81,9 +81,9 @@ void Render_Model::load_fbx_model(const char *file_name)
 		String diffuse_texture_name;
 		String specular_texture_name;
 
-		get_normal_texture_file_name(fbx_mesh_node, &normal_texture_name);
-		get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
-		get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
+		//get_normal_texture_file_name(fbx_mesh_node, &normal_texture_name);
+		//get_diffuse_texture_file_name(fbx_mesh_node, &diffuse_texture_name);
+		//get_specular_texture_file_name(fbx_mesh_node, &specular_texture_name);
 
 		//render_mesh->diffuse_texture = texture_manager.get_texture(diffuse_texture_name);
 

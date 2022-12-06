@@ -3,6 +3,9 @@
 
 #include "fbx_loader.h"
 
+//2020.0.1\include\fbxsdk\scene\shading\fbxsurfacematerial.h
+#include <fbxsdk/scene/shading/fbxsurfacematerial.h>
+
 #include "../sys/sys_local.h"
 
 #include "../render/model.h"

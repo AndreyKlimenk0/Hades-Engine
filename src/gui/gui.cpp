@@ -38,6 +38,12 @@ const u32 SCROLL_BAR_HASH = fast_hash("scroll_bar");
 
 #define GET_RENDER_LIST() (&window->render_list)
 
+
+typedef u32 Window_Style;
+const Window_Style WINDOW_WITH_HEADER = 0x1;
+const Window_Style WINDOW_WITH_OUTLINES = 0x2;
+const Window_Style WINDOW_DEFAULT_STYLE = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES;
+
 typedef u32 Element_Alignment;
 const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
 const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
@@ -48,7 +54,7 @@ const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
 const u32 FLOAT_PRECISION = 6;
 
-static const Rect_s32 default_window_rect = { 50, 50, 300, 300 };
+static const Rect_s32 DEFAULT_WINDOW_RECT = { 50, 50, 300, 300 };
 
 struct Gui_Edit_Field_Theme {
 	u32 float_precision = 2;
@@ -81,14 +87,15 @@ struct Gui_Text_Button_Theme {
 };
 
 struct Gui_Window_Theme {
-	s32 mouse_wheel_spped = 20;
-	s32 header_height = 20;
+	bool draw_header = true;
+	s32 header_height = 15;
+	s32 mouse_wheel_spped = 30;
 	s32 rounded_border = 6;
 	s32 place_between_elements = 10;
 	s32 shift_element_from_window_side = 20;
 	s32 scroll_bar_width = 15;
 	float outlines_width = 2.0f;
-	Color header_color = Color::White;
+	Color header_color = Color(28, 30, 33);
 	Color background_color = Color(36, 39, 43);
 	Color outlines_color = Color(92, 100, 107);
 };
@@ -96,11 +103,11 @@ struct Gui_Window_Theme {
 Gui_Window_Theme default_window_theme;
 Gui_Text_Button_Theme default_button_theme;
 
-static void draw_debug_rect(Rect_s32 *rect)
+static void draw_debug_rect(Render_Primitive_List *list, Rect_s32 *rect)
 {
 	Color red = Color::Red;
 	red.value.w = 0.4f;
-	//render_2d->draw_rect(rect, red);
+	list->add_rect(rect, red);
 }
 
 inline bool detect_collision(Rect_s32 *rect)
@@ -174,7 +181,7 @@ enum Axis {
 	BOTH_AXIS = 2
 };
 
-inline void place_in_center(Rect_s32 *in_element_place, Rect_s32 *placed_element, Axis axis)
+inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element, Axis axis)
 {
 	if ((axis == X_AXIS) || (axis == BOTH_AXIS)) {
 		placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
@@ -187,13 +194,13 @@ inline void place_in_center(Rect_s32 *in_element_place, Rect_s32 *placed_element
 inline void place_in_middle_and_by_left(Rect_s32 *placing_element, Rect_s32 *placed_element, int offset_from_left = 0)
 {
 	placed_element->x = placing_element->x + offset_from_left;
-	place_in_center(placing_element, placed_element, Y_AXIS);
+	place_in_middle(placing_element, placed_element, Y_AXIS);
 }
 
 inline void place_in_middle_and_by_right(Rect_s32 *placing_element, Rect_s32 *placed_element, int offset_from_right = 0)
 {
 	placed_element->x = placing_element->x + placing_element->width - placed_element->width - offset_from_right;
-	place_in_center(placing_element, placed_element, Y_AXIS);
+	place_in_middle(placing_element, placed_element, Y_AXIS);
 }
 
 
@@ -212,7 +219,7 @@ struct Gui_Window {
 	Rect_s32 rect;
 	Rect_s32 view_rect;
 	Rect_s32 content_rect;
-	Point_s32 next_place;
+	Point_s32 next_rect_place;
 	Point_s32 scroll;
 	String name;
 	
@@ -237,8 +244,8 @@ inline void Gui_Window::set_position(s32 x, s32 y)
 	content_rect.x += rect.x - old_win_x;
 	content_rect.y += rect.y - old_win_y;
 
-	next_place.x = content_rect.x;
-	next_place.y = content_rect.y;
+	next_rect_place.x = content_rect.x;
+	next_rect_place.y = content_rect.y;
 
 	scroll.x += rect.x - old_win_x;
 	scroll.y += rect.y - old_win_y;
@@ -353,7 +360,7 @@ struct Gui_Manager {
 	void update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect);
 	void update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect);
 
-	void begin_window(const char *name, Window_Type window_type);
+	void begin_window(const char *name, Window_Type window_type, Window_Style window_style = WINDOW_DEFAULT_STYLE);
 	void end_window();
 	void same_line();
 	void next_line();
@@ -364,6 +371,7 @@ struct Gui_Manager {
 
 	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
+	void image(Texture *texture, s32 width, s32 height);
 	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	void radio_button(const char *name, bool *state);
@@ -426,23 +434,28 @@ void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 
 	if (window->alignment & ALIGNMENT_VERTICALLY) {
 		if (reset_x_position) {
-			window->next_place.x = window->content_rect.x;
+			window->next_rect_place.x = window->content_rect.x;
 			reset_x_position = false;
-			window->next_place.y += prev_rect_height + offset;
+			window->next_rect_place.y += prev_rect_height + offset;
 			window->content_rect.height += prev_rect_height + offset;
 		}
-		rect->y = window->next_place.y + offset;
-		rect->x = window->next_place.x + offset;
-		window->next_place.y += rect->height + offset;
+		rect->y = window->next_rect_place.y + offset;
+		rect->x = window->next_rect_place.x + offset;
+		window->next_rect_place.y += rect->height + offset;
+		
+		if (rect->width > window->content_rect.width) {
+			window->content_rect.width = rect->width;
+		}
 		window->content_rect.height += rect->height + offset;
+
 	}
 
 	if (window->alignment & ALIGNMENT_HORIZONTALLY) {
 		reset_x_position = true;
 		prev_rect_height = rect->height;
-		rect->x = window->next_place.x + offset;
-		rect->y = window->next_place.y + offset;
-		window->next_place.x += rect->width + offset;
+		rect->x = window->next_rect_place.x + offset;
+		rect->y = window->next_rect_place.y + offset;
+		window->next_rect_place.x += rect->width + offset;
 		window->content_rect.width += rect->width + offset;
 	}
 }
@@ -496,7 +509,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
 	new_window.alignment |= ALIGNMENT_VERTICALLY;
-	new_window.content_rect.set(new_window.rect.x, new_window.rect.y);
+	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + window_theme.header_height);
 
 	new_window.scroll.x = new_window.rect.x;
 	new_window.scroll.y = new_window.rect.y;
@@ -525,10 +538,10 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
 	new_window.alignment |= ALIGNMENT_VERTICALLY;
-	new_window.content_rect.set(new_window.rect.x, new_window.rect.y);
+	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + window_theme.header_height);
 
 	new_window.scroll.x = new_window.rect.x;
-	new_window.scroll.y = new_window.rect.y;
+	new_window.scroll.y = new_window.rect.y + window_theme.header_height;
 
 	new_window.name = name;
 	new_window.render_list = Render_Primitive_List(render_2d);
@@ -561,7 +574,7 @@ void Gui_Manager::update_active_and_hot_state(Gui_Window *window, u32 rect_gui_i
 	}
 }
 
-inline bool must_item_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
+inline bool must_rect_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
 {
 	if ((item_rect->x > win_rect->right()) || (item_rect->y > win_rect->bottom())) {
 		return false;
@@ -610,12 +623,12 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &rect);
 
-	if (must_item_be_drawn(&window->rect, &rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &rect);
+	if (must_rect_be_drawn(&window->rect, &rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &rect);
 
 		place_in_middle_and_by_left(&rect, &text_rect, radio_rect.width + radio_button_theme.text_shift);
 		place_in_middle_and_by_left(&rect, &radio_rect, 0);
-		place_in_center(&radio_rect, &true_rect, BOTH_AXIS);
+		place_in_middle(&radio_rect, &true_rect, BOTH_AXIS);
 
 		Gui_ID radio_button_gui_id = GET_RADIO_BUTTON_GUI_ID();
 		update_active_and_hot_state(window, radio_button_gui_id, &radio_rect);
@@ -733,8 +746,8 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &rect);
 
-	if (must_item_be_drawn(&window->rect, &rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &rect);
+	if (must_rect_be_drawn(&window->rect, &rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &rect);
 		Rect_s32 label_rect = get_text_rect(name);
 
 		place_in_middle_and_by_left(&rect, &edit_field_rect, 0);
@@ -774,7 +787,8 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 			handle_events(get_event_queue(), &update_editing_value, &update_next_time_editing_value, &rect, &value_rect);
 			
 			caret_rect.x = edit_field_state.caret_x_posiiton;
-			if (is_draw_caret(edit_field_theme.caret_blink_time)) {
+			//if (is_draw_caret(edit_field_theme.caret_blink_time)) {
+			if (true) {
 				render_list->add_rect(&caret_rect, Color::White);
 			}
 		}
@@ -876,6 +890,31 @@ void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value
 	}
 }
 
+void Gui_Manager::image(Texture *texture, s32 width, s32 height)
+{
+	assert(texture);
+
+	Rect_s32 image_rect = { 0, 0, (s32)texture->width, (s32)texture->height };
+	if (width > 0) {
+		image_rect.width = width;
+	}
+	if (height > 0) {
+		image_rect.height = height;
+	}
+
+	Gui_Window *window = get_window();
+	place_rect_in_window(window, &image_rect);
+
+	if (must_rect_be_drawn(&window->rect, &image_rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &image_rect);
+		
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_texture(image_rect.x, image_rect.y, image_rect.width, image_rect.height, texture);
+		render_list->pop_clip_rect();
+	}
+}
+
 void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_index)
 {
 	assert(item_count > 0);
@@ -889,14 +928,21 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &list_box_rect);
 
-	if (must_item_be_drawn(&window->rect, &list_box_rect)) {
+	if (must_rect_be_drawn(&window->rect, &list_box_rect)) {
 
 		Gui_ID list_box_gui_id = GET_LIST_BOX_GUI_ID();
 		update_active_and_hot_state(window, list_box_gui_id, &list_box_rect);
 
 		Rect_s32 drop_window_rect;
-		drop_window_rect.set(list_box_rect.x, list_box_rect.bottom() + 5);
-		drop_window_rect.set_size(list_box_rect.width, item_count * button_theme.default_rect.height);
+		s32 window_box_height = item_count * button_theme.default_rect.height;
+		s32 window_box_default_position = list_box_rect.bottom() + 5;
+		
+		if ((window_box_default_position + window_box_height) > window->rect.bottom()) {
+			drop_window_rect.set(list_box_rect.x, list_box_rect.y - 5 - window_box_height);
+		} else {
+			drop_window_rect.set(list_box_rect.x, window_box_default_position);
+		}
+		drop_window_rect.set_size(list_box_rect.width, window_box_height);
 
 		if (was_click_by_left_mouse_button()) {
 			if (hot_item == list_box_gui_id) {
@@ -943,7 +989,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			end_window();
 		}
 
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &list_box_rect);
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &list_box_rect);
 		Rect_s32 text_rect = get_text_rect(strings[*item_index]);
 		
 		if (alignment & ALIGNMENT_RIGHT) {
@@ -951,7 +997,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 		} else if (alignment & ALIGNMENT_LEFT) {
 			place_in_middle_and_by_left(&list_box_rect, &text_rect, button_theme.shift_from_size);
 		} else {
-			place_in_center(&list_box_rect, &text_rect, BOTH_AXIS);
+			place_in_middle(&list_box_rect, &text_rect, BOTH_AXIS);
 		}
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
@@ -972,14 +1018,14 @@ bool Gui_Manager::button(const char *name)
 	place_rect_in_window(window, &button_rect);
 
 	bool mouse_hover = false;
-	if (must_item_be_drawn(&window->rect, &button_rect)) {
+	if (must_rect_be_drawn(&window->rect, &button_rect)) {
 		
 		u32 button_gui_id = GET_BUTTON_GUI_ID();
 		update_active_and_hot_state(window, button_gui_id, &button_rect);
 
 		mouse_hover = (hot_item == button_gui_id);
 
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &button_rect);
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &button_rect);
 		Rect_s32 text_rect = get_text_rect(name);
 
 		if (button_theme.aligment & ALIGNMENT_RIGHT) {
@@ -987,7 +1033,7 @@ bool Gui_Manager::button(const char *name)
 		} else if (button_theme.aligment & ALIGNMENT_LEFT) {
 			place_in_middle_and_by_left(&button_rect, &text_rect, button_theme.shift_from_size);
 		} else {
-			place_in_center(&button_rect, &text_rect, BOTH_AXIS);
+			place_in_middle(&button_rect, &text_rect, BOTH_AXIS);
 		}
 		
 		Color button_color = mouse_hover ? button_theme.hover_color : button_theme.color;
@@ -1089,7 +1135,7 @@ void Gui_Manager::new_frame()
 	//@TODO: can I not use frame_count var ?
 	static s64 frame_count = 0;
 
-	window_rect = default_window_rect;
+	window_rect = DEFAULT_WINDOW_RECT;
 
 	is_window_order_update = false;
 	mouse_x = Mouse_Input::x;
@@ -1126,7 +1172,7 @@ void Gui_Manager::new_frame()
 	u32 max_windows_order_index = 0;
 	u32 mouse_interception_count = 0;
 	Gui_ID first_drawing_window_id;
-	for (int i = 0; i < windows_order.count; i++) {
+	for (u32 i = 0; i < windows_order.count; i++) {
 		Gui_Window *window = windows_order[i];
 		if (detect_collision(&window->rect)) {
 			if (window->index_in_windows_order > max_windows_order_index) {
@@ -1183,7 +1229,7 @@ void Gui_Manager::end_frame()
 	}
 }
 
-void Gui_Manager::begin_window(const char *name, Window_Type window_type)
+void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window_Style window_style)
 {	
 	Gui_Window *window = NULL;
 	window = find_window(name);
@@ -1202,8 +1248,8 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 	}
 	window_stack.push(window);
 	
-	window->next_place.x = window->content_rect.x;
-	window->next_place.y = window->content_rect.y;
+	window->next_rect_place.x = window->content_rect.x;
+	window->next_rect_place.y = window->content_rect.y;
 	window->alignment = 0;
 	window->alignment |= ALIGNMENT_VERTICALLY;
 
@@ -1289,6 +1335,18 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type)
 	Render_Primitive_List *render_list = GET_RENDER_LIST();
 	render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width, window_theme.rounded_border);
 	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
+
+	if (window_theme.draw_header) {
+		Rect_s32 header_rect = { window->rect.x, window->rect.y, window->rect.width, window_theme.header_height };
+		render_list->add_rect(&header_rect, window_theme.header_color, window_theme.rounded_border, ROUND_TOP_RECT);
+		
+		Rect_s32 text_rect = get_text_rect(window->name);
+		place_in_middle(&header_rect, &text_rect, BOTH_AXIS);
+		render_list->add_text(&text_rect, window->name);
+		
+		window->view_rect.y += window_theme.header_height;
+		window->view_rect.height -= window_theme.header_height;
+	}
 }
 
 void Gui_Manager::end_window()
@@ -1322,6 +1380,9 @@ void Gui_Manager::end_window()
 	
 	if ((window->content_rect.height > window->view_rect.height) || (window->scroll[Y_AXIS] > window->view_rect.y)) {
 		right_scroll_bar = window->get_scrollbar_rect(Y_AXIS);
+		if (window_theme.draw_header) {
+			right_scroll_bar.y += window_theme.header_height;
+		}
 		window->view_rect.width -= right_scroll_bar.width;
 		draw_right_scroll_bar = true;
 	}
@@ -1339,13 +1400,17 @@ void Gui_Manager::end_window()
 		scroll_bar(window, X_AXIS, &bottom_scroll_bar);
 	}
 	
+	Render_Primitive_List *render_list = GET_RENDER_LIST();
+	draw_debug_rect(render_list, &window->content_rect);
+	//Reset a window state
 	window->content_rect.set_size(0, 0);
-	window_rect = default_window_rect;
+	
+	window_rect = DEFAULT_WINDOW_RECT;
+	
 	if (reset_window_params & SET_WINDOW_THEME) {
 		reset_window_params &= ~SET_WINDOW_THEME;
 		window_theme = default_window_theme;
 	}
-
 	window_stack.pop();
 }
 
@@ -1373,7 +1438,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 	s32 content_size = window->content_rect.get_size()[axis];
 
 	float ratio = (float)(window_size) / (float)content_size;
-	s32 scroll_size = (ratio < 1.0f) ? (float)window_size  * ratio : window_size;
+	s32 scroll_size = (ratio < 1.0f) ? (s32)((float)window_size)  * ratio : window_size;
 
 	s32 scroll_bar_width = 8;
 	s32 scroll_offset = math::abs(window->scroll[axis] - window->view_rect[axis]);
@@ -1389,24 +1454,26 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 	Gui_ID scroll_bar_gui_id = GET_SCROLL_BAR_GUI_ID();
 	update_active_and_hot_state(window, scroll_bar_gui_id, &scroll_rect);
 
-
 	s32 mouse_delta = 0;
 	bool update_scroll_position = false;
 	if ((active_item == scroll_bar_gui_id) && is_left_mouse_button_down()) {
-		
 		mouse_delta = (axis == Y_AXIS) ? mouse_y_delta : mouse_x_delta;
 		update_scroll_position = true;
+		//@TODO: This is hard code ?
+		// close list box window.
+		active_list_box = 0;
 	
 	} else if ((focused_window == window->gui_id) && (axis == Y_AXIS)) {
-		
 		Queue<Event> *events = get_event_queue();
 		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 			Event *event = &node->item;
 			if (event->type == EVENT_TYPE_MOUSE_WHEEL) {
 				mouse_delta = (event->first_value > 0) ? -window_theme.mouse_wheel_spped : window_theme.mouse_wheel_spped;
+				//@TODO: This is hard code ?
+				// close list box window.
+				active_list_box = 0;
 				update_scroll_position = true;
 			}
-		
 		}
 	}
 
@@ -1421,13 +1488,13 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 		window->content_rect[axis] = window->view_rect[axis] - result;
 	}
 
-		u32 flag = (axis == Y_AXIS) ? ROUND_RIGHT_RECT : ROUND_BOTTOM_RECT;
+	u32 flag = (axis == Y_AXIS) ? ROUND_RIGHT_RECT : ROUND_BOTTOM_RECT;
 
-		Render_Primitive_List *render_list = GET_RENDER_LIST();
-		render_list->add_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
-		render_list->add_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
+	Render_Primitive_List *render_list = GET_RENDER_LIST();
+	render_list->add_rect(scroll_bar, Color(48, 50, 54), window_theme.rounded_border, flag);
+	render_list->add_rect(&scroll_rect, Color(107, 114, 120), scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
 
-		window->scroll[axis] = scroll_rect[axis];
+	window->scroll[axis] = scroll_rect[axis];
 }
 
 bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side)
@@ -1463,7 +1530,6 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 
 static Gui_Manager gui_manager;
 
-
 void same_line()
 {
 	gui_manager.same_line();
@@ -1479,14 +1545,28 @@ bool gui::button(const char *text)
 	return gui_manager.button(text);
 }
 
-void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font)
+//@Note: Gpu_Device must be removed. it is used for testing
+
+static Texture *texture = NULL;
+static Gpu_Device *device = NULL;
+static Texture *create_texture_from_file(const char *file_name);
+
+void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font, Gpu_Device *gpu_device)
 {
+	device = gpu_device;
+	texture = create_texture_from_file("Background_Albedo.png");
 	gui_manager.init(render_2d, win32_info, font);
 }
 
 void gui::shutdown()
 {
+	RELEASE_COM(texture->gpu_resource);
 	gui_manager.shutdown();
+}
+
+void image(Texture *texture, s32 width = -1, s32 height = -1)
+{
+	gui_manager.image(texture, width, height);
 }
 
 void list_box(const char *strings[], u32 len, u32 *item_index)
@@ -1559,11 +1639,18 @@ void gui::draw_test_gui()
 
 	begin_frame();
 
-	//begin_window("Window1");
-	//if (button("Window1")) {
-	//	print("Window1 button was pressed");
-	//}
-	//end_window();
+	begin_window("Window1");
+	if (button("Window1")) {
+		print("Window1 button was pressed");
+	}
+	button("Window1");
+	button("Window2");
+	button("Window3");
+	button("Window4");
+	button("Window5");
+	button("Window6");
+	button("Window7");
+	end_window();
 
 	//begin_window("Window2");
 	//if (button("Window2")) {
@@ -1576,12 +1663,16 @@ void gui::draw_test_gui()
 	//button("Window3");
 	//end_window();
 
-	
+	//
 	if (begin_window("Test")) {
 
 		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
 		static u32 item_index = 123124;
 		list_box(str, 7, &item_index);
+
+		if (texture) {
+			image(texture, 200, 200);
+		}
 
 		const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
 		static u32 item_index2 = 123124;
@@ -1675,5 +1766,104 @@ void gui::draw_test_gui()
 	//	list_box(str2, 3, &item_index2);
 
 	end_frame();
+}
+
+
+#include "../libs/spng.h"
+
+static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *width, u32 *height)
+{
+	FILE *png_file = fopen(path_to_file, "rb");
+	if (!png_file) {
+		String file_name;
+		extract_file_name(path_to_file, file_name);
+		print("Can not open PNG file with name {}", file_name);
+		return false;
+	}
+
+	spng_ctx *ctx = spng_ctx_new(0);
+	spng_set_crc_action(ctx, SPNG_CRC_USE, SPNG_CRC_USE);
+
+	spng_set_png_file(ctx, png_file);
+
+	struct spng_ihdr ihdr;
+	int result = spng_get_ihdr(ctx, &ihdr);
+
+	if (result) {
+		print("spng_get_ihdr() error: {}", spng_strerror(result));
+		spng_ctx_free(ctx);
+		fclose(png_file);
+		return false;
+	}
+
+	*width = ihdr.width;
+	*height = ihdr.height;
+
+	if (*png_image_buffer) {
+		delete *png_image_buffer;
+	}
+
+	int size = ihdr.width * ihdr.width * 4;
+
+	*png_image_buffer = new u8[size];
+
+
+	result = spng_decode_chunks(ctx);
+	if (result) {
+		print("spng_decode_chunks() error: {}", spng_strerror(result));
+		delete *png_image_buffer;
+		spng_ctx_free(ctx);
+		fclose(png_file);
+		return false;
+	}
+
+	result = spng_decode_image(ctx, (void *)*png_image_buffer, size, SPNG_FMT_RGBA8, 0);
+	if (result) {
+		print("spng_decode_image() error: {}", spng_strerror(result));
+		delete *png_image_buffer;
+		spng_ctx_free(ctx);
+		fclose(png_file);
+		return false;
+	}
+
+	spng_ctx_free(ctx);
+	fclose(png_file);
+	return true;
+}
+
+
+static Texture *create_texture_from_file(const char *file_name)
+{
+	String file_extension;
+	extract_file_extension(file_name, file_extension);
+
+	if (file_extension != "png") {
+		print("create_texture_from_file: the fucntion supports only png file");
+		return NULL;
+	}
+
+	String texture_path;
+	build_full_path_to_texture_file(file_name, texture_path);
+	if (!file_exists(texture_path)) {
+		print("create_texture_from_file: file with name {} was not found", file_name);
+		return NULL;
+	}
+
+	u8 *png_image_buffer = NULL;
+	u32 png_image_width;
+	u32 png_image_height;
+
+	bool result = load_png_file(texture_path, &png_image_buffer, &png_image_width, &png_image_height);
+
+	if (!result) {
+		print("create_texture_from_file: Loading png file {} was failed.", file_name);
+		DELETE_PTR(png_image_buffer);
+		return NULL;
+	}
+
+	Texture *texture = device->create_texture_2d(png_image_width, png_image_height, (void *)png_image_buffer, 1);
+	DELETE_PTR(png_image_buffer);
+
+	return texture;
 }
 
