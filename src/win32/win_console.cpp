@@ -144,7 +144,7 @@ bool create_console(Win32_Info *win32_state)
 	UpdateWindow(win_console.window);
 	SetFocus(win_console.input_line_buffer);
 	
-	win_console.input_edit_proc = (WNDPROC)SetWindowLong(win_console.input_line_buffer, GWL_WNDPROC, (long)console_input_proc);
+	win_console.input_edit_proc = (WNDPROC)SetWindowLong(win_console.input_line_buffer, GWLP_WNDPROC, (long)console_input_proc);
 
 	HFONT text_buffer_font = create_font(11, "Consolas");
 	HFONT intput_line_font = create_font(11, "Consolas");

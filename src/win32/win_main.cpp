@@ -113,13 +113,13 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 		win32_info = (Win32_Info *)cs->lpCreateParams;
 
 		SetLastError(0);
-		if (SetWindowLongPtr(hwnd, GWL_USERDATA, (LONG_PTR)win32_info) == 0) {
+		if (SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win32_info) == 0) {
 			if (GetLastError() != 0) {
 				return FALSE;
 			}
 		}
 	} else {
-		win32_info = (Win32_Info *)GetWindowLongPtr(hwnd, GWL_USERDATA);
+		win32_info = (Win32_Info *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	}
 
 	switch (message) {

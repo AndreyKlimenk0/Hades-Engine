@@ -370,11 +370,11 @@ Texture *Gpu_Device::create_texture_2d(u32 width, u32 height, void *data, u32 mi
 	texture_2d_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 	u32 is_support_mips;
-	HR(device->CheckFormatSupport(format, &is_support_mips))
-		if ((mip_levels == 0) && (is_support_mips & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN)) {
-			texture_2d_desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-			texture_2d_desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-		}
+	HR(device->CheckFormatSupport(format, &is_support_mips));
+	if ((mip_levels == 0) && (is_support_mips & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN)) {
+		texture_2d_desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		texture_2d_desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+	}
 
 	if (data && (mip_levels == 1)) {
 		D3D11_SUBRESOURCE_DATA subresource_desc;
