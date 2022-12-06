@@ -350,7 +350,7 @@ Primitive_2D *Render_Primitive_List::make_or_find_primitive(float x, float y, Te
 	render_primitive.position.x = x;
 	render_primitive.position.y = y;
 	render_primitive.color.value = color.value;
-	render_primitive.gpu_resource = render_2d->default_texture;
+	render_primitive.gpu_resource = texture;
 	get_clip_rect(&render_primitive.clip_rect);
 
 	// if we found primitve we can just push it in render primitives array

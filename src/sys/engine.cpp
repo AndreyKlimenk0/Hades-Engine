@@ -11,7 +11,7 @@ void Engine::init(Win32_Info *_win32_info)
 	font.init(11);
 
 	render_sys.init(&win32_info, &font);
-	gui::init_gui(&render_sys.render_2d, &win32_info, &font);
+	gui::init_gui(&render_sys.render_2d, &win32_info, &font, &render_sys.gpu_device);
 	
 	// Test
 	test();

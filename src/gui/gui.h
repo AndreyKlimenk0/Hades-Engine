@@ -6,7 +6,7 @@
 namespace gui {
 	bool button(const char *text);
 
-	void init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font);
+	void init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font, Gpu_Device *gpu_device);
 	void shutdown();
 	void draw_test_gui();
 }
