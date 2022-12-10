@@ -90,6 +90,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line
 	if (!create_win32_window(&win32_info)) {
 		error("Failed to create main win32 window.");
 	}
+
+	// Test
+	test();
 	
 	ShowWindow(win32_info.window, cmd_show);
 	set_cursor(CURSOR_TYPE_ARROW);
