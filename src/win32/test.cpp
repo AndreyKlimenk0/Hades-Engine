@@ -165,35 +165,29 @@ void test_something()
 		//}
 		//print(test.i, test.f, &test.v);
 }
+struct Temp_func {
+	void operator() ()
+	{
+		print("Temp_func was called");
+	}
+};
+
+template <typename T, typename F = Temp_func>
+struct Temp {
+	T data;
+	F f;
+	void update_data(const T &value) 
+	{
+		data = value;
+		f();
+	}
+};
 
 void test()
 {
-	//Queue<int> temp;
-	//for (int i = 0; i < 10; i++) {
-	//	temp.push(i);
-	//}
-
-	//for (Queue_Node<int> *node = temp.first; node != NULL; node = node->next) {
-	//	print("node = ", node->item);
-	//}
-
-	//while (!temp.is_empty()) {
-	//	print("pop node = ", temp.pop());
-	//}
-
-	//temp.clear();
-	//print("clear Queue");
-
-	//for (int i = 10; i < 20; i++) {
-	//	temp.push(i);
-	//}
-
-	//for (Queue_Node<int> *node = temp.first; node != NULL; node = node->next) {
-	//	print("node = ", node->item);
-	//}
-
-	//while (!temp.is_empty()) {
-	//	print("pop node = ", temp.pop());
-	//}
-
+	Temp<int> temp;
+	temp.data = 2;
+	temp.f = Temp_func();
+	temp.update_data(22);
+	print("temp data =", 22);
 }

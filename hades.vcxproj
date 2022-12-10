@@ -109,6 +109,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>d3d11.lib;d3dcompiler.lib;d3dx11d.lib;libfbxsdk-md.lib;libxml2-md.lib;libfbxsdk.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <FxCompile>
       <ShaderType>Effect</ShaderType>

@@ -20,7 +20,7 @@
 //@Note included for testing
 #include "../game/world.h"
 
-//#define PRINT_INFO
+#define PRINT_INFO
 
 typedef u32 Gui_ID;
 
@@ -1400,8 +1400,6 @@ void Gui_Manager::end_window()
 		scroll_bar(window, X_AXIS, &bottom_scroll_bar);
 	}
 	
-	Render_Primitive_List *render_list = GET_RENDER_LIST();
-	draw_debug_rect(render_list, &window->content_rect);
 	//Reset a window state
 	window->content_rect.set_size(0, 0);
 	
@@ -1639,18 +1637,18 @@ void gui::draw_test_gui()
 
 	begin_frame();
 
-	begin_window("Window1");
-	if (button("Window1")) {
-		print("Window1 button was pressed");
-	}
-	button("Window1");
-	button("Window2");
-	button("Window3");
-	button("Window4");
-	button("Window5");
-	button("Window6");
-	button("Window7");
-	end_window();
+	//begin_window("Window1");
+	//if (button("Window1")) {
+	//	print("Window1 button was pressed");
+	//}
+	//button("Window1");
+	//button("Window2");
+	//button("Window3");
+	//button("Window4");
+	//button("Window5");
+	//button("Window6");
+	//button("Window7");
+	//end_window();
 
 	//begin_window("Window2");
 	//if (button("Window2")) {
@@ -1664,68 +1662,72 @@ void gui::draw_test_gui()
 	//end_window();
 
 	//
-	if (begin_window("Test")) {
 
-		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-		static u32 item_index = 123124;
-		list_box(str, 7, &item_index);
+	for (int i = 0; i < 3; i++) {
+		String s = "test" + String(i);
+		if (begin_window(s.c_str())) {
 
-		if (texture) {
-			image(texture, 200, 200);
+			const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+			static u32 item_index = 123124;
+			list_box(str, 7, &item_index);
+
+			if (texture) {
+				image(texture, 200, 200);
+			}
+
+			const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
+			static u32 item_index2 = 123124;
+			list_box(str2, 7, &item_index2);
+
+			button("seperating button");
+
+			const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
+			static u32 item_index3 = 0;
+			list_box(str3, 7, &item_index3);
+
+			static bool state = false;
+			static bool state1 = false;
+			radio_button("Trun on light", &state1);
+			radio_button("Render shadows", &state);
+			//if (button("Click")) {
+			//	print("Was click by bottom");
+			//}
+			static int position = 12345;
+			edit_field("Position: x", &position);
+
+			static int position1 = 85959;
+			edit_field("Position: y", &position1);
+
+			static float temp = 2345.234f;
+			edit_field("Float x posiiton", &temp);
+
+			static float temp1 = 0.0;
+			edit_field("Float x0 posiiton", &temp1);
+
+			static float temp2 = 10000.0;
+			edit_field("Float x2 posiiton", &temp2);
+
+			static float temp3 = 10000.1;
+			edit_field("Float x3 posiiton", &temp3);
+
+			if (button("next line1")) {
+				print("Was click next line 1");
+			}
+			button("next line2");
+			button("next line3");
+			button("next line4");
+			button("next line5");
+			button("next line6");
+			button("next line7");
+			button("next line8");
+			button("next line9");
+
+			const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+			static u32 item_index1 = 123124;
+			list_box(str1, 7, &item_index1);
+
+			end_window();
 		}
-
-		const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
-		static u32 item_index2 = 123124;
-		list_box(str2, 7, &item_index2);
-
-		button("seperating button");
-
-		const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
-		static u32 item_index3 = 0;
-		list_box(str3, 7, &item_index3);
-
-		static bool state = false;
-		static bool state1 = false;
-		radio_button("Trun on light", &state1);
-		radio_button("Render shadows", &state);
-		//if (button("Click")) {
-		//	print("Was click by bottom");
-		//}
-		static int position = 12345;
-		edit_field("Position: x", &position);
-
-		static int position1 = 85959;
-		edit_field("Position: y", &position1);
-
-		static float temp = 2345.234f;
-		edit_field("Float x posiiton", &temp);
-
-		static float temp1 = 0.0;
-		edit_field("Float x0 posiiton", &temp1);
-
-		static float temp2 = 10000.0;
-		edit_field("Float x2 posiiton", &temp2);
-
-		static float temp3 = 10000.1;
-		edit_field("Float x3 posiiton", &temp3);
-
-		if (button("next line1")) {
-			print("Was click next line 1");
-		}
-		button("next line2");
-		button("next line3");
-		button("next line4");
-		button("next line5");
-		button("next line6");
-		button("next line7");
-		button("next line8");
-		button("next line9");
-
-		const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-		static u32 item_index1 = 123124;
-		list_box(str1, 7, &item_index1);
-
-		end_window();
 	}
 
 	//static u32 id = 0;
