@@ -316,6 +316,7 @@ struct Gui_Manager {
 	u32 edit_field_count;
 	u32 reset_window_params;
 	u32 window_parent_count;
+	u32 window_count;
 
 	s32 curr_parent_windows_index_sum;
 	s32 prev_parent_windows_index_sum;
@@ -339,8 +340,8 @@ struct Gui_Manager {
 	Cursor_Type cursor_type;
 	
 	Array<Gui_Window> windows;
-	Stack<Gui_Window *> window_stack;
-	Array<Gui_Window *> windows_order;
+	Stack<u32> window_stack;
+	Array<u32> windows_order;
 
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme button_theme;
@@ -395,6 +396,8 @@ struct Gui_Manager {
 
 	Gui_Window *create_window(const char *name, Window_Type window_type);
 	Gui_Window *create_window(const char *name, Rect_s32 *rect);
+
+	Gui_Window *get_window_by_index(Array<u32> *window_indices, u32 index);
 };
 
 Rect_s32 Gui_Manager::get_text_rect(const char *text)
@@ -470,7 +473,7 @@ Gui_Window *Gui_Manager::get_window()
 	if (window_stack.is_empty()) {
 		error("Hades gui error: Window stask is empty");
 	}
-	return window_stack.top();
+	return &windows[window_stack.top()];
 }
 
 Gui_Window *Gui_Manager::find_window(const char *name)
@@ -490,9 +493,10 @@ Gui_Window *Gui_Manager::find_window_in_order(const char *name, int *window_inde
 	Gui_ID window_id = fast_hash(name);
 	
 	for (int i = 0; i < windows_order.count; i++) {
-		if (name == windows_order[i]->name) {
+		Gui_Window *window = get_window_by_index(&windows_order, i);
+		if (name == window->name) {
 			*window_index = i;
-			return windows_order[i];
+			return window;
 		}
 	}
 	return NULL;
@@ -551,6 +555,12 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	window_parent_count += 1;
 
 	return &windows.last_item();
+}
+
+inline Gui_Window *Gui_Manager::get_window_by_index(Array<u32> *window_indices, u32 index)
+{
+	u32 window_index = window_indices->at(index);
+	return &windows[window_index];
 }
 
 void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
@@ -1148,6 +1158,7 @@ void Gui_Manager::new_frame()
 	list_box_count = 0;
 	edit_field_count = 0;
 	became_just_focused = 0;
+	window_count = 0;
 
 	curr_parent_windows_index_sum = 0;
 
@@ -1156,11 +1167,11 @@ void Gui_Manager::new_frame()
 	if (any_window_was_moved || (frame_count == 2)) {
 		Gui_Window *checking_window = NULL;
 		for (u32 i = 0; i < windows_order.count; i++) {
-			checking_window = windows_order[i];
+			checking_window = get_window_by_index(&windows_order, i);
 			checking_window->collided_windows.count = 0;
 
 			for (u32 j = 0; j < windows_order.count; j++) {
-				Gui_Window *checked_window = windows_order[j];
+				Gui_Window *checked_window = get_window_by_index(&windows_order, j);
 				if ((checking_window->gui_id != checked_window->gui_id) && detect_collision(&checking_window->rect, &checked_window->rect)) {
 					checking_window->collided_windows.push(checked_window);
 				}
@@ -1173,7 +1184,7 @@ void Gui_Manager::new_frame()
 	u32 mouse_interception_count = 0;
 	Gui_ID first_drawing_window_id;
 	for (u32 i = 0; i < windows_order.count; i++) {
-		Gui_Window *window = windows_order[i];
+		Gui_Window *window = get_window_by_index(&windows_order, i);
 		if (detect_collision(&window->rect)) {
 			if (window->index_in_windows_order > max_windows_order_index) {
 				max_windows_order_index = window->index_in_windows_order;
@@ -1211,20 +1222,22 @@ void Gui_Manager::end_frame()
 #endif
 	if ((prev_parent_windows_index_sum - curr_parent_windows_index_sum) > 0) {
 		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum - 1;
-		windows_order[window_index]->index_in_windows_order = -1;
+		Gui_Window *window = get_window_by_index(&windows_order, window_index);
+		window->index_in_windows_order = -1;
 #ifdef PRINT_INFO
-		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", windows_order[window_index]->name, window_index);
+		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", window->name, window_index);
 #endif
 		windows_order.remove(window_index);
 		for (int i = 0; i < windows_order.count; i++) {
-			windows_order[i]->set_index_with_offset(i);
+			Gui_Window *window = get_window_by_index(&windows_order, i);
+			window->set_index_with_offset(i);
 		}
 	}
 
 	prev_parent_windows_index_sum = curr_parent_windows_index_sum;
 
-	Gui_Window *window = NULL;
-	For(windows_order, window) {
+	for (u32 i = 0; i < windows_order.count; i++) {
+		Gui_Window *window = get_window_by_index(&windows_order, i);
 		render_2d->add_render_primitive_list(&window->render_list);
 	}
 }
@@ -1246,7 +1259,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 			parent_window->child_windows.push(window);
 		}
 	}
-	window_stack.push(window);
+	window_stack.push(window_count++);
 	
 	window->next_rect_place.x = window->content_rect.x;
 	window->next_rect_place.y = window->content_rect.y;
@@ -1351,17 +1364,20 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 
 void Gui_Manager::end_window()
 {
-	Gui_Window *window = get_window();
+	u32 window_index = window_stack.top();
+	Gui_Window *window = get_window();;
 	if (window->index_in_windows_order < 0) {
 		window->set_index_with_offset(windows_order.count);
-		windows_order.push(window);
+		windows_order.push(window_index);
+	
 	} else if ((became_just_focused == window->gui_id) && (window->index_in_windows_order != -1)) {
 		windows_order.remove(window->get_index_with_offset());
-		windows_order.push(window);
+		windows_order.push(window_index);
 		curr_parent_windows_index_sum = 0;
 		for (int i = 0; i < windows_order.count; i++) {
-			windows_order[i]->set_index_with_offset(i);
-			curr_parent_windows_index_sum += windows_order[i]->index_in_windows_order;
+			Gui_Window *local_window = get_window_by_index(&windows_order, i);
+			local_window->set_index_with_offset(i);
+			curr_parent_windows_index_sum += local_window->index_in_windows_order;
 		}
 		is_window_order_update = true;
 	}
