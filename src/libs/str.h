@@ -44,26 +44,7 @@ char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
 char *to_string(Point_s32 *point);
 
-inline wchar_t *char_string_wchar(const char *str)
-{
-	assert(str != NULL);
-
-	int len = strlen(str);
-	if (*str == '?') {
-		str++;
-		len -= 1;
-	}
-	wchar_t *wstr = new wchar_t[len + 1];
-
-	size_t converted_chars = 0;
-	mbstowcs(wstr, str, len + 1);
-
-	wstr[len] = '\0';
-	return wstr;
-}
-
 int is_format_string(const char *string);
-
 
 template <typename First, typename... Args>
 void format_(Array<char *> *array, First first, Args... args)

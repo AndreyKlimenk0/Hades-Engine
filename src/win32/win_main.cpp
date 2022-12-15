@@ -196,7 +196,7 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 		}
 		case WM_CHAR:{
 			char c;
-			wcstombs((char *)&c, (wchar_t *)&wparam, sizeof(char));
+			wcstombs_s(NULL, (char *)&c, sizeof(char), (wchar_t *)&wparam, 1);
 			push_event(EVENT_TYPE_CHAR, c, 0);
 			break;
 		}

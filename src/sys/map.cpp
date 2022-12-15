@@ -11,12 +11,12 @@ void save_world_in_map(World *world, const char *map_name)
 
 	//HANDLE file = CreateFile(path_to_file, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	FILE *file = fopen(path_to_file, "wb");
+	//FILE *file = fopen(path_to_file, "wb");
 
-	Entity *entity = NULL;
-	For(world->entity_manager.entities, entity) {
+	//Entity *entity = NULL;
+	//For(world->entity_manager.entities, entity) {
 
-	}
+	//}
 }
 
 void read_from_map()
