@@ -530,8 +530,8 @@ void String::append(const char *string)
 	char *new_string = new char[new_len + 1];
 
 	memset(new_string, 0, sizeof(char) * new_len + 1);
-	strcat(new_string, data);
-	strcat(new_string, string);
+	strcat_s(new_string, new_len + 1, data);
+	strcat_s(new_string, new_len + 1, string);
 
 	DELETE_ARRAY(data);
 

@@ -1775,8 +1775,9 @@ void gui::draw_test_gui()
 
 static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *width, u32 *height)
 {
-	FILE *png_file = fopen(path_to_file, "rb");
-	if (!png_file) {
+	FILE *png_file;
+	errno_t error =fopen_s(&png_file, path_to_file, "rb");
+	if (!png_file || error) {
 		String file_name;
 		extract_file_name(path_to_file, file_name);
 		print("Can not open PNG file with name {}", file_name);
