@@ -382,7 +382,7 @@ Texture *Gpu_Device::create_texture_2d(u32 width, u32 height, void *data, u32 mi
 		subresource_desc.pSysMem = data;
 		subresource_desc.SysMemPitch = width * texture->format_size;
 
-		HR(device->CreateTexture2D(&texture_2d_desc, &subresource_desc, (ID3D11Texture2D **)&texture->gpu_resource))
+		HR(device->CreateTexture2D(&texture_2d_desc, &subresource_desc, (ID3D11Texture2D **)&texture->gpu_resource));
 	} else {
 		HR(device->CreateTexture2D(&texture_2d_desc, NULL, (ID3D11Texture2D **)&texture->gpu_resource));
 	}

@@ -37,7 +37,7 @@ void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *ex
 {
 	char buffer[1024];
 	char *error_message = get_str_error_message_from_hresult_description(hr);
-	sprintf(buffer, "File: %s\nLine: %d\nFunction: %s\nMessage: %s", file, line, expr, error_message);
+	sprintf_s(buffer, "File: %s\nLine: %d\nFunction: %s\nMessage: %s", file, line, expr, error_message);
 	int button = MessageBox(NULL, buffer, "Error", MB_OKCANCEL | MB_ICONERROR | MB_APPLMODAL);
 	
 	DELETE_PTR(error_message);
