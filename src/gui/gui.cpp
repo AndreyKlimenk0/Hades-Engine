@@ -316,7 +316,6 @@ struct Gui_Manager {
 	u32 edit_field_count;
 	u32 reset_window_params;
 	u32 window_parent_count;
-	u32 window_count;
 
 	s32 curr_parent_windows_index_sum;
 	s32 prev_parent_windows_index_sum;
@@ -391,7 +390,7 @@ struct Gui_Manager {
 	Rect_s32 get_text_rect(const char *text);
 
 	Gui_Window *get_window();
-	Gui_Window *find_window(const char *name);
+	Gui_Window *find_window(const char *name, u32 *window_index);
 	Gui_Window *find_window_in_order(const char *name, int *window_index);
 
 	Gui_Window *create_window(const char *name, Window_Type window_type);
@@ -476,12 +475,13 @@ Gui_Window *Gui_Manager::get_window()
 	return &windows[window_stack.top()];
 }
 
-Gui_Window *Gui_Manager::find_window(const char *name)
+Gui_Window *Gui_Manager::find_window(const char *name, u32 *window_index)
 {
 	Gui_ID window_id = fast_hash(name);
 
 	for (int i = 0; i < windows.count; i++) {
 		if (name == windows[i].name) {
+			*window_index = i;
 			return &windows[i];
 		}
 	}
@@ -1009,6 +1009,8 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 		} else {
 			place_in_middle(&list_box_rect, &text_rect, BOTH_AXIS);
 		}
+
+		Gui_Window *window = get_window();
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
@@ -1158,7 +1160,6 @@ void Gui_Manager::new_frame()
 	list_box_count = 0;
 	edit_field_count = 0;
 	became_just_focused = 0;
-	window_count = 0;
 
 	curr_parent_windows_index_sum = 0;
 
@@ -1244,12 +1245,14 @@ void Gui_Manager::end_frame()
 
 void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window_Style window_style)
 {	
-	Gui_Window *window = NULL;
-	window = find_window(name);
+	u32 window_index = 0;
+	Gui_Window *window = find_window(name, &window_index);
 	
 	if (!window) {
 		window = create_window(name, window_type);
+		window_index = windows.count - 1;
 		became_just_focused = window->gui_id;
+		
 		if (window->type != WINDOW_TYPE_CHILD) {
 			focused_window = window->gui_id;
 		}
@@ -1259,7 +1262,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 			parent_window->child_windows.push(window);
 		}
 	}
-	window_stack.push(window_count++);
+	window_stack.push(window_index);
 	
 	window->next_rect_place.x = window->content_rect.x;
 	window->next_rect_place.y = window->content_rect.y;
