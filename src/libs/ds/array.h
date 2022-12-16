@@ -114,7 +114,6 @@ inline const T &Array<T>::operator[](int i) const
 	return items[i];
 }
 
-
 template <typename T>
 void Array<T>::resize(int new_size)
 {
