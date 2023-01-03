@@ -8,10 +8,23 @@
 #include "../libs/math/common.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "../sys/engine.h"
 
 
 const String HLSL_FILE_EXTENSION = "cso";
 
+
+inline void from_win32_screen_space(u32 screen_x, u32 screen_y, u32 screen_width, u32 screen_height, s32 *x, s32 *y)
+{
+	*x = (s32)screen_x - (screen_width / 2);
+	*y = -(s32)screen_y + (screen_height / 2);
+}
+
+inline void to_win32_screen_space(s32 x, s32 y, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
+{
+	*screen_x = x + (screen_width / 2);
+	*screen_y = -y + (screen_height / 2);
+}
 
 inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 {
@@ -339,6 +352,56 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 	primitive->add_point(Vector2((float)width, 0.0f), Vector2(1.0f, 0.0f));
 	primitive->add_point(Vector2((float)width, (float)height), Vector2(1.0f, 1.0f));
 	primitive->add_point(Vector2(0.0f, (float)height), Vector2(0.0f, 1.0f));
+
+	primitive->make_triangle_polygon();
+	render_2d->add_primitive(primitive);
+}
+
+void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thickness)
+{
+	String hash = String(first_point->x) + String(first_point->y) + String(second_point->x) + String(second_point->y) + String(thickness);
+
+	Primitive_2D *primitive = make_or_find_primitive(0.0f, 0.0f, render_2d->default_texture, color, hash);
+	if (!primitive) {
+		return;
+	}
+	u32 window_width = get_window_width();
+	u32 window_height = get_window_height();
+
+	s32 x, y;
+	from_win32_screen_space(first_point->x, first_point->y, window_width, window_height, &x, &y);
+	
+	s32 x2, y2;
+	from_win32_screen_space(second_point->x, second_point->y, window_width, window_height, &x2, &y2);
+
+	float line_slope = slope(Point_s32(x, y), Point_s32(x2, y2));
+	
+	float perpendicular_line_slope = -1.0f / line_slope;
+	if (line_slope == 0.0f) {
+		perpendicular_line_slope = 0.0f;
+	}
+
+	float line_rect[8];
+
+	//first perpendicular line
+	line_rect[0] = (float)x + thickness;
+	line_rect[1] = (float)y + (thickness * perpendicular_line_slope);
+
+	line_rect[2] = (float)x2 + thickness;
+	line_rect[3] = (float)y2 + (thickness * perpendicular_line_slope);
+
+	//second perpendicular line
+	line_rect[4] = (float)x2 + -thickness;
+	line_rect[5] = (float)y2 + -(thickness * perpendicular_line_slope);
+
+	line_rect[6] = (float)x + -thickness;
+	line_rect[7] = (float)y + -(thickness * perpendicular_line_slope);
+
+	for (int i = 0; i < 4; i++) {
+		u32 x, y;
+		to_win32_screen_space(line_rect[i * 2], line_rect[(i * 2) + 1], window_width, window_height, &x, &y);
+		primitive->add_point(Vector2((float)x, (float)y));
+	}
 
 	primitive->make_triangle_polygon();
 	render_2d->add_primitive(primitive);

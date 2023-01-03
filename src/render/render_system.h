@@ -78,6 +78,8 @@ struct Render_Primitive_List {
 
 	void add_texture(int x, int y, int width, int height, Texture *gpu_resource);
 
+	void add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thicknesss = 0.5f);
+
 	Primitive_2D *make_or_find_primitive(float x, float y, Texture *texture, const Color &color, String &primitve_hash);
 };
 
@@ -142,6 +144,7 @@ struct View_Info {
 struct Render_System {
 	~Render_System();
 
+	//@Note: may be I can delete this var and use functions instead of it.
 	Win32_Info *win32_info;
 
 	Texture_Sampler *sampler = NULL;

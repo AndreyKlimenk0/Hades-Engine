@@ -621,4 +621,7 @@ inline float Vector4::dot(const Vector4 &other)
 extern Vector3 base_x_vec;
 extern Vector3 base_y_vec;
 extern Vector3 base_z_vec;
+
+extern Vector2 base_x_vec2;
+extern Vector2 base_y_vec2;
 #endif
