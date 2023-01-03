@@ -36,6 +36,9 @@ struct Engine {
 	Event_Handler *get_event_handler();
 };
 
+u32 get_window_width();
+u32 get_window_height();
+
 struct Camera;
 
 struct Engine_Info {
