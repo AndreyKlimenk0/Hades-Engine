@@ -20,7 +20,7 @@
 //@Note included for testing
 #include "../game/world.h"
 
-#define PRINT_INFO
+#define PRINT_GUI_INFO
 
 typedef u32 Gui_ID;
 
@@ -29,20 +29,23 @@ const u32 RADIO_BUTTON_HASH = fast_hash("radio_button");
 const u32 LIST_BOX_HASH = fast_hash("list_box");
 const u32 EDIT_FIELD_HASH = fast_hash("edit_Field");
 const u32 SCROLL_BAR_HASH = fast_hash("scroll_bar");
+const u32 TAB_HASH = fast_hash("window_tab_hash");
 
 #define GET_BUTTON_GUI_ID() (window->gui_id + BUTTON_HASH + button_count)
 #define GET_LIST_BOX_GUI_ID() (window->gui_id + LIST_BOX_HASH + list_box_count)
 #define GET_EDIT_FIELD_GUI_ID() (window->gui_id + EDIT_FIELD_HASH + edit_field_count)
 #define GET_RADIO_BUTTON_GUI_ID() (window->gui_id + RADIO_BUTTON_HASH + radio_button_count)
 #define GET_SCROLL_BAR_GUI_ID() (window->gui_id + SCROLL_BAR_HASH)
+#define  GET_TAB_GUI_ID() (window->gui_id + TAB_HASH + tab_count)
 
 #define GET_RENDER_LIST() (&window->render_list)
 
-
 typedef u32 Window_Style;
+const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_WITH_HEADER = 0x1;
 const Window_Style WINDOW_WITH_OUTLINES = 0x2;
-const Window_Style WINDOW_DEFAULT_STYLE = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES;
+const Window_Style WINDOW_WITH_SCROLL_BAR = 0x4;
+const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES | WINDOW_WITH_SCROLL_BAR;
 
 typedef u32 Element_Alignment;
 const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
@@ -87,7 +90,6 @@ struct Gui_Text_Button_Theme {
 };
 
 struct Gui_Window_Theme {
-	bool draw_header = true;
 	s32 header_height = 15;
 	s32 mouse_wheel_spped = 30;
 	s32 rounded_border = 6;
@@ -203,23 +205,26 @@ inline void place_in_middle_and_by_right(Rect_s32 *placing_element, Rect_s32 *pl
 	place_in_middle(placing_element, placed_element, Y_AXIS);
 }
 
-
 enum Window_Type {
 	WINDOW_TYPE_PARENT,
 	WINDOW_TYPE_CHILD,
 };
 
 struct Gui_Window {
+	bool tab_was_added = false;
+	bool tab_was_drawn;
 	Gui_ID gui_id;
 	s32 index_in_windows_order = -1;
 
 	Window_Type type;
 	Element_Alignment alignment;
+	Window_Style style;
 
 	Rect_s32 rect;
 	Rect_s32 view_rect;
 	Rect_s32 content_rect;
 	Point_s32 next_rect_place;
+	Point_s32 tab_place;
 	Point_s32 scroll;
 	String name;
 	
@@ -227,11 +232,38 @@ struct Gui_Window {
 	Array<Gui_Window *> collided_windows;
 	Render_Primitive_List render_list;
 
+	void place_tab_rect(Rect_s32 *tab_rect);
+	void start_new_frame(Window_Style window_style);
 	void set_position(s32 x, s32 y);
 	void set_index_with_offset(s32 index);
 	u32 get_index_with_offset();
 	Rect_s32 get_scrollbar_rect(Axis axis);
 };
+
+void Gui_Window::place_tab_rect(Rect_s32 *tab_rect)
+{
+	tab_rect->x = tab_place.x;
+	tab_rect->y = tab_place.y;
+
+	tab_place.x += tab_rect->width;
+
+	if (tab_was_added == false) {
+		tab_was_added = true;
+		content_rect.y += tab_rect->height;
+	}
+}
+
+void Gui_Window::start_new_frame(Window_Style window_style)
+{
+	tab_was_drawn = false;
+	tab_place.x = view_rect.x;
+	tab_place.y = view_rect.y;
+	style = window_style;
+	next_rect_place.x = content_rect.x;
+	next_rect_place.y = content_rect.y;
+	alignment = 0;
+	alignment |= ALIGNMENT_VERTICALLY;
+}
 
 inline void Gui_Window::set_position(s32 x, s32 y)
 {
@@ -291,7 +323,6 @@ Edit_Field_State make_edit_field(const char *str_value, s32 caret_x_posiiton, in
 	return edit_field;
 }
 
-
 const u32 SET_WINDOW_POSITION = 0x1;
 const u32 SET_WINDOW_SIZE = 0x2;
 const u32 SET_WINDOW_THEME = 0x4;
@@ -310,6 +341,7 @@ struct Gui_Manager {
 	s32 mouse_x_delta;
 	s32 mouse_y_delta;
 
+	u32 tab_count;
 	u32 button_count;
 	u32 radio_button_count;
 	u32 list_box_count;
@@ -325,6 +357,7 @@ struct Gui_Manager {
 	Gui_ID resizing_window;
 	Gui_ID active_list_box;
 	Gui_ID active_edit_field;
+	Gui_ID active_tab;
 	Gui_ID focused_window;
 	Gui_ID became_just_focused; //window
 	Gui_ID probably_resizing_window;
@@ -360,7 +393,7 @@ struct Gui_Manager {
 	void update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect);
 	void update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect);
 
-	void begin_window(const char *name, Window_Type window_type, Window_Style window_style = WINDOW_DEFAULT_STYLE);
+	void begin_window(const char *name, Window_Type window_type, Window_Style window_style);
 	void end_window();
 	void same_line();
 	void next_line();
@@ -371,6 +404,7 @@ struct Gui_Manager {
 
 	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
+	bool add_tab(const char *tab_name);
 	void image(Texture *texture, s32 width, s32 height);
 	void list_box(const char *strings[], u32 item_count, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
@@ -393,8 +427,8 @@ struct Gui_Manager {
 	Gui_Window *find_window(const char *name, u32 *window_index);
 	Gui_Window *find_window_in_order(const char *name, int *window_index);
 
-	Gui_Window *create_window(const char *name, Window_Type window_type);
-	Gui_Window *create_window(const char *name, Rect_s32 *rect);
+	Gui_Window *create_window(const char *name, Window_Type window_type, Window_Style window_style);
+	Gui_Window *create_window(const char *name, Rect_s32 *rect, Window_Style window_style);
 
 	Gui_Window *get_window_by_index(Array<u32> *window_indices, u32 index);
 };
@@ -502,9 +536,14 @@ Gui_Window *Gui_Manager::find_window_in_order(const char *name, int *window_inde
 	return NULL;
 }
 
-Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type)
+Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type, Window_Style window_style)
 {
 	Gui_ID window_id = fast_hash(name);
+
+	s32 header_height = 0;
+	if (window_style & WINDOW_WITH_HEADER) {
+		header_height = window_theme.header_height;
+	}
 	
 	Gui_Window new_window;
 	new_window.gui_id = window_id;
@@ -513,7 +552,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
 	new_window.alignment |= ALIGNMENT_VERTICALLY;
-	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + window_theme.header_height);
+	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + header_height);
 
 	new_window.scroll.x = new_window.rect.x;
 	new_window.scroll.y = new_window.rect.y;
@@ -531,9 +570,14 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	return &windows.last_item();
 }
 
-Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
+Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect, Window_Style window_style)
 {
 	Gui_ID window_id = fast_hash(name);
+
+	s32 header_height = 0;
+	if (window_style & WINDOW_WITH_HEADER) {
+		header_height = window_theme.header_height;
+	}
 
 	Gui_Window new_window;
 	new_window.gui_id = window_id;
@@ -542,10 +586,10 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect)
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
 	new_window.alignment |= ALIGNMENT_VERTICALLY;
-	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + window_theme.header_height);
+	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + header_height);
 
 	new_window.scroll.x = new_window.rect.x;
-	new_window.scroll.y = new_window.rect.y + window_theme.header_height;
+	new_window.scroll.y = new_window.rect.y + header_height;
 
 	new_window.name = name;
 	new_window.render_list = Render_Primitive_List(render_2d);
@@ -900,6 +944,74 @@ void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value
 	}
 }
 
+bool Gui_Manager::add_tab(const char *tab_name)
+{
+	static const s32 TAB_HEIGHT = 26;
+
+	Gui_Window *window = get_window();
+
+	Rect_s32 text_rect = get_text_rect(tab_name);
+	Rect_s32 tab_rect;
+	tab_rect.set_size(text_rect.width +  40, TAB_HEIGHT);
+
+	window->place_tab_rect(&tab_rect);
+
+	Gui_ID tab_gui_id = GET_TAB_GUI_ID();
+
+	update_active_and_hot_state(window, tab_gui_id, &tab_rect);
+
+	if (tab_gui_id == active_item) {
+		active_tab = active_item;
+	}
+
+	if (must_rect_be_drawn(&window->rect, &tab_rect)) {
+
+		place_in_middle(&tab_rect, &text_rect, BOTH_AXIS);
+
+		Color default_color = Color(52, 52, 56);
+		
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		//Color tab_color = (active_tab == tab_gui_id) ? Color(30, 30, 30) : Color(60, 60, 60);
+		//Color tab_color = (active_tab == tab_gui_id) ? Color(36, 39, 43) : Color(74, 82, 90);
+		Color tab_color = (active_tab == tab_gui_id) ? Color(36, 39, 43) : default_color;
+
+		if (!window->tab_was_drawn) {
+			window->tab_was_drawn = true;
+			Rect_s32 tab_line_rect = { window->view_rect.x, window->view_rect.y, window->rect.width, TAB_HEIGHT };
+			//rgb(51, 51, 51)
+			//render_list->add_rect(&tab_line_rect, Color(60, 60, 60));
+			//render_list->add_rect(&tab_line_rect, Color(74, 82, 90));
+			//render_list->add_rect(&tab_line_rect, Color(45, 45, 48);
+			render_list->add_rect(&tab_line_rect, default_color);
+		}
+
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &tab_rect);
+		render_list->push_clip_rect(&clip_rect);
+
+		render_list->add_rect(&tab_rect, tab_color);
+		render_list->add_text(&text_rect, tab_name);
+		render_list->pop_clip_rect();
+
+		if (active_tab == tab_gui_id) {
+			Point_s32 f = { tab_rect.x, tab_rect.y };
+			Point_s32 s = { text_rect.width + 40, tab_rect.y };
+
+			//render_list->add_line(&f, &s, Color(74, 82, 90), 2.0f);
+			//render_list->add_line(&f, &s, Color::Red, 10.0f);
+		}
+
+		Point_s32 fp2 = { tab_rect.right() - 2, tab_rect.y };
+		Point_s32 fs2 = { tab_rect.right() - 2, tab_rect.bottom() };
+		render_list->add_line(&fp2, &fs2, Color(60, 60, 60), 2.0f);
+
+		//Point_s32 fp = { window->view_rect.x, tab_rect.bottom() - 1 };
+		//Point_s32 fs = { window->view_rect.right(), tab_rect.bottom() - 1 };
+		//render_list->add_line(&fp, &fs, Color(60, 60, 60), 1.0f);
+	}
+	tab_count++;
+	return (active_tab == tab_gui_id);
+}
+
 void Gui_Manager::image(Texture *texture, s32 width, s32 height)
 {
 	assert(texture);
@@ -981,7 +1093,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 
 			//@Note: May be create string for list_box_gui_id is a temporary decision.
 			// I will refactoring this code when make normal working child windows.
-			begin_window(String((int)list_box_gui_id), WINDOW_TYPE_CHILD);
+			begin_window(String((int)list_box_gui_id), WINDOW_TYPE_CHILD, WINDOW_WITH_OUTLINES);
 
 			Gui_Text_Button_Theme theme;
 			theme.default_rect.width = list_box_rect.width;
@@ -1073,6 +1185,7 @@ bool Gui_Manager::can_window_be_resized(Gui_Window *window)
 
 void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font)
 {
+	print("[Init Hades gui]");
 	render_2d = _render_2d;
 	win32_info = _win32_info;
 	font = _font;
@@ -1095,12 +1208,16 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 		return;
 	}
 
-	int window_count = 0;
-	save_file.read((void *)&window_count, sizeof(int));
+	u32 window_count = 0;
+	save_file.read((void *)&window_count, sizeof(u32));
 
 	for (int i = 0; i < window_count; i++) {
+		u32 window_style = 0;
+		save_file.read((void *)&window_style, sizeof(u32));
+		
 		int string_len = 0;
 		save_file.read((void *)&string_len, sizeof(int));
+		
 		char *string = new char[string_len + 1];
 		save_file.read((void *)string, string_len);
 		string[string_len] = '\0';
@@ -1111,8 +1228,20 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 		print("[{}] Gui Window", i);
 		print("name:", string);
 		print("rect:", &rect);
+		print("Window styles:");
+		if (window_style & WINDOW_WITH_OUTLINES) {
+			print("    Window with outlines");
+		}
+		
+		if (window_style & WINDOW_WITH_HEADER) {
+			print("    Window with header");
+		}
+		
+		if (window_style & WINDOW_WITH_SCROLL_BAR) {
+			print("    Window with scroll bar");
+		}
 
-		create_window(string, &rect);
+		create_window(string, &rect, window_style);
 		free_string(string);
 	}
 }
@@ -1128,13 +1257,14 @@ void Gui_Manager::shutdown()
 		return;
 	}
 
-	save_file.write((void *)&window_parent_count, sizeof(int));
+	save_file.write((void *)&window_parent_count, sizeof(u32));
 
 	Gui_Window *window = NULL;
 	int i = 0;
 	For(windows, window) {
 		if (window->type == WINDOW_TYPE_PARENT) {
 
+			save_file.write((void *)&window->style, sizeof(u32));
 			save_file.write((void *)&window->name.len, sizeof(int));
 			save_file.write((void *)&window->name.data[0], window->name.len);
 			save_file.write((void *)&window->rect, sizeof(Rect_s32));
@@ -1157,6 +1287,7 @@ void Gui_Manager::new_frame()
 	hot_item = 0;
 	button_count = 0;
 	radio_button_count = 0;
+	tab_count = 0;
 	list_box_count = 0;
 	edit_field_count = 0;
 	became_just_focused = 0;
@@ -1215,7 +1346,7 @@ void Gui_Manager::end_frame()
 	}
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
-#ifdef PRINT_INFO
+#ifdef PRINT_GUI_INFO
 	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
 		print("Gui_Manager::end_frame: curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
 		print("Gui_Manager::end_frame: prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
@@ -1225,7 +1356,7 @@ void Gui_Manager::end_frame()
 		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum - 1;
 		Gui_Window *window = get_window_by_index(&windows_order, window_index);
 		window->index_in_windows_order = -1;
-#ifdef PRINT_INFO
+#ifdef PRINT_GUI_INFO
 		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", window->name, window_index);
 #endif
 		windows_order.remove(window_index);
@@ -1249,7 +1380,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	Gui_Window *window = find_window(name, &window_index);
 	
 	if (!window) {
-		window = create_window(name, window_type);
+		window = create_window(name, window_type, window_style);
 		window_index = windows.count - 1;
 		became_just_focused = window->gui_id;
 		
@@ -1264,10 +1395,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	}
 	window_stack.push(window_index);
 	
-	window->next_rect_place.x = window->content_rect.x;
-	window->next_rect_place.y = window->content_rect.y;
-	window->alignment = 0;
-	window->alignment |= ALIGNMENT_VERTICALLY;
+	window->start_new_frame(window_style);
 
 	Rect_s32  *rect = &window->rect;
 	update_active_and_hot_state(window, window->gui_id, &window->rect);
@@ -1349,13 +1477,15 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	window->view_rect = *rect;
 
 	Render_Primitive_List *render_list = GET_RENDER_LIST();
-	render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width, window_theme.rounded_border);
+	if (window->style & WINDOW_WITH_OUTLINES) {
+		render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width + 2, window_theme.rounded_border);
+	}
 	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
 
-	if (window_theme.draw_header) {
+	if (window->style & WINDOW_WITH_HEADER) {
 		Rect_s32 header_rect = { window->rect.x, window->rect.y, window->rect.width, window_theme.header_height };
 		render_list->add_rect(&header_rect, window_theme.header_color, window_theme.rounded_border, ROUND_TOP_RECT);
-		
+
 		Rect_s32 text_rect = get_text_rect(window->name);
 		place_in_middle(&header_rect, &text_rect, BOTH_AXIS);
 		render_list->add_text(&text_rect, window->name);
@@ -1397,16 +1527,16 @@ void Gui_Manager::end_window()
 	Rect_s32 right_scroll_bar;
 	Rect_s32 bottom_scroll_bar;
 	
-	if ((window->content_rect.height > window->view_rect.height) || (window->scroll[Y_AXIS] > window->view_rect.y)) {
+	if ((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.height > window->view_rect.height) || (window->scroll[Y_AXIS] > window->view_rect.y))) {
 		right_scroll_bar = window->get_scrollbar_rect(Y_AXIS);
-		if (window_theme.draw_header) {
+		if (window->style & WINDOW_WITH_HEADER) {
 			right_scroll_bar.y += window_theme.header_height;
 		}
 		window->view_rect.width -= right_scroll_bar.width;
 		draw_right_scroll_bar = true;
 	}
 
-	if ((window->content_rect.width > window->view_rect.width) || (window->scroll[X_AXIS] > window->view_rect.x)) {
+	if ((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.width > window->view_rect.width) || (window->scroll[X_AXIS] > window->view_rect.x))) {
 		bottom_scroll_bar = window->get_scrollbar_rect(X_AXIS);
 		window->view_rect.height -= bottom_scroll_bar.height;
 		draw_bottom_scroll_bar = true;
@@ -1581,6 +1711,11 @@ void gui::shutdown()
 	gui_manager.shutdown();
 }
 
+bool add_tab(const char *tab_name)
+{
+	return gui_manager.add_tab(tab_name);
+}
+
 void image(Texture *texture, s32 width = -1, s32 height = -1)
 {
 	gui_manager.image(texture, width, height);
@@ -1621,9 +1756,9 @@ void end_frame()
 	gui_manager.end_frame();
 }
 
-bool begin_window(const char *name)
+bool begin_window(const char *name, Window_Style window_style = WINDOW_STYLE_DEFAULT)
 {
-	gui_manager.begin_window(name, WINDOW_TYPE_PARENT);
+	gui_manager.begin_window(name, WINDOW_TYPE_PARENT, window_style);
 	return true;
 }
 void end_window()
@@ -1656,7 +1791,7 @@ void gui::draw_test_gui()
 
 	begin_frame();
 
-	//begin_window("Window1");
+	//begin_window("Window1", WINDOW_WITH_SCROLL_BAR);
 	//if (button("Window1")) {
 	//	print("Window1 button was pressed");
 	//}
@@ -1669,12 +1804,44 @@ void gui::draw_test_gui()
 	//button("Window7");
 	//end_window();
 
-	//begin_window("Window2");
-	//if (button("Window2")) {
-	//	print("Window2 button was pressed");
-	//}
+	begin_window("Line window");
 
-	//end_window();
+	if (add_tab("Render System")) {
+		button("Window1");
+		button("Window2");
+		button("Window3");
+		button("Window4");
+		button("Window5");
+		button("Window6");
+		button("Window7");
+	}
+
+	if (add_tab("Render settings")) {
+		button("Window122");
+		button("Window222");
+		button("Window322");
+		button("Window422");
+		button("Window522");
+		button("Window622");
+		button("Window722");
+	}
+
+	if (add_tab("Game World")) {
+		button("Window133");
+		button("Window233");
+		button("Window333");
+		button("Window4233");
+		button("Window533");
+		button("Window633");
+		button("Window722");
+	}
+	button("Window4");
+
+	if (add_tab("Tab 2")) {
+
+	}
+
+	end_window();
 	//
 	//begin_window("Window3");
 	//button("Window3");
@@ -1682,72 +1849,136 @@ void gui::draw_test_gui()
 
 	//
 
-	for (int i = 0; i < 3; i++) {
-		String s = "test" + String(i);
-		if (begin_window(s.c_str())) {
+	//if (begin_window("Test window")) {
 
-			const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-			static u32 item_index = 123124;
-			list_box(str, 7, &item_index);
+	//	const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+	//	static u32 item_index = 123124;
+	//	list_box(str, 7, &item_index);
 
-			if (texture) {
-				image(texture, 200, 200);
-			}
+	//	if (texture) {
+	//		image(texture, 200, 200);
+	//	}
 
-			const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
-			static u32 item_index2 = 123124;
-			list_box(str2, 7, &item_index2);
+	//	const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
+	//	static u32 item_index2 = 123124;
+	//	list_box(str2, 7, &item_index2);
 
-			button("seperating button");
+	//	button("seperating button");
 
-			const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
-			static u32 item_index3 = 0;
-			list_box(str3, 7, &item_index3);
+	//	const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
+	//	static u32 item_index3 = 0;
+	//	list_box(str3, 7, &item_index3);
 
-			static bool state = false;
-			static bool state1 = false;
-			radio_button("Trun on light", &state1);
-			radio_button("Render shadows", &state);
-			//if (button("Click")) {
-			//	print("Was click by bottom");
-			//}
-			static int position = 12345;
-			edit_field("Position: x", &position);
+	//	static bool state = false;
+	//	static bool state1 = false;
+	//	radio_button("Trun on light", &state1);
+	//	radio_button("Render shadows", &state);
+	//	//if (button("Click")) {
+	//	//	print("Was click by bottom");
+	//	//}
+	//	static int position = 12345;
+	//	edit_field("Position: x", &position);
 
-			static int position1 = 85959;
-			edit_field("Position: y", &position1);
+	//	static int position1 = 85959;
+	//	edit_field("Position: y", &position1);
 
-			static float temp = 2345.234f;
-			edit_field("Float x posiiton", &temp);
+	//	static float temp = 2345.234f;
+	//	edit_field("Float x posiiton", &temp);
 
-			static float temp1 = 0.0;
-			edit_field("Float x0 posiiton", &temp1);
+	//	static float temp1 = 0.0;
+	//	edit_field("Float x0 posiiton", &temp1);
 
-			static float temp2 = 10000.0;
-			edit_field("Float x2 posiiton", &temp2);
+	//	static float temp2 = 10000.0;
+	//	edit_field("Float x2 posiiton", &temp2);
 
-			static float temp3 = 10000.1;
-			edit_field("Float x3 posiiton", &temp3);
+	//	static float temp3 = 10000.1;
+	//	edit_field("Float x3 posiiton", &temp3);
 
-			if (button("next line1")) {
-				print("Was click next line 1");
-			}
-			button("next line2");
-			button("next line3");
-			button("next line4");
-			button("next line5");
-			button("next line6");
-			button("next line7");
-			button("next line8");
-			button("next line9");
+	//	if (button("next line1")) {
+	//		print("Was click next line 1");
+	//	}
+	//	button("next line2");
+	//	button("next line3");
+	//	button("next line4");
+	//	button("next line5");
+	//	button("next line6");
+	//	button("next line7");
+	//	button("next line8");
+	//	button("next line9");
 
-			const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-			static u32 item_index1 = 123124;
-			list_box(str1, 7, &item_index1);
+	//	const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+	//	static u32 item_index1 = 123124;
+	//	list_box(str1, 7, &item_index1);
 
-			end_window();
-		}
-	}
+	//	end_window();
+	//}
+
+	//for (int i = 0; i < 3; i++) {
+	//	String s = "test" + String(i);
+	//	if (begin_window(s.c_str())) {
+
+	//		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+	//		static u32 item_index = 123124;
+	//		list_box(str, 7, &item_index);
+
+	//		if (texture) {
+	//			image(texture, 200, 200);
+	//		}
+
+	//		const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
+	//		static u32 item_index2 = 123124;
+	//		list_box(str2, 7, &item_index2);
+
+	//		button("seperating button");
+
+	//		const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
+	//		static u32 item_index3 = 0;
+	//		list_box(str3, 7, &item_index3);
+
+	//		static bool state = false;
+	//		static bool state1 = false;
+	//		radio_button("Trun on light", &state1);
+	//		radio_button("Render shadows", &state);
+	//		//if (button("Click")) {
+	//		//	print("Was click by bottom");
+	//		//}
+	//		static int position = 12345;
+	//		edit_field("Position: x", &position);
+
+	//		static int position1 = 85959;
+	//		edit_field("Position: y", &position1);
+
+	//		static float temp = 2345.234f;
+	//		edit_field("Float x posiiton", &temp);
+
+	//		static float temp1 = 0.0;
+	//		edit_field("Float x0 posiiton", &temp1);
+
+	//		static float temp2 = 10000.0;
+	//		edit_field("Float x2 posiiton", &temp2);
+
+	//		static float temp3 = 10000.1;
+	//		edit_field("Float x3 posiiton", &temp3);
+
+	//		if (button("next line1")) {
+	//			print("Was click next line 1");
+	//		}
+	//		button("next line2");
+	//		button("next line3");
+	//		button("next line4");
+	//		button("next line5");
+	//		button("next line6");
+	//		button("next line7");
+	//		button("next line8");
+	//		button("Tab 2");
+
+	//		const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
+	//		static u32 item_index1 = 123124;
+	//		list_box(str1, 7, &item_index1);
+
+	//		end_window();
+	//	}
+	//}
 
 	//static u32 id = 0;
 	//static bool entity_window = false;

@@ -2,11 +2,15 @@
 #define COMMON_MATH_H
 
 #include <assert.h>
+#include <math.h>
 #include "../../win32/win_types.h"
 
-//float Pi = 3.1415926535f;
-//
+const float PI = 3.1415926535f;
 
+inline u32 radians_to_degrees(float radians)
+{
+	return (u32)(radians * (180.0f / PI));
+}
 
 #ifdef max
 	#undef max
@@ -39,6 +43,21 @@ namespace math {
 	inline T abs(T value)
 	{
 		return (value > 0) ? value : -value;
+	}
+
+	inline float arccos(float value)
+	{
+		return (float)::acos((double)value);
+	}
+
+	inline float cos(float value)
+	{
+		return (float)::cos((double)value);
+	}
+
+	inline float sin(float value)
+	{
+		return (float)::sin((double)value);
 	}
 };
 
@@ -98,7 +117,20 @@ Point_V2<T> operator-(const Point_V2<T> &point1, const Point_V2<T> &point2)
 	return Point_V2<T>(point1.x - point2.x, point1.y - point2.y);
 }
 
+template <typename T>
+float slope(const Point_V2<T> &point1, const Point_V2<T> &point2)
+{
+	T y_delta = point2.y - point1.y;
+	T x_delta = point2.x - point1.x;
+	if (x_delta == 0.0f) {
+		return 0.0f;
+	}
+	return (float)y_delta / (float)x_delta;
+}
+
 typedef Point_V2<s32> Point_s32;
+typedef Point_V2<u32> Point_u32;
+typedef Point_V2<float> Point_f32;
 
 template <typename T>
 struct Triangle {

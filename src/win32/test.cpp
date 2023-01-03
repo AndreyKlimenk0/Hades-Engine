@@ -183,11 +183,57 @@ struct Temp {
 	}
 };
 
+//inline void from_win32_screen_space(u32 screen_x, u32 screen_y, u32 screen_width, u32 screen_height, s32 *x, s32 *y)
+//{
+//	*x = (s32)screen_x - (screen_width / 2);
+//	*y = -(s32)screen_y + (screen_height / 2);
+//}
+//
+//inline void to_win32_screen_space(s32 x, s32 y, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
+//{
+//	*screen_x = x + (screen_width / 2);
+//	*screen_y = -y + (screen_height / 2);
+//}
+
+//template< typename T >
+//inline Vector2 make_vector2(Point_V2<T> *first_point, Point_V2<T> *second_point)
+//{
+//	Point_V2<T> result = *first_point - *second_point;
+//	return Vector2((float)result.x, (float)result.y);
+//}
+//
+//inline float get_angle_between_vectors(Vector2 &first_vector, Vector2 &second_vector)
+//{
+//	return math::arccos(first_vector.dot(second_vector) / ( first_vector.length() * second_vector.length()));
+//}
+//
+//template < typename T >
+//Point_f32 rotate_point(float radians, Point_V2<T> *point)
+//{
+//	Point_f32 result;
+//	result.x = (float)point->x * math::cos(radians) + (float)point->y * math::sin(radians);
+//	result.y = -(float)point->x * math::sin(radians) + (float)point->y * math::cos(radians);
+//	return result;
+//}
+
 void test()
 {
-	Temp<int> temp;
-	temp.data = 2;
-	temp.f = Temp_func();
-	temp.update_data(22);
-	print("temp data =", 22);
+	//Point_s32 fp_input = { -5, 5 };
+	//Point_s32 sp_input = { 0, 0 };
+	//s32 x;
+	//s32 y;
+	//from_win32_screen_space(0, 0, 10, 10, &x, &y);
+	//
+	//s32 x2;
+	//s32 y2;
+	//from_win32_screen_space(4, 0, 10, 10, &x2, &y2);
+
+	//float line_slope = slope(Point_s32(x, y), Point_s32(x2, y2));
+	//float perpendicular_line_slope = -1.0f / line_slope;
+
+	//u32 sx;
+	//u32 sy;
+	//to_win32_screen_space(x, y, 20, 20, &sx, &sy);
+	//print("from Conver coordinates", x, y);
+	//print("to Conver coordinates", sx, sy);
 }

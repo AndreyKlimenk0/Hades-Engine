@@ -3,8 +3,12 @@
 #include "../win32/test.h"
 #include "../win32/win_time.h"
 
+static Engine *engine = NULL;
+
 void Engine::init(Win32_Info *_win32_info)
 {
+	engine = this;
+	
 	win32_info = *_win32_info;
 	init_os_path();
 
@@ -40,4 +44,14 @@ void Engine::shutdown()
 Event_Handler *Engine::get_event_handler()
 {
 	return nullptr;
+}
+
+u32 get_window_width()
+{
+	return engine->win32_info.window_width;
+}
+
+u32 get_window_height()
+{
+	return engine->win32_info.window_height;
 }
