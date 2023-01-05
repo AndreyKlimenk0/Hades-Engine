@@ -6,10 +6,16 @@
 #include "../../win32/win_types.h"
 
 const float PI = 3.1415926535f;
+const float RADIANS_360 = 6.28319f;
 
-inline u32 radians_to_degrees(float radians)
+inline s32 radians_to_degrees(float radians)
 {
-	return (u32)(radians * (180.0f / PI));
+	return (s32)(radians * (180.0f / PI));
+}
+
+inline float degress_to_radians(s32 degrees)
+{
+	return ((float)degrees * PI) / 180.0f;
 }
 
 #ifdef max
@@ -58,6 +64,17 @@ namespace math {
 	inline float sin(float value)
 	{
 		return (float)::sin((double)value);
+	}
+
+	template< typename T>
+	inline T pow2(T value)
+	{
+		return (T)::pow((double)value, 2);
+	}
+
+	inline float sqrt(float value)
+	{
+		return (float)::sqrt((double)value);
 	}
 };
 
@@ -126,6 +143,12 @@ float slope(const Point_V2<T> &point1, const Point_V2<T> &point2)
 		return 0.0f;
 	}
 	return (float)y_delta / (float)x_delta;
+}
+
+template <typename T>
+float distance(Point_V2<T> *point1, Point_V2<T> *point2)
+{
+	return math::sqrt(math::pow2(point1->x - point2->x) + math::pow2(point1->y - point2->y));
 }
 
 typedef Point_V2<s32> Point_s32;

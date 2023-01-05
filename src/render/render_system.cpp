@@ -14,16 +14,28 @@
 const String HLSL_FILE_EXTENSION = "cso";
 
 
-inline void from_win32_screen_space(u32 screen_x, u32 screen_y, u32 screen_width, u32 screen_height, s32 *x, s32 *y)
+inline void from_win32_screen_space(u32 screen_width, u32 screen_height, Point_s32 *win32_point, Point_s32 *normal_point)
 {
-	*x = (s32)screen_x - (screen_width / 2);
-	*y = -(s32)screen_y + (screen_height / 2);
+	normal_point->x = win32_point->x - (screen_width / 2);
+	normal_point->y = -win32_point->y + (screen_height / 2);
 }
 
-inline void to_win32_screen_space(s32 x, s32 y, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
+inline void to_win32_screen_space(Point_s32 *point, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
 {
-	*screen_x = x + (screen_width / 2);
-	*screen_y = -y + (screen_height / 2);
+	*screen_x = point->x + (screen_width / 2);
+	*screen_y = -point->y + (screen_height / 2);
+}
+
+template< typename T >
+inline Vector2 make_vector2(Point_V2<T> *first_point, Point_V2<T> *second_point)
+{
+	Point_V2<T> result = *first_point - *second_point;
+	return Vector2((float)result.x, (float)result.y);
+}
+
+inline float get_angle_between_vectors(Vector2 &first_vector, Vector2 &second_vector)
+{
+	return math::arccos(first_vector.dot(second_vector) / (first_vector.length() * second_vector.length()));
 }
 
 inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
@@ -182,9 +194,11 @@ void Primitive_2D::make_triangle_polygon()
 		//indices.push(i);
 		//indices.push(0);
 	}
-	indices.push(0);
-	indices.push(vertices.count - 1);
-	indices.push(1);
+	if ((vertices.count % 2) != 0) {
+		indices.push(0);
+		indices.push(vertices.count - 1);
+		indices.push(1);
+	}
 }
 
 void Primitive_2D::make_outline_triangle_polygons()
@@ -241,7 +255,11 @@ void Render_Primitive_List::add_outlines(int x, int y, int width, int height, co
 {
 	String hash = String((int)width) + String((int)height) + String((int)outline_width) + String("outline");
 
-	Primitive_2D *primitive = make_or_find_primitive(x, y, render_2d->default_texture, color, hash);
+	Vector2 position = { (float)x, (float)y };
+	Matrix4 transform_matrix;
+	transform_matrix.translate(&position);
+
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, render_2d->default_texture, color, hash);
 	if (!primitive) {
 		return;
 	}
@@ -276,10 +294,11 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 
 		char c = text[i];
 		Font_Char &font_char = render_2d->font->characters[c];
-
+		Vector2 position = Vector2(x + font_char.bearing.width, y + (max_height - font_char.size.height) + (font_char.size.height - font_char.bearing.height));
+		
 		Render_Primitive_2D info;
 		info.gpu_resource = render_2d->font_atlas;
-		info.position = Vector2(x + font_char.bearing.width, y + (max_height - font_char.size.height) + (font_char.size.height - font_char.bearing.height));
+		info.transform_matrix.translate(&position);
 		info.color = Color::White;
 		info.primitive = render_2d->lookup_table[String(c)];
 		get_clip_rect(&info.clip_rect);
@@ -317,7 +336,12 @@ void Render_Primitive_List::add_rect(float x, float y, float width, float height
 	//////////////////////////////////////////////////////////
 	String hash = String((int)width) + String((int)height) + String((int)rounding) + String((int)flags);
 
-	Primitive_2D *primitive = make_or_find_primitive(x, y, render_2d->default_texture, color, hash);
+
+	Vector2 position = { (float)x, (float)y };
+	Matrix4 transform_matrix;
+	transform_matrix.translate(&position);
+
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, render_2d->default_texture, color, hash);
 	if (!primitive) {
 		return;
 	}
@@ -343,7 +367,11 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 {
 	String hash = String(width + height);
 
-	Primitive_2D *primitive = make_or_find_primitive(x, y, gpu_resource, Color::White, hash);
+	Vector2 position = { (float)x, (float)y };
+	Matrix4 transform_matrix;
+	transform_matrix.translate(&position);
+
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, gpu_resource, Color::White, hash);
 	if (!primitive) {
 		return;
 	}
@@ -359,61 +387,54 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 
 void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thickness)
 {
-	String hash = String(first_point->x) + String(first_point->y) + String(second_point->x) + String(second_point->y) + String(thickness);
+	Vector2 position = { (float)first_point->x, (float)first_point->y };
+	Matrix4 position_matrix;
+	position_matrix.translate(&position);
 
-	Primitive_2D *primitive = make_or_find_primitive(0.0f, 0.0f, render_2d->default_texture, color, hash);
+	Point_s32 converted_point1;
+	from_win32_screen_space(get_window_width(), get_window_height(), first_point, &converted_point1);
+
+	Point_s32 converted_point2;
+	from_win32_screen_space(get_window_width(), get_window_height(), second_point, &converted_point2);
+
+	Vector2 line_direction = make_vector2(&converted_point2, &converted_point1);
+	line_direction.normalize();
+
+	float angle = get_angle_between_vectors(line_direction, base_x_vec2);
+
+	Matrix4 rotation_matrix;
+	if (line_direction.y < 0.0f) {
+		angle = math::abs(RADIANS_360 - angle);
+	}
+	
+	rotation_matrix.rotate_about_z(angle);
+
+	Matrix4 transform_matrix;
+	transform_matrix = rotation_matrix * position_matrix;
+
+	float line_width = distance(first_point, second_point);
+	String hash = String(line_width + thickness);
+
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, render_2d->default_texture, color, hash);
 	if (!primitive) {
 		return;
 	}
-	u32 window_width = get_window_width();
-	u32 window_height = get_window_height();
 
-	s32 x, y;
-	from_win32_screen_space(first_point->x, first_point->y, window_width, window_height, &x, &y);
-	
-	s32 x2, y2;
-	from_win32_screen_space(second_point->x, second_point->y, window_width, window_height, &x2, &y2);
-
-	float line_slope = slope(Point_s32(x, y), Point_s32(x2, y2));
-	
-	float perpendicular_line_slope = -1.0f / line_slope;
-	if (line_slope == 0.0f) {
-		perpendicular_line_slope = 0.0f;
-	}
-
-	float line_rect[8];
-
-	//first perpendicular line
-	line_rect[0] = (float)x + thickness;
-	line_rect[1] = (float)y + (thickness * perpendicular_line_slope);
-
-	line_rect[2] = (float)x2 + thickness;
-	line_rect[3] = (float)y2 + (thickness * perpendicular_line_slope);
-
-	//second perpendicular line
-	line_rect[4] = (float)x2 + -thickness;
-	line_rect[5] = (float)y2 + -(thickness * perpendicular_line_slope);
-
-	line_rect[6] = (float)x + -thickness;
-	line_rect[7] = (float)y + -(thickness * perpendicular_line_slope);
-
-	for (int i = 0; i < 4; i++) {
-		u32 x, y;
-		to_win32_screen_space(line_rect[i * 2], line_rect[(i * 2) + 1], window_width, window_height, &x, &y);
-		primitive->add_point(Vector2((float)x, (float)y));
-	}
+	primitive->add_point(Vector2(0.0f, 0.0f));
+	primitive->add_point(Vector2(line_width, 0.0f));
+	primitive->add_point(Vector2(line_width, thickness));
+	primitive->add_point(Vector2(0.0f, thickness));
 
 	primitive->make_triangle_polygon();
 	render_2d->add_primitive(primitive);
 }
 
-Primitive_2D *Render_Primitive_List::make_or_find_primitive(float x, float y, Texture *texture, const Color &color, String &primitve_hash)
+Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_matrix, Texture *texture, const Color &color, String &primitve_hash)
 {
 	Render_Primitive_2D render_primitive;
-	render_primitive.position.x = x;
-	render_primitive.position.y = y;
 	render_primitive.color.value = color.value;
 	render_primitive.gpu_resource = texture;
+	render_primitive.transform_matrix = transform_matrix;
 	get_clip_rect(&render_primitive.clip_rect);
 
 	// if we found primitve we can just push it in render primitives array
@@ -631,6 +652,7 @@ void Render_2D::render_frame()
 
 	CB_Render_2d_Info cb_render_info;
 
+
 	Render_Primitive_List *list = NULL;
 	For(draw_list, list) {
 		Render_Primitive_2D *render_primitive = NULL;
@@ -638,10 +660,10 @@ void Render_2D::render_frame()
 
 			render_pipeline->set_scissor(&render_primitive->clip_rect);
 
-			screen_postion.translate(&render_primitive->position);
-
-			cb_render_info.position_orthographic_matrix = screen_postion * render_system->view_info.orthogonal_matrix;
+			cb_render_info.position_orthographic_matrix = render_primitive->transform_matrix * render_system->view_info.orthogonal_matrix;
+			
 			cb_render_info.color = render_primitive->color.value;
+			
 			render_pipeline->update_constant_buffer(constant_buffer, &cb_render_info);
 			render_pipeline->set_veretex_shader_resource(constant_buffer);
 			render_pipeline->set_pixel_shader_resource(constant_buffer);

@@ -1,7 +1,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <math.h>
+#include "../math/common.h"
 #include <assert.h>
 #include <DirectXMath.h>
 
@@ -165,13 +165,14 @@ inline Vector2::operator XMVECTOR()
 
 inline float Vector2::length()
 {
-	return (float)sqrt(x * x + y * y);
+	return math::sqrt(math::pow2(x) + math::pow2(y));
 }
 
 inline void Vector2::normalize()
 {
-	x /= length(); 
-	y /= length();
+	float len = length();
+	x /= len; 
+	y /= len;
 }
 
 inline float Vector2::dot(const Vector2 &other)

@@ -246,20 +246,18 @@ struct Matrix4 {
 	operator XMMATRIX();
 	operator float *();
 	
-	
 	void zero();
 	void indentity();
 	void translate(Vector2 *vector);
 	void translate(Vector3 *vector);
 	void translate(float x = 0.0f, float y = 0.0f, float z = 0.0f);
+	void rotate_about_z(float radians);
 
 	bool is_indentity();
 	bool compare(const Matrix4 &other);
 	
 	Matrix4 transpose();
 	Matrix4 inverse();
-
-
 };
 
 extern Matrix4 matrix4_indentity;
@@ -442,6 +440,17 @@ inline void Matrix4::translate(float x, float y, float z)
 	matrix[3].x = x;
 	matrix[3].y = y;
 	matrix[3].z = z;
+}
+
+inline void Matrix4::rotate_about_z(float radians)
+{
+	float c = math::cos(radians);
+	float s = math::sin(radians);
+
+	matrix[0] = Vector4(c, -s, 0.0f, 0.0f);
+	matrix[1] = Vector4(s,  c, 0.0f, 0.0f);
+	matrix[2] = Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+	matrix[3] = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 inline Matrix4 Matrix4::transpose()
