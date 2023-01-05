@@ -970,18 +970,13 @@ bool Gui_Manager::add_tab(const char *tab_name)
 
 		Color default_color = Color(52, 52, 56);
 		
-		Render_Primitive_List *render_list = GET_RENDER_LIST();
-		//Color tab_color = (active_tab == tab_gui_id) ? Color(30, 30, 30) : Color(60, 60, 60);
-		//Color tab_color = (active_tab == tab_gui_id) ? Color(36, 39, 43) : Color(74, 82, 90);
 		Color tab_color = (active_tab == tab_gui_id) ? Color(36, 39, 43) : default_color;
 
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		
+		Rect_s32 tab_line_rect = { window->view_rect.x, window->view_rect.y, window->rect.width, TAB_HEIGHT };
 		if (!window->tab_was_drawn) {
 			window->tab_was_drawn = true;
-			Rect_s32 tab_line_rect = { window->view_rect.x, window->view_rect.y, window->rect.width, TAB_HEIGHT };
-			//rgb(51, 51, 51)
-			//render_list->add_rect(&tab_line_rect, Color(60, 60, 60));
-			//render_list->add_rect(&tab_line_rect, Color(74, 82, 90));
-			//render_list->add_rect(&tab_line_rect, Color(45, 45, 48);
 			render_list->add_rect(&tab_line_rect, default_color);
 		}
 
@@ -990,23 +985,26 @@ bool Gui_Manager::add_tab(const char *tab_name)
 
 		render_list->add_rect(&tab_rect, tab_color);
 		render_list->add_text(&text_rect, tab_name);
-		render_list->pop_clip_rect();
 
-		if (active_tab == tab_gui_id) {
-			Point_s32 f = { tab_rect.x, tab_rect.y };
-			Point_s32 s = { text_rect.width + 40, tab_rect.y };
+		//right line
+		s32 thickness = 1.5f;
+		Point_s32 point1 = { tab_rect.right(), tab_rect.y };
+		Point_s32 point2 = { tab_rect.right(), tab_rect.bottom() };
+		render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
 
-			//render_list->add_line(&f, &s, Color(74, 82, 90), 2.0f);
-			//render_list->add_line(&f, &s, Color::Red, 10.0f);
+		//bottom line
+		if (active_tab != tab_gui_id) {
+			point1 = { tab_rect.x, tab_rect.bottom() - thickness };
+			point2 = { tab_rect.right(), tab_rect.bottom() - thickness };
+			render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
 		}
 
-		Point_s32 fp2 = { tab_rect.right() - 2, tab_rect.y };
-		Point_s32 fs2 = { tab_rect.right() - 2, tab_rect.bottom() };
-		render_list->add_line(&fp2, &fs2, Color(60, 60, 60), 2.0f);
+		//bottom line after a tab
+		point1 = { tab_rect.right(), tab_rect.bottom() - thickness };
+		point2 = { tab_line_rect.right(), tab_rect.bottom() - thickness };
+		render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
 
-		//Point_s32 fp = { window->view_rect.x, tab_rect.bottom() - 1 };
-		//Point_s32 fs = { window->view_rect.right(), tab_rect.bottom() - 1 };
-		//render_list->add_line(&fp, &fs, Color(60, 60, 60), 1.0f);
+		render_list->pop_clip_rect();
 	}
 	tab_count++;
 	return (active_tab == tab_gui_id);

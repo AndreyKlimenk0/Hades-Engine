@@ -39,9 +39,9 @@ struct Primitive_2D {
 struct Render_Primitive_2D {
 	Primitive_2D *primitive = NULL;
 	Texture *gpu_resource = NULL;
-	Vector2 position;
-	Rect_s32 clip_rect;
 	Color color;
+	Rect_s32 clip_rect;
+	Matrix4 transform_matrix;
 };
 
 const u32 ROUND_TOP_LEFT_RECT = 0x1;
@@ -80,7 +80,7 @@ struct Render_Primitive_List {
 
 	void add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thicknesss = 0.5f);
 
-	Primitive_2D *make_or_find_primitive(float x, float y, Texture *texture, const Color &color, String &primitve_hash);
+	Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture *texture, const Color &color, String &primitve_hash);
 };
 
 struct Render_2D {
@@ -112,7 +112,6 @@ struct Render_2D {
 	u32 total_vertex_count = 0;
 	u32 total_index_count = 0;
 
-	Matrix4 screen_postion;
 
 	Array<Primitive_2D *> primitives;
 	Array<Render_Primitive_List *> draw_list;
