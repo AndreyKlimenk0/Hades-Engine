@@ -50,13 +50,14 @@ struct File {
 	~File();
 
 	bool is_file_open = false;
+	u32 file_size = 0;
 	HANDLE file_handle = NULL;
 	String file_name;
 
 	bool open(const char *path_to_file, File_Mode mode, File_Creation file_creation);
-	void read(void *data, u32 data_size);
-	void write(void *data, u32 data_size);
-	void write(const char *string, bool new_line = true);
+	bool read(void *data, u32 data_size);
+	bool write(void *data, u32 data_size);
+	bool write(const char *string, bool new_line = true);
 
 };
 

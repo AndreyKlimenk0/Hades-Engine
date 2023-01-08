@@ -3,6 +3,6 @@
 
 #include "../game/world.h"
 
-void save_world_in_map(World *world, const char *map_name = NULL);
+void save_world_in_map(Game_World *world, const char *map_name = NULL);
 
 #endif

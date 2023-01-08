@@ -347,25 +347,12 @@ String::String(const char *string)
 
 String::String(const char *string, int start, int end)
 {
-	int l = end - start;
-	const char *c = string;
-	c += start;
-
-	data = new char[l + 1];
-	len = l;
-	memcpy(data, c, sizeof(char) * l);
-	data[l] = '\0';
+	copy(string, (u32)start, (u32)end);
 }
 
 String::String(const String &string, int start, int end)
 {
-	int l = end - start;
-	const char *c = string.data;
-	c += start;
-
-	data = new char[l + 1];
-	memcpy(data, c, sizeof(char) * l);
-	data[l] = '\0';
+	copy(string, (u32)start, (u32)end);
 }
 
 String::String(const String *other)
@@ -439,7 +426,6 @@ void String::pop_char()
 	String *other_str = copy();
 	other_str->data[other_str->len - 1] = '\0';
 
-	other_str->print();
 	*this = *other_str;
 	DELETE_PTR(other_str);
 }
@@ -498,6 +484,16 @@ void String::remove(int index)
 	DELETE_PTR(copied_str);
 }
 
+void String::removee_all(char c)
+{
+	for (u32 i = 0; i < len; i++) {
+		char character = data[i];
+		if (character == c) {
+			remove(i);
+		}
+	}
+}
+
 void String::replace(char from, char on)
 {
 	for (int i = 0; i < len; i++) {
@@ -544,6 +540,13 @@ void String::append(const String &string)
 	append(string.data);
 }
 
+void String::allocate(u32 char_count)
+{
+	DELETE_ARRAY(data);
+	data = new char[char_count];
+	len = char_count;
+}
+
 void String::allocate_and_copy_string(const char *string)
 {
 	assert(string);
@@ -553,6 +556,13 @@ void String::allocate_and_copy_string(const char *string)
 	len = string_len;
 	data = new char[string_len + 1];
 	memcpy(data, string, sizeof(char) * (string_len + 1));
+}
+
+void String::place_end_char()
+{
+	if ((len > 0) && (data != NULL)) {
+		data[len - 1] = '\0';
+	}
 }
 
 int String::find_text(const char *text, int start)
@@ -579,6 +589,19 @@ int String::find_text(const char *text, int start)
 		}
 	}
 	return result;
+}
+
+void String::copy(const String & string, u32 start, u32 end)
+{
+	DELETE_ARRAY(data);
+	
+	u32 string_len = end - start;
+	const char *ptr = string.data;
+	ptr += start;
+
+	data = new char[string_len + 1];
+	memcpy(data, ptr, sizeof(char) * string_len);
+	data[string_len] = '\0';
 }
 
 String *String::copy()

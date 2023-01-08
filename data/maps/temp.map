@@ -1,0 +1,32 @@
+Game_World:
+    Ligths<array, 10>: { 
+        {
+            id: 0,
+            type: ENTITY_TYPE_LIGHT,
+            position: Vector3(0.0, 200.0, 0.0),
+            light_type: DIRECTIONAL_LIGHT_TYPE,
+            color: Color(255, 255, 255),
+            direction: Vector3(1.0, 0.5, 0.7),
+        },
+        {
+            id : 0,
+            type : ENTITY_TYPE_LIGHT,
+            position : Vector3(0.0, 200.0, 0.0),
+            light_type : POINT_LIGHT_TYPE,
+            color : Color(255, 255, 255),
+            direction: Vector3(1.0, 0.5, 0.7),
+        },
+    }
+    Lights:
+        count 10
+        Directinal_Light:
+            color Color(255, 255, 255)
+            direction Vector(0.0, 0.0, -0.5)
+
+        Point_Light:
+
+    Entities:
+        count 10
+        Entity:
+            position Vector(0.0, 0.0, 0.0)
+            render_model_name "test_name.fbx"
