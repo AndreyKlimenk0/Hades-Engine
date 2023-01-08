@@ -4,7 +4,7 @@
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 
-void save_world_in_map(World *world, const char *map_name)
+void save_world_in_map(Game_World *world, const char *map_name)
 {
 	String path_to_file;
 	build_full_path_to_map_file(map_name, path_to_file);

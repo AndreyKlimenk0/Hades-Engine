@@ -21,7 +21,6 @@ inline void free_string(const char *string)
 	string = NULL;
 }
 
-
 char *get_next_line(char **buffer);
 char *concatenate_c_str(const char *str1, const char *str2);
 
@@ -92,12 +91,16 @@ struct String {
 	void pop_char();
 	void insert(int index, char c);
 	void remove(int index);
+	void removee_all(char c);
 	void replace(char from, char on);
 	void append(char c);
 	void append(const char *string);
 	void append(const String &string);
 	void append(const String *string);
+	void allocate(u32 char_count);
 	void allocate_and_copy_string(const char *string);
+	void place_end_char();
+	void copy(const String &string, u32 start, u32 end);
 
 	bool is_empty() { return data == NULL && len == 0; }
 	

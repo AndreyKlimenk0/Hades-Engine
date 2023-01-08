@@ -11,12 +11,7 @@
 
 u32 fast_hash(const char *data);
 
-inline u32 hash(char c, const int factor, const int table_count)
-{
-	return (u32)c % table_count;
-}
-
-inline u32 hash(const char* string, const int factor, const int table_count)
+inline u32 hash(const char* string, int factor, int table_count)
 {
 	unsigned long hash = 5381;
     int c;
@@ -27,7 +22,7 @@ inline u32 hash(const char* string, const int factor, const int table_count)
     return (u32)(hash % table_count);
 }
 
-inline u32 hash(int number, const int table_count, const int attempt)
+inline u32 hash(int number, int table_count, int attempt)
 {
 	char *str = to_string(number);
 	u32 h = hash(str, table_count, attempt);
@@ -89,7 +84,7 @@ struct Hash_Table {
 	u32 hash1(const _Key_ &key);
 	u32 hash2(const _Key_ &key);
 
-	_Value_ &operator[](u32 index);
+	//_Value_ &operator[](u32 index);
 	_Value_ &operator[](const _Key_ &key);
 
 	Hash_Node<_Key_, _Value_> *get_node(u32 index);
@@ -122,27 +117,31 @@ Hash_Table<_Key_, _Value_>::~Hash_Table()
 template<typename _Key_, typename _Value_>
 u32 Hash_Table<_Key_, _Value_>::hash1(const _Key_ &key)
 {
-	return (u32)hash(key, hash_factor1, size);
+	return (u32)hash((_Key_)key, hash_factor1, size);
 }
 
 template<typename _Key_, typename _Value_>
 u32 Hash_Table<_Key_, _Value_>::hash2(const _Key_ &key)
 {
-	return (u32)hash(key, hash_facotr2, size) + size;
+	return (u32)hash((_Key_)key, hash_facotr2, size) + size;
 }
 
-template<typename _Key_, typename _Value_>
-_Value_ &Hash_Table<_Key_, _Value_>::operator[](u32 index)
-{
-	Table_Entry *entry = get_node(index);
-	return entry->value;
-}
+//template<typename _Key_, typename _Value_>
+//_Value_ &Hash_Table<_Key_, _Value_>::operator[](u32 index)
+//{
+//	Table_Entry *entry = get_node(index);
+//	return entry->value;
+//}
 
 template<typename _Key_, typename _Value_>
 _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)
 {
 	Table_Entry *entry = get_table_entry(key);
-	assert(entry);
+	if (!entry) {
+		_Value_ value;
+		entry = new Table_Entry(key, value);
+		insert_entry(entry);
+	}
 	return entry->value;
 }
 
