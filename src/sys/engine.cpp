@@ -3,6 +3,8 @@
 #include "../win32/test.h"
 #include "../win32/win_time.h"
 
+//#define DRAW_TEST_GUI
+
 static Engine *engine = NULL;
 
 void Engine::init(Win32_Info *_win32_info)
@@ -18,6 +20,12 @@ void Engine::init(Win32_Info *_win32_info)
 	gui::init_gui(&render_sys.render_2d, &win32_info, &font, &render_sys.gpu_device);
 
 	game_world.init();
+	
+	render_world.init();
+
+	editor.init();
+
+	engine->is_initialized = true;
 }
 
 void Engine::frame()
@@ -29,7 +37,14 @@ void Engine::frame()
 	run_event_loop();
 
 	render_sys.new_frame();
-	render_sys.render_frame();
+	
+#ifdef DRAW_TEST_GUI
+	gui::draw_test_gui();
+#endif
+
+	render_world.render();
+
+	editor.render();
 	render_sys.end_frame();
 
 	clear_event_queue();
@@ -43,14 +58,37 @@ void Engine::shutdown()
 {
 }
 
+bool Engine::initialized()
+{
+	if (engine) {
+		return engine->is_initialized;
+	}
+	return false;
+}
+
+void Engine::resize_window(u32 window_width, u32 window_height)
+{
+	engine->render_sys.resize(window_width, window_height);
+}
+
 Font *Engine::get_font()
 {
 	return &engine->font;
 }
 
+Game_World *Engine::get_game_world()
+{
+	return &engine->game_world;
+}
+
 Render_World *Engine::get_render_world()
 {
 	return &engine->render_world;
+}
+
+Render_System *Engine::get_render_system()
+{
+	return &engine->render_sys;
 }
 
 u32 get_window_width()

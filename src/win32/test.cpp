@@ -7,6 +7,7 @@
 #include "../libs/os/file.h"
 #include "../libs/os/path.h"
 #include "../libs/enum_helper.h"
+#include "../game/world.h"
 
 
 static bool is_alpha(char c) {
@@ -398,7 +399,8 @@ void Map_Parser::report_error(Token_Type expecting_token, Token_Type actual_toke
 
 void test()
 {
-
-	Map_Parser parser;
-	parser.parse("base.map");
+	//print("Light Size of", sizeof(Light));
+	//print("check", sizeof(Light) % 16);
+	//Map_Parser parser;
+	//parser.parse("base.map");
 }

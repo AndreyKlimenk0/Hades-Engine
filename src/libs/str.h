@@ -9,10 +9,12 @@
 
 
 struct String;
+typedef u32 String_Id;
 
 void format_(Array<char *> *array);
 void split(const char *string, const char *characters, Array<char *> *array);
 bool split(String *string, const char *characters, Array<String> *array);
+void to_upper_first_letter(String *string);
 bool is_alphabet(const char *string);
 
 inline void free_string(const char *string)
