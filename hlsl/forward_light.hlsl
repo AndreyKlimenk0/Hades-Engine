@@ -12,16 +12,6 @@
 #define DIRECTIONAL_LIGHT_TYPE 2
 
 
-struct Material {
-	float4 ambient;
-	float4 diffuse;
-	float4 specular;
-};
-
-cbuffer Mesh_Info : register(b3) {
-	Material material;
-};
-
 struct Light {
 	float4 position;
 	float4 direction;
@@ -32,14 +22,32 @@ struct Light {
 	float pad;
 };
 
-StructuredBuffer<Light> lights : register(t1);
+struct Mesh_Instance {
+	uint vertex_count;
+	uint index_count;
+	uint vertex_offset;
+	uint index_offset;
+};
 
-//float4 calculate_ambient_light(float3 normal, float3 color)
-//{
-//	float up = normal.y * 0.5 + 0.5;
-//	float3 ambient_color = ambient_lower_color + up * ambient_upper_color;
-//	return float4(ambient_color * color, 0.0f);
-//}
+cbuffer Pass_Data : register(b2) {
+	uint mesh_id;
+	uint world_matrix_id;
+	uint pad11;
+	uint pad22;
+}
+
+struct Material {
+	float4 ambient;
+	float4 diffuse;
+	float4 specular;
+};
+
+StructuredBuffer<Light> lights : register(t1);
+StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
+StructuredBuffer<float4x4> world_matrices : register(t3);
+StructuredBuffer<uint> unified_index_buffer : register(t4);
+StructuredBuffer<Vertex_XNUV> unified_vertex_buffer : register(t5);
+
 
 float4 calculate_spot_light(Light light, Material material, float3 normal, float3 position)
 {
@@ -156,14 +164,24 @@ struct Vertex_Out {
 	float2 uv : TEXCOORD;
 };
 
-Vertex_Out vs_main(Vertex_XNUV_In vertex)
+Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 {
-	Vertex_Out result;
-	result.position = mul(float4(vertex.position, 1.0f), wvp_matrix); 
-	result.world_position = mul(vertex.position, (float3x3)world_matrix);
-	result.normal = mul(vertex.normal, (float3x3)world_matrix);
-	result.uv = vertex.uv;
-	return result;
+	Mesh_Instance mesh_instance = mesh_instances[mesh_id];
+	
+	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
+	Vertex_XNUV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
+
+	float4x4 world_matrix = transpose(world_matrices[world_matrix_id]);
+
+	float4x4 temp = mul(view_matrix, perspective_matrix);
+	float4x4 temp2 = mul(world_matrix, temp);
+	
+	Vertex_Out vertex_out;
+	vertex_out.position = mul(float4(vertex.position, 1.0f), temp2); 
+	vertex_out.world_position = mul(vertex.position, (float3x3)world_matrix);
+	vertex_out.normal = mul(vertex.normal, (float3x3)world_matrix);
+	vertex_out.uv = vertex.uv;
+	return vertex_out;
 }
 
 float4 ps_main(Vertex_Out pixel) : SV_Target
@@ -173,7 +191,12 @@ float4 ps_main(Vertex_Out pixel) : SV_Target
 	if (light_count == 0) {
 		return test;
 	}
-	
+
+	Material material;
+	material.ambient = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.diffuse = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.specular = float4(1.0f, 1.0f, 1.0f, 1.0f);
+
 	float4 final_color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	for (int i = 0; i < light_count; i++) {
 		switch (lights[i].light_type) {

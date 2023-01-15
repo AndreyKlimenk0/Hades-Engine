@@ -10,11 +10,11 @@
 #include "../libs/color.h"
 
 
+struct Struct_Buffer;
 struct Gpu_Device;
 struct Render_Pipeline;
 
 typedef ID3D11SamplerState Texture_Sampler;
-typedef ID3D11ShaderResourceView Shader_Resource_View;
 typedef ID3D11Resource  Gpu_Resource;
 typedef ID3D11InputLayout Input_Layout;
 typedef ID3D11RasterizerState Rasterizer;
@@ -27,6 +27,7 @@ typedef ID3D11ComputeShader  Compute_Shader;
 typedef ID3D11HullShader     Hull_Shader;
 typedef ID3D11DomainShader   Domain_Shader;
 typedef ID3D11PixelShader    Pixel_Shader;
+typedef ID3D11ShaderResourceView Shader_Resource_View;
 
 const u32 BIND_VERTEX_BUFFER = 0x1L;
 const u32 BIND_INDEX_BUFFER = 0x2L;
@@ -42,6 +43,23 @@ const u32 BIND_VIDEO_ENCODER = 0x400L;
 const u32 CPU_ACCESS_WRITE = 0x10000L;
 const u32 CPU_ACCESS_READ = 0x20000L;
 
+const u32 RESOURCE_MISC_GENERATE_MIPS = 0x1L;
+const u32 RESOURCE_MISC_SHARED = 0x2L;
+const u32 RESOURCE_MISC_TEXTURECUBE = 0x4L;
+const u32 RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10L;
+const u32 RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20L;
+const u32 RESOURCE_MISC_BUFFER_STRUCTURED = 0x40L;
+const u32 RESOURCE_MISC_RESOURCE_CLAMP = 0x80L;
+const u32 RESOURCE_MISC_SHARED_KEYEDMUTEX = 0x100L;
+const u32 RESOURCE_MISC_GDI_COMPATIBLE = 0x200L;
+const u32 RESOURCE_MISC_SHARED_NTHANDLE = 0x800L;
+const u32 RESOURCE_MISC_RESTRICTED_CONTENT = 0x1000L;
+const u32 RESOURCE_MISC_RESTRICT_SHARED_RESOURCE = 0x2000L;
+const u32 RESOURCE_MISC_RESTRICT_SHARED_RESOURCE_DRIVER = 0x4000L;
+const u32 RESOURCE_MISC_GUARDED = 0x8000L;
+const u32 RESOURCE_MISC_TILE_POOL = 0x20000L;
+const u32 RESOURCE_MISC_TILED = 0x40000L;
+const u32 RESOURCE_MISC_HW_PROTECTED = 0x80000L;
 
 enum Resource_Usage {
 	RESOURCE_USAGE_DEFAULT ,
@@ -58,7 +76,9 @@ struct Gpu_Buffer_Desc {
 	
 	u32 bind_flags = 0;
 	u32 cpu_access = 0;
-
+	u32 misc_flags = 0;
+	u32 struct_size = 0;
+	
 	Resource_Usage usage;
 };
 
@@ -66,23 +86,19 @@ struct Gpu_Buffer {
 	Gpu_Buffer() {};
 	~Gpu_Buffer();
 
-	ID3D11Buffer *buffer = NULL;
+	ID3D11Buffer *dx11buffer = NULL;
 
 	u32 data_size = 0;
 	u32 data_count = 0;
 
 	u32 get_data_width();
 	ID3D11Buffer **get_buffer_ptr();
+	void free();
 };
 
+Gpu_Buffer_Desc make_vertex_buffer_desc(u32 data_count, u32 data_size, void *data, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, u32 cpu_access = 0);
+Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void *data, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, u32 cpu_access = 0);
 
-struct Vertex_Buffer_Desc : Gpu_Buffer_Desc {
-	Vertex_Buffer_Desc(u32 _data_count, u32 _data_size, void *_data, Resource_Usage _usage = RESOURCE_USAGE_DEFAULT, u32 _cpu_access = 0);
-};
-
-struct Index_Buffer_Desc : Gpu_Buffer_Desc {
-	Index_Buffer_Desc(u32 _data_count, void *_data, Resource_Usage _usage = RESOURCE_USAGE_DEFAULT, u32 _cpu_access = 0);
-};
 
 struct Rasterizer_Desc {
 	Rasterizer_Desc();
@@ -195,9 +211,19 @@ struct Shader {
 	String name;
 };
 
+struct Shader_Resource {
+	Shader_Resource() {}
+	~Shader_Resource();
+	
+	ID3D11ShaderResourceView *dx11_shader_resource = NULL;
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	
+	void free();
+};
+
 struct Texture {
 	Texture() {}
-	~Texture();
+	~Texture() {};
 
 	u32 width;
 	u32 height;
@@ -232,6 +258,8 @@ struct Gpu_Device {
 	Texture_Sampler *create_sampler();
 	Texture *create_texture_2d(u32 width, u32 height, void *data = NULL, u32 mip_levels = 0, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
 
+	void create_shader_resource_for_struct_buffer(Gpu_Buffer *buffer, u32 elements_count, Shader_Resource *shader_resource);
+
 	Rasterizer *create_rasterizer(Rasterizer_Desc *rasterizer_desc);
 	Blending_Test *create_blending_test(Blending_Test_Desc *blending_desc);
 	Depth_Stencil_Test *create_depth_stencil_test(Depth_Stencil_Test_Desc *depth_stencil_desc);
@@ -240,6 +268,14 @@ struct Gpu_Device {
 enum Render_Primitive_Type {
 	RENDER_PRIMITIVE_TRIANGLES,
 	RENDER_PRIMITIVE_LINES,
+};
+
+enum Map_Type {
+	MAP_TYPE_READ,
+	MAP_TYPE_WRITE,
+	MAP_TYPE_READ_WRITE,
+	MAP_TYPE_WRITE_DISCARD,
+	MAP_TYPE_MAP_WRITE_NO_OVERWRITE
 };
 
 struct Render_Pipeline {
@@ -253,8 +289,10 @@ struct Render_Pipeline {
 
 	void resize(Gpu_Device *gpu_device, u32 window_width, u32 window_height);
 	void shutdown();
+
+	void copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buffer);
 	
-	void *map(Gpu_Buffer *gpu_buffer);
+	void *map(Gpu_Buffer *gpu_buffer, Map_Type map_type = MAP_TYPE_WRITE_DISCARD);
 	void unmap(Gpu_Buffer *gpu_buffer);
 
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
@@ -273,10 +311,14 @@ struct Render_Pipeline {
 	void set_domain_shader(Shader *shader);
 	void set_pixel_shader(Shader *shader);
 
-	void set_veretex_shader_resource(Gpu_Buffer *constant_buffer);
+	void set_vertex_shader_resource(u32 gpu_register, Gpu_Buffer *constant_buffer);
+	void set_vertex_shader_resource(u32 gpu_register, Shader_Resource *shader_resource);
+	void set_vertex_shader_resource(Struct_Buffer *struct_buffer);
+	
 	void set_pixel_shader_sampler(Texture_Sampler *sampler);
-	void set_pixel_shader_resource(Gpu_Buffer *constant_buffer);
+	void set_pixel_shader_resource(u32 gpu_register, Gpu_Buffer *constant_buffer);
 	void set_pixel_shader_resource(Shader_Resource_View *shader_resource_view);
+	void set_pixel_shader_resource(Struct_Buffer *struct_buffer);
 
 	void set_rasterizer(Rasterizer *rasterizer);
 	void set_scissor(Rect_s32 *rect);
@@ -287,7 +329,10 @@ struct Render_Pipeline {
 
 	void set_depth_stencil_test(Depth_Stencil_Test *depth_stencil_test, u32 stencil_ref = 0);
 	void reset_depth_stencil_test();
+	void reset_vertex_buffer();
+	void reset_index_buffer();
 
+	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 };
 

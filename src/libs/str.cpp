@@ -62,6 +62,23 @@ bool split(String *string, const char *symbols, Array<String> *array)
 	return true;
 }
 
+void to_upper_first_letter(String *string)
+{
+	for (u32 i = 0; i < string->len; i++) {
+		char c = string->data[i];
+		if (isalpha((int)c)) {
+			if (i > 0) {
+				char prev = string->data[i - 1];
+				if (prev == ' ') {
+					string->data[i] = toupper((int)c);
+				}
+			} else {
+				string->data[i] = toupper((int)c);
+			}
+		}
+	}
+}
+
 bool is_alphabet(const char *string)
 {
 	u32 len = strlen(string);

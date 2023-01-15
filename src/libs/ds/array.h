@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 #include "../../win32/win_local.h"
+#include "../../win32/win_types.h"
 
 
 #define DO_STRING_JOIN(arg1, arg2) arg1 ## arg2
@@ -28,7 +29,7 @@ struct Array {
 	void remove(int index);
 	void set_count(int _count);
 	void shutdown();
-	void push(const T &item);
+	u32 push(const T &item);
 	void set_pointer_to_item(T *ptr, int index);
 	void set_pointer_to_item(T **ptr, int index);
 
@@ -61,6 +62,17 @@ struct Array {
 		resize(size);
 	}
 };
+
+template <typename T>
+inline void merge(Array<T> *dst, Array<T> *src)
+{
+	if ((dst->count + src->count) > dst->size) {
+		dst->resize(dst->count + src->count);
+	}
+	memcpy((void *)&dst->items[dst->count], (void *)src->items, sizeof(T) * src->count);
+	dst->count += src->count;
+}
+
 
 template <typename T>
 void Array<T>::set_count(int _count)
@@ -159,12 +171,13 @@ inline void Array<T>::remove(int index)
 }
 
 template <typename T>
-void Array<T>::push(const T &item)
+u32 Array<T>::push(const T &item)
 {
 	if (count >= size) {
 		resize(size * 2);
 	}
-	items[count++] = item;
+	items[count] = item;
+	return count++;
 }
 
 template <typename T>

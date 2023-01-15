@@ -84,7 +84,7 @@ struct Hash_Table {
 	u32 hash1(const _Key_ &key);
 	u32 hash2(const _Key_ &key);
 
-	//_Value_ &operator[](u32 index);
+	_Value_ &get_value(u32 index);
 	_Value_ &operator[](const _Key_ &key);
 
 	Hash_Node<_Key_, _Value_> *get_node(u32 index);
@@ -126,12 +126,12 @@ u32 Hash_Table<_Key_, _Value_>::hash2(const _Key_ &key)
 	return (u32)hash((_Key_)key, hash_facotr2, size) + size;
 }
 
-//template<typename _Key_, typename _Value_>
-//_Value_ &Hash_Table<_Key_, _Value_>::operator[](u32 index)
-//{
-//	Table_Entry *entry = get_node(index);
-//	return entry->value;
-//}
+template<typename _Key_, typename _Value_>
+_Value_ &Hash_Table<_Key_, _Value_>::get_value(u32 index)
+{
+	Table_Entry *entry = get_node(index);
+	return entry->value;
+}
 
 template<typename _Key_, typename _Value_>
 _Value_ &Hash_Table<_Key_, _Value_>::operator[](const _Key_ &key)

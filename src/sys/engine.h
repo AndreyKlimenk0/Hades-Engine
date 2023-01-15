@@ -8,6 +8,8 @@
 #include "../render/render_world.h"
 #include "../render/render_system.h"
 #include "../win32/win_local.h"
+#include "../gui/editor.h"
+
 
 struct Game_World;
 
@@ -17,11 +19,13 @@ enum Engine_Mode {
 };
 
 struct Engine {
+	bool is_initialized = false;
 	s64 fps = 0;
 	s64 frame_time = 0;
 	Engine_Mode engine_mode;
 
 	Font font;
+	Editor editor;
 	Win32_Info win32_info;
 	
 	Game_World game_world;
@@ -34,8 +38,13 @@ struct Engine {
 	void frame();
 	void shutdown();
 
+	static bool initialized();
+	static void resize_window(u32 window_width, u32 window_height);
+
 	static Font *get_font();
+	static Game_World *get_game_world();
 	static Render_World *get_render_world();
+	static Render_System *get_render_system();
 };
 
 u32 get_window_width();

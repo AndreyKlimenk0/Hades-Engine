@@ -9,16 +9,26 @@
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
 #include "../render/model.h"
+#include "../libs/geometry_generator.h"
 
 
 const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
 
-typedef u32 Entity_Id;
+//typedef u32 Entity_Id;
 struct Render_World;
 
 enum Entity_Type {
 	ENTITY_TYPE_COMMON,
-	ENTITY_TYPE_LIGHT
+	ENTITY_TYPE_LIGHT,
+	ENTITY_TYPE_GEOMETRY,
+};
+
+struct Entity_Id {
+	Entity_Id();
+	Entity_Id(Entity_Type type, u32 index);
+
+	Entity_Type type;
+	u32 index;
 };
 
 struct Entity {
@@ -26,6 +36,20 @@ struct Entity {
 	u32 id;
 	Entity_Type type;
 	Vector3 position;
+};
+
+enum Geometry_Type {
+	GEOMETRY_TYPE_BOX,
+	GEOMETRY_TYPE_GRID
+};
+
+struct Geometry_Entity : Entity {
+	Geometry_Entity() { type = ENTITY_TYPE_GEOMETRY; }
+	Geometry_Type geometry_type;
+	union {
+		Box box;
+		Grid grid;
+	};
 };
 
 enum Light_Type : u32 {
@@ -50,11 +74,16 @@ struct Game_World {
 	u32 id_count = 0;
 	Render_World *render_world = NULL;
 	
-	Array<Light> lights;
 	Array<Entity> entities;
+	Array<Light> lights;
+	Array<Geometry_Entity> geometry_entities;
 
 	void init();
 	void add_entity(Entity *entity);
+
+	Entity *get_entity(Entity_Id entity_id);
+
+	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
 	
 	Light  *make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
 	Light  *make_point_light(const Vector3 &position, const Vector3 &color, float range);

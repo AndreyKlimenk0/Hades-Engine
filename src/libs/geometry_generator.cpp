@@ -4,93 +4,91 @@
 #include "../libs/ds/array.h"
 #include "../win32/win_types.h"
 
-void generate_grid(float width, float depth, int m, int n, Triangle_Mesh *mesh)
+void generate_grid(Grid *grid, Triangle_Mesh *mesh)
 {
-	int vertex_count = m * n;
-	int index_count = (m - 1)*(n - 1) * 2;
+	u32 vertex_count = grid->rows_count * grid->columns_count;
+	u32 index_count = (grid->rows_count - 1) * (grid->columns_count - 1) * 2;
 
-	float half_width = 0.5f*width;
-	float half_depth = 0.5f*depth;
+	mesh->vertices.set_count(vertex_count);
+	mesh->indices.set_count(index_count * 3);
 
-	float dx = width / (n - 1);
-	float dz = depth / (m - 1);
+	float half_width = 0.5f * grid->width;
+	float half_depth = 0.5f * grid->depth;
 
-	float du = 1.0f / (n - 1);
-	float dv = 1.0f / (m - 1);
+	float dx = grid->width / (grid->columns_count - 1);
+	float dz = grid->depth / (grid->rows_count - 1);
 
-	//mesh->allocate_vertices(vertex_count);
-	for (int i = 0; i < m; ++i) {
+	float du = 1.0f / (grid->columns_count - 1);
+	float dv = 1.0f / (grid->rows_count - 1);
+
+	for (int i = 0; i < grid->rows_count; ++i) {
 		float z = half_depth - i * dz;
-		for (int j = 0; j < n; ++j) {
+		for (int j = 0; j < grid->columns_count; ++j) {
 			float x = -half_width + j * dx;
 
-			mesh->vertices[i*n + j].position = Vector3(x, 0.0f, z);
-			mesh->vertices[i*n + j].normal = Vector3(0.0f, 1.0f, 0.0f);
-			mesh->vertices[i*n + j].uv.x = j;
-			mesh->vertices[i*n + j].uv.y = i;
+			mesh->vertices[i * grid->columns_count + j].position = Vector3(x, 0.0f, z);
+			mesh->vertices[i * grid->columns_count + j].normal = Vector3(0.0f, 1.0f, 0.0f);
+			mesh->vertices[i * grid->columns_count + j].uv.x = j;
+			mesh->vertices[i * grid->columns_count + j].uv.y = i;
 		}
 	}
 
-	//mesh->allocate_indices(index_count * 3);
-
 	int k = 0;
-	for (int i = 0; i < m - 1; ++i) {
-		for (int j = 0; j < n - 1; ++j) {
-			mesh->indices[k] = i * n + j;
-			mesh->indices[k + 1] = i * n + j + 1;
-			mesh->indices[k + 2] = (i + 1)*n + j;
+	for (int i = 0; i < grid->rows_count - 1; ++i) {
+		for (int j = 0; j < grid->columns_count - 1; ++j) {
+			mesh->indices[k] = i * grid->columns_count + j;
+			mesh->indices[k + 1] = i * grid->columns_count + j + 1;
+			mesh->indices[k + 2] = (i + 1) * grid->columns_count + j;
 
-			mesh->indices[k + 3] = (i + 1)*n + j;
-			mesh->indices[k + 4] = i * n + j + 1;
-			mesh->indices[k + 5] = (i + 1)*n + j + 1;
+			mesh->indices[k + 3] = (i + 1) * grid->columns_count + j;
+			mesh->indices[k + 4] = i * grid->columns_count + j + 1;
+			mesh->indices[k + 5] = (i + 1) * grid->columns_count + j + 1;
 
 			k += 6; // next quad
 		}
 	}
-
-	//mesh->allocate_static_buffer();
 }
 
-void generate_box(float width, float height, float depth, Triangle_Mesh *mesh)
+void generate_box(Box *box, Triangle_Mesh *mesh)
 {
-	float w = 0.5f * width;
-	float h = 0.5f * height;
-	float d = 0.5f * depth;
+	float w = 0.5f * box->width;
+	float h = 0.5f * box->height;
+	float d = 0.5f * box->depth;
 
-	//mesh->allocate_vertices(24);
+	mesh->vertices.set_count(24);
 
-	mesh->vertices[0]  = Vertex(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[1]  = Vertex(Vector3(-w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[2]  = Vertex(Vector3(+w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[3]  = Vertex(Vector3(+w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[0]  = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[1]  = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[2]  = Vertex_XNUV(Vector3(+w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[3]  = Vertex_XNUV(Vector3(+w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 1.0f));
 	
-	mesh->vertices[4]  = Vertex(Vector3(-w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 1.0f));
-	mesh->vertices[5]  = Vertex(Vector3(+w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[6]  = Vertex(Vector3(+w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[7]  = Vertex(Vector3(-w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[4]  = Vertex_XNUV(Vector3(-w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[5]  = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[6]  = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[7]  = Vertex_XNUV(Vector3(-w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f));
 
-	mesh->vertices[8]  = Vertex(Vector3(-w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[9]  = Vertex(Vector3(-w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[10] = Vertex(Vector3(+w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[11] = Vertex(Vector3(+w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[8]  = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[9]  = Vertex_XNUV(Vector3(-w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[10] = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[11] = Vertex_XNUV(Vector3(+w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector2(1.0f, 1.0f));
 
-	mesh->vertices[12] = Vertex(Vector3(-w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector2(1.0f, 1.0f));
-	mesh->vertices[13] = Vertex(Vector3(+w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[14] = Vertex(Vector3(+w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[15] = Vertex(Vector3(-w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[12] = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[13] = Vertex_XNUV(Vector3(+w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[14] = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[15] = Vertex_XNUV(Vector3(-w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector2(1.0f, 0.0f));
 
-	mesh->vertices[16] = Vertex(Vector3(-w, -h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[17] = Vertex(Vector3(-w, +h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[18] = Vertex(Vector3(-w, +h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[19] = Vertex(Vector3(-w, -h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[16] = Vertex_XNUV(Vector3(-w, -h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[17] = Vertex_XNUV(Vector3(-w, +h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[18] = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[19] = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
 	
-	mesh->vertices[20] = Vertex(Vector3(+w, -h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[21] = Vertex(Vector3(+w, +h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[22] = Vertex(Vector3(+w, +h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[23] = Vertex(Vector3(+w, -h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[20] = Vertex_XNUV(Vector3(+w, -h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[21] = Vertex_XNUV(Vector3(+w, +h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[22] = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[23] = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
 
-	//mesh->allocate_indices(36);
-	u32 *i = mesh->indices;
+	mesh->indices.set_count(36);
+	u32 *i = mesh->indices.items;
 	i[0] = 0;   i[1] = 1;   i[2] = 2;
 	i[3] = 0;   i[4] = 2;   i[5] = 3;
 
@@ -121,11 +119,11 @@ void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Me
 	// Poles: note that there will be texture coordinate distortion as there is
 	// not a unique point on the texture map to assign to the pole when mapping
 	// a rectangular texture onto a sphere.
-	Vertex topVertex(0.0f, +radius, 0.0f, 0.0f, +1.0f, 0.0f, 0.0f, 0.0f);
-	Vertex bottomVertex(0.0f, -radius, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f);
+	Vertex_XNUV topVertex(0.0f, +radius, 0.0f, 0.0f, +1.0f, 0.0f, 0.0f, 0.0f);
+	Vertex_XNUV bottomVertex(0.0f, -radius, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f);
 
 	//meshData.Vertices.push_back(topVertex);
-	Array<Vertex> vertices;
+	Array<Vertex_XNUV> vertices;
 	vertices.push(topVertex);
 
 	float phiStep = XM_PI / stackCount;
@@ -139,7 +137,7 @@ void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Me
 		for (UINT j = 0; j <= sliceCount; ++j) {
 			float theta = j * thetaStep;
 
-			Vertex v;
+			Vertex_XNUV v;
 
 			// spherical to cartesian
 			v.position.x = radius * sinf(phi)*cosf(theta);

@@ -610,12 +610,12 @@ void Render_2D::render_frame()
 		privious_total_vertex_count = total_vertex_count;
 
 		if (vertex_buffer) {
-			free_com_object(vertex_buffer->buffer);
-			free_com_object(index_buffer->buffer);
+			free_com_object(vertex_buffer->dx11buffer);
+			free_com_object(index_buffer->dx11buffer);
 		}
 
-		Vertex_Buffer_Desc vertex_buffer_desc = Vertex_Buffer_Desc(total_vertex_count, sizeof(Vertex_X2UV), NULL, RESOURCE_USAGE_DYNAMIC, CPU_ACCESS_WRITE);
-		Index_Buffer_Desc index_buffer_desc = Index_Buffer_Desc(total_index_count, NULL, RESOURCE_USAGE_DYNAMIC, CPU_ACCESS_WRITE);
+		Gpu_Buffer_Desc vertex_buffer_desc = make_vertex_buffer_desc(total_vertex_count, sizeof(Vertex_X2UV), NULL, RESOURCE_USAGE_DYNAMIC, CPU_ACCESS_WRITE);
+		Gpu_Buffer_Desc index_buffer_desc = make_index_buffer_desc(total_index_count, NULL, RESOURCE_USAGE_DYNAMIC, CPU_ACCESS_WRITE);
 		
 		vertex_buffer = gpu_device->create_gpu_buffer(&vertex_buffer_desc);
 		index_buffer = gpu_device->create_gpu_buffer(&index_buffer_desc);
@@ -665,8 +665,8 @@ void Render_2D::render_frame()
 			cb_render_info.color = render_primitive->color.value;
 			
 			render_pipeline->update_constant_buffer(constant_buffer, &cb_render_info);
-			render_pipeline->set_veretex_shader_resource(constant_buffer);
-			render_pipeline->set_pixel_shader_resource(constant_buffer);
+			render_pipeline->set_vertex_shader_resource(0, constant_buffer);
+			render_pipeline->set_pixel_shader_resource(0, constant_buffer);
 			if (render_primitive->gpu_resource) {
 				render_pipeline->set_pixel_shader_resource(render_primitive->gpu_resource->shader_resource);
 			}
@@ -680,7 +680,7 @@ void Render_2D::render_frame()
 	render_pipeline->reset_depth_stencil_test();
 }
 
-void View_Info::init(u32 width, u32 height, float _near_plane, float _far_plane)
+void View_Info::update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane)
 {
 	ratio = (float)width / (float)height;
 	fov_y_ratio = XMConvertToRadians(45);
@@ -689,14 +689,6 @@ void View_Info::init(u32 width, u32 height, float _near_plane, float _far_plane)
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, ratio, near_plane, far_plane);
 	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 }
-
-void View_Info::update_projection_matries(u32 new_window_width, u32 new_window_height)
-{
-	ratio = (float)new_window_width / (float)new_window_height;
-	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, ratio, near_plane, far_plane);
-	orthogonal_matrix =  XMMatrixOrthographicOffCenterLH(0.0f, (float)new_window_width, (float)new_window_height, 0.0f, near_plane, far_plane);
-}
-
 
 Render_System::~Render_System()
 {
@@ -707,8 +699,8 @@ void Render_System::init(Win32_Info *_win32_info, Font *font)
 {
 	win32_info = _win32_info;
 	win32_info->render_sys = this;
-	
-	view_info.init(win32_info->window_width, win32_info->window_height, 1.0f, 10000.0f);
+
+	view_info.update_projection_matries(win32_info->window_width, win32_info->window_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline, win32_info);
 	init_shaders();
@@ -777,8 +769,11 @@ void Render_System::init_shaders()
 	}
 }
 
-void Render_System::resize()
+void Render_System::resize(u32 window_width, u32 window_height)
 {
+	if (Engine::initialized()) {
+		view_info.update_projection_matries(window_width, window_height, 1.0f, 10000.0f);
+	}
 }
 
 void Render_System::shutdown()
@@ -792,19 +787,17 @@ void Render_System::new_frame()
 
 	render_pipeline.pipeline->ClearRenderTargetView(render_pipeline.render_target_view, (float *)&Color::LightSteelBlue);
 	render_pipeline.pipeline->ClearDepthStencilView(render_pipeline.depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	render_2d.new_frame();
 }
 
 void Render_System::end_frame()
 {
+	//render_2d.render_frame();
 	HR(render_pipeline.swap_chain->Present(0, 0));
 }
 
-void Render_System::render_frame()
+Shader *Render_System::get_shader(const char *name)
 {
-
-	render_2d.new_frame();
-
-	gui::draw_test_gui();
-
-	render_2d.render_frame();
+	return shaders[name];
 }

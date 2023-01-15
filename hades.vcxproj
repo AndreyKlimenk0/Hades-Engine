@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\game\world.cpp" />
+    <ClCompile Include="src\gui\editor.cpp" />
     <ClCompile Include="src\gui\gui.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\ds\dict.cpp" />
@@ -175,7 +176,6 @@
     <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\render\font.cpp" />
-    <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_api.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
@@ -191,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game\world.h" />
+    <ClInclude Include="src\gui\editor.h" />
     <ClInclude Include="src\gui\gui.h" />
     <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\ds\dict.h" />
@@ -213,7 +214,6 @@
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\render\font.h" />
-    <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_api.h" />
     <ClInclude Include="src\render\render_system.h" />

@@ -82,6 +82,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line
 {
 	Win32_Info win32_info;
 	win32_info.hinstance = hInstance;
+
+	if (!create_console(&win32_info)) {
+		info("Faield to create win32 console.");
+	}
 	
 	if (!create_win32_window(&win32_info)) {
 		error("Failed to create main win32 window.");
@@ -89,10 +93,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line
 	
 	ShowWindow(win32_info.window, cmd_show);
 	set_cursor(CURSOR_TYPE_ARROW);
-
-	if (!create_console(&win32_info)) {
-		info("Faield to create win32 console.");
-	}
 
 	Engine engine;
 	engine.init(&win32_info);
@@ -145,6 +145,7 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 		case WM_SIZE: {
 			win32_info->window_width = LOWORD(lparam);
 			win32_info->window_height = HIWORD(lparam);
+			Engine::resize_window(win32_info->window_width, win32_info->window_height);
 			break;
 		}
 		case WM_LBUTTONDOWN: {

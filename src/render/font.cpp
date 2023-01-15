@@ -2,7 +2,6 @@
 #include <d3dx11.h>
 #include <windows.h>
 
-#include "mesh.h"
 #include "font.h"
 #include "vertex.h"
 #include "render_system.h"
