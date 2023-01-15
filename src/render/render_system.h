@@ -136,8 +136,7 @@ struct View_Info {
 	Matrix4 perspective_matrix;
 	Matrix4 orthogonal_matrix;
 
-	void init(u32 width, u32 height, float _near_plane, float _far_plane);
-	void update_projection_matries(u32 new_window_width, u32 new_window_height);
+	void update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane);
 };
 
 struct Render_System {
@@ -159,12 +158,12 @@ struct Render_System {
 
 	void init(Win32_Info *_win32_Info, Font *font);
 	void init_shaders();
-	void resize();
+	void resize(u32 window_width, u32 window_height);
 	void shutdown();
 
 	void new_frame();
 	void end_frame();
-	
-	void render_frame();
+
+	Shader *get_shader(const char *name);
 };
 #endif

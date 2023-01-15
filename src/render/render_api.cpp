@@ -3,8 +3,26 @@
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "render_world.h"
 //#include <D3DCompiler.inl>
 
+
+inline D3D11_MAP to_dx11_map_type(Map_Type map_type)
+{
+	switch (map_type) {
+		case MAP_TYPE_READ:
+			return D3D11_MAP_READ;
+		case MAP_TYPE_WRITE:
+			return D3D11_MAP_WRITE;
+		case MAP_TYPE_READ_WRITE:
+			return D3D11_MAP_READ_WRITE;
+		case MAP_TYPE_WRITE_DISCARD:
+			return D3D11_MAP_WRITE_DISCARD;
+		case MAP_TYPE_MAP_WRITE_NO_OVERWRITE:
+			return D3D11_MAP_WRITE_NO_OVERWRITE;
+	}
+	assert(false);
+}
 
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
 {
@@ -267,7 +285,7 @@ inline u32 size_of_dxgi_format(DXGI_FORMAT format)
 
 Gpu_Buffer::~Gpu_Buffer()
 {
-	RELEASE_COM(buffer);
+	free();
 }
 
 u32 Gpu_Buffer::get_data_width()
@@ -277,7 +295,12 @@ u32 Gpu_Buffer::get_data_width()
 
 ID3D11Buffer **Gpu_Buffer::get_buffer_ptr()
 {
-	return &buffer;;
+	return &dx11buffer;;
+}
+
+void Gpu_Buffer::free()
+{
+	RELEASE_COM(dx11buffer);
 }
 
 Input_Layout *Gpu_Device::vertex_xc = NULL;
@@ -309,6 +332,8 @@ Gpu_Buffer *Gpu_Device::create_gpu_buffer(Gpu_Buffer_Desc *desc)
 	buffer_desc.BindFlags = desc->bind_flags;
 	buffer_desc.ByteWidth = buffer->get_data_width();
 	buffer_desc.CPUAccessFlags = desc->cpu_access;
+	buffer_desc.MiscFlags = desc->misc_flags;
+	buffer_desc.StructureByteStride = desc->struct_size;
 
 	if (desc->data) {
 		D3D11_SUBRESOURCE_DATA resource_data_desc;
@@ -397,6 +422,20 @@ Texture *Gpu_Device::create_texture_2d(u32 width, u32 height, void *data, u32 mi
 	
 	return texture;
 }
+
+void Gpu_Device::create_shader_resource_for_struct_buffer(Gpu_Buffer *buffer, u32 elements_count, Shader_Resource *shader_resource)
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
+	ZeroMemory(&shader_resource_desc, sizeof(shader_resource_desc));
+	shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+	shader_resource_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	shader_resource_desc.Buffer.FirstElement = 0;
+	shader_resource_desc.Buffer.NumElements = elements_count;
+
+	shader_resource->desc = shader_resource_desc;
+	HR(device->CreateShaderResourceView(buffer->dx11buffer, &shader_resource_desc, &shader_resource->dx11_shader_resource));
+}
+
 
 Rasterizer *Gpu_Device::create_rasterizer(Rasterizer_Desc *rasterizer_desc)
 {
@@ -695,16 +734,21 @@ void Render_Pipeline::shutdown()
 {
 }
 
-void *Render_Pipeline::map(Gpu_Buffer *gpu_buffer)
+void Render_Pipeline::copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buffer)
+{
+	pipeline->CopyResource(dst_buffer->dx11buffer, src_buffer->dx11buffer);
+}
+
+void *Render_Pipeline::map(Gpu_Buffer *gpu_buffer, Map_Type map_type)
 {
 	D3D11_MAPPED_SUBRESOURCE subresource;
-	HR(pipeline->Map(gpu_buffer->buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource));
+	HR(pipeline->Map(gpu_buffer->dx11buffer, 0, to_dx11_map_type(map_type), 0, &subresource));
 	return subresource.pData;
 }
 
 void Render_Pipeline::unmap(Gpu_Buffer *gpu_buffer)
 {
-	pipeline->Unmap(gpu_buffer->buffer, 0);
+	pipeline->Unmap(gpu_buffer->dx11buffer, 0);
 }
 
 void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
@@ -759,7 +803,7 @@ void Render_Pipeline::set_vertex_buffer(Gpu_Buffer *gpu_buffer)
 
 void Render_Pipeline::set_index_buffer(Gpu_Buffer *gpu_buffer)
 {
-	pipeline->IASetIndexBuffer(gpu_buffer->buffer, DXGI_FORMAT_R32_UINT, 0);
+	pipeline->IASetIndexBuffer(gpu_buffer->dx11buffer, DXGI_FORMAT_R32_UINT, 0);
 }
 
 void Render_Pipeline::set_vertex_shader(Shader *shader)
@@ -798,9 +842,19 @@ void Render_Pipeline::set_pixel_shader(Shader *shader)
 	pipeline->PSSetShader(shader->pixel_shader, 0, 0);
 }
 
-void Render_Pipeline::set_veretex_shader_resource(Gpu_Buffer *constant_buffer)
+void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, Gpu_Buffer *constant_buffer)
 {
-	pipeline->VSSetConstantBuffers(0, 1, &constant_buffer->buffer);
+	pipeline->VSSetConstantBuffers(gpu_register, 1, &constant_buffer->dx11buffer);
+}
+
+void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, Shader_Resource *shader_resource)
+{
+	pipeline->VSGetShaderResources(gpu_register, 1, &shader_resource->dx11_shader_resource);
+}
+
+void Render_Pipeline::set_vertex_shader_resource(Struct_Buffer *struct_buffer)
+{
+	pipeline->VSSetShaderResources(struct_buffer->shader_resource_register, 1, &struct_buffer->shader_resource.dx11_shader_resource);
 }
 
 void Render_Pipeline::set_pixel_shader_sampler(Texture_Sampler *sampler)
@@ -808,14 +862,19 @@ void Render_Pipeline::set_pixel_shader_sampler(Texture_Sampler *sampler)
 	pipeline->PSSetSamplers(0, 1, &sampler);
 }
 
-void Render_Pipeline::set_pixel_shader_resource(Gpu_Buffer *constant_buffer)
+void Render_Pipeline::set_pixel_shader_resource(u32 gpu_register, Gpu_Buffer *constant_buffer)
 {
-	pipeline->PSSetConstantBuffers(0, 1, &constant_buffer->buffer);
+	pipeline->PSSetConstantBuffers(gpu_register, 1, &constant_buffer->dx11buffer);
 }
 
 void Render_Pipeline::set_pixel_shader_resource(Shader_Resource_View *shader_resource_view)
 {
 	pipeline->PSSetShaderResources(0, 1, &shader_resource_view);
+}
+
+void Render_Pipeline::set_pixel_shader_resource(Struct_Buffer * struct_buffer)
+{
+	pipeline->PSGetShaderResources(struct_buffer->shader_resource_register, 1, &struct_buffer->shader_resource.dx11_shader_resource);
 }
 
 void Render_Pipeline::set_rasterizer(Rasterizer *rasterizer)
@@ -861,29 +920,50 @@ void Render_Pipeline::reset_depth_stencil_test()
 	pipeline->OMSetDepthStencilState(NULL, 0);
 }
 
+void Render_Pipeline::reset_vertex_buffer()
+{
+	u32 strides = 0;
+	u32 offsets = 0;
+	pipeline->IASetVertexBuffers(0, 0, NULL, &strides, &offsets);
+}
+
+void Render_Pipeline::reset_index_buffer()
+{
+	pipeline->IASetIndexBuffer(NULL, DXGI_FORMAT_R32_UINT, 0);
+}
+
+void Render_Pipeline::draw(u32 vertex_count)
+{
+	pipeline->Draw(vertex_count, 0);
+}
+
 void Render_Pipeline::draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset)
 {
 	pipeline->DrawIndexed(index_count, index_offset, vertex_offset);
 }
 
-Vertex_Buffer_Desc::Vertex_Buffer_Desc(u32 _data_count, u32 _data_size, void *_data, Resource_Usage _usage, u32 _cpu_access)
+Gpu_Buffer_Desc make_vertex_buffer_desc(u32 data_count, u32 data_size, void * data, Resource_Usage usage, u32 cpu_access)
 {
-	data_count = _data_count;
-	data_size = _data_size;
-	data = _data;
-	usage = _usage;
-	cpu_access = _cpu_access;
-	bind_flags = BIND_VERTEX_BUFFER;
+	Gpu_Buffer_Desc gpu_buffer_desc;
+	gpu_buffer_desc.data_count = data_count;
+	gpu_buffer_desc.data_size = data_size;
+	gpu_buffer_desc.data = data;
+	gpu_buffer_desc.usage = usage;
+	gpu_buffer_desc.cpu_access = cpu_access;
+	gpu_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
+	return gpu_buffer_desc;
 }
 
-Index_Buffer_Desc::Index_Buffer_Desc(u32 _data_count, void *_data, Resource_Usage _usage, u32 _cpu_access)
+Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void * data, Resource_Usage usage, u32 cpu_access)
 {
-	data_count = _data_count;
-	data_size = sizeof(u32);
-	data = _data;
-	usage = _usage;
-	cpu_access = _cpu_access;
-	bind_flags = BIND_INDEX_BUFFER;
+	Gpu_Buffer_Desc gpu_buffer_desc;
+	gpu_buffer_desc.data_count = data_count;
+	gpu_buffer_desc.data_size = sizeof(u32);
+	gpu_buffer_desc.data = data;
+	gpu_buffer_desc.usage = usage;
+	gpu_buffer_desc.cpu_access = cpu_access;
+	gpu_buffer_desc.bind_flags = BIND_INDEX_BUFFER;
+	return gpu_buffer_desc;
 }
 
 Rasterizer_Desc::Rasterizer_Desc()
@@ -1044,4 +1124,14 @@ u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
 		}
 	}
 	return new_data;
+}
+
+Shader_Resource::~Shader_Resource()
+{
+	this->free();
+}
+
+void Shader_Resource::free()
+{
+	RELEASE_COM(dx11_shader_resource);
 }

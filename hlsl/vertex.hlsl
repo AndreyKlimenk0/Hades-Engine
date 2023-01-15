@@ -21,6 +21,12 @@ struct Vertex_XUV_Out {
     float2 uv       : TEXCOORD;
 };
 
+struct Vertex_XNUV {
+    float3 position;
+    float3 normal;
+    float2 uv;
+};
+
 struct Vertex_XNUV_In {
     float3 position : POSITION;
     float3 normal   : NORMAL;

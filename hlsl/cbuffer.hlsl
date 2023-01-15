@@ -7,12 +7,9 @@ cbuffer Render_2D_Info : register(b0) {
 	float4 primitive_color;
 };
 
-cbuffer Entity_Info : register(b1) {
-	float4x4 world_matrix;
-	float4x4 wvp_matrix;
-};
-
-cbuffer World_Info : register(b2) {
+cbuffer Frame_Info : register(b1) {
+	float4x4 view_matrix;
+	float4x4 perspective_matrix;
 	float3 camera_position;
 	int pad1;
 	float3 camera_direction;

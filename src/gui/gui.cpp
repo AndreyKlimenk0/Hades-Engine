@@ -40,12 +40,6 @@ const u32 TAB_HASH = fast_hash("window_tab_hash");
 
 #define GET_RENDER_LIST() (&window->render_list)
 
-typedef u32 Window_Style;
-const Window_Style NO_WINDOW_STYLE = 0x0;
-const Window_Style WINDOW_WITH_HEADER = 0x1;
-const Window_Style WINDOW_WITH_OUTLINES = 0x2;
-const Window_Style WINDOW_WITH_SCROLL_BAR = 0x4;
-const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES | WINDOW_WITH_SCROLL_BAR;
 
 typedef u32 Element_Alignment;
 const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
@@ -211,6 +205,7 @@ enum Window_Type {
 };
 
 struct Gui_Window {
+	bool reset_x_position = false;
 	bool tab_was_added = false;
 	bool tab_was_drawn;
 	Gui_ID gui_id;
@@ -256,6 +251,7 @@ void Gui_Window::place_tab_rect(Rect_s32 *tab_rect)
 void Gui_Window::start_new_frame(Window_Style window_style)
 {
 	tab_was_drawn = false;
+	reset_x_position = false;
 	tab_place.x = view_rect.x;
 	tab_place.y = view_rect.y;
 	style = window_style;
@@ -404,9 +400,10 @@ struct Gui_Manager {
 
 	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
+	void text(const char *some_text);
 	bool add_tab(const char *tab_name);
 	void image(Texture *texture, s32 width, s32 height);
-	void list_box(const char *strings[], u32 item_count, u32 *item_index);
+	void list_box(Array<String> *array, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	void radio_button(const char *name, bool *state);
 	
@@ -464,14 +461,13 @@ void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 {
 	assert(!((window->alignment & ALIGNMENT_VERTICALLY) && (window->alignment & ALIGNMENT_HORIZONTALLY)));
 
-	static bool reset_x_position = false;
 	static s32 prev_rect_height = 0;
 	u32 offset = window_theme.place_between_elements;
 
 	if (window->alignment & ALIGNMENT_VERTICALLY) {
-		if (reset_x_position) {
+		if (window->reset_x_position) {
 			window->next_rect_place.x = window->content_rect.x;
-			reset_x_position = false;
+			window->reset_x_position = false;
 			window->next_rect_place.y += prev_rect_height + offset;
 			window->content_rect.height += prev_rect_height + offset;
 		}
@@ -487,7 +483,7 @@ void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 	}
 
 	if (window->alignment & ALIGNMENT_HORIZONTALLY) {
-		reset_x_position = true;
+		window->reset_x_position = true;
 		prev_rect_height = rect->height;
 		rect->x = window->next_rect_place.x + offset;
 		rect->y = window->next_rect_place.y + offset;
@@ -758,7 +754,7 @@ void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *ed
 
 	if ((mouse_x >= rect->x) && (mouse_x <= (rect->x + edit_field_theme.text_shift))) {
 		edit_field_state.caret_x_posiiton = rect->x + edit_field_theme.text_shift;
-		edit_field_state.caret_index_for_inserting = 1;
+		edit_field_state.caret_index_for_inserting = 0;
 		edit_field_state.caret_index_in_text = 0;
 		return;
 	}
@@ -944,6 +940,24 @@ void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value
 	}
 }
 
+void Gui_Manager::text(const char *some_text)
+{
+	Gui_Window *window = get_window();
+
+	Rect_s32 text_rect = get_text_rect(some_text);
+
+	place_rect_in_window(window, &text_rect);
+
+	Render_Primitive_List *render_list = GET_RENDER_LIST();
+
+	if (must_rect_be_drawn(&window->rect, &text_rect)) {
+		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &text_rect);
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_text(&text_rect, some_text);
+		render_list->pop_clip_rect();
+	}
+}
+
 bool Gui_Manager::add_tab(const char *tab_name)
 {
 	static const s32 TAB_HEIGHT = 26;
@@ -1035,11 +1049,11 @@ void Gui_Manager::image(Texture *texture, s32 width, s32 height)
 	}
 }
 
-void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_index)
+void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 {
-	assert(item_count > 0);
+	assert(array->count > 0);
 
-	if (*item_index >= item_count) {
+	if (*item_index >= array->count) {
 		*item_index = 0;
 	}
 
@@ -1054,7 +1068,7 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 		update_active_and_hot_state(window, list_box_gui_id, &list_box_rect);
 
 		Rect_s32 drop_window_rect;
-		s32 window_box_height = item_count * button_theme.default_rect.height;
+		s32 window_box_height = array->count * button_theme.default_rect.height;
 		s32 window_box_default_position = list_box_rect.bottom() + 5;
 		
 		if ((window_box_default_position + window_box_height) > window->rect.bottom()) {
@@ -1099,8 +1113,8 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			theme.aligment |= alignment;
 
 			button_theme = theme;
-			for (u32 i = 0; i < item_count; i++) {
-				if (button(strings[i])) {
+			for (u32 i = 0; i < array->count; i++) {
+				if (button(array->at(i))) {
 					*item_index = i;
 					active_list_box = 0;
 				}
@@ -1109,8 +1123,10 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 			end_window();
 		}
 
+		window = get_window();
+
 		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &list_box_rect);
-		Rect_s32 text_rect = get_text_rect(strings[*item_index]);
+		Rect_s32 text_rect = get_text_rect(array->at(*item_index));
 		
 		if (alignment & ALIGNMENT_RIGHT) {
 			place_in_middle_and_by_right(&list_box_rect, &text_rect, button_theme.shift_from_size);
@@ -1119,13 +1135,11 @@ void Gui_Manager::list_box(const char *strings[], u32 item_count, u32 *item_inde
 		} else {
 			place_in_middle(&list_box_rect, &text_rect, BOTH_AXIS);
 		}
-
-		Gui_Window *window = get_window();
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
 		render_list->add_rect(&list_box_rect, Color(74, 82, 90), button_theme.rounded_border);
-		render_list->add_text(&text_rect, strings[*item_index]);
+		render_list->add_text(&text_rect, array->at(*item_index));
 		render_list->pop_clip_rect();
 	}
 
@@ -1476,7 +1490,7 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 
 	Render_Primitive_List *render_list = GET_RENDER_LIST();
 	if (window->style & WINDOW_WITH_OUTLINES) {
-		render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width + 2, window_theme.rounded_border);
+		render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width, window_theme.rounded_border);
 	}
 	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
 
@@ -1675,21 +1689,6 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 
 static Gui_Manager gui_manager;
 
-void same_line()
-{
-	gui_manager.same_line();
-}
-
-void next_line()
-{
-	gui_manager.next_line();
-}
-
-bool gui::button(const char *text)
-{
-	return gui_manager.button(text);
-}
-
 //@Note: Gpu_Device must be removed. it is used for testing
 
 static Texture *texture = NULL;
@@ -1709,69 +1708,89 @@ void gui::shutdown()
 	gui_manager.shutdown();
 }
 
-bool add_tab(const char *tab_name)
+bool gui::add_tab(const char *tab_name)
 {
 	return gui_manager.add_tab(tab_name);
 }
 
-void image(Texture *texture, s32 width = -1, s32 height = -1)
+void gui::image(Texture *texture, s32 width, s32 height)
 {
 	gui_manager.image(texture, width, height);
 }
 
-void list_box(const char *strings[], u32 len, u32 *item_index)
+void gui::list_box(Array<String> *array, u32 *item_index)
 {
-	gui_manager.list_box(strings, len, item_index);
+	gui_manager.list_box(array, item_index);
 }
 
-void radio_button(const char *name, bool *state)
+void gui::radio_button(const char *name, bool *state)
 {
 	gui_manager.radio_button(name, state);
 }
 
-void edit_field(const char *name, int *value)
+void gui::edit_field(const char *name, int *value)
 {
 	gui_manager.edit_field(name, value);
 }
 
-void edit_field(const char *name, float *value)
+void gui::edit_field(const char *name, float *value)
 {
 	gui_manager.edit_field(name, value);
 }
 
-void edit_field(const char *name, String *value)
+void gui::edit_field(const char *name, String *value)
 {
 	gui_manager.edit_field(name, value);
 }
 
-void begin_frame()
+void gui::begin_frame()
 {
 	gui_manager.new_frame();
 }
 
-void end_frame()
+void gui::end_frame()
 {
 	gui_manager.end_frame();
 }
 
-bool begin_window(const char *name, Window_Style window_style = WINDOW_STYLE_DEFAULT)
+bool gui::begin_window(const char *name, Window_Style window_style)
 {
 	gui_manager.begin_window(name, WINDOW_TYPE_PARENT, window_style);
 	return true;
 }
-void end_window()
+void gui::end_window()
 {
 	gui_manager.end_window();
 }
 
-void set_next_window_size(s32 width, s32 height)
+void gui::set_next_window_size(s32 width, s32 height)
 {
 	gui_manager.set_next_window_size(width, height);
 }
 
-void set_next_window_pos(s32 x, s32 y)
+void gui::set_next_window_pos(s32 x, s32 y)
 {
 	gui_manager.set_next_window_pos(x, y);
+}
+
+void gui::same_line()
+{
+	gui_manager.same_line();
+}
+
+void gui::next_line()
+{
+	gui_manager.next_line();
+}
+
+bool gui::button(const char *text)
+{
+	return gui_manager.button(text);
+}
+
+void gui::text(const char *some_text)
+{
+	gui_manager.text(some_text);
 }
 
 struct Enum_String {
@@ -1786,7 +1805,6 @@ inline void handle_click(bool *state)
 
 void gui::draw_test_gui()
 {
-
 	begin_frame();
 
 	//begin_window("Window1", WINDOW_WITH_SCROLL_BAR);

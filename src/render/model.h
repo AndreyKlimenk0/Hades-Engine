@@ -4,7 +4,7 @@
 #include <d3d11.h>
 #include <stdlib.h>
 
-#include "mesh.h"
+#include "vertex.h"
 #include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/color.h"
@@ -26,52 +26,62 @@ struct Material {
 	Vector4 specular;
 };
 
-struct Render_Mesh {
-	Render_Mesh() {}
-	~Render_Mesh() {};
-	
-	Texture *normal_texture = NULL;
-	Texture *diffuse_texture = NULL;
-	Texture *specular_texture = NULL;
+struct Triangle_Mesh {
+	Triangle_Mesh() {};
+	~Triangle_Mesh() {};
 
-	Matrix4 position;
-	Matrix4 orientation;
-	Matrix4 scale;
-	Matrix4 transform;
+	Array<Vertex_XNUV> vertices;
+	Array<u32> indices;
 
-	Material material;
-	Triangle_Mesh mesh;
-
-
-	void operator=(const Render_Mesh &other);
+	DELETE_COPING(Triangle_Mesh);
 };
 
-inline void Render_Mesh::operator=(const Render_Mesh &other)
-{
-	normal_texture = NULL;
-	diffuse_texture = NULL;
-	specular_texture = NULL;
+//struct Render_Mesh {
+//	Render_Mesh() {}
+//	~Render_Mesh() {};
+//	
+//	Texture *normal_texture = NULL;
+//	Texture *diffuse_texture = NULL;
+//	Texture *specular_texture = NULL;
+//
+//	Matrix4 position;
+//	Matrix4 orientation;
+//	Matrix4 scale;
+//	Matrix4 transform;
+//
+//	Material material;
+//	Triangle_Mesh mesh;
+//
+//
+//	void operator=(const Render_Mesh &other);
+//};
 
-	mesh.vertex_buffer = NULL;
-	mesh.index_buffer = NULL;
-	mesh.vertices = NULL;
-	mesh.indices = NULL;
-	mesh.vertex_count = 0;
-	mesh.index_count = 0;
-}
+//inline void Render_Mesh::operator=(const Render_Mesh &other)
+//{
+//	normal_texture = NULL;
+//	diffuse_texture = NULL;
+//	specular_texture = NULL;
+//
+//	//mesh.vertex_buffer = NULL;
+//	//mesh.index_buffer = NULL;
+//	//mesh.vertices = NULL;
+//	//mesh.indices = NULL;
+//	//mesh.vertex_count = 0;
+//	//mesh.index_count = 0;
+//}
 
 struct Render_Model {
 	Render_Model();
 	~Render_Model();
 
 	String name;
-	Array<Render_Mesh> render_meshes;
+	Array<Triangle_Mesh> render_meshes;
 
 	void init(const char *render_model_name, u32 render_mesh_count = 1);
 	void init_from_file(const char *file_name);
 	void load_fbx_model(const char *file_name);
 	bool is_single_mesh_model();
-	Render_Mesh *get_render_mesh(int index = 0);
+	Triangle_Mesh *get_render_mesh(int index = 0);
 	Triangle_Mesh *get_triangle_mesh(int index = 0);
 };
 
@@ -82,13 +92,9 @@ inline bool Render_Model::is_single_mesh_model()
 
 inline Triangle_Mesh *Render_Model::get_triangle_mesh(int index)
 {
-	return &render_meshes[index].mesh;
+	//return &render_meshes[index].mesh;
 }
 
-inline Render_Mesh *Render_Model::get_render_mesh(int index)
-{
-	return &render_meshes[index];
-}
 
 
 inline Material make_default_material()
