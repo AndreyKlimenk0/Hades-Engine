@@ -907,7 +907,7 @@ void Render_Pipeline::set_blending_text(Blending_Test *blending_test)
 void Render_Pipeline::reset_blending_test()
 {
 	float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	pipeline->OMSetBlendState(0, b, 0);
+	pipeline->OMSetBlendState(0, b, 0xffffffff);
 }
 
 void Render_Pipeline::set_depth_stencil_test(Depth_Stencil_Test *depth_stencil_test, u32 stencil_ref)
