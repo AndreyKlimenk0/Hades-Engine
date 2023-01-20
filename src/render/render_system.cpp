@@ -793,7 +793,7 @@ void Render_System::new_frame()
 
 void Render_System::end_frame()
 {
-	//render_2d.render_frame();
+	render_2d.render_frame();
 	HR(render_pipeline.swap_chain->Present(0, 0));
 }
 
