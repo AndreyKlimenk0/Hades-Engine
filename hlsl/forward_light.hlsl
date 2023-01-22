@@ -42,13 +42,6 @@ struct Material {
 	float4 specular;
 };
 
-StructuredBuffer<Light> lights : register(t1);
-StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
-StructuredBuffer<float4x4> world_matrices : register(t3);
-StructuredBuffer<uint> unified_index_buffer : register(t4);
-StructuredBuffer<Vertex_XNUV> unified_vertex_buffer : register(t5);
-
-
 float4 calculate_spot_light(Light light, Material material, float3 normal, float3 position)
 {
 	float shininess = material.specular.w;
@@ -164,6 +157,11 @@ struct Vertex_Out {
 	float2 uv : TEXCOORD;
 };
 
+StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
+StructuredBuffer<float4x4> world_matrices : register(t3);
+StructuredBuffer<uint> unified_index_buffer : register(t4);
+StructuredBuffer<Vertex_XNUV> unified_vertex_buffer : register(t5);
+
 Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 {
 	Mesh_Instance mesh_instance = mesh_instances[mesh_id];
@@ -183,6 +181,8 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	vertex_out.uv = vertex.uv;
 	return vertex_out;
 }
+
+StructuredBuffer<Light> lights : register(t6);
 
 float4 ps_main(Vertex_Out pixel) : SV_Target
 {

@@ -9,8 +9,8 @@ void generate_grid(Grid *grid, Triangle_Mesh *mesh)
 	u32 vertex_count = grid->rows_count * grid->columns_count;
 	u32 index_count = (grid->rows_count - 1) * (grid->columns_count - 1) * 2;
 
-	mesh->vertices.set_count(vertex_count);
-	mesh->indices.set_count(index_count * 3);
+	mesh->vertices.reserve(vertex_count);
+	mesh->indices.reserve(index_count * 3);
 
 	float half_width = 0.5f * grid->width;
 	float half_depth = 0.5f * grid->depth;
@@ -55,7 +55,7 @@ void generate_box(Box *box, Triangle_Mesh *mesh)
 	float h = 0.5f * box->height;
 	float d = 0.5f * box->depth;
 
-	mesh->vertices.set_count(24);
+	mesh->vertices.reserve(24);
 
 	mesh->vertices[0]  = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 1.0f));
 	mesh->vertices[1]  = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 0.0f));
@@ -87,7 +87,7 @@ void generate_box(Box *box, Triangle_Mesh *mesh)
 	mesh->vertices[22] = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
 	mesh->vertices[23] = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
 
-	mesh->indices.set_count(36);
+	mesh->indices.reserve(36);
 	u32 *i = mesh->indices.items;
 	i[0] = 0;   i[1] = 1;   i[2] = 2;
 	i[3] = 0;   i[4] = 2;   i[5] = 3;
