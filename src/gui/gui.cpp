@@ -2036,6 +2036,16 @@ void gui::draw_test_gui()
 	end_frame();
 }
 
+bool gui::were_events_handled()
+{
+	for (u32 i = 0; i < gui_manager.windows_order.count; i++) {
+		Gui_Window *window = gui_manager.get_window_by_index(&gui_manager.windows_order, i);
+		if (detect_collision(&window->rect)) {
+			return true;
+		}
+	}
+	return false;
+}
 
 #include "../libs/spng.h"
 
