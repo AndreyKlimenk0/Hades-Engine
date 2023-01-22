@@ -36,6 +36,8 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
+	render_world.update();
+
 	render_sys.new_frame();
 	
 #ifdef DRAW_TEST_GUI

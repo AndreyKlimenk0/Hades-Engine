@@ -27,7 +27,7 @@ struct Array {
 	bool is_empty();
 	void resize(int _size);
 	void remove(int index);
-	void set_count(int _count);
+	void reserve(int _count);
 	void shutdown();
 	u32 push(const T &item);
 	void set_pointer_to_item(T *ptr, int index);
@@ -75,7 +75,7 @@ inline void merge(Array<T> *dst, Array<T> *src)
 
 
 template <typename T>
-void Array<T>::set_count(int _count)
+void Array<T>::reserve(int _count)
 {
 	resize(_count);
 	count = _count;

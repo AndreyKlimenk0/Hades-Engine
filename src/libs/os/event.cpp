@@ -42,6 +42,7 @@ static void update_left_mouse_button_state(Event *event)
 
 void pump_events()
 {
+
 	click_by_left_mouse_button = false;
 	if (left_mouse_button_just_pressed) {
 		left_mouse_button_just_pressed = false;
