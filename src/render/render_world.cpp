@@ -4,17 +4,6 @@
 #include "../gui/gui.h"
 
 
-struct Frame_Info {
-	Matrix4 view_matrix;
-	Matrix4 perspective_matrix;
-	Vector3 camera_position;
-	int pad1;
-	Vector3 camera_direction;
-	int pad2;
-	u32 light_count;
-	Vector3 pad3;
-};
-
 struct Pass_Data {
 	u32 mesh_id;
 	u32 world_matrix_id;
@@ -23,18 +12,20 @@ struct Pass_Data {
 };
 
 void Render_World::init()
-{
+{	
 	Render_System *render_sys = Engine::get_render_system();
 	
 	view_info = &render_sys->view_info;
 	gpu_device = &render_sys->gpu_device;
 	render_pipeline = &render_sys->render_pipeline;
 
+	light_struct_buffer.shader_resource_register = 6;
 	mesh_struct_buffer.shader_resource_register = 2;
 	world_matrix_struct_buffer.shader_resource_register = 3;
 	index_struct_buffer.shader_resource_register = 4;
 	vertex_struct_buffer.shader_resource_register = 5;
 
+	light_struct_buffer.allocate<Hlsl_Light>(100);
 	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
 	world_matrix_struct_buffer.allocate<Matrix4>(1000);
 	index_struct_buffer.allocate<u32>(100000);
@@ -45,7 +36,7 @@ void Render_World::init()
 
 	Game_World *game_world = Engine::get_game_world();
 	Box box;
-	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 0.0f, 10.0f), GEOMETRY_TYPE_BOX, (void *)&box);
+	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 10.0f), GEOMETRY_TYPE_BOX, (void *)&box);
 
 	Triangle_Mesh mesh;
 	generate_box(&box, &mesh);
@@ -57,10 +48,10 @@ void Render_World::init()
 
 	Triangle_Mesh grid_mesh;
 	Grid grid;
-	grid.width = 100.0f;
-	grid.depth = 100.0f;
-	grid.rows_count = 10;
-	grid.columns_count = 10;
+	grid.width = 1000.0f;
+	grid.depth = 1000.0f;
+	grid.rows_count = 100;
+	grid.columns_count = 100;
 	generate_grid(&grid, &grid_mesh);
 
 	Mesh_Id grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
@@ -69,6 +60,48 @@ void Render_World::init()
 	make_render_entity(grid_entity_id, grid_mesh_id);
 
 	free_string(mesh_name);
+
+	game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
+}
+
+void Render_World::update()
+{
+	if (!gui::were_events_handled()) {
+		Queue<Event> *events = get_event_queue();
+		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+			Event *event = &node->item;
+
+			camera.handle_event(event);
+		}
+	}
+
+	frame_info.view_matrix = camera.get_view_matrix();
+	frame_info.perspective_matrix = view_info->perspective_matrix;
+	frame_info.camera_position = camera.position;
+	frame_info.camera_direction = camera.target;
+
+	Game_World *game_world = Engine::get_game_world();
+	
+	if (light_hash != game_world->light_hash) {
+		light_hash = game_world->light_hash;
+		
+		frame_info.light_count = game_world->lights.count;
+
+		Array<Hlsl_Light> hlsl_lights;
+		
+		Light *light = NULL;
+		For(game_world->lights, light) {
+			Hlsl_Light hlsl_light;
+			hlsl_light.position = light->position;
+			hlsl_light.direction = light->direction;
+			hlsl_light.color = light->color;
+			hlsl_light.light_type = light->light_type;
+			hlsl_light.radius = light->radius;
+			hlsl_light.range = light->range;
+			hlsl_lights.push(hlsl_light);
+		}
+		light_struct_buffer.update(&hlsl_lights);
+	}
 }
 
 Mesh_Id Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
@@ -139,22 +172,6 @@ void Render_World::update_world_matrices()
 
 void Render_World::render()
 {
-	if (!gui::were_events_handled()) {
-		Queue<Event> *events = get_event_queue();
-		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
-			Event *event = &node->item;
-
-			camera.handle_event(event);
-		}
-	}
-
-	Frame_Info frame_info;
-	frame_info.view_matrix = camera.get_view_matrix();
-	frame_info.perspective_matrix = view_info->perspective_matrix;
-	frame_info.light_count = 0;
-	frame_info.camera_position = camera.position;
-	frame_info.camera_direction = camera.target;
-
 	render_pipeline->set_input_layout(NULL);
 	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
 
@@ -174,13 +191,14 @@ void Render_World::render()
 	render_pipeline->set_vertex_shader_resource(&index_struct_buffer);
 
 	Texture *temp = gpu_device->create_texture_2d(200, 200, NULL, 1);
-
-	u32 *pixel_buffer = create_color_buffer(200, 200, Color::Red);
-	
+	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
 	render_pipeline->update_subresource(temp, (void *)pixel_buffer, temp->get_row_pitch());
+	DELETE_PTR(pixel_buffer);
+	
 	render_pipeline->set_pixel_shader_sampler(Engine::get_render_system()->sampler);
 	render_pipeline->set_pixel_shader_resource(temp->shader_resource);
-
+	print("Light register = ", light_struct_buffer.shader_resource_register);
+	render_pipeline->set_pixel_shader_resource(&light_struct_buffer);
 
 	Render_Entity *render_entity = NULL;
 
@@ -194,6 +212,7 @@ void Render_World::render()
 
 		render_pipeline->draw(mesh_instances[render_entity->mesh_id].index_count);
 	}
+
 	RELEASE_COM(temp->gpu_resource);
 	RELEASE_COM(temp->shader_resource);
 	DELETE_PTR(temp);
@@ -223,6 +242,10 @@ void Struct_Buffer::allocate(u32 elements_count)
 template<typename T>
 void Struct_Buffer::update(Array<T> *array)
 {
+	if (array->count == 0) {
+		return;
+	}
+
 	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
 	
 	if (array->count > size) {

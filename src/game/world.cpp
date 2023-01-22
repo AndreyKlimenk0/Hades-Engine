@@ -12,22 +12,6 @@ static void init_entity(Entity *entity, Entity_Type type, const Vector3 &positio
 	entity->position = position;
 }
 
-void Game_World::add_entity(Entity *entity)
-{
-	entity->id = id_count++;
-	if (entity->type == ENTITY_TYPE_COMMON) {
-		entities.push(*entity);
-	} else if (entity->type == ENTITY_TYPE_LIGHT) {
-		Light *light = static_cast<Light *>(entity);
-		
-		if (lights.count < MAX_NUMBER_LIGHT_IN_WORLD) {
-			lights.push(*light);
-		} else {
-			print("In the world already there is max number of lights, this light will not add to the world");
-		}
-	}
-}
-
 Entity *Game_World::get_entity(Entity_Id entity_id)
 {
 	switch (entity_id.type) {
@@ -58,41 +42,47 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 	return Entity_Id(ENTITY_TYPE_GEOMETRY, geometry_entities.count - 1);
 }
 
+#define UPDATE_LIGHT_HASH() light_hash += (u32)light.light_type + 1
+
 Light *Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
-	assert(false);
 	Light light;
+	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 0.0f, 0.0f));
 	light.direction = direction;
 	light.color = color;
 	light.light_type = DIRECTIONAL_LIGHT_TYPE;
-	add_entity(&light);
+	lights.push(light);
+
+	UPDATE_LIGHT_HASH();
 
 	return &light;
 }
 
 Light *Game_World::make_point_light(const Vector3 &position, const Vector3 &color, float range)
 {
-	assert(false);
 	Light light;
-	light.position = position;
+	init_entity(&light, ENTITY_TYPE_LIGHT, position);
 	light.color = color;
 	light.light_type = POINT_LIGHT_TYPE;
 	light.range = range;
-	add_entity(&light);
-	
+	lights.push(light);
+
+	UPDATE_LIGHT_HASH();
+
 	return &light;
 }
 
 Light  *Game_World::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
 {
-	assert(false);
 	Light light;
-	light.position = position;
+	init_entity(&light, ENTITY_TYPE_LIGHT, position);
 	light.direction = direction;
 	light.color = color;
 	light.light_type = SPOT_LIGHT_TYPE;
 	light.radius = radius;
-	add_entity(&light);
+	lights.push(light);
+
+	UPDATE_LIGHT_HASH();
 
 	return &light;
 }

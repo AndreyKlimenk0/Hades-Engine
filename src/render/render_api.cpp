@@ -849,7 +849,7 @@ void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, Gpu_Buffer *c
 
 void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, Shader_Resource *shader_resource)
 {
-	pipeline->VSGetShaderResources(gpu_register, 1, &shader_resource->dx11_shader_resource);
+	pipeline->VSSetShaderResources(gpu_register, 1, &shader_resource->dx11_shader_resource);
 }
 
 void Render_Pipeline::set_vertex_shader_resource(Struct_Buffer *struct_buffer)
@@ -872,9 +872,9 @@ void Render_Pipeline::set_pixel_shader_resource(Shader_Resource_View *shader_res
 	pipeline->PSSetShaderResources(0, 1, &shader_resource_view);
 }
 
-void Render_Pipeline::set_pixel_shader_resource(Struct_Buffer * struct_buffer)
+void Render_Pipeline::set_pixel_shader_resource(Struct_Buffer *struct_buffer)
 {
-	pipeline->PSGetShaderResources(struct_buffer->shader_resource_register, 1, &struct_buffer->shader_resource.dx11_shader_resource);
+	pipeline->PSSetShaderResources(struct_buffer->shader_resource_register, 1, &struct_buffer->shader_resource.dx11_shader_resource);
 }
 
 void Render_Pipeline::set_rasterizer(Rasterizer *rasterizer)

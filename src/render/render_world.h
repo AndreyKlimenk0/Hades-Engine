@@ -16,6 +16,17 @@ struct Render_Entity {
 	u32 world_matrix_id;
 };
 
+struct Frame_Info {
+	Matrix4 view_matrix;
+	Matrix4 perspective_matrix;
+	Vector3 camera_position;
+	int pad1;
+	Vector3 camera_direction;
+	int pad2;
+	u32 light_count;
+	Vector3 pad3;
+};
+
 struct Struct_Buffer {
 	u32 count = 0;
 	u32 size = 0;
@@ -38,7 +49,23 @@ struct Mesh_Instance {
 	u32 index_offset = 0;
 };
 
+
+struct Hlsl_Light {
+	Vector4 position;
+	Vector4 direction;
+	Vector4 color;
+	u32 light_type;
+	float radius;
+	float range;
+	float pad;
+};
+
 struct Render_World {
+
+	u32 light_hash;
+
+	Frame_Info frame_info;
+
 	Free_Camera camera;
 
 	View_Info *view_info = NULL;
@@ -48,9 +75,10 @@ struct Render_World {
 	Gpu_Buffer *pass_data_cbuffer = NULL;
 	Gpu_Buffer *frame_info_cbuffer = NULL;
 
+	Array<Matrix4> world_matrices;
+	
 	Array<Vertex_XNUV> unified_vertices;
 	Array<u32> unified_indices;
-	Array<Matrix4> world_matrices;
 	Array<Mesh_Instance> mesh_instances;
 	
 	Array<Render_Entity> render_entities;
@@ -61,8 +89,10 @@ struct Render_World {
 	Struct_Buffer index_struct_buffer;
 	Struct_Buffer mesh_struct_buffer;
 	Struct_Buffer world_matrix_struct_buffer;
+	Struct_Buffer light_struct_buffer;
 
 	void init();
+	void update();
 	void make_render_entity(Entity_Id entity_id, Mesh_Id mesh_id);
 	void update_world_matrices();
 	void render();

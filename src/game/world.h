@@ -71,6 +71,7 @@ struct Light : Entity {
 };
 
 struct Game_World {
+	u32 light_hash = 0;
 	u32 id_count = 0;
 	Render_World *render_world = NULL;
 	
@@ -79,7 +80,6 @@ struct Game_World {
 	Array<Geometry_Entity> geometry_entities;
 
 	void init();
-	void add_entity(Entity *entity);
 
 	Entity *get_entity(Entity_Id entity_id);
 
