@@ -60,7 +60,6 @@ void Free_Camera::handle_event(Event *event)
 		}
 	}
 
-
 	Matrix4 rotation = XMMatrixRotationRollPitchYaw(pitch, yam, 0);
 	target = XMVector3TransformCoord(base_z_vec, rotation);
 	target.normalize();
