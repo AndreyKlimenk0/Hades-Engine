@@ -1,6 +1,8 @@
 #include "render_world.h"
 #include "../sys/engine.h"
 #include <stdint.h>
+#include "../gui/gui.h"
+
 
 struct Frame_Info {
 	Matrix4 view_matrix;
@@ -137,27 +139,14 @@ void Render_World::update_world_matrices()
 
 void Render_World::render()
 {
-	Queue<Event> *events = get_event_queue();
-	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
-		Event *event = &node->item;
+	if (!gui::were_events_handled()) {
+		Queue<Event> *events = get_event_queue();
+		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+			Event *event = &node->item;
 
-		camera.handle_event(event);
+			camera.handle_event(event);
+		}
 	}
-	
-	Matrix4 result1 = camera.get_view_matrix();
-	Matrix4 result2 = world_matrices[0] * result1 * view_info->perspective_matrix;
-
-	Vector4 temp_vec = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
-	Matrix4 temp_matrix = Matrix4(
-		Vector4(1.0f, 2.0f, 3.0f, 4.0f),
-		Vector4(5.0f, 6.0f, 7.0f, 8.0f),
-		Vector4(9.0f, 10.0f,11.0f, 12.0f),
-		Vector4(13.0f, 14.0f, 15.0f, 16.0f)
-	);
-
-	Vector4 temp_result = temp_matrix * temp_vec;
-
-	Vector4 result3 = result2 * Vector4(unified_vertices[0].position, 1.0f);
 
 	Frame_Info frame_info;
 	frame_info.view_matrix = camera.get_view_matrix();
@@ -192,7 +181,6 @@ void Render_World::render()
 	render_pipeline->set_pixel_shader_sampler(Engine::get_render_system()->sampler);
 	render_pipeline->set_pixel_shader_resource(temp->shader_resource);
 
-	//update_world_matrices();
 
 	Render_Entity *render_entity = NULL;
 
@@ -204,7 +192,6 @@ void Render_World::render()
 		render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
 
-		//render_pipeline->draw_indexed(mesh_instances[render_entity->mesh_id].index_count, 0, 0);
 		render_pipeline->draw(mesh_instances[render_entity->mesh_id].index_count);
 	}
 	RELEASE_COM(temp->gpu_resource);

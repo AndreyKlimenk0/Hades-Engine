@@ -16,6 +16,8 @@ namespace gui {
 	void shutdown();
 	void draw_test_gui();
 
+	bool were_events_handled();
+
 	void begin_frame();
 	void end_frame();
 
@@ -36,7 +38,6 @@ namespace gui {
 	void list_box(Array<String> *array, u32 *item_index);
 	
 	void image(Texture *texture, s32 width = -1, s32 height = -1);
-
 
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
