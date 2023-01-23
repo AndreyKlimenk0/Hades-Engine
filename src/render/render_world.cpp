@@ -36,6 +36,9 @@ void Render_World::init()
 
 	Game_World *game_world = Engine::get_game_world();
 	Box box;
+	box.depth = 200;
+	box.width = 200;
+	box.height = 200;
 	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 10.0f), GEOMETRY_TYPE_BOX, (void *)&box);
 
 	Triangle_Mesh mesh;
@@ -48,10 +51,10 @@ void Render_World::init()
 
 	Triangle_Mesh grid_mesh;
 	Grid grid;
-	grid.width = 1000.0f;
-	grid.depth = 1000.0f;
-	grid.rows_count = 100;
-	grid.columns_count = 100;
+	grid.width = 100000.0f;
+	grid.depth = 100000.0f;
+	grid.rows_count = 10;
+	grid.columns_count = 10;
 	generate_grid(&grid, &grid_mesh);
 
 	Mesh_Id grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
@@ -197,7 +200,6 @@ void Render_World::render()
 	
 	render_pipeline->set_pixel_shader_sampler(Engine::get_render_system()->sampler);
 	render_pipeline->set_pixel_shader_resource(temp->shader_resource);
-	print("Light register = ", light_struct_buffer.shader_resource_register);
 	render_pipeline->set_pixel_shader_resource(&light_struct_buffer);
 
 	Render_Entity *render_entity = NULL;
