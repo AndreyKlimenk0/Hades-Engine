@@ -7,6 +7,10 @@
 
 using namespace DirectX;
 
+struct Vector2;
+struct Vector3;
+struct Vector4;
+
 struct Vector2 {
 	float x;
 	float y;
@@ -188,8 +192,10 @@ struct Vector3 {
 	Vector3() {};
 	Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 	Vector3(const XMVECTOR &xm_vec);
+	Vector3(const Vector4 &vec);
 	
 	Vector3 &operator=(const XMFLOAT3 &vector);
+	Vector3 &operator=(const Vector4 &vec4);
 
 	float  &operator[](int i);
 	const float  &operator[](int i) const;
