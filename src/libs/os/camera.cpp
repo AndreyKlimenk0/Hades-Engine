@@ -9,75 +9,85 @@
 using namespace DirectX;
 
 
+Free_Camera::Free_Camera()
+{
+
+	position = Vector3(0.0f, 20.0f, 250.0f);
+	target = Vector3(0.0f, 10.0f, 1.0f);
+	up = Vector3(0.0f, 1.0f, 0.0f);
+	forward = Vector3(0.0f, 0.0f, 1.0f);
+}
+
 void Free_Camera::handle_event(Event *event)
 {
-	static float camera_speed = 10.0f;
 	static int last_mouse_x = 0.0f;
 	static int last_mouse_y = 0.0f;
-	
-	static float pitch = 0.0f;
-	static float yam = 0.0f;
 
-	float move_by_z = 0.0f;
-	float move_by_x = 0.0f;
+	static s32 sum = 0;
+	if (event->type == EVENT_TYPE_KEY) {
+		if (event->key_info.key == VK_LBUTTON) {
+			if (!captured && event->key_info.is_pressed) {
+				last_mouse_x = Mouse_Input::x;
+				last_mouse_y = Mouse_Input::y;
+				captured = true;
+			}
 
-	static bool is_left_mouse_button_down = false;
-
-	if (event->is_mouse_event()) {
-
-		if (is_left_mouse_button_down) {
-			yam = XMConvertToRadians(static_cast<float>(event->mouse_info.x % 360));
-			pitch = XMConvertToRadians(static_cast<float>(event->mouse_info.y % 360));
+			if (captured && !event->key_info.is_pressed) {
+				captured = false;
+			}
 		}
 		
+		//if (event->is_key_down(Key_W)) {
+		//	Vector3 normalized_target = (target - position);
+		//	normalized_target.normalize();
+		//	normalized_target += 10;
+		//	position -= normalized_target;
+		//}
+
+		//if (event->is_key_down(Key_S)) {
+		//	Vector3 normalized_target = (target - position);
+		//	normalized_target.normalize();
+		//	normalized_target -= 10;
+		//	position -= normalized_target;
+		//}
+	}
+	if (Key_Input::is_key_down(Key_W)) {
+		Vector3 normalized_target = (target - position);
+		normalized_target.normalize();
+		normalized_target += 2;
+		position -= normalized_target;
+	}
+
+	if (Key_Input::is_key_down(Key_S)) {
+		Vector3 normalized_target = (target - position);
+		normalized_target.normalize();
+		normalized_target -= 2;
+		position -= normalized_target;
+	}
+
+	
+	if ((event->type == EVENT_TYPE_MOUSE) && captured) {
+		s32 mouse_x_delta = event->mouse_info.x - last_mouse_x;
+		s32 mouse_y_delta = event->mouse_info.y - last_mouse_y;
+
+		float x_angle = degress_to_radians(mouse_x_delta);
+		float y_angle = -degress_to_radians(mouse_y_delta);
+
+
+		Matrix4 rotate_about_y = XMMatrixRotationY(0.5 * x_angle);
+		Matrix4 rotate_about_x = XMMatrixRotationX(0.5 * y_angle);
+
+		Vector3 normalized_target = (target - position);
+		normalized_target.normalize();
+		
+		Vector4 result = rotate_about_x * rotate_about_y * Vector4(normalized_target, 1.0);
+		
+		result += Vector4(position, 1.0f);
+		target = result;
+
 		last_mouse_x = event->mouse_info.x;
 		last_mouse_y = event->mouse_info.y;
 	}
-
-	if (event->is_key_event()) {
-		if (event->is_key_down(VK_LBUTTON)) {
-			is_left_mouse_button_down = true;
-		}
-
-		if (event->key_info.key == VK_LBUTTON && (!event->key_info.is_pressed)) {
-			is_left_mouse_button_down = false;
-		}
-
-		if (event->is_key_down(Key_W)) {
-			move_by_z += camera_speed;
-		}
-
-		if (event->is_key_down(Key_S)) {
-			move_by_z -= camera_speed;
-		}
-
-		if (event->is_key_down(Key_A)) {
-			move_by_x -= camera_speed;
-		}
-
-		if (event->is_key_down(Key_D)) {
-			move_by_x += camera_speed;
-		}
-	}
-
-	Matrix4 rotation = XMMatrixRotationRollPitchYaw(pitch, yam, 0);
-	target = XMVector3TransformCoord(base_z_vec, rotation);
-	target.normalize();
-
-	Matrix4 rotation_about_y = XMMatrixRotationY(yam);	
-	Matrix4 rotation_about_x = XMMatrixRotationX(pitch);
-
-	Vector3 right = XMVector3TransformCoord(base_x_vec, rotation_about_y);
-    Vector3 incline = XMVector3TransformCoord(base_z_vec, rotation_about_x);
-	up = XMVector3TransformCoord(up, rotation_about_y);
-	forward = XMVector3TransformCoord(base_z_vec, rotation_about_y);
-	
-
-	forward.y += incline.y;
-	position += move_by_z * forward;
-	position += move_by_x * right;
-
-	target = position + target;
 }
 
 Matrix4 Free_Camera::get_view_matrix()
