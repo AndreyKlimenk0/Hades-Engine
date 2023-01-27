@@ -9,7 +9,7 @@
 using namespace DirectX;
 
 
-Free_Camera::Free_Camera()
+Camera::Camera()
 {
 
 	position = Vector3(0.0f, 20.0f, 250.0f);
@@ -18,7 +18,7 @@ Free_Camera::Free_Camera()
 	forward = Vector3(0.0f, 0.0f, 1.0f);
 }
 
-void Free_Camera::handle_event(Event *event)
+void Camera::handle_event(Event *event)
 {
 	static int last_mouse_x = 0.0f;
 	static int last_mouse_y = 0.0f;
@@ -54,14 +54,15 @@ void Free_Camera::handle_event(Event *event)
 	if (Key_Input::is_key_down(Key_W)) {
 		Vector3 normalized_target = (target - position);
 		normalized_target.normalize();
-		normalized_target += 2;
-		position -= normalized_target;
+		normalized_target *= 2;
+		position += normalized_target;
+		target += normalized_target;
 	}
 
 	if (Key_Input::is_key_down(Key_S)) {
 		Vector3 normalized_target = (target - position);
 		normalized_target.normalize();
-		normalized_target -= 2;
+		normalized_target *= 2;
 		position -= normalized_target;
 	}
 
@@ -90,7 +91,7 @@ void Free_Camera::handle_event(Event *event)
 	}
 }
 
-Matrix4 Free_Camera::get_view_matrix()
+Matrix4 Camera::get_view_matrix()
 {
 	XMMATRIX view = XMMatrixLookAtLH(position, target, up);
 	return Matrix4(view);
