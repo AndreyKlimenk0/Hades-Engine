@@ -36,6 +36,20 @@ enum Keys {
 	Key_Z,
 };
 
+enum Hades_Keys {
+	KEY_UNKNOWN = 0,
+	KEY_LMOUSE,
+	KEY_RMOUSE,
+	KEY_W,
+	KEY_S,
+	KEY_A,
+	KEY_D,
+	KEY_E,
+	KEY_Q,
+};
+
+Hades_Keys win32_key_to_engine_key(u32 win32_key_code);
+
 
 struct Mouse_Input {
 	static s32 x;

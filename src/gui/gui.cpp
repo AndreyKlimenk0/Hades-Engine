@@ -46,6 +46,7 @@ const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
 const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
 const Element_Alignment ALIGNMENT_RIGHT = 0x04;
 const Element_Alignment ALIGNMENT_LEFT = 0x08;
+const Element_Alignment GO_TO_NEW_LINE = 0x10;
 
 const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
@@ -60,7 +61,9 @@ struct Gui_Edit_Field_Theme {
 	s32 caret_blink_time = 3000;
 	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 default_rect = { 0, 0, 220, 20 };
-	Color color = Color(74, 82, 90);
+	//Color color = Color(74, 82, 90);
+	//Color color = Color(51, 53, 54);
+	Color color = Color(66, 70, 75);
 };
 
 struct Gui_Radio_Button_Theme {
@@ -87,12 +90,13 @@ struct Gui_Window_Theme {
 	s32 header_height = 15;
 	s32 mouse_wheel_spped = 30;
 	s32 rounded_border = 6;
-	s32 place_between_elements = 10;
+	s32 place_between_elements = 12;
 	s32 shift_element_from_window_side = 20;
 	s32 scroll_bar_width = 15;
 	float outlines_width = 2.0f;
 	Color header_color = Color(28, 30, 33);
-	Color background_color = Color(36, 39, 43);
+	Color background_color = Color(25, 27, 29);
+	//Color background_color = Color(36, 39, 43);
 	Color outlines_color = Color(92, 100, 107);
 };
 
@@ -393,6 +397,7 @@ struct Gui_Manager {
 	void end_window();
 	void same_line();
 	void next_line();
+	void new_line();
 	void set_next_window_pos(s32 x, s32 y);
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_theme(Gui_Window_Theme *theme);
@@ -410,6 +415,8 @@ struct Gui_Manager {
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *value);
+	void edit_field(const char *name, Vector3 *vector);
+	void edit_field_vector(char label, float *value, const Color &color);
 	bool edit_field(const char *name, const char *value, u32 max_symbols_number, bool(*is_symbol_valid)(char symbol));
 	
 	bool button(const char *name);
@@ -433,6 +440,8 @@ struct Gui_Manager {
 Rect_s32 Gui_Manager::get_text_rect(const char *text)
 {
 	Rect_s32 text_rect;
+	text_rect.x = 0;
+	text_rect.y = 0;
 	Size_u32 size = font->get_text_size(text);
 	text_rect.width = (s32)size.width;
 	text_rect.height = (s32)size.height;
@@ -462,33 +471,37 @@ void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 	assert(!((window->alignment & ALIGNMENT_VERTICALLY) && (window->alignment & ALIGNMENT_HORIZONTALLY)));
 
 	static s32 prev_rect_height = 0;
-	u32 offset = window_theme.place_between_elements;
+	u32 place_between_elements = window_theme.place_between_elements;
+
+	if (window->alignment & GO_TO_NEW_LINE) {
+		window->alignment &= ~GO_TO_NEW_LINE;
+		window->next_rect_place.y += prev_rect_height + place_between_elements;
+		window->next_rect_place.x = window->content_rect.x;
+	}
 
 	if (window->alignment & ALIGNMENT_VERTICALLY) {
 		if (window->reset_x_position) {
 			window->next_rect_place.x = window->content_rect.x;
 			window->reset_x_position = false;
-			window->next_rect_place.y += prev_rect_height + offset;
-			window->content_rect.height += prev_rect_height + offset;
+			window->next_rect_place.y += prev_rect_height + place_between_elements;
+			window->content_rect.height += prev_rect_height + place_between_elements;
 		}
-		rect->y = window->next_rect_place.y + offset;
-		rect->x = window->next_rect_place.x + offset;
-		window->next_rect_place.y += rect->height + offset;
+		rect->y = window->next_rect_place.y + place_between_elements;
+		rect->x = window->next_rect_place.x + place_between_elements;
+		window->next_rect_place.y += rect->height + place_between_elements;
 		
 		if (rect->width > window->content_rect.width) {
 			window->content_rect.width = rect->width;
 		}
-		window->content_rect.height += rect->height + offset;
+		window->content_rect.height += rect->height + place_between_elements;
 
-	}
-
-	if (window->alignment & ALIGNMENT_HORIZONTALLY) {
+	} else if (window->alignment & ALIGNMENT_HORIZONTALLY) {
 		window->reset_x_position = true;
 		prev_rect_height = rect->height;
-		rect->x = window->next_rect_place.x + offset;
-		rect->y = window->next_rect_place.y + offset;
-		window->next_rect_place.x += rect->width + offset;
-		window->content_rect.width += rect->width + offset;
+		rect->x = window->next_rect_place.x + place_between_elements;
+		rect->y = window->next_rect_place.y + place_between_elements;
+		window->next_rect_place.x += rect->width + place_between_elements;
+		window->content_rect.width += rect->width + place_between_elements;
 	}
 }
 
@@ -632,7 +645,7 @@ inline bool must_rect_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
 	return true;
 }
 
-Rect_s32 calcualte_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
+Rect_s32 calculate_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 {
 	Rect_s32 clip_rect;
 
@@ -674,7 +687,7 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 	place_rect_in_window(window, &rect);
 
 	if (must_rect_be_drawn(&window->rect, &rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &rect);
 
 		place_in_middle_and_by_left(&rect, &text_rect, radio_rect.width + radio_button_theme.text_shift);
 		place_in_middle_and_by_left(&rect, &radio_rect, 0);
@@ -740,6 +753,68 @@ void Gui_Manager::edit_field(const char *name, String *value)
 	assert(false);
 }
 
+void Gui_Manager::edit_field(const char *name, Vector3 *vector)
+{
+	Gui_Window *window = get_window();
+	int c = 180;
+	//if (window->alignment & ALIGNMENT_VERTICALLY) {
+	//	next_line();
+	//	edit_field_vector('X', &vector->x, Color(c, 0, 0));
+	//	same_line();
+	//	edit_field_vector('Y', &vector->y, Color(0, c, 0));
+	//	edit_field_vector('Z', &vector->z, Color(0, 0, c));
+	//} else {
+		new_line();
+		same_line();
+		edit_field_vector('X', &vector->x, Color(c, 0, 0));
+		edit_field_vector('Y', &vector->y, Color(0, c, 0));
+		edit_field_vector('Z', &vector->z, Color(0, 0, c));
+//	}
+	text(name);
+	//text(name);
+	//edit_field_vector('X', &vector->x, Color(c, 0, 0));
+	//edit_field_vector('Y', &vector->y, Color(0, c, 0));
+	//edit_field_vector('Z', &vector->z, Color(0, 0, c));
+	next_line();
+}
+
+void Gui_Manager::edit_field_vector(char label, float *value, const Color &color)
+{
+
+	Gui_Window *window = get_window();
+	char *str_value = to_string(*value);
+	int len = strlen(str_value);
+	String str(str_value, 0, len - (FLOAT_PRECISION - edit_field_theme.float_precision));
+	
+	Rect_s32 str_value_rect = get_text_rect(str);
+	Rect_s32 edit_field_rect = { 0, 0, 80, 20 };
+	Rect_s32 vector_field_name = { 0, 0, (s32)font->get_char_width(label) + 12, 20 };
+
+	place_rect_in_window(window, &edit_field_rect);
+	if (must_rect_be_drawn(&window->rect, &edit_field_rect)) {
+		String string{ label };
+
+		place_in_middle_and_by_left(&edit_field_rect, &str_value_rect, vector_field_name.width + 5);
+		
+		place_in_middle_and_by_left(&edit_field_rect, &vector_field_name);
+
+		Rect_s32 clip_rect = calculate_clip_rect(&window->rect, &edit_field_rect);
+		Rect_s32 text_rect = get_text_rect(string);
+		place_in_middle(&vector_field_name, &text_rect, BOTH_AXIS);
+		
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		
+		render_list->add_rect(&edit_field_rect, edit_field_theme.color, edit_field_theme.rounded_border);
+		render_list->add_rect(&vector_field_name, color, edit_field_theme.rounded_border);
+		render_list->add_text(&text_rect, string);
+		render_list->add_text(&str_value_rect, str);
+		
+		render_list->pop_clip_rect();
+	}
+	free_string(str_value);
+}
+
 void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
 	s32 text_width = font->get_text_size(edit_field_state.data).width;
@@ -797,7 +872,7 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 	place_rect_in_window(window, &rect);
 
 	if (must_rect_be_drawn(&window->rect, &rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &rect);
 		Rect_s32 label_rect = get_text_rect(name);
 
 		place_in_middle_and_by_left(&rect, &edit_field_rect, 0);
@@ -945,15 +1020,18 @@ void Gui_Manager::text(const char *some_text)
 	Gui_Window *window = get_window();
 
 	Rect_s32 text_rect = get_text_rect(some_text);
+	text_rect.height = 20;
+	Rect_s32 alignment_text_rect = get_text_rect(some_text);
 
 	place_rect_in_window(window, &text_rect);
 
-	Render_Primitive_List *render_list = GET_RENDER_LIST();
-
 	if (must_rect_be_drawn(&window->rect, &text_rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->rect, &text_rect);
+		place_in_middle(&text_rect, &alignment_text_rect, BOTH_AXIS);
+		
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		Rect_s32 clip_rect = calculate_clip_rect(&window->rect, &text_rect);
 		render_list->push_clip_rect(&clip_rect);
-		render_list->add_text(&text_rect, some_text);
+		render_list->add_text(&alignment_text_rect, some_text);
 		render_list->pop_clip_rect();
 	}
 }
@@ -982,7 +1060,7 @@ bool Gui_Manager::add_tab(const char *tab_name)
 
 		place_in_middle(&tab_rect, &text_rect, BOTH_AXIS);
 
-		Color default_color = Color(52, 52, 56);
+		Color default_color = Color(28, 30, 33);
 		
 		Color tab_color = (active_tab == tab_gui_id) ? Color(36, 39, 43) : default_color;
 
@@ -994,14 +1072,14 @@ bool Gui_Manager::add_tab(const char *tab_name)
 			render_list->add_rect(&tab_line_rect, default_color);
 		}
 
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &tab_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &tab_rect);
 		render_list->push_clip_rect(&clip_rect);
 
 		render_list->add_rect(&tab_rect, tab_color);
 		render_list->add_text(&text_rect, tab_name);
 
 		//right line
-		s32 thickness = 1.5f;
+		s32 thickness = 2;
 		Point_s32 point1 = { tab_rect.right(), tab_rect.y };
 		Point_s32 point2 = { tab_rect.right(), tab_rect.bottom() };
 		render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
@@ -1040,7 +1118,7 @@ void Gui_Manager::image(Texture *texture, s32 width, s32 height)
 	place_rect_in_window(window, &image_rect);
 
 	if (must_rect_be_drawn(&window->rect, &image_rect)) {
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &image_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &image_rect);
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
@@ -1125,7 +1203,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 
 		window = get_window();
 
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &list_box_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &list_box_rect);
 		Rect_s32 text_rect = get_text_rect(array->at(*item_index));
 		
 		if (alignment & ALIGNMENT_RIGHT) {
@@ -1138,11 +1216,10 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
-		render_list->add_rect(&list_box_rect, Color(74, 82, 90), button_theme.rounded_border);
+		render_list->add_rect(&list_box_rect, Color(66, 70, 75), button_theme.rounded_border);
 		render_list->add_text(&text_rect, array->at(*item_index));
 		render_list->pop_clip_rect();
 	}
-
 	list_box_count++;
 }
 
@@ -1161,7 +1238,7 @@ bool Gui_Manager::button(const char *name)
 
 		mouse_hover = (hot_item == button_gui_id);
 
-		Rect_s32 clip_rect = calcualte_clip_rect(&window->view_rect, &button_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &button_rect);
 		Rect_s32 text_rect = get_text_rect(name);
 
 		if (button_theme.aligment & ALIGNMENT_RIGHT) {
@@ -1591,6 +1668,12 @@ void Gui_Manager::next_line()
 	window->alignment |= ALIGNMENT_VERTICALLY;
 }
 
+void Gui_Manager::new_line()
+{
+	Gui_Window *window = get_window();
+	window->alignment |= GO_TO_NEW_LINE;
+}
+
 void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar)
 {
 	s32 window_size = window->view_rect.get_size()[axis];
@@ -1741,6 +1824,11 @@ void gui::edit_field(const char *name, float *value)
 void gui::edit_field(const char *name, String *value)
 {
 	gui_manager.edit_field(name, value);
+}
+
+void gui::edit_field(const char *name, Vector3 *vector)
+{
+	gui_manager.edit_field(name, vector);
 }
 
 void gui::begin_frame()

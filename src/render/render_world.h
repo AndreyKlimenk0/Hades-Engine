@@ -66,7 +66,7 @@ struct Render_World {
 
 	Frame_Info frame_info;
 
-	Free_Camera camera;
+	Camera camera;
 
 	View_Info *view_info = NULL;
 	Gpu_Device *gpu_device = NULL;

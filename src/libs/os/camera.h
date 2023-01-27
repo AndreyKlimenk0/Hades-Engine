@@ -7,8 +7,8 @@
 #include "../../win32/win_local.h"
 #include "event.h"
 
-struct Free_Camera {
-	Free_Camera();
+struct Camera {
+	Camera();
 
 	bool captured = false;
 

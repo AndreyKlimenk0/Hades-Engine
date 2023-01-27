@@ -79,7 +79,7 @@ Size_u32 Font::get_text_size(const char *text)
 
 	u32 len = strlen(text);
 	u32 max_height = 0;
-	Size_u32 result;
+	Size_u32 result = { 0, 0 };
 
 	for (u32 index = 0; index < len; index++) {
 		char c = text[index];
