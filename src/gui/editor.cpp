@@ -108,13 +108,44 @@ void Editor::render()
 
 	if (gui::begin_window("Editor")) {
 
-		if (gui::button("Make Entity")) {
-			reverse_state(&is_draw_make_entity_window);
+		if (gui::add_tab("Game World")) {
+			static float x = 0.0f;
+			static float y = 0.0f;
+			static float z = 0.0f;
+			gui::text("Direction");
+			gui::same_line();
+			gui::edit_field("X", &x);
+			gui::edit_field("Y", &y);
+			gui::edit_field("Z", &z);
+			gui::next_line();
+			Vector3 vector = { 10.0f , 10000.0f, 22.0f };
+			gui::edit_field("Position", &vector);
+			if (gui::button("Make Entity")) {
+				reverse_state(&is_draw_make_entity_window);
+			}
+
+			if (is_draw_make_entity_window) {
+				draw_make_entity_window();
+			}
 		}
 
-		if (is_draw_make_entity_window) {
-			draw_make_entity_window();
-		}
+		//if (gui::add_tab("Camera")) {
+		//	Camera *camera = &render_world->camera;
+		//	
+		//	gui::text("position");
+		//	gui::same_line();
+		//	gui::edit_field("X", &camera->position.x);
+		//	gui::edit_field("Y", &camera->position.y);
+		//	gui::edit_field("Z", &camera->position.z);
+
+		//	gui::next_line();
+
+		//	gui::text("Direction");
+		//	gui::same_line();
+		//	gui::edit_field("X", &camera->target.x);
+		//	gui::edit_field("Y", &camera->target.y);
+		//	gui::edit_field("Z", &camera->target.z);
+		//}
 
 		gui::end_window();
 	}

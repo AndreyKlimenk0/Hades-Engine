@@ -34,3 +34,26 @@ bool Key_Input::is_key_down(int key)
 	}
 	return false;
 }
+
+Hades_Keys win32_key_to_engine_key(u32 win32_key_code)
+{
+	switch (win32_key_code) {
+		case VK_LBUTTON:
+			return KEY_LMOUSE;
+		case VK_RBUTTON:
+			return KEY_RMOUSE;
+		case 0x41:
+			return KEY_A;
+		case 0x44:
+			return KEY_D;
+		case 0x45:
+			return KEY_E;
+		case 0x51:
+			return KEY_Q;
+		case 0x53:
+			return KEY_S;
+		case 0x57:
+			return KEY_W;
+	}
+	return KEY_UNKNOWN;
+}

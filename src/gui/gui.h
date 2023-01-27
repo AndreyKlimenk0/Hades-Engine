@@ -42,5 +42,6 @@ namespace gui {
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *value);
+	void edit_field(const char *name, Vector3 *vector);
 }
 #endif
