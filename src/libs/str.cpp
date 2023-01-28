@@ -236,6 +236,18 @@ char *to_string(float number)
 	return str;
 }
 
+#define FLOAT_PRECISION(n) #n
+
+char *to_string(float number, u32 precision)
+{
+	char *str = new char[64];
+	memset(str, 0, 64);
+	char *format = ::format("%.{}f", precision);
+	_sprintf_p(str, 64, format, number);
+	free_string(format);
+	return str;
+}
+
 char *to_string(double num)
 {
 	char *str = new char[64];
