@@ -481,7 +481,7 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 
 	Rasterizer_Desc rasterizer_desc;
 	rasterizer_desc.set_counter_clockwise(true);
-	rasterizer_desc.set_sciccor(true);
+	rasterizer_desc.set_sciccor(false);
 	
 	rasterizer = gpu_device->create_rasterizer(&rasterizer_desc);
 

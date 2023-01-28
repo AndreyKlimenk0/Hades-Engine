@@ -8,8 +8,6 @@
 #include "../win32/win_types.h"
 #include <string.h>
 
-Font font;
-
 void Font::init(int font_size)
 {
 	FT_Library ft;
@@ -69,7 +67,7 @@ u32 Font::get_char_advance(char c)
 
 u32 Font::get_text_width(const char *text)
 {
-	Size_u32 size = font.get_text_size(text);
+	Size_u32 size = get_text_size(text);
 	return size.width;
 }
 
@@ -83,8 +81,11 @@ Size_u32 Font::get_text_size(const char *text)
 
 	for (u32 index = 0; index < len; index++) {
 		char c = text[index];
-		Font_Char &font_char = characters[c];
-
+		Font_Char font_char;
+		if (!characters.get(c, &font_char)) {
+			print("Font::get_text_size: Can't get font char '{}' from text '{}'.", c, text);
+			return Size_u32(0, 0);
+		}
 
 		if (font_char.size.height > max_height) {
 			max_height = font_char.size.height;

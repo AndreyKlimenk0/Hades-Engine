@@ -33,6 +33,7 @@ char *to_string(unsigned long number, int base = 10);
 char *to_string(s64 number, int base = 10);
 char *to_string(u64 number, int base = 10);
 char *to_string(float number);
+char *to_string(float number, u32 precision);
 char *to_string(double num);
 char *to_string(bool val);
 char *to_string(const char *string);
