@@ -40,13 +40,16 @@ const u32 TAB_HASH = fast_hash("window_tab_hash");
 
 #define GET_RENDER_LIST() (&window->render_list)
 
-
 typedef u32 Element_Alignment;
-const Element_Alignment ALIGNMENT_HORIZONTALLY = 0x01;
-const Element_Alignment ALIGNMENT_VERTICALLY = 0x02;
-const Element_Alignment ALIGNMENT_RIGHT = 0x04;
-const Element_Alignment ALIGNMENT_LEFT = 0x08;
+const Element_Alignment HORIZONTALLY_ALIGNMENT = 0x01;
+const Element_Alignment VERTICALLY_ALIGNMENT = 0x02;
+const Element_Alignment RIGHT_ALIGNMENT = 0x04;
+const Element_Alignment LEFT_ALIGNMENT = 0x08;
 const Element_Alignment GO_TO_NEW_LINE = 0x10;
+const Element_Alignment HORIZONTALLY_ALIGNMENT_JUST_SET = 0x20;
+const Element_Alignment HORIZONTALLY_ALIGNMENT_ALREADY_SET = 0x40;
+const Element_Alignment VERTICALLY_ALIGNMENT_JUST_SET = 0x80;
+const Element_Alignment VERTICALLY_ALIGNMENT_WAS_USED = 0x100;
 
 const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
@@ -210,7 +213,6 @@ enum Window_Type {
 };
 
 struct Gui_Window {
-	bool reset_x_position = false;
 	bool tab_was_added = false;
 	bool tab_was_drawn;
 	Gui_ID gui_id;
@@ -224,7 +226,7 @@ struct Gui_Window {
 	Rect_s32 rect;
 	Rect_s32 view_rect;
 	Rect_s32 content_rect;
-	Point_s32 next_rect_place;
+	Point_s32 rect_place;
 	Point_s32 tab_place;
 	Point_s32 scroll;
 	String name;
@@ -257,14 +259,13 @@ void Gui_Window::place_tab_rect(Rect_s32 *tab_rect)
 void Gui_Window::start_new_frame(Window_Style window_style)
 {
 	tab_was_drawn = false;
-	reset_x_position = false;
 	tab_place.x = view_rect.x;
 	tab_place.y = view_rect.y;
 	style = window_style;
-	next_rect_place.x = content_rect.x;
-	next_rect_place.y = content_rect.y;
+	rect_place.x = content_rect.x;
+	rect_place.y = content_rect.y;
 	alignment = 0;
-	alignment |= ALIGNMENT_VERTICALLY;
+	alignment |= VERTICALLY_ALIGNMENT | VERTICALLY_ALIGNMENT_JUST_SET;
 	prev_rect_height = 0;
 }
 
@@ -279,8 +280,8 @@ inline void Gui_Window::set_position(s32 x, s32 y)
 	content_rect.x += rect.x - old_win_x;
 	content_rect.y += rect.y - old_win_y;
 
-	next_rect_place.x = content_rect.x;
-	next_rect_place.y = content_rect.y;
+	rect_place.x = content_rect.x;
+	rect_place.y = content_rect.y;
 
 	scroll.x += rect.x - old_win_x;
 	scroll.y += rect.y - old_win_y;
@@ -413,7 +414,6 @@ struct Gui_Manager {
 	void end_window();
 	void same_line();
 	void next_line();
-	void new_line();
 	void set_next_window_pos(s32 x, s32 y);
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_theme(Gui_Window_Theme *theme);
@@ -487,41 +487,50 @@ void Gui_Manager::set_next_window_theme(Gui_Window_Theme *theme)
 
 void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 {
-	assert(!((window->alignment & ALIGNMENT_VERTICALLY) && (window->alignment & ALIGNMENT_HORIZONTALLY)));
+	assert(!((window->alignment & VERTICALLY_ALIGNMENT) && (window->alignment & HORIZONTALLY_ALIGNMENT)));
 
-	//static s32 prev_rect_height = 0;
 	u32 place_between_elements = window_theme.place_between_elements;
 
-	//if (window->alignment & GO_TO_NEW_LINE) {
-	//	window->alignment &= ~GO_TO_NEW_LINE;
-	//	window->next_rect_place.y += window->prev_rect_height + place_between_elements;
-	//	window->next_rect_place.x = window->content_rect.x;
-	//
-	//} else 
-	if (window->alignment & ALIGNMENT_VERTICALLY) {
-		if (window->reset_x_position) {
-			window->next_rect_place.x = window->content_rect.x;
-			window->reset_x_position = false;
-			window->next_rect_place.y += window->prev_rect_height + place_between_elements;
-			window->content_rect.height += window->prev_rect_height + place_between_elements;
-		}
-		rect->y = window->next_rect_place.y + place_between_elements;
-		rect->x = window->next_rect_place.x + place_between_elements;
-		window->next_rect_place.y += rect->height + place_between_elements;
+	if (window->alignment & VERTICALLY_ALIGNMENT) {
+		window->alignment |= VERTICALLY_ALIGNMENT_WAS_USED;
 		
-		if (rect->width > window->content_rect.width) {
-			window->content_rect.width = rect->width;
+		if (window->alignment & VERTICALLY_ALIGNMENT_JUST_SET) {
+			window->alignment &= ~VERTICALLY_ALIGNMENT_JUST_SET;
+			
+			window->rect_place.x = window->content_rect.x + place_between_elements;
+			window->rect_place.y += window->prev_rect_height;
 		}
+		rect->x = window->rect_place.x;
+		rect->y = window->rect_place.y + place_between_elements;
+		
+		window->rect_place.y += rect->height + place_between_elements;
 		window->content_rect.height += rect->height + place_between_elements;
-
-	} 
-	if (window->alignment & ALIGNMENT_HORIZONTALLY) {
-		window->reset_x_position = true;
 		window->prev_rect_height = rect->height;
-		rect->x = window->next_rect_place.x + place_between_elements;
-		rect->y = window->next_rect_place.y + place_between_elements;
-		window->next_rect_place.x += rect->width + place_between_elements;
-		
+	} 
+	
+	if (window->alignment & HORIZONTALLY_ALIGNMENT) {
+		if (window->alignment & HORIZONTALLY_ALIGNMENT_JUST_SET) {
+			window->alignment &= ~HORIZONTALLY_ALIGNMENT_JUST_SET;
+
+			if (!(window->alignment & VERTICALLY_ALIGNMENT_WAS_USED)) {
+				window->rect_place.y += window->prev_rect_height;
+			}
+			if (window->alignment & HORIZONTALLY_ALIGNMENT_ALREADY_SET) {
+				window->alignment &= ~HORIZONTALLY_ALIGNMENT_ALREADY_SET;
+				window->rect_place.y += window->prev_rect_height;
+			}
+			
+			window->rect_place.y += place_between_elements;
+			window->rect_place.x = window->content_rect.x + place_between_elements;
+			rect->y = window->rect_place.y;
+			rect->x = window->rect_place.x;
+			window->rect_place.x += rect->width;
+			return;
+		}
+		rect->x = window->rect_place.x + place_between_elements;
+		rect->y = window->rect_place.y;
+		window->rect_place.x += rect->width + place_between_elements;
+		window->prev_rect_height = rect->height;
 		window->content_rect.width += rect->width + place_between_elements;
 	}
 }
@@ -581,7 +590,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	new_window.rect = window_rect;
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
-	new_window.alignment |= ALIGNMENT_VERTICALLY;
+	new_window.alignment |= VERTICALLY_ALIGNMENT | VERTICALLY_ALIGNMENT_JUST_SET;
 	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + header_height);
 
 	new_window.scroll.x = new_window.rect.x;
@@ -615,7 +624,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect, Window_
 	new_window.rect = *rect;
 	new_window.view_rect = new_window.rect;
 	new_window.alignment = 0;
-	new_window.alignment |= ALIGNMENT_VERTICALLY;
+	new_window.alignment |= VERTICALLY_ALIGNMENT | VERTICALLY_ALIGNMENT_JUST_SET;
 	new_window.content_rect.set(new_window.rect.x, new_window.rect.y + header_height);
 
 	new_window.scroll.x = new_window.rect.x;
@@ -788,7 +797,7 @@ void Gui_Manager::edit_field(const char *name, Vector3 *vector)
 		vector->z = atof(edit_field_state.data.c_str());
 	}
 	text(name);
-	new_line();
+	//new_line();
 	next_line();
 
 	free_string(x_str);
@@ -1228,7 +1237,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 			}
 		}
 
-		u32 alignment = ALIGNMENT_LEFT;
+		u32 alignment = LEFT_ALIGNMENT;
 		if (active_list_box == list_box_gui_id) {
 			Gui_Window_Theme win_theme;
 			win_theme.shift_element_from_window_side = 0;
@@ -1264,9 +1273,9 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &list_box_rect);
 		Rect_s32 name_rect = get_text_rect(array->at(*item_index));
 		
-		if (alignment & ALIGNMENT_RIGHT) {
+		if (alignment & RIGHT_ALIGNMENT) {
 			place_in_middle_and_by_right(&list_box_rect, &name_rect, button_theme.shift_from_size);
-		} else if (alignment & ALIGNMENT_LEFT) {
+		} else if (alignment & LEFT_ALIGNMENT) {
 			place_in_middle_and_by_left(&list_box_rect, &name_rect, button_theme.shift_from_size);
 		} else {
 			place_in_middle(&list_box_rect, &name_rect, BOTH_AXIS);
@@ -1299,9 +1308,9 @@ bool Gui_Manager::button(const char *name)
 		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &button_rect);
 		Rect_s32 name_rect = get_text_rect(name);
 
-		if (button_theme.aligment & ALIGNMENT_RIGHT) {
+		if (button_theme.aligment & RIGHT_ALIGNMENT) {
 			place_in_middle_and_by_right(&button_rect, &name_rect, button_theme.shift_from_size);
-		} else if (button_theme.aligment & ALIGNMENT_LEFT) {
+		} else if (button_theme.aligment & LEFT_ALIGNMENT) {
 			place_in_middle_and_by_left(&button_rect, &name_rect, button_theme.shift_from_size);
 		} else {
 			place_in_middle(&button_rect, &name_rect, BOTH_AXIS);
@@ -1711,26 +1720,29 @@ void Gui_Manager::end_window()
 void Gui_Manager::same_line()
 {
 	Gui_Window *window = get_window();
-	if (window->alignment & ALIGNMENT_VERTICALLY) {
-		window->alignment &= ~ALIGNMENT_VERTICALLY;
+	if (window->alignment & VERTICALLY_ALIGNMENT) {
+		window->alignment &= ~VERTICALLY_ALIGNMENT;
+		window->alignment &= ~VERTICALLY_ALIGNMENT_JUST_SET;
 	}
-	window->alignment |= ALIGNMENT_HORIZONTALLY;
+	
+	if (window->alignment & HORIZONTALLY_ALIGNMENT) {
+		window->alignment |= HORIZONTALLY_ALIGNMENT_ALREADY_SET;
+	}
+	
+	window->alignment |= HORIZONTALLY_ALIGNMENT;
+	window->alignment |= HORIZONTALLY_ALIGNMENT_JUST_SET;
 }
 
 void Gui_Manager::next_line()
 {
 	Gui_Window *window = get_window();
-	if (window->alignment & ALIGNMENT_HORIZONTALLY) {
-		window->alignment &= ~ALIGNMENT_HORIZONTALLY;
+	if (window->alignment & HORIZONTALLY_ALIGNMENT) {
+		window->alignment &= ~HORIZONTALLY_ALIGNMENT;
+		window->alignment &= ~HORIZONTALLY_ALIGNMENT_JUST_SET;
+		window->alignment &= ~VERTICALLY_ALIGNMENT_WAS_USED;
 	}
-	window->alignment |= ALIGNMENT_VERTICALLY;
-}
-
-void Gui_Manager::new_line()
-{
-	Gui_Window *window = get_window();
-	window->next_rect_place.y += window->prev_rect_height + window_theme.place_between_elements;
-	window->next_rect_place.x = window->content_rect.x;
+	window->alignment |= VERTICALLY_ALIGNMENT;
+	window->alignment |= VERTICALLY_ALIGNMENT_JUST_SET;
 }
 
 void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar)
