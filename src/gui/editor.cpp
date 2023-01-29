@@ -42,7 +42,7 @@ void Editor::init()
 
 void Editor::draw_make_entity_window()
 {
-	if (gui::begin_window("Make Entity")) {
+	if (gui::begin_window("Make Entity", 0)) {
 		
 		static u32 index = 0;
 		
@@ -113,6 +113,8 @@ void Editor::render()
 				reverse_state(&is_draw_make_entity_window);
 			}
 
+			gui::button("Create Wolrd");
+
 			if (is_draw_make_entity_window) {
 				draw_make_entity_window();
 			}
@@ -121,10 +123,10 @@ void Editor::render()
 		if (gui::add_tab("Camera")) {
 			Camera *camera = &render_world->camera;
 			gui::text("Camera Type: Free");
-			gui::button("temp1");
 			gui::edit_field("Position", &camera->position);
 			gui::edit_field("Direction", &camera->target);
-			gui::button("temp2");
+			gui::button("asdlfj");
+
 		}
 
 		gui::end_window();
