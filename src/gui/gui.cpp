@@ -65,8 +65,6 @@ struct Gui_Edit_Field_Theme {
 	Rect_s32 caret_rect{ 0, 0, 1, 14 };
 	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 rect = { 0, 0, 220, 20 };
-	//Color color = Color(74, 82, 90);
-	//Color color = Color(51, 53, 54);
 	Color color = Color(66, 70, 75);
 };
 
@@ -100,7 +98,6 @@ struct Gui_Window_Theme {
 	float outlines_width = 2.0f;
 	Color header_color = Color(28, 30, 33);
 	Color background_color = Color(25, 27, 29);
-	//Color background_color = Color(36, 39, 43);
 	Color outlines_color = Color(92, 100, 107);
 };
 
@@ -499,39 +496,60 @@ void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect)
 			
 			window->rect_place.x = window->content_rect.x + place_between_elements;
 			window->rect_place.y += window->prev_rect_height;
+			window->content_rect.height += window->prev_rect_height;
 		}
 		rect->x = window->rect_place.x;
 		rect->y = window->rect_place.y + place_between_elements;
 		
 		window->rect_place.y += rect->height + place_between_elements;
 		window->content_rect.height += rect->height + place_between_elements;
+		
+		if (rect->width > window->content_rect.width) {
+			window->content_rect.width = rect->width;
+		}
 		window->prev_rect_height = rect->height;
 	} 
 	
+	static s32 max_window_content_width = 0;
 	if (window->alignment & HORIZONTALLY_ALIGNMENT) {
 		if (window->alignment & HORIZONTALLY_ALIGNMENT_JUST_SET) {
 			window->alignment &= ~HORIZONTALLY_ALIGNMENT_JUST_SET;
+			max_window_content_width = 0;
 
 			if (!(window->alignment & VERTICALLY_ALIGNMENT_WAS_USED)) {
 				window->rect_place.y += window->prev_rect_height;
+				window->content_rect.height += window->prev_rect_height;
 			}
 			if (window->alignment & HORIZONTALLY_ALIGNMENT_ALREADY_SET) {
 				window->alignment &= ~HORIZONTALLY_ALIGNMENT_ALREADY_SET;
+				
 				window->rect_place.y += window->prev_rect_height;
+				window->content_rect.height += window->prev_rect_height;
 			}
 			
 			window->rect_place.y += place_between_elements;
 			window->rect_place.x = window->content_rect.x + place_between_elements;
+			window->content_rect.height += place_between_elements;
+			
 			rect->y = window->rect_place.y;
 			rect->x = window->rect_place.x;
 			window->rect_place.x += rect->width;
+			
+			max_window_content_width += rect->width;
+			if (max_window_content_width > window->content_rect.width) {
+				window->content_rect.width += max_window_content_width - window->content_rect.width;
+			}
 			return;
 		}
 		rect->x = window->rect_place.x + place_between_elements;
 		rect->y = window->rect_place.y;
 		window->rect_place.x += rect->width + place_between_elements;
 		window->prev_rect_height = rect->height;
-		window->content_rect.width += rect->width + place_between_elements;
+
+		max_window_content_width += rect->width + place_between_elements;
+		if (max_window_content_width > window->content_rect.width) {
+			window->content_rect.width += max_window_content_width - window->content_rect.width;
+		}
 	}
 }
 
@@ -797,7 +815,6 @@ void Gui_Manager::edit_field(const char *name, Vector3 *vector)
 		vector->z = atof(edit_field_state.data.c_str());
 	}
 	text(name);
-	//new_line();
 	next_line();
 
 	free_string(x_str);
@@ -952,7 +969,6 @@ void Gui_Manager::draw_edit_field(Edit_Field_Instance *edit_field_instance)
 
 void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	print("Caret ", &edit_field_state.caret);
 	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 		Event *event = &node->item;
 		
@@ -1024,10 +1040,8 @@ void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value
 				}
 
 				if (edit_field_state.caret_index_in_text == (edit_field_state.data.len - 1)) {
-					print("Append char");
 					edit_field_state.data.append(event->char_key);
 				} else {
-					print("Insert char");
 					edit_field_state.data.insert(edit_field_state.caret_index_for_inserting, event->char_key);
 				}
 				edit_field_state.caret_index_in_text += 1;
@@ -1086,17 +1100,17 @@ void Gui_Manager::text(const char *some_text)
 {
 	Gui_Window *window = get_window();
 
-	Rect_s32 name_rect = get_text_rect(some_text);
-	name_rect.height = 20;
+	Rect_s32 text_rect = get_text_rect(some_text);
+	text_rect.height = 20;
 	Rect_s32 alignment_text_rect = get_text_rect(some_text);
 
-	place_rect_in_window(window, &name_rect);
+	place_rect_in_window(window, &text_rect);
 
-	if (must_rect_be_drawn(&window->rect, &name_rect)) {
-		place_in_middle(&name_rect, &alignment_text_rect, BOTH_AXIS);
+	if (must_rect_be_drawn(&window->rect, &text_rect)) {
+		place_in_middle(&text_rect, &alignment_text_rect, BOTH_AXIS);
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
-		Rect_s32 clip_rect = calculate_clip_rect(&window->rect, &name_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->rect, &text_rect);
 		render_list->push_clip_rect(&clip_rect);
 		render_list->add_text(&alignment_text_rect, some_text);
 		render_list->pop_clip_rect();
@@ -1705,6 +1719,7 @@ void Gui_Manager::end_window()
 		scroll_bar(window, X_AXIS, &bottom_scroll_bar);
 	}
 	
+	draw_debug_rect(&window->render_list, &window->content_rect);
 	//Reset a window state
 	window->content_rect.set_size(0, 0);
 	
@@ -1715,6 +1730,7 @@ void Gui_Manager::end_window()
 		window_theme = default_window_theme;
 	}
 	window_stack.pop();
+
 }
 
 void Gui_Manager::same_line()
@@ -1724,11 +1740,9 @@ void Gui_Manager::same_line()
 		window->alignment &= ~VERTICALLY_ALIGNMENT;
 		window->alignment &= ~VERTICALLY_ALIGNMENT_JUST_SET;
 	}
-	
 	if (window->alignment & HORIZONTALLY_ALIGNMENT) {
 		window->alignment |= HORIZONTALLY_ALIGNMENT_ALREADY_SET;
 	}
-	
 	window->alignment |= HORIZONTALLY_ALIGNMENT;
 	window->alignment |= HORIZONTALLY_ALIGNMENT_JUST_SET;
 }
@@ -2057,8 +2071,8 @@ void gui::draw_test_gui()
 	//	static int position1 = 85959;
 	//	edit_field("Position: y", &position1);
 
-	//	static float temp = 2345.234f;
-	//	edit_field("Float x posiiton", &temp);
+	//	static float max_window_content_width = 2345.234f;
+	//	edit_field("Float x posiiton", &max_window_content_width);
 
 	//	static float temp1 = 0.0;
 	//	edit_field("Float x0 posiiton", &temp1);
@@ -2123,8 +2137,8 @@ void gui::draw_test_gui()
 	//		static int position1 = 85959;
 	//		edit_field("Position: y", &position1);
 
-	//		static float temp = 2345.234f;
-	//		edit_field("Float x posiiton", &temp);
+	//		static float max_window_content_width = 2345.234f;
+	//		edit_field("Float x posiiton", &max_window_content_width);
 
 	//		static float temp1 = 0.0;
 	//		edit_field("Float x0 posiiton", &temp1);

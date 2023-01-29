@@ -113,7 +113,9 @@ void Editor::render()
 				reverse_state(&is_draw_make_entity_window);
 			}
 
-			gui::button("Create Wolrd");
+			gui::button("Create Wolrd1");
+			gui::button("Create Wolrd2");
+			gui::button("Create Wolrd3");
 
 			if (is_draw_make_entity_window) {
 				draw_make_entity_window();
@@ -125,7 +127,9 @@ void Editor::render()
 			gui::text("Camera Type: Free");
 			gui::edit_field("Position", &camera->position);
 			gui::edit_field("Direction", &camera->target);
-			gui::button("asdlfj");
+			gui::button("button1");
+			gui::button("button2");
+			gui::button("button3");
 
 		}
 
