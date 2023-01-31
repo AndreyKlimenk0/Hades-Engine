@@ -18,8 +18,14 @@ struct Grid {
 	u32 columns_count;
 };
 
+struct Sphere {
+	float radius = 10.0f;
+	u32 slice_count = 100;
+	u32 stack_count = 100;
+};
+
 void generate_grid(Grid *grid, Triangle_Mesh *mesh);
 void generate_box(Box *box,  Triangle_Mesh *mesh);
-void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Mesh *mesh);
+void generate_sphere(Sphere *sphere, Triangle_Mesh *mesh);
 
 #endif
