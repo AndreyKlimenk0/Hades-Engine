@@ -40,7 +40,8 @@ struct Entity {
 
 enum Geometry_Type {
 	GEOMETRY_TYPE_BOX,
-	GEOMETRY_TYPE_GRID
+	GEOMETRY_TYPE_GRID,
+	GEOMETRY_TYPE_SPHERE
 };
 
 struct Geometry_Entity : Entity {
@@ -49,6 +50,7 @@ struct Geometry_Entity : Entity {
 	union {
 		Box box;
 		Grid grid;
+		Sphere sphere;
 	};
 };
 

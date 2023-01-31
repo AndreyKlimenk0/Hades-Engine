@@ -73,6 +73,11 @@ void Engine::resize_window(u32 window_width, u32 window_height)
 	engine->render_sys.resize(window_width, window_height);
 }
 
+Engine *Engine::get_instance()
+{
+	return engine;
+}
+
 Font *Engine::get_font()
 {
 	return &engine->font;

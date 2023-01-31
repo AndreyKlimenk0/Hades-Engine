@@ -50,7 +50,7 @@ struct Mesh_Instance {
 };
 
 
-struct Hlsl_Light {
+struct Shader_Light {
 	Vector4 position;
 	Vector4 direction;
 	Vector4 color;

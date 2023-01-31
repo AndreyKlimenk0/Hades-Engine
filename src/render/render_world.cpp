@@ -25,7 +25,7 @@ void Render_World::init()
 	index_struct_buffer.shader_resource_register = 4;
 	vertex_struct_buffer.shader_resource_register = 5;
 
-	light_struct_buffer.allocate<Hlsl_Light>(100);
+	light_struct_buffer.allocate<Shader_Light>(100);
 	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
 	world_matrix_struct_buffer.allocate<Matrix4>(1000);
 	index_struct_buffer.allocate<u32>(100000);
@@ -36,18 +36,19 @@ void Render_World::init()
 
 	Game_World *game_world = Engine::get_game_world();
 	Box box;
-	box.depth = 200;
-	box.width = 200;
-	box.height = 200;
+	box.depth = 10;
+	box.width = 10;
+	box.height = 10;
 	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 10.0f), GEOMETRY_TYPE_BOX, (void *)&box);
 
 	Triangle_Mesh mesh;
 	generate_box(&box, &mesh);
 
 	char *mesh_name = format(box.width, box.height, box.depth);
-	Mesh_Id mesh_id = add_mesh(mesh_name, &mesh);
+	Mesh_Id box_mesh_id = add_mesh(mesh_name, &mesh);
 
-	make_render_entity(entity_id, mesh_id);
+	make_render_entity(entity_id, box_mesh_id);
+	free_string(mesh_name);
 
 	Triangle_Mesh grid_mesh;
 	Grid grid;
@@ -59,10 +60,21 @@ void Render_World::init()
 
 	Mesh_Id grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
 
-	Entity_Id grid_entity_id = game_world->make_geometry_entity(Vector3(0.0f, 0.0f, 00.0f), GEOMETRY_TYPE_GRID, (void *)&grid);
+	Entity_Id grid_entity_id = game_world->make_geometry_entity(Vector3(0.0f, 0.0f, 0.0f), GEOMETRY_TYPE_GRID, (void *)&grid);
 	make_render_entity(grid_entity_id, grid_mesh_id);
 
-	free_string(mesh_name);
+
+	Sphere sphere;
+	Entity_Id sphere_id = game_world->make_geometry_entity(Vector3(20.0, 20.0f, 0.0f), GEOMETRY_TYPE_SPHERE, (void *)&sphere);
+	Triangle_Mesh sphere_mesh;
+	generate_sphere(&sphere, &sphere_mesh);
+
+	char *sphere_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
+
+	Mesh_Id mesh_id = add_mesh(sphere_name, &sphere_mesh);
+
+	make_render_entity(sphere_id, mesh_id);
+	
 
 	game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
 }
@@ -90,20 +102,20 @@ void Render_World::update()
 		
 		frame_info.light_count = game_world->lights.count;
 
-		Array<Hlsl_Light> hlsl_lights;
+		Array<Shader_Light> shader_lights;
 		
 		Light *light = NULL;
 		For(game_world->lights, light) {
-			Hlsl_Light hlsl_light;
+			Shader_Light hlsl_light;
 			hlsl_light.position = light->position;
 			hlsl_light.direction = light->direction;
 			hlsl_light.color = light->color;
 			hlsl_light.light_type = light->light_type;
 			hlsl_light.radius = light->radius;
 			hlsl_light.range = light->range;
-			hlsl_lights.push(hlsl_light);
+			shader_lights.push(hlsl_light);
 		}
-		light_struct_buffer.update(&hlsl_lights);
+		light_struct_buffer.update(&shader_lights);
 	}
 }
 
@@ -112,7 +124,7 @@ Mesh_Id Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
 	assert(mesh_name);
 	
 	if ((mesh->vertices.count == 0) || (mesh->indices.count == 0)) {
-		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.");
+		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.", mesh_name);
 		return UINT32_MAX;
 	}
 
