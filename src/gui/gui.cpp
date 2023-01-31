@@ -396,7 +396,7 @@ struct Gui_Manager {
 
 	Edit_Field_State edit_field_state;
 
-	void handle_events(Queue<Event> *events, bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
+	void handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
 	void init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font);
 	void shutdown();
@@ -428,7 +428,7 @@ struct Gui_Manager {
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *value);
-	void edit_field(const char *name, Vector3 *vector);
+	void edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z);
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color);
 	
@@ -797,7 +797,7 @@ void Gui_Manager::edit_field(const char *name, String *value)
 	assert(false);
 }
 
-void Gui_Manager::edit_field(const char *name, Vector3 *vector)
+void Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
 {
 	u32 color = 180;
 	char *x_str = to_string(vector->x, GUI_FLOAT_PRECISION);
@@ -805,13 +805,13 @@ void Gui_Manager::edit_field(const char *name, Vector3 *vector)
 	char *z_str = to_string(vector->z, GUI_FLOAT_PRECISION);
 	
 	same_line();
-	if (edit_field("X", x_str, 12, &is_symbol_float_valid, Color(color, 0, 0))) {
+	if (edit_field(x, x_str, 12, &is_symbol_float_valid, Color(color, 0, 0))) {
 		vector->x = atof(edit_field_state.data.c_str());
 	}
-	if (edit_field("Y", y_str, 12, &is_symbol_float_valid, Color(0, color, 0))) {
+	if (edit_field(y, y_str, 12, &is_symbol_float_valid, Color(0, color, 0))) {
 		vector->y = atof(edit_field_state.data.c_str());
 	}
-	if (edit_field("X", z_str, 12, &is_symbol_float_valid, Color(0, 0, color))) {
+	if (edit_field(z, z_str, 12, &is_symbol_float_valid, Color(0, 0, color))) {
 		vector->z = atof(edit_field_state.data.c_str());
 	}
 	text(name);
@@ -939,7 +939,7 @@ bool Gui_Manager::update_edit_field(Edit_Field_Instance *edit_field_instance)
 			edit_field_state.data = edit_field_instance->editing_value;
 			update_next_time_editing_value = false;
 		}
-		handle_events(get_event_queue(), &update_editing_value, &update_next_time_editing_value, &edit_field_instance->edit_field_rect, &edit_field_instance->value_rect);
+		handle_events(&update_editing_value, &update_next_time_editing_value, &edit_field_instance->edit_field_rect, &edit_field_instance->value_rect);
 	}
 	return update_editing_value;
 }
@@ -967,8 +967,9 @@ void Gui_Manager::draw_edit_field(Edit_Field_Instance *edit_field_instance)
 	render_list->pop_clip_rect();
 }
 
-void Gui_Manager::handle_events(Queue<Event> *events, bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect)
+void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
+	Queue<Event> *events = get_event_queue();
 	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 		Event *event = &node->item;
 		
@@ -1719,7 +1720,6 @@ void Gui_Manager::end_window()
 		scroll_bar(window, X_AXIS, &bottom_scroll_bar);
 	}
 	
-	draw_debug_rect(&window->render_list, &window->content_rect);
 	//Reset a window state
 	window->content_rect.set_size(0, 0);
 	
@@ -1911,9 +1911,9 @@ void gui::edit_field(const char *name, String *value)
 	gui_manager.edit_field(name, value);
 }
 
-void gui::edit_field(const char *name, Vector3 *vector)
+void gui::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
 {
-	gui_manager.edit_field(name, vector);
+	gui_manager.edit_field(name, vector, x, y, z);
 }
 
 void gui::begin_frame()

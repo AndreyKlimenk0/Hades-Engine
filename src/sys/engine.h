@@ -41,6 +41,7 @@ struct Engine {
 	static bool initialized();
 	static void resize_window(u32 window_width, u32 window_height);
 
+	static Engine *get_instance();
 	static Font *get_font();
 	static Game_World *get_game_world();
 	static Render_World *get_render_world();

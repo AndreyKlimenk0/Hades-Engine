@@ -36,6 +36,11 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 		geometry_entity.box = *((Box *)data);
 	} else if (geometry_type == GEOMETRY_TYPE_GRID) {
 		geometry_entity.grid = *((Grid *)data);
+	} else if (geometry_type == GEOMETRY_TYPE_SPHERE) {
+		geometry_entity.sphere = *((Sphere *)data);
+	} else {
+		print("Game_World::make_geometry_entity: Was passed not existing Geometry Type argument.");
+		return Entity_Id();
 	}
 	geometry_entities.push(geometry_entity);
 	

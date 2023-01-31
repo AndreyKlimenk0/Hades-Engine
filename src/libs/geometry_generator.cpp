@@ -109,45 +109,27 @@ void generate_box(Box *box, Triangle_Mesh *mesh)
 }
 
 
-void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Mesh *mesh)
+void generate_sphere(Sphere *sphere, Triangle_Mesh *mesh)
 {
+	Vertex_XNUV topVertex(0.0f, +sphere->radius, 0.0f, 0.0f, +1.0f, 0.0f, 0.0f, 0.0f);
+	Vertex_XNUV bottomVertex(0.0f, -sphere->radius, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f);
 
-	//
-	// Compute the vertices stating at the top pole and moving down the stacks.
-	//
+	mesh->vertices.push(topVertex);
 
-	// Poles: note that there will be texture coordinate distortion as there is
-	// not a unique point on the texture map to assign to the pole when mapping
-	// a rectangular texture onto a sphere.
-	Vertex_XNUV topVertex(0.0f, +radius, 0.0f, 0.0f, +1.0f, 0.0f, 0.0f, 0.0f);
-	Vertex_XNUV bottomVertex(0.0f, -radius, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f);
+	float phiStep = PI / sphere->stack_count;
+	float thetaStep = 2.0f * PI / sphere->slice_count;
 
-	//meshData.Vertices.push_back(topVertex);
-	Array<Vertex_XNUV> vertices;
-	vertices.push(topVertex);
-
-	float phiStep = XM_PI / stackCount;
-	float thetaStep = 2.0f*XM_PI / sliceCount;
-
-	// Compute vertices for each stack ring (do not count the poles as rings).
-	for (UINT i = 1; i <= stackCount - 1; ++i) {
+	for (UINT i = 1; i <= sphere->stack_count - 1; ++i) {
 		float phi = i * phiStep;
 
-		// Vertices of ring.
-		for (UINT j = 0; j <= sliceCount; ++j) {
+		for (UINT j = 0; j <= sphere->slice_count; ++j) {
 			float theta = j * thetaStep;
 
 			Vertex_XNUV v;
+			v.position.x = sphere->radius * sinf(phi) * cosf(theta);
+			v.position.y = sphere->radius * cosf(phi);
+			v.position.z = sphere->radius * sinf(phi) * sinf(theta);
 
-			// spherical to cartesian
-			v.position.x = radius * sinf(phi)*cosf(theta);
-			v.position.y = radius * cosf(phi);
-			v.position.z = radius * sinf(phi)*sinf(theta);
-
-			// Partial derivative of P with respect to theta
-
-			//XMVECTOR p = XMLoadFloat3(&v.position);
-			//XMStoreFloat3(&v.Normal, XMVector3Normalize(p));
 			Vector3 n = v.position;
 			n.normalize();
 			v.normal = n;
@@ -155,64 +137,36 @@ void generate_sphere(float radius, UINT sliceCount, UINT stackCount, Triangle_Me
 			v.uv.x = theta / XM_2PI;
 			v.uv.y = phi / XM_PI;
 
-			vertices.push(v);
+			mesh->vertices.push(v);
 		}
 	}
+	mesh->vertices.push(bottomVertex);
 
-	//meshData.Vertices.push_back(bottomVertex);
-	vertices.push(bottomVertex);
-
-	//
-	// Compute indices for top stack.  The top stack was written first to the vertex buffer
-	// and connects the top pole to the first ring.
-	//
-
-	Array<u32> indices;
-
-	for (UINT i = 1; i <= sliceCount; ++i) {
-		indices.push(0);
-		indices.push(i + 1);
-		indices.push(i);
+	for (UINT i = 1; i <= sphere->slice_count; ++i) {
+		mesh->indices.push(0);
+		mesh->indices.push(i + 1);
+		mesh->indices.push(i);
 	}
 
-	//
-	// Compute indices for inner stacks (not connected to poles).
-	//
-
-	// Offset the indices to the index of the first vertex in the first ring.
-	// This is just skipping the top pole vertex.
 	UINT baseIndex = 1;
-	UINT ringVertexCount = sliceCount + 1;
-	for (UINT i = 0; i < stackCount - 2; ++i) {
-		for (UINT j = 0; j < sliceCount; ++j) {
-			indices.push(baseIndex + i * ringVertexCount + j);
-			indices.push(baseIndex + i * ringVertexCount + j + 1);
-			indices.push(baseIndex + (i + 1)*ringVertexCount + j);
+	UINT ringVertexCount = sphere->slice_count + 1;
+	for (UINT i = 0; i < sphere->stack_count - 2; ++i) {
+		for (UINT j = 0; j < sphere->slice_count; ++j) {
+			mesh->indices.push(baseIndex + i * ringVertexCount + j);
+			mesh->indices.push(baseIndex + i * ringVertexCount + j + 1);
+			mesh->indices.push(baseIndex + (i + 1)*ringVertexCount + j);
 
-			indices.push(baseIndex + (i + 1)*ringVertexCount + j);
-			indices.push(baseIndex + i * ringVertexCount + j + 1);
-			indices.push(baseIndex + (i + 1)*ringVertexCount + j + 1);
+			mesh->indices.push(baseIndex + (i + 1)*ringVertexCount + j);
+			mesh->indices.push(baseIndex + i * ringVertexCount + j + 1);
+			mesh->indices.push(baseIndex + (i + 1)*ringVertexCount + j + 1);
 		}
 	}
-
-	//
-	// Compute indices for bottom stack.  The bottom stack was written last to the vertex buffer
-	// and connects the bottom pole to the bottom ring.
-	//
-
-	// South pole vertex was added last.
-	UINT southPoleIndex = (UINT)vertices.count - 1;
-
-	// Offset the indices to the index of the first vertex in the last ring.
+	UINT southPoleIndex = (UINT)mesh->vertices.count - 1;
 	baseIndex = southPoleIndex - ringVertexCount;
 
-	for (UINT i = 0; i < sliceCount; ++i) {
-		indices.push(southPoleIndex);
-		indices.push(baseIndex + i);
-		indices.push(baseIndex + i + 1);
+	for (UINT i = 0; i < sphere->slice_count; ++i) {
+		mesh->indices.push(southPoleIndex);
+		mesh->indices.push(baseIndex + i);
+		mesh->indices.push(baseIndex + i + 1);
 	}
-
-	//mesh->copy_vertices(vertices.items, vertices.count);
-	//mesh->copy_indices(indices.items, indices.count);
-	//mesh->allocate_static_buffer();
 }
