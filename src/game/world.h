@@ -17,6 +17,17 @@ const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
 //typedef u32 Entity_Id;
 struct Render_World;
 
+enum Boudning_Box_Type {
+	BOUNDING_BOX_TYPE_NONE,
+	BOUNDING_BOX_TYPE_AABB,
+	BOUNDING_BOX_TYPE_OBB
+};
+
+struct AABB {
+	Vector3 min;
+	Vector3 max;
+};
+
 enum Entity_Type {
 	ENTITY_TYPE_COMMON,
 	ENTITY_TYPE_LIGHT,
@@ -29,13 +40,24 @@ struct Entity_Id {
 
 	Entity_Type type;
 	u32 index;
+
+	bool operator==(const Entity_Id &other)
+	{
+		if ((type == other.type) && (index == other.index)) {
+			return true;
+		}
+		return false;
+	}
 };
 
 struct Entity {
-	Entity() { type = ENTITY_TYPE_COMMON; }
+	Entity() { type = ENTITY_TYPE_COMMON; bounding_box_type = BOUNDING_BOX_TYPE_NONE; }
 	u32 id;
 	Entity_Type type;
 	Vector3 position;
+	
+	Boudning_Box_Type bounding_box_type;
+	AABB AABB_box;
 };
 
 enum Geometry_Type {
@@ -83,7 +105,7 @@ struct Game_World {
 
 	void init();
 
-	Entity *get_entity(Entity_Id entity_id);
+	Entity *get_entity(Entity_Id entity_idx);
 
 	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
 	

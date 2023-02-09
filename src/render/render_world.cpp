@@ -5,14 +5,48 @@
 
 
 struct Pass_Data {
-	u32 mesh_id;
-	u32 world_matrix_id;
+	u32 mesh_idx;
+	u32 world_matrix_idx;
 	u32 pad1;
 	u32 pad2;
 };
 
+void make_AABB(Entity_Id entity_id, Triangle_Mesh *mesh)
+{
+	Game_World *game_world = Engine::get_game_world();
+	Entity *entity = game_world->get_entity(entity_id);
+
+	Vector3 min = { 0.0f, 0.0f, 0.0f };
+	Vector3 max = { 0.0f, 0.0f, 0.0f };
+	for (u32 i = 0; i < mesh->vertices.count; i++) {
+		Vector3 position = mesh->vertices[i].position;
+		if (position.x < min.x) {
+			min.x = position.x;
+		}
+		if (position.y < min.y) {
+			min.y = position.y;
+		}
+		if (position.z > min.z) {
+			min.z = position.z;
+		}
+		if (position.x > max.x) {
+			max.x = position.x;
+		}
+		if (position.y > max.y) {
+			max.y = position.y;
+		}
+		if (position.z < max.z) {
+			max.z = position.z;
+		}
+	}
+	entity->bounding_box_type = BOUNDING_BOX_TYPE_AABB;
+	entity->AABB_box.min = min;
+	entity->AABB_box.max = max;
+}
+
 void Render_World::init()
 {	
+	game_world = Engine::get_game_world();
 	Render_System *render_sys = Engine::get_render_system();
 	
 	view_info = &render_sys->view_info;
@@ -34,21 +68,24 @@ void Render_World::init()
 	frame_info_cbuffer = gpu_device->create_constant_buffer((sizeof(Frame_Info)));
 	pass_data_cbuffer = gpu_device->create_constant_buffer((sizeof(Pass_Data)));
 
-	Game_World *game_world = Engine::get_game_world();
+
 	Box box;
 	box.depth = 10;
 	box.width = 10;
 	box.height = 10;
 	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 10.0f), GEOMETRY_TYPE_BOX, (void *)&box);
-
+	entity_ids.push(entity_id);
+	
 	Triangle_Mesh mesh;
 	generate_box(&box, &mesh);
 
 	char *mesh_name = format(box.width, box.height, box.depth);
-	Mesh_Id box_mesh_id = add_mesh(mesh_name, &mesh);
+	Mesh_Idx box_mesh_id = add_mesh(mesh_name, &mesh);
 
 	make_render_entity(entity_id, box_mesh_id);
 	free_string(mesh_name);
+
+	make_AABB(entity_id, &mesh);
 
 	Triangle_Mesh grid_mesh;
 	Grid grid;
@@ -58,23 +95,24 @@ void Render_World::init()
 	grid.columns_count = 10;
 	generate_grid(&grid, &grid_mesh);
 
-	Mesh_Id grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
+	Mesh_Idx grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
 
 	Entity_Id grid_entity_id = game_world->make_geometry_entity(Vector3(0.0f, 0.0f, 0.0f), GEOMETRY_TYPE_GRID, (void *)&grid);
 	make_render_entity(grid_entity_id, grid_mesh_id);
 
-
 	Sphere sphere;
 	Entity_Id sphere_id = game_world->make_geometry_entity(Vector3(20.0, 20.0f, 0.0f), GEOMETRY_TYPE_SPHERE, (void *)&sphere);
+	entity_ids.push(sphere_id);
+	
 	Triangle_Mesh sphere_mesh;
 	generate_sphere(&sphere, &sphere_mesh);
 
 	char *sphere_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
 
-	Mesh_Id mesh_id = add_mesh(sphere_name, &sphere_mesh);
+	Mesh_Idx mesh_idx = add_mesh(sphere_name, &sphere_mesh);
+	make_AABB(sphere_id, &sphere_mesh);
 
-	make_render_entity(sphere_id, mesh_id);
-	
+	make_render_entity(sphere_id, mesh_idx);	
 
 	game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
 }
@@ -119,7 +157,19 @@ void Render_World::update()
 	}
 }
 
-Mesh_Id Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
+Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
+{
+
+	Render_Entity *render_entity = NULL;
+	For(render_entities, render_entity) {
+		if (render_entity->entity_idx == entity_id) {
+			return render_entity;
+		}
+	}
+	return NULL;
+}
+
+Mesh_Idx Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
 {
 	assert(mesh_name);
 	
@@ -130,9 +180,9 @@ Mesh_Id Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
 
 	String_Id string_id = fast_hash(mesh_name);
 	
-	Mesh_Id mesh_id;
-	if (mesh_table.get(string_id, &mesh_id)) {
-		return mesh_id;
+	Mesh_Idx mesh_idx;
+	if (mesh_table.get(string_id, &mesh_idx)) {
+		return mesh_idx;
 	}
 
 	Mesh_Instance mesh_info;
@@ -141,7 +191,7 @@ Mesh_Id Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
 	mesh_info.vertex_offset = unified_vertices.count;
 	mesh_info.index_offset = unified_indices.count;
 
-	mesh_id = mesh_instances.push(mesh_info);
+	mesh_idx = mesh_instances.push(mesh_info);
 	merge(&unified_vertices, &mesh->vertices);
 	merge(&unified_indices, &mesh->indices);
 
@@ -149,22 +199,21 @@ Mesh_Id Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
 	vertex_struct_buffer.update(&unified_vertices);
 	index_struct_buffer.update(&unified_indices);
 	
-	mesh_table.set(string_id, mesh_id);
-	return mesh_id;
+	mesh_table.set(string_id, mesh_idx);
+	return mesh_idx;
 }
 
-void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Id mesh_id)
+void Render_World::make_render_entity(Entity_Id entity_idx, Mesh_Idx mesh_idx)
 {
 	Render_Entity render_entity;
-	render_entity.entity_id = entity_id;
-	render_entity.mesh_id = mesh_id;
+	render_entity.entity_idx = entity_idx;
+	render_entity.mesh_idx = mesh_idx;
 
-	Game_World *game_world = Engine::get_game_world();
-	Entity *entity = game_world->get_entity(entity_id);
+	Entity *entity = game_world->get_entity(entity_idx);
 
 	Matrix4 matrix;
 	matrix.translate(&entity->position);
-	render_entity.world_matrix_id = world_matrices.push(matrix);
+	render_entity.world_matrix_idx = world_matrices.push(matrix);
 
 	world_matrix_struct_buffer.update(&world_matrices);
 	
@@ -174,14 +223,148 @@ void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Id mesh_id)
 void Render_World::update_world_matrices()
 {
 	world_matrices.count = 0;
-	Game_World *game_world = Engine::get_game_world();
 	
 	for (u32 index = 0; index < render_entities.count; index++) {
-		Entity *entity = game_world->get_entity(render_entities[index].entity_id);
+		Entity *entity = game_world->get_entity(render_entities[index].entity_idx);
 		
 		Matrix4 matrix;
 		matrix.translate(&entity->position);
 		world_matrices.push(matrix);
+	}
+}
+
+void Render_World::draw_outlines(Array<u32> *entity_ids)
+{
+
+}
+
+void make_AABB_mesh(Entity *entity, Array<Vector3> *vertices, Array<u32> *indices)
+{
+	Vector3 min = entity->AABB_box.min;
+	Vector3 max = entity->AABB_box.max;
+
+	// Go  for clockwise.
+	// Back cube side.
+	vertices->push(min);
+	vertices->push(Vector3(min.x, max.y, min.z));
+	vertices->push(Vector3(max.x, max.y, min.z));
+	vertices->push(Vector3(max.x, min.y, min.z));
+
+	// Front cuve side.
+	vertices->push(Vector3(min.x, min.y, max.z));
+	vertices->push(Vector3(min.x, max.y, max.z));
+	vertices->push(max);
+	vertices->push(Vector3(max.x, min.y, max.z));
+
+	indices->push(0);
+	indices->push(1);
+
+	indices->push(1);
+	indices->push(2);
+
+	indices->push(2);
+	indices->push(3);
+
+	indices->push(3);
+	indices->push(0);
+
+	indices->push(0 + 4);
+	indices->push(1 + 4);
+
+	indices->push(1 + 4);
+	indices->push(2 + 4);
+
+	indices->push(2 + 4);
+	indices->push(3 + 4);
+
+	indices->push(3 + 4);
+	indices->push(0 + 4);
+
+	indices->push(0);
+	indices->push(0 + 4);
+
+	indices->push(1);
+	indices->push(1 + 4);
+
+	indices->push(2);
+	indices->push(2 + 4);
+
+	indices->push(3);
+	indices->push(3 + 4);
+}
+
+const u32 t0_register = 0;
+const u32 t1_register = 1;
+const u32 t2_register = 2;
+const u32 t3_register = 3;
+const u32 t4_register = 4;
+
+const u32 b0_register = 0;
+const u32 b1_register = 1;
+const u32 b2_register = 2;
+
+void Render_World::draw_bounding_boxs(Array<Entity_Id> *entity_ids)
+{
+	static Render_Meshes_Data<Vector3> render_data;
+	static bool data_initialized = false;
+	if (!data_initialized) {
+		data_initialized = true;
+		render_data.init(t0_register, t1_register, t2_register);
+	}
+
+	for (u32 i = 0; i < entity_ids->count; i++) {
+		Entity_Id entity_id = entity_ids->get(i);
+		Entity *entity = game_world->get_entity(entity_id);
+
+		char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
+		defer(free_string(name));
+
+		if ((entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) && (!render_data.mesh_table.key_in_table(fast_hash(name)))) {
+			Array<Vector3> vertices;
+			Array<u32> indices;
+			make_AABB_mesh(entity, &vertices, &indices);
+
+			Mesh_Idx mesh_idx = render_data.add_mesh(name, &vertices, &indices);
+			Render_Entity *render_entity = find_render_entity(entity_id);
+			if (render_entity) {
+				Render_Entity new_render_entity;
+				new_render_entity.entity_idx = entity_id;
+				new_render_entity.mesh_idx = mesh_idx;
+				new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
+
+				render_data.render_entities.push(new_render_entity);
+			}
+		}
+	}
+
+	Shader *shader;
+	if (!Engine::get_render_system()->shaders.get("draw_lines", &shader)) {
+		loop_print("Can not found shader");
+		return;
+	}
+	
+	render_pipeline->set_input_layout(NULL);
+	render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
+	render_pipeline->set_vertex_shader(shader);
+	render_pipeline->set_pixel_shader(shader);
+
+	render_pipeline->set_vertex_shader_resource(b1_register, frame_info_cbuffer);
+	render_pipeline->set_pixel_shader_resource(b1_register, frame_info_cbuffer);
+	
+	render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
+	render_pipeline->set_vertex_shader_resource(&render_data.vertex_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(&render_data.index_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(&render_data.mesh_instance_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
+
+	Render_Entity *render_entity = NULL;
+	For(render_data.render_entities, render_entity) {
+		Pass_Data pass_data;
+		pass_data.mesh_idx = render_entity->mesh_idx;
+		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+
+		render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
+		render_pipeline->draw(render_data.mesh_instances[render_entity->mesh_idx].index_count);
 	}
 }
 
@@ -215,21 +398,22 @@ void Render_World::render()
 	render_pipeline->set_pixel_shader_resource(&light_struct_buffer);
 
 	Render_Entity *render_entity = NULL;
-
 	For(render_entities, render_entity) {
 		Pass_Data pass_data;
-		pass_data.mesh_id = render_entity->mesh_id;
-		pass_data.world_matrix_id = render_entity->world_matrix_id;
+		pass_data.mesh_idx = render_entity->mesh_idx;
+		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
 
-		render_pipeline->draw(mesh_instances[render_entity->mesh_id].index_count);
+		render_pipeline->draw(mesh_instances[render_entity->mesh_idx].index_count);
 	}
 
 	RELEASE_COM(temp->gpu_resource);
 	RELEASE_COM(temp->shader_resource);
 	DELETE_PTR(temp);
+
+	draw_bounding_boxs(&entity_ids);
 }
 
 template<typename T>

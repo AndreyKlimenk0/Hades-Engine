@@ -91,15 +91,15 @@ void Make_Entity_Window::draw()
 				gui::edit_field("Depth", &box.depth);
 
 				if (gui::button("Make")) {
-					Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
+					Entity_Id entity_idx = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
 
 					Triangle_Mesh mesh;
 					generate_box(&box, &mesh);
 
 					char *mesh_name = format(box.width, box.height, box.depth);
-					Mesh_Id mesh_id = render_world->add_mesh(mesh_name, &mesh);
+					Mesh_Idx mesh_idx = render_world->add_mesh(mesh_name, &mesh);
 
-					render_world->make_render_entity(entity_id, mesh_id);
+					render_world->make_render_entity(entity_idx, mesh_idx);
 
 					free_string(mesh_name);
 				}
@@ -109,15 +109,15 @@ void Make_Entity_Window::draw()
 				gui::edit_field("Stack count", (s32 *)&sphere.stack_count);
 				
 				if (gui::button("Make")) {
-					Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
+					Entity_Id entity_idx = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
 
 					Triangle_Mesh mesh;
 					generate_sphere(&sphere, &mesh);
 
 					char *mesh_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
-					Mesh_Id mesh_id = render_world->add_mesh(mesh_name, &mesh);
+					Mesh_Idx mesh_idx = render_world->add_mesh(mesh_name, &mesh);
 
-					render_world->make_render_entity(entity_id, mesh_id);
+					render_world->make_render_entity(entity_idx, mesh_idx);
 
 					free_string(mesh_name);
 				}

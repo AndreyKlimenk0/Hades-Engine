@@ -793,7 +793,7 @@
 #define FT_CACHE_CHARMAP_H        FT_CACHE_H
 
   /* The internals of the cache sub-system are no longer exposed.  We */
-  /* default to `FT_CACHE_H` at the moment just in case, but we know  */
+  /* default to `FT_CACHE_H` get the moment just in case, but we know  */
   /* of no rogue client that uses them.                               */
   /*                                                                  */
 #define FT_CACHE_MANAGER_H           FT_CACHE_H
