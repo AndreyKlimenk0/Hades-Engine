@@ -37,8 +37,8 @@ struct Array {
 	const T &operator[](int i) const;
 
 	T &pop();
-	T &at(int index);
-	const T &at(int index) const;
+	T &get(int index);
+	const T &get(int index) const;
 
 	T &first_item()
 	{
@@ -82,13 +82,13 @@ void Array<T>::reserve(int _count)
 }
 
 template <typename T>
-T &Array<T>::at(int index)
+T &Array<T>::get(int index)
 {
 	return items[index];
 }
 
 template <typename T>
-const T &Array<T>::at(int index) const
+const T &Array<T>::get(int index) const
 {
 	return items[index];
 }

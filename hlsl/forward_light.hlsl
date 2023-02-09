@@ -22,20 +22,6 @@ struct Light {
 	float pad;
 };
 
-struct Mesh_Instance {
-	uint vertex_count;
-	uint index_count;
-	uint vertex_offset;
-	uint index_offset;
-};
-
-cbuffer Pass_Data : register(b2) {
-	uint mesh_id;
-	uint world_matrix_id;
-	uint pad11;
-	uint pad22;
-}
-
 struct Material {
 	float4 ambient;
 	float4 diffuse;

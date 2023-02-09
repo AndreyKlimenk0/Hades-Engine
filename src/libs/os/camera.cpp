@@ -36,20 +36,6 @@ void Camera::handle_event(Event *event)
 				captured = false;
 			}
 		}
-		
-		//if (event->is_key_down(Key_W)) {
-		//	Vector3 normalized_target = (target - position);
-		//	normalized_target.normalize();
-		//	normalized_target += 10;
-		//	position -= normalized_target;
-		//}
-
-		//if (event->is_key_down(Key_S)) {
-		//	Vector3 normalized_target = (target - position);
-		//	normalized_target.normalize();
-		//	normalized_target -= 10;
-		//	position -= normalized_target;
-		//}
 	}
 	if (Key_Input::is_key_down(Key_W)) {
 		Vector3 normalized_target = (target - position);

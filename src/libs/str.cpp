@@ -18,7 +18,7 @@
 	while ((char_array->size - char_array->count) < s_len) { \
 		char_array->resize(char_array->size * 2);\
 	} \
-	char *symbol = &char_array->at(char_array->count); \
+	char *symbol = &char_array->get(char_array->count); \
 	memcpy(symbol, string, bytes_of(char, s_len));\
 	char_array->count += s_len; \
 }
@@ -122,13 +122,13 @@ char * __do_formatting(Array<char *> *strings)
 	Array<char *> vars_buffer;
 
 	for (int i = 0; i < strings->count; i++) {
-		char *string = strings->at(i);
+		char *string = strings->get(i);
 		int result = is_format_string(string);
 		if (result) {
 			assert(strings->count >= result);
 			int var_index = i + 1;
 			for (int j = 0; j < result; j++, i++) {
-				vars_buffer.push(strings->at(var_index++));
+				vars_buffer.push(strings->get(var_index++));
 			}
 			format_string(string, &formatting_string, &vars_buffer);
 			vars_buffer.clear();
