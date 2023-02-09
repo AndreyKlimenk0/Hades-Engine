@@ -319,8 +319,8 @@ struct Edit_Field_Instance {
 struct Edit_Field_State {
 	bool(*symbol_validation)(char symbol);
 	u32 max_symbol_number;
-	s32 caret_index_in_text; // this caret index specifies at character is placed befor the caret.
-	s32 caret_index_for_inserting; // this caret index specifies at character is placed after the caret.
+	s32 caret_index_in_text; // this caret index specifies get character is placed befor the caret.
+	s32 caret_index_for_inserting; // this caret index specifies get character is placed after the caret.
 	String data;
 	Rect_s32 caret;
 };
@@ -660,7 +660,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Rect_s32 *rect, Window_
 
 inline Gui_Window *Gui_Manager::get_window_by_index(Array<u32> *window_indices, u32 index)
 {
-	u32 window_index = window_indices->at(index);
+	u32 window_index = window_indices->get(index);
 	return &windows[window_index];
 }
 
@@ -1274,7 +1274,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 
 			button_theme = theme;
 			for (u32 i = 0; i < array->count; i++) {
-				if (button(array->at(i))) {
+				if (button(array->get(i))) {
 					*item_index = i;
 					active_list_box = 0;
 				}
@@ -1286,7 +1286,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		window = get_window();
 
 		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &list_box_rect);
-		Rect_s32 name_rect = get_text_rect(array->at(*item_index));
+		Rect_s32 name_rect = get_text_rect(array->get(*item_index));
 		
 		if (alignment & RIGHT_ALIGNMENT) {
 			place_in_middle_and_by_right(&list_box_rect, &name_rect, button_theme.shift_from_size);
@@ -1299,7 +1299,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
 		render_list->add_rect(&list_box_rect, Color(66, 70, 75), button_theme.rounded_border);
-		render_list->add_text(&name_rect, array->at(*item_index));
+		render_list->add_text(&name_rect, array->get(*item_index));
 		render_list->pop_clip_rect();
 	}
 	list_box_count++;
