@@ -20,7 +20,7 @@
 //@Note included for testing
 #include "../game/world.h"
 
-#define PRINT_GUI_INFO
+//#define PRINT_GUI_INFO
 
 typedef u32 Gui_ID;
 
@@ -1265,7 +1265,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 
 			//@Note: May be create string for list_box_gui_id is a temporary decision.
 			// I will refactoring this code when make normal working child windows.
-			begin_window(String((int)list_box_gui_id), WINDOW_TYPE_CHILD, WINDOW_WITH_OUTLINES);
+			begin_window(String((int)list_box_gui_id), WINDOW_TYPE_PARENT, WINDOW_WITH_OUTLINES);
 
 			Gui_Text_Button_Theme theme;
 			theme.rect.width = list_box_rect.width;
@@ -1579,8 +1579,12 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	}
 
 	if ((active_item == window->gui_id) && is_left_mouse_button_down() && !was_left_mouse_button_just_pressed()) {
-		s32 x = math::clamp(rect->x + mouse_x_delta, 0, (s32)win32_info->window_width - rect->width);
-		s32 y = math::clamp(rect->y + mouse_y_delta, 0, (s32)win32_info->window_height - rect->height);
+		s32 min_window_position = 0;
+		if (window->style & WINDOW_WITH_OUTLINES) {
+			min_window_position = (s32)window_theme.outlines_width;
+		}
+		s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)win32_info->window_width - rect->width);
+		s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)win32_info->window_height - rect->height);
 		window->set_position(x, y);
 		any_window_was_moved = true;
 	}
@@ -1613,7 +1617,8 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 
 		if ((rect_side == RECT_SIDE_LEFT) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
 			if ((mouse_x >= 0) && ((rect->width - mouse_x_delta) > MIN_WINDOW_WIDTH)) {
-				rect->x = math::max(rect->x + mouse_x_delta, 0);
+				s32 x = math::max(rect->x + mouse_x_delta, 0);
+				window->set_position(x, rect->y);
 				rect->width = math::max(rect->width - mouse_x_delta, MIN_WINDOW_WIDTH);
 			}
 		}
@@ -1629,7 +1634,8 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 		}
 		if (rect_side == RECT_SIDE_TOP) {
 			if ((mouse_y >= 0) && ((rect->height - mouse_y_delta) > MIN_WINDOW_HEIGHT)) {
-				rect->y = math::max(rect->y + mouse_y_delta, 0);
+				s32 y = math::max(rect->y + mouse_y_delta, 0);
+				window->set_position(rect->x, y);
 				rect->height = math::max(rect->height - mouse_y_delta, MIN_WINDOW_HEIGHT);
 			}
 		}
