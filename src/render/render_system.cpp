@@ -481,7 +481,7 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 
 	Rasterizer_Desc rasterizer_desc;
 	rasterizer_desc.set_counter_clockwise(true);
-	rasterizer_desc.set_sciccor(false);
+	rasterizer_desc.set_sciccor(true);
 	
 	rasterizer = gpu_device->create_rasterizer(&rasterizer_desc);
 
@@ -651,7 +651,6 @@ void Render_2D::render_frame()
 	render_pipeline->set_depth_stencil_test(depth_test);
 
 	CB_Render_2d_Info cb_render_info;
-
 
 	Render_Primitive_List *list = NULL;
 	For(draw_list, list) {
