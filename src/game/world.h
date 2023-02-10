@@ -9,7 +9,7 @@
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
 #include "../render/model.h"
-#include "../libs/geometry_generator.h"
+#include "../libs/geometry_helper.h"
 
 
 const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
