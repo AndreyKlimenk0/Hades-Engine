@@ -1,10 +1,11 @@
 #include "math/vector.h"
-#include "geometry_generator.h"
+#include "geometry_helper.h"
 #include "../render/vertex.h"
 #include "../libs/ds/array.h"
 #include "../win32/win_types.h"
 
-void generate_grid(Grid *grid, Triangle_Mesh *mesh)
+
+void make_grid_mesh(Grid *grid, Triangle_Mesh *mesh)
 {
 	u32 vertex_count = grid->rows_count * grid->columns_count;
 	u32 index_count = (grid->rows_count - 1) * (grid->columns_count - 1) * 2;
@@ -49,7 +50,7 @@ void generate_grid(Grid *grid, Triangle_Mesh *mesh)
 	}
 }
 
-void generate_box(Box *box, Triangle_Mesh *mesh)
+void make_box_mesh(Box *box, Triangle_Mesh *mesh)
 {
 	float w = 0.5f * box->width;
 	float h = 0.5f * box->height;
@@ -109,7 +110,7 @@ void generate_box(Box *box, Triangle_Mesh *mesh)
 }
 
 
-void generate_sphere(Sphere *sphere, Triangle_Mesh *mesh)
+void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 {
 	Vertex_XNUV topVertex(0.0f, +sphere->radius, 0.0f, 0.0f, +1.0f, 0.0f, 0.0f, 0.0f);
 	Vertex_XNUV bottomVertex(0.0f, -sphere->radius, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f);
@@ -169,4 +170,56 @@ void generate_sphere(Sphere *sphere, Triangle_Mesh *mesh)
 		mesh->indices.push(baseIndex + i);
 		mesh->indices.push(baseIndex + i + 1);
 	}
+}
+
+void make_AABB_mesh(Vector3 *min, Vector3 *max, Array<Vector3> *vertices, Array<u32> *indices)
+{
+	// Go  for clockwise.
+	// Back cube side.
+	vertices->push(*min);
+	vertices->push(Vector3(min->x, max->y, min->z));
+	vertices->push(Vector3(max->x, max->y, min->z));
+	vertices->push(Vector3(max->x, min->y, min->z));
+
+	// Front cuve side.
+	vertices->push(Vector3(min->x, min->y, max->z));
+	vertices->push(Vector3(min->x, max->y, max->z));
+	vertices->push(*max);
+	vertices->push(Vector3(max->x, min->y, max->z));
+
+	indices->push(0);
+	indices->push(1);
+
+	indices->push(1);
+	indices->push(2);
+
+	indices->push(2);
+	indices->push(3);
+
+	indices->push(3);
+	indices->push(0);
+
+	indices->push(0 + 4);
+	indices->push(1 + 4);
+
+	indices->push(1 + 4);
+	indices->push(2 + 4);
+
+	indices->push(2 + 4);
+	indices->push(3 + 4);
+
+	indices->push(3 + 4);
+	indices->push(0 + 4);
+
+	indices->push(0);
+	indices->push(0 + 4);
+
+	indices->push(1);
+	indices->push(1 + 4);
+
+	indices->push(2);
+	indices->push(2 + 4);
+
+	indices->push(3);
+	indices->push(3 + 4);
 }
