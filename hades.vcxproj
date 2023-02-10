@@ -172,7 +172,7 @@
     <ClCompile Include="src\libs\spng.c" />
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\fbx_loader.cpp" />
-    <ClCompile Include="src\libs\geometry_generator.cpp" />
+    <ClCompile Include="src\libs\geometry_helper.cpp" />
     <ClCompile Include="src\libs\math\matrix.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\render\font.cpp" />
@@ -209,11 +209,12 @@
     <ClInclude Include="src\libs\spng.h" />
     <ClInclude Include="src\libs\str.h" />
     <ClInclude Include="src\libs\fbx_loader.h" />
-    <ClInclude Include="src\libs\geometry_generator.h" />
+    <ClInclude Include="src\libs\geometry_helper.h" />
     <ClInclude Include="src\libs\math\common.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\render\font.h" />
+    <ClInclude Include="src\render\hlsl.h" />
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\render_api.h" />
     <ClInclude Include="src\render\render_system.h" />

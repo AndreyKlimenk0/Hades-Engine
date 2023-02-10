@@ -2,7 +2,7 @@
 #include "editor.h"
 #include "../sys/sys_local.h"
 #include "../sys/engine.h"
-#include "../libs/geometry_generator.h"
+#include "../libs/geometry_helper.h"
 
 
 inline void reverse_state(bool *state)
@@ -94,7 +94,7 @@ void Make_Entity_Window::draw()
 					Entity_Id entity_idx = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
 
 					Triangle_Mesh mesh;
-					generate_box(&box, &mesh);
+					make_box_mesh(&box, &mesh);
 
 					char *mesh_name = format(box.width, box.height, box.depth);
 					Mesh_Idx mesh_idx = render_world->add_mesh(mesh_name, &mesh);
@@ -112,7 +112,7 @@ void Make_Entity_Window::draw()
 					Entity_Id entity_idx = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
 
 					Triangle_Mesh mesh;
-					generate_sphere(&sphere, &mesh);
+					make_sphere_mesh(&sphere, &mesh);
 
 					char *mesh_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
 					Mesh_Idx mesh_idx = render_world->add_mesh(mesh_name, &mesh);

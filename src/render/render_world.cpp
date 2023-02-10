@@ -77,7 +77,7 @@ void Render_World::init()
 	entity_ids.push(entity_id);
 	
 	Triangle_Mesh mesh;
-	generate_box(&box, &mesh);
+	make_box_mesh(&box, &mesh);
 
 	char *mesh_name = format(box.width, box.height, box.depth);
 	Mesh_Idx box_mesh_id = add_mesh(mesh_name, &mesh);
@@ -93,7 +93,7 @@ void Render_World::init()
 	grid.depth = 100000.0f;
 	grid.rows_count = 10;
 	grid.columns_count = 10;
-	generate_grid(&grid, &grid_mesh);
+	make_grid_mesh(&grid, &grid_mesh);
 
 	Mesh_Idx grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
 
@@ -105,7 +105,7 @@ void Render_World::init()
 	entity_ids.push(sphere_id);
 	
 	Triangle_Mesh sphere_mesh;
-	generate_sphere(&sphere, &sphere_mesh);
+	make_sphere_mesh(&sphere, &sphere_mesh);
 
 	char *sphere_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
 
@@ -233,65 +233,6 @@ void Render_World::update_world_matrices()
 	}
 }
 
-void Render_World::draw_outlines(Array<u32> *entity_ids)
-{
-
-}
-
-void make_AABB_mesh(Entity *entity, Array<Vector3> *vertices, Array<u32> *indices)
-{
-	Vector3 min = entity->AABB_box.min;
-	Vector3 max = entity->AABB_box.max;
-
-	// Go  for clockwise.
-	// Back cube side.
-	vertices->push(min);
-	vertices->push(Vector3(min.x, max.y, min.z));
-	vertices->push(Vector3(max.x, max.y, min.z));
-	vertices->push(Vector3(max.x, min.y, min.z));
-
-	// Front cuve side.
-	vertices->push(Vector3(min.x, min.y, max.z));
-	vertices->push(Vector3(min.x, max.y, max.z));
-	vertices->push(max);
-	vertices->push(Vector3(max.x, min.y, max.z));
-
-	indices->push(0);
-	indices->push(1);
-
-	indices->push(1);
-	indices->push(2);
-
-	indices->push(2);
-	indices->push(3);
-
-	indices->push(3);
-	indices->push(0);
-
-	indices->push(0 + 4);
-	indices->push(1 + 4);
-
-	indices->push(1 + 4);
-	indices->push(2 + 4);
-
-	indices->push(2 + 4);
-	indices->push(3 + 4);
-
-	indices->push(3 + 4);
-	indices->push(0 + 4);
-
-	indices->push(0);
-	indices->push(0 + 4);
-
-	indices->push(1);
-	indices->push(1 + 4);
-
-	indices->push(2);
-	indices->push(2 + 4);
-
-	indices->push(3);
-	indices->push(3 + 4);
-}
 
 const u32 t0_register = 0;
 const u32 t1_register = 1;
@@ -305,67 +246,67 @@ const u32 b2_register = 2;
 
 void Render_World::draw_bounding_boxs(Array<Entity_Id> *entity_ids)
 {
-	static Render_Meshes_Data<Vector3> render_data;
-	static bool data_initialized = false;
-	if (!data_initialized) {
-		data_initialized = true;
-		render_data.init(t0_register, t1_register, t2_register);
-	}
+	//static Render_Meshes_Data<Vector3> render_data;
+	//static bool data_initialized = false;
+	//if (!data_initialized) {
+	//	data_initialized = true;
+	//	render_data.init(t0_register, t1_register, t2_register);
+	//}
 
-	for (u32 i = 0; i < entity_ids->count; i++) {
-		Entity_Id entity_id = entity_ids->get(i);
-		Entity *entity = game_world->get_entity(entity_id);
+	//for (u32 i = 0; i < entity_ids->count; i++) {
+	//	Entity_Id entity_id = entity_ids->get(i);
+	//	Entity *entity = game_world->get_entity(entity_id);
 
-		char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
-		defer(free_string(name));
+	//	char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
+	//	defer(free_string(name));
 
-		if ((entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) && (!render_data.mesh_table.key_in_table(fast_hash(name)))) {
-			Array<Vector3> vertices;
-			Array<u32> indices;
-			make_AABB_mesh(entity, &vertices, &indices);
+	//	if ((entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) && (!render_data.mesh_table.key_in_table(fast_hash(name)))) {
+	//		Array<Vector3> vertices;
+	//		Array<u32> indices;
+	//		make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &vertices, &indices);
 
-			Mesh_Idx mesh_idx = render_data.add_mesh(name, &vertices, &indices);
-			Render_Entity *render_entity = find_render_entity(entity_id);
-			if (render_entity) {
-				Render_Entity new_render_entity;
-				new_render_entity.entity_idx = entity_id;
-				new_render_entity.mesh_idx = mesh_idx;
-				new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
+	//		Mesh_Idx mesh_idx = render_data.add_mesh(name, &vertices, &indices);
+	//		Render_Entity *render_entity = find_render_entity(entity_id);
+	//		if (render_entity) {
+	//			Render_Entity new_render_entity;
+	//			new_render_entity.entity_idx = entity_id;
+	//			new_render_entity.mesh_idx = mesh_idx;
+	//			new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
 
-				render_data.render_entities.push(new_render_entity);
-			}
-		}
-	}
+	//			render_data.render_entities.push(new_render_entity);
+	//		}
+	//	}
+	//}
 
-	Shader *shader;
-	if (!Engine::get_render_system()->shaders.get("draw_lines", &shader)) {
-		loop_print("Can not found shader");
-		return;
-	}
-	
-	render_pipeline->set_input_layout(NULL);
-	render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
-	render_pipeline->set_vertex_shader(shader);
-	render_pipeline->set_pixel_shader(shader);
+	//Shader *shader;
+	//if (!Engine::get_render_system()->shaders.get("draw_lines", &shader)) {
+	//	loop_print("Can not found shader");
+	//	return;
+	//}
+	//
+	//render_pipeline->set_input_layout(NULL);
+	//render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
+	//render_pipeline->set_vertex_shader(shader);
+	//render_pipeline->set_pixel_shader(shader);
 
-	render_pipeline->set_vertex_shader_resource(b1_register, frame_info_cbuffer);
-	render_pipeline->set_pixel_shader_resource(b1_register, frame_info_cbuffer);
-	
-	render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
-	render_pipeline->set_vertex_shader_resource(&render_data.vertex_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(&render_data.index_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(&render_data.mesh_instance_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(b1_register, frame_info_cbuffer);
+	//render_pipeline->set_pixel_shader_resource(b1_register, frame_info_cbuffer);
+	//
+	//render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
+	//render_pipeline->set_vertex_shader_resource(&render_data.vertex_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&render_data.index_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&render_data.mesh_instance_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
 
-	Render_Entity *render_entity = NULL;
-	For(render_data.render_entities, render_entity) {
-		Pass_Data pass_data;
-		pass_data.mesh_idx = render_entity->mesh_idx;
-		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+	//Render_Entity *render_entity = NULL;
+	//For(render_data.render_entities, render_entity) {
+	//	Pass_Data pass_data;
+	//	pass_data.mesh_idx = render_entity->mesh_idx;
+	//	pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
-		render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
-		render_pipeline->draw(render_data.mesh_instances[render_entity->mesh_idx].index_count);
-	}
+	//	render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
+	//	render_pipeline->draw(render_data.mesh_instances[render_entity->mesh_idx].index_count);
+	//}
 }
 
 void Render_World::render()
