@@ -149,6 +149,10 @@ void Editor::render()
 	if (gui::begin_window("Editor")) {
 
 		if (gui::add_tab("Game World")) {
+			if (gui::begin_window("Entity List")) {
+
+				gui::end_window();
+			}
 			if (gui::button("Make Entity")) {
 				reverse_state(&is_draw_make_entity_window);
 			}
