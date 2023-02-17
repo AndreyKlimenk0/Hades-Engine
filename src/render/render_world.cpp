@@ -124,7 +124,7 @@ void Render_World::update()
 		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 			Event *event = &node->item;
 
-			camera.handle_event(event);
+			//camera.handle_event(event);
 		}
 	}
 
