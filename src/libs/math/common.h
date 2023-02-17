@@ -200,6 +200,8 @@ struct Rect {
 
 	void set(Size<T> &size);
 	void set(T _x, T _y);
+	void offset_y(T _y);
+	void offset_x(T _x);
 	void set_size(T _width, T _height);
 	Size<T> get_size();
 
@@ -226,6 +228,20 @@ inline void Rect<T>::set(T _x, T _y)
 	x = _x;
 	y = _y;
 }
+template<typename T>
+inline void Rect<T>::offset_y(T _y)
+{
+	y += _y;
+	height -= _y;
+}
+
+template<typename T>
+inline void Rect<T>::offset_x(T _x)
+{
+	x += _x;
+	width -= _x;
+}
+
 template <typename T>
 inline T Rect<T>::right()
 {

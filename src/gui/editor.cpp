@@ -146,13 +146,46 @@ void Editor::render()
 {
 	gui::begin_frame();
 
+	//Gui_Window_Theme theme;
+	//theme.rounded_border = 10;
+	//theme.outlines_width = 20.0f;
+	//gui::set_next_theme(&theme);
 	if (gui::begin_window("Editor")) {
 
-		if (gui::add_tab("Game World")) {
-			if (gui::begin_window("Entity List")) {
+		//Gui_Window_Theme theme;
+		//theme.rounded_border = 0;
+		//theme.outlines_width = 1.0f;
+		////theme.place_between_elements = 3;
+		//
+		//gui::set_next_theme(&theme);
+		//gui::set_next_window_size(500, 500);
+		//if (gui::begin_child("Entity List")) {
+		//	for (u32 i = 0; i < 30; i++) {
+		//		char *str = format("Child Button", i);
+		//		gui::button(str);
+		//		free_string(str);
+		//	}
+		//	//gui::button("Child Button 1");
+		//	//gui::button("Child Button 2");
+		//	//gui::button("Child Button 3");
+		//	//gui::button("Child Button 4");
+		//	//gui::button("Child Button 5");
+		//	gui::end_child();
+		//}
 
-				gui::end_window();
-			}
+		gui::button("Button 1");
+		gui::button("Button 2");
+		gui::button("Button 3");
+		gui::button("Button 4");
+		gui::button("Button 5");
+
+		gui::button("Button 6");
+		gui::button("Button 7");
+		gui::button("Button 8");
+		gui::button("Button 9");
+		gui::button("Button 10");
+
+		if (gui::add_tab("Game World")) {
 			if (gui::button("Make Entity")) {
 				reverse_state(&is_draw_make_entity_window);
 			}
