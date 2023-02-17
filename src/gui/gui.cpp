@@ -57,6 +57,7 @@ const s32 MIN_WINDOW_HEIGHT = 40;
 const u32 GUI_FLOAT_PRECISION = 2;
 
 const s32 TAB_HEIGHT = 26;
+const s32 TAB_BAR_HEIGHT = 30;
 
 const Rect_s32 DEFAULT_WINDOW_RECT = { 50, 50, 300, 300 };
 
@@ -168,6 +169,7 @@ struct Gui_Window {
 	s32 index_in_windows_array = -1;
 	s32 index_in_windows_order = -1;
 	s32 prev_rect_height = 0;
+	s32 tab_offset = 0;
 
 	Window_Type type;
 	Element_Alignment alignment;
@@ -177,7 +179,6 @@ struct Gui_Window {
 	Rect_s32 view_rect;
 	Rect_s32 content_rect;
 	Point_s32 rect_place;
-	Point_s32 tab_place;
 	Point_s32 scroll;
 	String name;
 	
@@ -185,7 +186,6 @@ struct Gui_Window {
 	Array<Gui_Window *> collided_windows;
 	Render_Primitive_List render_list;
 
-	void place_tab_rect(Rect_s32 *tab_rect);
 	void start_new_frame(Window_Style window_style);
 	void set_position(s32 x, s32 y);
 	void set_index_with_offset(s32 index);
@@ -230,26 +230,11 @@ void Gui_Window::place_rect_over_window(Rect_s32 *additional_rect)
 	}
 }
 
-void Gui_Window::place_tab_rect(Rect_s32 *tab_rect)
-{
-	tab_rect->x = tab_place.x;
-	tab_rect->y = view_rect.y;
-
-	tab_place.x += tab_rect->width;
-
-	if (tab_was_added == false) {
-		tab_was_added = true;
-		content_rect.y += tab_rect->height;
-		scroll[Y_AXIS] += TAB_HEIGHT;
-	}
-}
-
 void Gui_Window::start_new_frame(Window_Style window_style)
 {
 	view_rect = rect;
 	tab_was_drawn = false;
-	tab_place.x = view_rect.x;
-	tab_place.y = view_rect.y;
+	tab_offset = view_rect.x;
 	style = window_style;
 	rect_place.x = content_rect.x;
 	rect_place.y = content_rect.y;
@@ -380,6 +365,7 @@ struct Gui_Manager {
 	Stack<u32> window_stack;
 	Array<u32> windows_order;
 
+	Gui_Tab_Theme tab_theme;
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme button_theme;
 	Gui_Edit_Field_Theme edit_field_theme;
@@ -1102,13 +1088,16 @@ bool Gui_Manager::add_tab(const char *tab_name)
 	Gui_Window *window = get_window();
 
 	Rect_s32 name_rect = get_text_rect(tab_name);
-	Rect_s32 tab_rect;
-	tab_rect.set_size(name_rect.width +  40, TAB_HEIGHT);
+	Rect_s32 tab_rect = { 0, 0, name_rect.width + tab_theme.additional_space_in_tab, tab_theme.tab_height };
+	Rect_s32 tab_bar_rect = { window->view_rect.x, window->view_rect.y, window->rect.width, tab_theme.tab_bar_height };
 
-	window->place_tab_rect(&tab_rect);
+	if (!window->tab_was_drawn) {
+		window->place_rect_over_window(&tab_bar_rect);
+	}
+	tab_rect.set(window->tab_offset, window->view_rect.y - TAB_HEIGHT);
+	window->tab_offset += tab_rect.width;
 
 	Gui_ID tab_gui_id = GET_TAB_GUI_ID();
-
 	update_active_and_hot_state(window, tab_gui_id, &tab_rect);
 
 	if (tab_gui_id == active_item) {
@@ -1116,46 +1105,23 @@ bool Gui_Manager::add_tab(const char *tab_name)
 	}
 
 	if (must_rect_be_drawn(&window->rect, &tab_rect)) {
-
-		place_in_middle(&tab_rect, &name_rect, BOTH_AXIS);
-
-		//Color default_color = Color(80, 80, 86);
-		Color default_color = Color(38, 38, 38);
-		Color tab_color = (active_tab == tab_gui_id) ? Color(36, 39, 43) : default_color;
-
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		
-		Rect_s32 tab_line_rect = { window->view_rect.x, window->view_rect.y, window->rect.width, TAB_HEIGHT };
 		if (!window->tab_was_drawn) {
 			window->tab_was_drawn = true;
-			render_list->add_rect(&tab_line_rect, default_color);
-			window->place_rect_over_window(&tab_line_rect);
+			render_list->add_rect(&tab_bar_rect, tab_theme.tab_bar_color);
 		}
+		place_in_middle(&tab_rect, &name_rect, BOTH_AXIS);
 
-		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &tab_rect);
-		//render_list->push_clip_rect(&clip_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->rect, &tab_rect);
+		render_list->push_clip_rect(&clip_rect);
 
-		//render_list->add_rect(&tab_rect, tab_color);
-		//render_list->add_text(&name_rect, tab_name);
-
-		////right line
-		//s32 thickness = 2;
-		//Point_s32 point1 = { tab_rect.right(), tab_rect.y };
-		//Point_s32 point2 = { tab_rect.right(), tab_rect.bottom() };
-		//render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
-
-		////bottom line
-		//if (active_tab != tab_gui_id) {
-		//	point1 = { tab_rect.x, tab_rect.bottom() - thickness };
-		//	point2 = { tab_rect.right(), tab_rect.bottom() - thickness };
-		//	render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
-		//}
-
-		////bottom line after a tab
-		//point1 = { tab_rect.right(), tab_rect.bottom() - thickness };
-		//point2 = { tab_line_rect.right(), tab_rect.bottom() - thickness };
-		//render_list->add_line(&point1, &point2, Color(60, 60, 60), (float)thickness);
-
+		if (active_tab != tab_gui_id) {
+			render_list->add_rect(&tab_rect, tab_theme.tab_color);
+		} else {
+			render_list->add_rect(&tab_rect, tab_theme.active_tab_color, ROUND_TOP_RECT);
+		}
+		render_list->add_text(&name_rect, tab_name);
 		render_list->pop_clip_rect();
 	}
 	tab_count++;
@@ -1642,7 +1608,8 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	if (window->style & WINDOW_WITH_HEADER) {
 		Rect_s32 header_rect = { rect->x, rect->y, rect->width, window_theme.header_height };
 		window->place_rect_over_window(&header_rect);
-		render_list->add_rect(&header_rect, window_theme.header_color, window_theme.rounded_border, ROUND_TOP_RECT);
+		//render_list->add_rect(&header_rect, window_theme.header_color, window_theme.rounded_border, ROUND_TOP_RECT);
+		render_list->add_rect(&header_rect, Color(16, 16, 16), window_theme.rounded_border, ROUND_TOP_RECT);
 
 		Rect_s32 name_rect = get_text_rect(window->name);
 		place_in_middle(&header_rect, &name_rect, BOTH_AXIS);

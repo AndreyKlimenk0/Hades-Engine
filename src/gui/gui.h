@@ -32,6 +32,15 @@ struct Gui_Radio_Button_Theme {
 	Rect_s32 rect = { 0, 0, 220, 20 };
 };
 
+struct Gui_Tab_Theme {
+	s32 tab_height = 26;
+	s32 tab_bar_height = 30;
+	s32 additional_space_in_tab = 40;
+	Color tab_color = Color(40, 40, 40);
+	Color tab_bar_color = Color(40, 40, 40);
+	Color active_tab_color = Color(30, 30, 30);
+};
+
 struct Gui_Text_Button_Theme {
 	u32 aligment = 0;
 	s32 shift_from_size = 10;
@@ -43,15 +52,16 @@ struct Gui_Text_Button_Theme {
 };
 
 struct Gui_Window_Theme {
-	s32 header_height = 15;
+	s32 header_height = 18;
 	s32 mouse_wheel_spped = 30;
 	s32 rounded_border = 6;
 	s32 place_between_elements = 12;
 	s32 shift_element_from_window_side = 20;
 	s32 scroll_bar_width = 15;
-	float outlines_width = 2.0f;
+	float outlines_width = 1.0f;
 	Color header_color = Color(28, 30, 33);
-	Color background_color = Color(25, 27, 29);
+	//Color background_color = Color(25, 27, 29);
+	Color background_color = Color(30, 30, 30);
 	Color outlines_color = Color(92, 100, 107);
 };
 
