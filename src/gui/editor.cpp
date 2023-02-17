@@ -184,8 +184,18 @@ void Editor::render()
 		gui::button("Button 8");
 		gui::button("Button 9");
 		gui::button("Button 10");
+		if (gui::add_tab("Test Tab 1")){
 
-		if (gui::add_tab("Game World")) {
+		}
+
+		if (gui::add_tab("Test Tab 2")) {
+
+		}
+
+		if (gui::add_tab("Test Tab 3")) {
+
+		}
+		//if (gui::add_tab("Game World")) {
 			if (gui::button("Make Entity")) {
 				reverse_state(&is_draw_make_entity_window);
 			}
@@ -193,15 +203,15 @@ void Editor::render()
 			if (is_draw_make_entity_window) {
 				make_entity_window.draw();
 			}
-		}
+		//}
 
-		if (gui::add_tab("Camera")) {
+		//if (gui::add_tab("Camera")) {
 			Camera *camera = &Engine::get_render_world()->camera;
 			gui::text("Camera Type: Free");
 			gui::edit_field("Position", &camera->position);
 			gui::edit_field("Direction", &camera->target);
 
-		}
+		//}
 
 		gui::end_window();
 	}
