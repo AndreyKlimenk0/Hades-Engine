@@ -80,13 +80,19 @@ namespace gui {
 	bool begin_child(const char *name, Window_Style window_style = WINDOW_STYLE_DEFAULT);
 	void end_child();
 
+	void set_theme(Gui_Window_Theme *gui_window_theme);
+	void set_theme(Gui_Text_Button_Theme *gui_window_theme);
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
+	
+	void reset_window_theme();
+	void reset_button_theme();
+	
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_pos(s32 x, s32 y);
 	void same_line();
 	void next_line();
 
-	bool button(const char *text);
+	bool button(const char *text, bool *state = NULL);
 	void radio_button(const char *name, bool *state);
 
 	bool add_tab(const char *tab_name);
@@ -101,5 +107,7 @@ namespace gui {
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *value);
 	void edit_field(const char *name, Vector3 *vector, const char *x = "X", const char *y = "Y", const char *z = "z");
+
+	Size_s32 get_window_size();
 }
 #endif

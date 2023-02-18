@@ -20,10 +20,9 @@
 //@Note included for testing
 #include "../game/world.h"
 
-//#define PRINT_GUI_INFO
+#define PRINT_GUI_INFO 0
 #define DRAW_WINDOW_DEBUG_RECTS 0
-#define DRAW_CHILD_WINDOW_DEBUG_RECTS 1
-
+#define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
 
 typedef u32 Gui_ID;
 
@@ -39,7 +38,7 @@ const u32 TAB_HASH = fast_hash("window_tab_hash");
 #define GET_EDIT_FIELD_GUI_ID() (window->gui_id + EDIT_FIELD_HASH + edit_field_count)
 #define GET_RADIO_BUTTON_GUI_ID() (window->gui_id + RADIO_BUTTON_HASH + radio_button_count)
 #define GET_SCROLL_BAR_GUI_ID() (window->gui_id + SCROLL_BAR_HASH)
-#define  GET_TAB_GUI_ID() (window->gui_id + TAB_HASH + tab_count)
+#define GET_TAB_GUI_ID() (window->gui_id + TAB_HASH + tab_count)
 
 #define GET_RENDER_LIST() (&window->render_list)
 
@@ -63,8 +62,17 @@ const s32 TAB_BAR_HEIGHT = 30;
 
 const Rect_s32 DEFAULT_WINDOW_RECT = { 50, 50, 300, 300 };
 
-Gui_Window_Theme default_window_theme;
-Gui_Text_Button_Theme default_button_theme;
+const Gui_Window_Theme DEFAULT_WINDOW_THEME;
+const Gui_Text_Button_Theme DEFAULT_BUTTON_THEME;
+
+inline void reverse_state(bool *state)
+{
+	if (*state) {
+		*state = false;
+	} else {
+		*state = true;
+	}
+}
 
 inline bool detect_collision(Rect_s32 *rect)
 {
@@ -396,6 +404,7 @@ struct Gui_Manager {
 	void set_next_window_pos(s32 x, s32 y);
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_theme(Gui_Window_Theme *theme);
+	
 	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
 
 	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
@@ -417,7 +426,7 @@ struct Gui_Manager {
 	bool update_edit_field(Edit_Field_Instance *edit_field_instance);
 	void draw_edit_field(Edit_Field_Instance *edit_field_instance);
 	
-	bool button(const char *name);
+	bool button(const char *name, bool *state = NULL);
 
 	bool can_window_be_resized(Gui_Window *window);
 	bool detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side);
@@ -1225,7 +1234,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 					active_list_box = 0;
 				}
 			}
-			button_theme = default_button_theme;
+			button_theme = DEFAULT_BUTTON_THEME;
 			end_window();
 		}
 
@@ -1251,7 +1260,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 	list_box_count++;
 }
 
-bool Gui_Manager::button(const char *name)
+bool Gui_Manager::button(const char *name, bool *state)
 {
 	Rect_s32 button_rect = button_theme.rect;	
 	
@@ -1263,6 +1272,10 @@ bool Gui_Manager::button(const char *name)
 		
 		u32 button_gui_id = GET_BUTTON_GUI_ID();
 		update_active_and_hot_state(window, button_gui_id, &button_rect);
+
+		if ((state != NULL) && (hot_item == button_gui_id) && (was_click_by_left_mouse_button())) {
+			reverse_state(state);
+		}
 
 		mouse_hover = (hot_item == button_gui_id);
 
@@ -1314,7 +1327,7 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	reset_window_params = 0;
 	curr_parent_windows_index_sum = 0;
 	prev_parent_windows_index_sum = 0;
-	window_theme = default_window_theme;
+	window_theme = DEFAULT_WINDOW_THEME;
 
 	String path_to_save_file;
 	build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
@@ -1463,7 +1476,7 @@ void Gui_Manager::end_frame()
 	}
 	last_mouse_x = Mouse_Input::x;
 	last_mouse_y = Mouse_Input::y;
-#ifdef PRINT_GUI_INFO
+#if PRINT_GUI_INFO
 	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
 		print("Gui_Manager::end_frame: curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
 		print("Gui_Manager::end_frame: prev_parent_windows_index_sum = ", prev_parent_windows_index_sum);
@@ -1473,7 +1486,7 @@ void Gui_Manager::end_frame()
 		s32 window_index = prev_parent_windows_index_sum - curr_parent_windows_index_sum - 1;
 		Gui_Window *window = get_window_by_index(&windows_order, window_index);
 		window->index_in_windows_order = -1;
-#ifdef PRINT_GUI_INFO
+#if PRINT_GUI_INFO
 		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", window->name, window_index);
 #endif
 		windows_order.remove(window_index);
@@ -1681,7 +1694,7 @@ void Gui_Manager::end_window()
 	
 	if (reset_window_params & SET_WINDOW_THEME) {
 		reset_window_params &= ~SET_WINDOW_THEME;
-		window_theme = default_window_theme;
+		window_theme = DEFAULT_WINDOW_THEME;
 	}
 	window_stack.pop();
 }
@@ -1788,7 +1801,7 @@ void Gui_Manager::end_child()
 
 	if (reset_window_params & SET_WINDOW_THEME) {
 		reset_window_params &= ~SET_WINDOW_THEME;
-		window_theme = default_window_theme;
+		window_theme = DEFAULT_WINDOW_THEME;
 	}
 
 #if DRAW_CHILD_WINDOW_DEBUG_RECTS
@@ -1983,6 +1996,12 @@ void gui::edit_field(const char *name, Vector3 *vector, const char *x, const cha
 	gui_manager.edit_field(name, vector, x, y, z);
 }
 
+Size_s32 gui::get_window_size()
+{
+	Gui_Window *window = gui_manager.get_window();
+	return window->rect.get_size();
+}
+
 void gui::begin_frame()
 {
 	gui_manager.new_frame();
@@ -2019,6 +2038,26 @@ void gui::set_next_theme(Gui_Window_Theme *gui_window_theme)
 	gui_manager.set_next_window_theme(gui_window_theme);
 }
 
+void gui::set_theme(Gui_Window_Theme *gui_window_theme)
+{
+	gui_manager.window_theme = *gui_window_theme;
+}
+
+void gui::set_theme(Gui_Text_Button_Theme *gui_button_theme)
+{
+	gui_manager.button_theme = *gui_button_theme;
+}
+
+void gui::reset_window_theme()
+{
+	gui_manager.window_theme = DEFAULT_WINDOW_THEME;
+}
+
+void gui::reset_button_theme()
+{
+	gui_manager.button_theme = DEFAULT_BUTTON_THEME;
+}
+
 void gui::set_next_window_size(s32 width, s32 height)
 {
 	gui_manager.set_next_window_size(width, height);
@@ -2039,9 +2078,9 @@ void gui::next_line()
 	gui_manager.next_line();
 }
 
-bool gui::button(const char *text)
+bool gui::button(const char *text, bool *state)
 {
-	return gui_manager.button(text);
+	return gui_manager.button(text, state);
 }
 
 void gui::text(const char *some_text)
