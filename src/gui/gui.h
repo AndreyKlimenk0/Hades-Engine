@@ -59,8 +59,7 @@ struct Gui_Window_Theme {
 	s32 shift_element_from_window_side = 20;
 	s32 scroll_bar_width = 15;
 	float outlines_width = 1.0f;
-	Color header_color = Color(28, 30, 33);
-	//Color background_color = Color(25, 27, 29);
+	Color header_color = Color(16, 16, 16);
 	Color background_color = Color(30, 30, 30);
 	Color outlines_color = Color(92, 100, 107);
 };
