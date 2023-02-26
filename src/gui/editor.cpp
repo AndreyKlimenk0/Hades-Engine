@@ -1,4 +1,3 @@
-#include "gui.h"
 #include "editor.h"
 #include "../sys/sys_local.h"
 #include "../sys/engine.h"
@@ -125,16 +124,16 @@ void Editor::init()
 {
 	Engine *engine = Engine::get_instance();
 	make_entity_window.init(engine);
+	game_world_window.init(engine);
 }
 
 void Editor::render()
 {
 	gui::begin_frame();
-
 	if (gui::begin_window("Editor")) {
 
 		if (gui::add_tab("Game World")) {
-			make_entity_window.draw();
+			game_world_window.draw();
 		}
 
 		if (gui::add_tab("Camera")) {
@@ -142,63 +141,95 @@ void Editor::render()
 			gui::text("Camera Type: Free");
 			gui::edit_field("Position", &camera->position);
 			gui::edit_field("Direction", &camera->target);
-
-		}
-
-		if (gui::add_tab("Entity List")) {
-			Gui_Window_Theme win_theme;
-			win_theme.shift_element_from_window_side = 0;
-			win_theme.outlines_width = 1.0f;
-			win_theme.place_between_elements = 0;
-			gui::set_theme(&win_theme);
-
-			Gui_Text_Button_Theme theme;
-			theme.rect.width = gui::get_window_size().width;
-			theme.color = win_theme.background_color;
-			theme.aligment |= 0x08;
-			gui::set_theme(&theme);
-
-			static bool state = false;
-			Game_World *game_world = Engine::get_game_world();
-			static u32 index = 0;
-			for (u32 i = 0; i < game_world->geometry_entities.count; i++) {
-				char *text = format("Geometry", i);
-				if (gui::button(text, &state)) {
-					state = true;
-					index = i;
-				}
-				free_string(text);
-			}
-
-			gui::reset_button_theme();
-			gui::reset_window_theme();
-
-			if (state) {
-				if (gui::begin_window("Entity Info")) {
-					Geometry_Entity *entity = &game_world->geometry_entities[index];
-					print("index = ", index);
-					gui::edit_field("Position", &entity->position);
-					if (entity->geometry_type == GEOMETRY_TYPE_BOX) {
-						gui::edit_field("Width", &entity->box.width);
-						gui::edit_field("Height", &entity->box.height);
-						gui::edit_field("Depth", &entity->box.depth);
-					} else if (entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
-						gui::edit_field("Radius", &entity->sphere.radius);
-						gui::edit_field("Slice Count", (s32 *)&entity->sphere.slice_count);
-						gui::edit_field("Stack Count", (s32 *)&entity->sphere.stack_count);
-					} else if (entity->geometry_type == GEOMETRY_TYPE_GRID) {
-						gui::edit_field("Width", &entity->grid.width);
-						gui::edit_field("Depth", &entity->grid.depth);
-						gui::edit_field("Rows count", (s32 *)&entity->grid.rows_count);
-						gui::edit_field("Columns count", (s32 *)&entity->grid.columns_count);
-					}
-					gui::end_window();
-				}
-			}
 		}
 
 		gui::end_window();
 	}
 
 	gui::end_frame();
+}
+
+void Game_World_Window::init(Engine *engine)
+{
+	Editor_Window::init(engine);
+	entity_index = 0;
+	window_width_delta = 20;
+	world_entities_height = 200;
+	entity_info_height = 400;
+	window_style = WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES;
+	entity_type = ENTITY_TYPE_UNKNOWN;
+
+	world_entities_window_theme.background_color = Color(42, 42, 42);
+	world_entities_window_theme.header_color = Color(36, 36, 36);
+	world_entities_window_theme.place_between_elements = 0;
+
+	entity_info_window_theme.background_color = Color(42, 42, 42);
+	entity_info_window_theme.header_color = Color(36, 36, 36);
+	entity_info_window_theme.place_between_elements = 8;
+
+	buttons_theme.color = world_entities_window_theme.background_color;
+	buttons_theme.aligment = 0x08;
+}
+
+void Game_World_Window::draw()
+{
+	Size_s32 window_size = gui::get_window_size();
+	gui::set_next_window_size(window_size.width - window_width_delta, world_entities_height);
+	gui::set_next_theme(&world_entities_window_theme);
+	if (gui::begin_child("World Entities", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
+		buttons_theme.rect.width = window_size.width - window_width_delta;
+		gui::set_theme(&buttons_theme);
+
+		Game_World *game_world = Engine::get_game_world();
+		draw_entity_list("Lights", game_world->lights.count, ENTITY_TYPE_LIGHT);
+		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
+
+		gui::reset_button_theme();
+		gui::end_child();
+	}
+
+	gui::set_next_theme(&entity_info_window_theme);
+	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
+	if (gui::begin_child("Entity Info", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
+
+		if (entity_type == ENTITY_TYPE_GEOMETRY) {
+			Geometry_Entity *entity = &game_world->geometry_entities[entity_index];
+			gui::edit_field("Position", &entity->position);
+			if (entity->geometry_type == GEOMETRY_TYPE_BOX) {
+				gui::edit_field("Width", &entity->box.width);
+				gui::edit_field("Height", &entity->box.height);
+				gui::edit_field("Depth", &entity->box.depth);
+			} else if (entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
+				gui::edit_field("Radius", &entity->sphere.radius);
+				gui::edit_field("Slice Count", (s32 *)&entity->sphere.slice_count);
+				gui::edit_field("Stack Count", (s32 *)&entity->sphere.stack_count);
+			} else if (entity->geometry_type == GEOMETRY_TYPE_GRID) {
+				gui::edit_field("Width", &entity->grid.width);
+				gui::edit_field("Depth", &entity->grid.depth);
+				gui::edit_field("Rows count", (s32 *)&entity->grid.rows_count);
+				gui::edit_field("Columns count", (s32 *)&entity->grid.columns_count);
+			}
+		} else if (entity_type == ENTITY_TYPE_LIGHT) {
+			Light *light = &game_world->lights[entity_index];
+			if (light->type == DIRECTIONAL_LIGHT_TYPE) {
+				if (gui::edit_field("Direction", &light->direction) || gui::edit_field("Color", &light->color, "R", "G", "B")) {
+					render_world->update_lights();
+				}
+			}
+		}
+
+		gui::end_child();
+	}
+}
+
+bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, Entity_Type type)
+{
+	for (u32 i = 0; i < list_count; i++) {
+		if (gui::button(list_name)) {
+			entity_index = i;
+			entity_type = type;
+			return true;
+		}
+	}
+	return false;
 }

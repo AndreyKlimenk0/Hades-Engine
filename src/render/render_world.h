@@ -39,6 +39,19 @@ struct Mesh_Instance {
 	u32 index_offset = 0;
 };
 
+struct Shadows_Map {
+	Game_World *game_world = NULL;
+	Gpu_Device *gpu_device = NULL;
+	Render_Pipeline *render_pipeline = NULL;
+
+	Texture *texture_map = NULL;
+	Depth_Stencil_View *dsv = NULL;
+
+	void init(Render_World *render_world);
+	void update();
+	void update_map();
+};
+
 struct Render_World {
 	u32 light_hash;
 
@@ -46,10 +59,11 @@ struct Render_World {
 
 	Camera camera;
 
+	Game_World *game_world = NULL;
+
 	View_Info *view_info = NULL;
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
-	Game_World *game_world = NULL;
 	
 	Gpu_Buffer *pass_data_cbuffer = NULL;
 	Gpu_Buffer *frame_info_cbuffer = NULL;
@@ -73,8 +87,11 @@ struct Render_World {
 	Struct_Buffer world_matrix_struct_buffer;
 	Struct_Buffer light_struct_buffer;
 
+
 	void init();
 	void update();
+	void update_lights();
+	void update_depth_maps();
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
 	void update_world_matrices();
 	void draw_outlines(Array<Entity_Id> *entity_ids);
