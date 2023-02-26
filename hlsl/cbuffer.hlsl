@@ -25,13 +25,6 @@ struct Mesh_Instance {
 	uint index_offset;
 };
 
-cbuffer Pass_Data : register(b2) {
-	uint mesh_id;
-	uint world_matrix_id;
-	uint pad11;
-	uint pad22;
-}
-
 Texture2D<float4> texture_map : register(t0);
 
 SamplerState sampler_anisotropic : register(s0);

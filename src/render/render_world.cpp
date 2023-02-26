@@ -4,6 +4,16 @@
 #include "../gui/gui.h"
 
 
+const u32 t0_register = 0;
+const u32 t1_register = 1;
+const u32 t2_register = 2;
+const u32 t3_register = 3;
+const u32 t4_register = 4;
+
+const u32 b0_register = 0;
+const u32 b1_register = 1;
+const u32 b2_register = 2;
+
 struct Pass_Data {
 	u32 mesh_idx;
 	u32 world_matrix_idx;
@@ -137,29 +147,212 @@ void Render_World::update()
 	
 	if (light_hash != game_world->light_hash) {
 		light_hash = game_world->light_hash;
-		
-		frame_info.light_count = game_world->lights.count;
-
-		Array<Shader_Light> shader_lights;
-		
-		Light *light = NULL;
-		For(game_world->lights, light) {
-			Shader_Light hlsl_light;
-			hlsl_light.position = light->position;
-			hlsl_light.direction = light->direction;
-			hlsl_light.color = light->color;
-			hlsl_light.light_type = light->light_type;
-			hlsl_light.radius = light->radius;
-			hlsl_light.range = light->range;
-			shader_lights.push(hlsl_light);
-		}
-		light_struct_buffer.update(&shader_lights);
+		update_lights();
+		update_depth_maps();
 	}
+}
+
+void Render_World::update_lights()
+{
+	frame_info.light_count = game_world->lights.count;
+
+	Array<Shader_Light> shader_lights;
+
+	Light *light = NULL;
+	For(game_world->lights, light) {
+		Shader_Light hlsl_light;
+		hlsl_light.position = light->position;
+		hlsl_light.direction = light->direction;
+		hlsl_light.color = light->color;
+		hlsl_light.light_type = light->light_type;
+		hlsl_light.radius = light->radius;
+		hlsl_light.range = light->range;
+		shader_lights.push(hlsl_light);
+	}
+	light_struct_buffer.update(&shader_lights);
+}
+
+void Shadows_Map::init(Render_World *render_world)
+{
+	game_world = render_world->game_world;
+	gpu_device = render_world->gpu_device;
+	render_pipeline = render_world->render_pipeline;
+}
+
+void Shadows_Map::update()
+{
+	u32 directional_light_count = 0;
+	Light *light = NULL;
+	For(game_world->lights, light) {
+		if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
+			directional_light_count += 1;
+		}
+	}
+
+	if (texture_map) {
+		texture_map->free();
+	}
+
+	Texture_Desc texture_desc;
+	texture_desc.width = 1024;
+	texture_desc.height = 1024;
+	texture_desc.mip_levels = 1;
+	texture_desc.array_count = directional_light_count;
+	texture_desc.format = DXGI_FORMAT_R32_TYPELESS;
+	texture_desc.bind = BIND_SHADER_RESOURCE | BIND_DEPTH_STENCIL;
+
+	Shader_Resource_Desc shader_resource_desc;
+	shader_resource_desc.format = DXGI_FORMAT_R32_FLOAT;
+	shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY;
+	shader_resource_desc.resource.texture_2d_array.count = directional_light_count;
+	shader_resource_desc.resource.texture_2d_array.mip_levels = 1;
+	shader_resource_desc.resource.texture_2d_array.most_detailed_mip = 0;
+
+	texture_map = gpu_device->create_texture_2d(&texture_desc, &shader_resource_desc);
+
+	Depth_Stencil_View_Desc depth_stencil_view_desc;
+	depth_stencil_view_desc.format = DXGI_FORMAT_D32_FLOAT;
+	depth_stencil_view_desc.type = DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY;
+	depth_stencil_view_desc.view.texture_2d_array.mip_slice = 0;
+	depth_stencil_view_desc.view.texture_2d_array.first_array_slice = 0;
+	depth_stencil_view_desc.view.texture_2d_array.array_count = directional_light_count;
+
+	gpu_device->create_depth_stencil_view(texture_map, &depth_stencil_view_desc, dsv);
+
+	update_map();
+}
+
+void Shadows_Map::update_map()
+{
+	//Shader *shader;
+	//if (!Engine::get_render_system()->shaders.get("depth_map", &shader)) {
+	//	loop_print("Shadows_Map::update_map: Can not found shader");
+	//	return;
+	//}
+
+	//render_pipeline->set_input_layout(NULL);
+	//render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
+
+	//Shader *forward_light = Engine::get_render_system()->get_shader("forward_light");
+
+	//render_pipeline->set_vertex_shader(forward_light);
+	//render_pipeline->set_pixel_shader(forward_light);
+
+	//render_pipeline->set_vertex_shader_resource(1, frame_info_cbuffer);
+	//render_pipeline->set_pixel_shader_resource(1, frame_info_cbuffer);
+
+	//render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
+
+	//render_pipeline->set_vertex_shader_resource(&mesh_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&vertex_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&index_struct_buffer);
+
+	//Texture_Desc texture_desc;
+	//texture_desc.width = 200;
+	//texture_desc.height = 200;
+	//texture_desc.mip_levels = 1;
+	//Texture *temp = gpu_device->create_texture_2d(&texture_desc);
+	//u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
+	//render_pipeline->update_subresource(temp, (void *)pixel_buffer, temp->get_row_pitch());
+	//DELETE_PTR(pixel_buffer);
+
+	//render_pipeline->set_pixel_shader_sampler(Engine::get_render_system()->sampler);
+	//render_pipeline->set_pixel_shader_resource(temp->shader_resource);
+	//render_pipeline->set_pixel_shader_resource(&light_struct_buffer);
+
+	//Render_Entity *render_entity = NULL;
+	//For(render_entities, render_entity) {
+	//	Pass_Data pass_data;
+	//	pass_data.mesh_idx = render_entity->mesh_idx;
+	//	pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+
+	//	render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
+	//	render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
+
+	//	render_pipeline->draw(mesh_instances[render_entity->mesh_idx].index_count);
+	//}
+
+	//RELEASE_COM(temp->gpu_resource);
+	//RELEASE_COM(temp->shader_resource);
+	//DELETE_PTR(temp);
+}
+
+
+void Render_World::update_depth_maps()
+{
+	//u32 directional_light_count = 0;
+	//Light *light = NULL;
+	//For(game_world->lights, light) {
+	//	if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
+	//		directional_light_count += 1;
+	//	}
+	//}
+	//
+	//if (depth_maps) {
+	//	depth_maps->free();
+	//}
+	//
+	//Texture_Desc texture_desc;
+	//texture_desc.width = 1024;
+	//texture_desc.height = 1024;
+	//texture_desc.mip_levels = 1;
+	//texture_desc.array_count = directional_light_count;
+	//texture_desc.format = DXGI_FORMAT_R32_TYPELESS;
+	//texture_desc.bind = BIND_SHADER_RESOURCE | BIND_DEPTH_STENCIL;
+	//
+	//Shader_Resource_Desc shader_resource_desc;
+	//shader_resource_desc.format = DXGI_FORMAT_R32_FLOAT;
+	//shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY;
+	//shader_resource_desc.resource.texture_2d_array.count = directional_light_count;
+	//shader_resource_desc.resource.texture_2d_array.mip_levels = 1;
+	//shader_resource_desc.resource.texture_2d_array.most_detailed_mip = 0;
+
+	//depth_maps = gpu_device->create_texture_2d(&texture_desc, &shader_resource_desc);
+
+	//Depth_Stencil_View_Desc depth_stencil_view_desc;
+	//depth_stencil_view_desc.format = DXGI_FORMAT_D32_FLOAT;
+	//depth_stencil_view_desc.type = DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY;
+	//depth_stencil_view_desc.view.texture_2d_array.mip_slice = 0;
+	//depth_stencil_view_desc.view.texture_2d_array.first_array_slice = 0;
+	//depth_stencil_view_desc.view.texture_2d_array.array_count = directional_light_count;
+
+	//Depth_Stencil_View *depth_stencil_view = NULL;
+	//gpu_device->create_depth_stencil_view(depth_maps, &depth_stencil_view_desc, depth_stencil_view);
+
+	//Shader *shader;
+	//if (!Engine::get_render_system()->shaders.get("draw_lines", &shader)) {
+	//	loop_print("Can not found shader");
+	//	return;
+	//}
+
+	//render_pipeline->set_input_layout(NULL);
+	//render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
+	//render_pipeline->set_vertex_shader(shader);
+	//render_pipeline->set_pixel_shader(shader);
+
+	//render_pipeline->set_vertex_shader_resource(b1_register, frame_info_cbuffer);
+	//render_pipeline->set_pixel_shader_resource(b1_register, frame_info_cbuffer);
+
+	//render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
+	//render_pipeline->set_vertex_shader_resource(&vertex_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&index_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&mesh_struct_buffer);
+	//render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
+
+	//Render_Entity *render_entity = NULL;
+	//For(render_entities, render_entity) {
+	//	Pass_Data pass_data;
+	//	pass_data.mesh_idx = render_entity->mesh_idx;
+	//	pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+
+	//	render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
+	//	//render_pipeline->draw(mesh_instances[render_entity->mesh_idx].index_count);
+	//}
 }
 
 Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
 {
-
 	Render_Entity *render_entity = NULL;
 	For(render_entities, render_entity) {
 		if (render_entity->entity_idx == entity_id) {
@@ -232,17 +425,6 @@ void Render_World::update_world_matrices()
 		world_matrices.push(matrix);
 	}
 }
-
-
-const u32 t0_register = 0;
-const u32 t1_register = 1;
-const u32 t2_register = 2;
-const u32 t3_register = 3;
-const u32 t4_register = 4;
-
-const u32 b0_register = 0;
-const u32 b1_register = 1;
-const u32 b2_register = 2;
 
 void Render_World::draw_bounding_boxs(Array<Entity_Id> *entity_ids)
 {
@@ -329,7 +511,11 @@ void Render_World::render()
 	render_pipeline->set_vertex_shader_resource(&vertex_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(&index_struct_buffer);
 
-	Texture *temp = gpu_device->create_texture_2d(200, 200, NULL, 1);
+	Texture_Desc texture_desc;
+	texture_desc.width = 200;
+	texture_desc.height = 200;
+	texture_desc.mip_levels = 1;
+	Texture *temp = gpu_device->create_texture_2d(&texture_desc);
 	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
 	render_pipeline->update_subresource(temp, (void *)pixel_buffer, temp->get_row_pitch());
 	DELETE_PTR(pixel_buffer);

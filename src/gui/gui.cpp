@@ -217,15 +217,12 @@ void Gui_Window::place_rect_over_window(Rect_s32 *additional_rect)
 	static Point_s32 view_point = { 0, 0 };
 	if ((additional_rect->y == view_rect.y) && (additional_rect->width == view_rect.width) && (additional_rect->height != view_rect.height)) {
 		view_rect.offset_y(additional_rect->height);
-	
 	} else if ((additional_rect->y == view_rect.y) && (additional_rect->height == view_rect.height) && (additional_rect->width != view_rect.width)) {
 		view_rect.width -= additional_rect->width;
-	
 	} else if ((additional_rect->bottom() == rect.bottom()) && (additional_rect->width == view_rect.width) && (additional_rect->height != view_rect.height)) {
 		view_rect.height -= additional_rect->height;
-	
 	} else {
-		print("Gui_Window::add_rect_on_window: There is no an option to add {} to window {}.", &additional_rect, name);
+		print("Gui_Window::add_rect_on_window: There is no an option to add {} to window {}.", additional_rect, name);
 	}
 
 	if (view_rect.y > view_point.y) {
@@ -377,6 +374,8 @@ struct Gui_Manager {
 
 	Gui_Tab_Theme tab_theme;
 	Gui_Window_Theme window_theme;
+	Gui_Window_Theme backup_window_theme;
+	Gui_Window_Theme future_window_theme;
 	Gui_Text_Button_Theme button_theme;
 	Gui_Edit_Field_Theme edit_field_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
@@ -419,7 +418,7 @@ struct Gui_Manager {
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *value);
-	void edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z);
+	bool edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z);
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color);
 	
@@ -469,7 +468,7 @@ void Gui_Manager::set_next_window_size(s32 width, s32 height)
 
 void Gui_Manager::set_next_window_theme(Gui_Window_Theme *theme)
 {
-	window_theme = *theme;
+	future_window_theme = *theme;
 	reset_window_params |= SET_WINDOW_THEME;;
 }
 
@@ -773,8 +772,9 @@ void Gui_Manager::edit_field(const char *name, String *value)
 	assert(false);
 }
 
-void Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
+bool Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
 {
+	bool was_data_updated = false;
 	u32 color = 180;
 	char *x_str = to_string(vector->x, GUI_FLOAT_PRECISION);
 	char *y_str = to_string(vector->y, GUI_FLOAT_PRECISION);
@@ -783,12 +783,15 @@ void Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, c
 	same_line();
 	if (edit_field(x, x_str, 12, &is_symbol_float_valid, Color(color, 0, 0))) {
 		vector->x = atof(edit_field_state.data.c_str());
+		was_data_updated = true;
 	}
 	if (edit_field(y, y_str, 12, &is_symbol_float_valid, Color(0, color, 0))) {
 		vector->y = atof(edit_field_state.data.c_str());
+		was_data_updated = true;
 	}
 	if (edit_field(z, z_str, 12, &is_symbol_float_valid, Color(0, 0, color))) {
 		vector->z = atof(edit_field_state.data.c_str());
+		was_data_updated = true;
 	}
 	text(name);
 	next_line();
@@ -796,6 +799,7 @@ void Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, c
 	free_string(x_str);
 	free_string(y_str);
 	free_string(z_str);
+	return was_data_updated;
 }
 
 bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color)
@@ -1722,6 +1726,7 @@ void Gui_Manager::begin_child(const char *name, Window_Style window_style)
 	child_window->start_new_frame(window_style);
 
 	Rect_s32 *rect = &child_window->rect;
+	Rect_s32 *view_rect = &child_window->view_rect;
 	if (reset_window_params & SET_WINDOW_POSITION) {
 		child_window->set_position(window_rect.x, window_rect.y);
 		reset_window_params &= ~SET_WINDOW_POSITION;
@@ -1729,7 +1734,13 @@ void Gui_Manager::begin_child(const char *name, Window_Style window_style)
 
 	if (reset_window_params & SET_WINDOW_SIZE) {
 		rect->set_size(window_rect.width, window_rect.height);
+		*view_rect = *rect;
 		reset_window_params &= ~SET_WINDOW_SIZE;
+	}
+
+	if (reset_window_params & SET_WINDOW_THEME) {
+		backup_window_theme = window_theme;
+		window_theme = future_window_theme;
 	}
 	
 	// If an parent view window less than an child view window gui must clip the child view window
@@ -1752,7 +1763,7 @@ void Gui_Manager::begin_child(const char *name, Window_Style window_style)
 	}
 
 	if (child_window->style & WINDOW_WITH_HEADER) {
-		Rect_s32 header_rect = { rect->x, rect->y, rect->width, window_theme.header_height };
+		Rect_s32 header_rect = { view_rect->x, view_rect->y, view_rect->width, window_theme.header_height };
 		child_window->place_rect_over_window(&header_rect);
 		render_list->add_rect(&header_rect, window_theme.header_color, window_theme.rounded_border, ROUND_TOP_RECT);
 		
@@ -1775,12 +1786,14 @@ void Gui_Manager::end_child()
 	Rect_s32 right_scroll_bar;
 	Rect_s32 bottom_scroll_bar;
 
-	if ((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.height > window->view_rect.height) || (window->scroll[Y_AXIS] > window->view_rect.y))) {
+	if (((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.height > window->view_rect.height)) || (window->scroll[Y_AXIS] > window->view_rect.y))) {
+		print("Content rect", &window->content_rect);
+		print("View rect", &window->view_rect);
 		right_scroll_bar = window->get_scrollbar_rect(Y_AXIS);
 		draw_right_scroll_bar = true;
 	}
 
-	if ((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.width > window->view_rect.width) || (window->scroll[X_AXIS] > window->view_rect.x))) {
+	if (((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.width > window->view_rect.width)) || (window->scroll[X_AXIS] > window->view_rect.x))) {
 		bottom_scroll_bar = window->get_scrollbar_rect(X_AXIS);
 		draw_bottom_scroll_bar = true;
 	}
@@ -1800,8 +1813,8 @@ void Gui_Manager::end_child()
 	render_list->pop_clip_rect();
 
 	if (reset_window_params & SET_WINDOW_THEME) {
+		window_theme = backup_window_theme;
 		reset_window_params &= ~SET_WINDOW_THEME;
-		window_theme = DEFAULT_WINDOW_THEME;
 	}
 
 #if DRAW_CHILD_WINDOW_DEBUG_RECTS
@@ -1991,9 +2004,9 @@ void gui::edit_field(const char *name, String *value)
 	gui_manager.edit_field(name, value);
 }
 
-void gui::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
+bool gui::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
 {
-	gui_manager.edit_field(name, vector, x, y, z);
+	return gui_manager.edit_field(name, vector, x, y, z);
 }
 
 Size_s32 gui::get_window_size()
@@ -2435,7 +2448,13 @@ static Texture *create_texture_from_file(const char *file_name)
 		return NULL;
 	}
 
-	Texture *texture = device->create_texture_2d(png_image_width, png_image_height, (void *)png_image_buffer, 1);
+	Texture_Desc desc;
+	desc.width = png_image_width;
+	desc.height = png_image_height;
+	desc.data = (void *)png_image_buffer;
+	desc.mip_levels = 1;
+
+	Texture *texture = device->create_texture_2d(&desc);
 	DELETE_PTR(png_image_buffer);
 
 	return texture;
