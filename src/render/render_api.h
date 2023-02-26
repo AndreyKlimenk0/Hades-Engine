@@ -28,6 +28,7 @@ typedef ID3D11HullShader     Hull_Shader;
 typedef ID3D11DomainShader   Domain_Shader;
 typedef ID3D11PixelShader    Pixel_Shader;
 typedef ID3D11ShaderResourceView Shader_Resource_View;
+typedef ID3D11DepthStencilView Depth_Stencil_View;
 
 const u32 BIND_VERTEX_BUFFER = 0x1L;
 const u32 BIND_INDEX_BUFFER = 0x2L;
@@ -221,6 +222,78 @@ struct Shader_Resource {
 	void free();
 };
 
+enum Shader_Resource_Type {
+	SHADER_RESOURCE_TYPE_UNKNOWN,
+	SHADER_RESOURCE_TYPE_BUFFER ,
+	SHADER_RESOURCE_TYPE_TEXTURE_1D,
+	SHADER_RESOURCE_TYPE_TEXTURE_1D_ARRAY,
+	SHADER_RESOURCE_TYPE_TEXTURE_2D,
+	SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY,
+	SHADER_RESOURCE_TYPE_TEXTURE_2D_MS,
+	SHADER_RESOURCE_TYPE_TEXTURE_2D_MS_ARRAY,
+	SHADER_RESOURCE_TYPE_TEXTURE_3D,
+	SHADER_RESOURCE_TYPE_TEXTURE_CUBE,
+	SHADER_RESOURCE_TYPE_TEXTURE_CUBE_ARRAY,
+	SHADER_RESOURCE_TYPE_BUFFEREX
+};
+
+struct Shader_Resource_Desc {
+	DXGI_FORMAT format;
+	Shader_Resource_Type resource_type;
+	union {
+		struct Buffer {
+			u32 first_element;
+			u32 element_count;
+		} buffer;
+		struct Texture_2D {
+			u32 most_detailed_mip;
+			u32 mip_levels;
+		} texture_2d;
+		struct Texture_2D_Array {
+			u32 count;
+			u32 most_detailed_mip;
+			u32 mip_levels;
+		} texture_2d_array;
+	} resource;
+};
+
+enum Depth_Stencil_View_Type {
+	DEPTH_STENCIL_VIEW_TYPE_UNKNOWN,
+	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_1D,
+	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_1D_ARRAY,
+	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D,
+	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY,
+	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS,
+	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS_ARRAY
+};
+
+struct Depth_Stencil_View_Desc {
+	DXGI_FORMAT format;
+	Depth_Stencil_View_Type type;
+	union {
+		struct Texture_2D {
+			u32 mip_slice;
+		} texture_2d;
+		struct Texture_2D_Array {
+			u32 mip_slice;
+			u32 first_array_slice;
+			u32 array_count;
+		} texture_2d_array;
+	} view;
+};
+
+struct Texture_Desc {
+	u32 width;
+	u32 height; 
+	u32 array_count = 1;
+	u32 mip_levels = 0;
+	u32 cpu_access = 0;
+	u32 bind = BIND_SHADER_RESOURCE;
+	void *data = NULL; 
+	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+};
+
 struct Texture {
 	Texture() {}
 	~Texture() {};
@@ -234,6 +307,7 @@ struct Texture {
 
 	String name;
 
+	void free();
 	u32 get_row_pitch();
 };
 
@@ -256,8 +330,12 @@ struct Gpu_Device {
 	Gpu_Buffer *create_constant_buffer(u32 buffer_size);
 
 	Texture_Sampler *create_sampler();
-	Texture *create_texture_2d(u32 width, u32 height, void *data = NULL, u32 mip_levels = 0, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
+	Texture *create_texture_2d(Texture_Desc *texture_desc);
+	Texture *create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc);
 
+	void create_depth_stencil_view(Texture *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
+
+	void create_shader_resource(Texture *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 	void create_shader_resource_for_struct_buffer(Gpu_Buffer *buffer, u32 elements_count, Shader_Resource *shader_resource);
 
 	Rasterizer *create_rasterizer(Rasterizer_Desc *rasterizer_desc);
@@ -283,7 +361,7 @@ struct Render_Pipeline {
 	ID3D11DeviceContext *pipeline = NULL;
 
 	//@Note can I these fields not use in this struct ?
-	ID3D11Texture2D *depth_stencil_buffer = NULL;
+	ID3D11Texture2D *depth_stencil_texture = NULL;
 	ID3D11RenderTargetView *render_target_view = NULL;
 	ID3D11DepthStencilView *depth_stencil_view = NULL;
 

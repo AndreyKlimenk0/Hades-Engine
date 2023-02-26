@@ -473,7 +473,11 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	font = _font;
 	
 	constant_buffer = gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info));
-	default_texture = gpu_device->create_texture_2d(100, 100, NULL, 1);
+	Texture_Desc texture_desc;
+	texture_desc.width = 100;
+	texture_desc.height = 100;
+	texture_desc.mip_levels = 1;
+	default_texture = gpu_device->create_texture_2d(&texture_desc);
 
 	u32 *pixel_buffer = create_color_buffer(default_texture->width, default_texture->height, Color::White);
 	render_pipeline->update_subresource(default_texture, (void *)pixel_buffer, default_texture->get_row_pitch());
@@ -534,7 +538,12 @@ void Render_2D::init_font_rendering()
 
 void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs)
 {
-	font_atlas = gpu_device->create_texture_2d(200, 200, NULL, 1);
+	Texture_Desc texture_desc;
+	texture_desc.width = 200;
+	texture_desc.height = 200;
+	texture_desc.mip_levels = 1;
+
+	font_atlas = gpu_device->create_texture_2d(&texture_desc);
 
 	u32 *pixel_buffer = create_color_buffer(font_atlas->width, font_atlas->height, Color::White);
 	render_pipeline->update_subresource(font_atlas, (void *)pixel_buffer, font_atlas->get_row_pitch());

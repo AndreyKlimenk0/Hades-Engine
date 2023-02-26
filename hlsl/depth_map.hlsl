@@ -1,5 +1,5 @@
-#ifndef __DRAW_LINES__
-#define __DRAW_LINES__
+#ifndef __DEPTH_MAP__
+#define __DEPTH_MAP__
 
 #include "cbuffer.hlsl"
 
@@ -30,5 +30,4 @@ float4 ps_main(float4 position : SV_POSITION) : SV_TARGET
 {
 	return float4(1.0f, 0.0f, 0.0f, 1.0f);
 }
-
 #endif

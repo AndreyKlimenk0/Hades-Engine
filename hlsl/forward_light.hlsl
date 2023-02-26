@@ -136,6 +136,13 @@ float4 calculate_directional_light(Light light, Material material, float3 normal
 	return specular + diffuse + ambient;
 }
 
+cbuffer Pass_Data : register(b2) {
+	uint mesh_id;
+	uint world_matrix_id;
+	uint pad11;
+	uint pad22;
+}
+
 struct Vertex_Out {
 	float4 position : SV_POSITION;
 	float3 world_position : POSITION;

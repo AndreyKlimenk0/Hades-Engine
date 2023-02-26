@@ -1,10 +1,11 @@
 #ifndef EDITOR_H
 #define EDITOR_H
 
+#include "gui.h"
 #include "../libs/str.h"
 #include "../libs/ds/array.h"
-#include "../game/world.h"
 #include "../libs/enum_helper.h"
+#include "../game/world.h"
 
 struct Engine;
 
@@ -48,12 +49,30 @@ struct Make_Entity_Window : Editor_Window {
 	void draw();
 };
 
+struct Game_World_Window : Editor_Window {
+	u32 entity_index;
+	s32 window_width_delta;
+	s32 world_entities_height;
+	s32 entity_info_height;
+	Window_Style window_style;
+	Entity_Type entity_type;
+
+	Gui_Window_Theme world_entities_window_theme;
+	Gui_Window_Theme entity_info_window_theme;
+	Gui_Text_Button_Theme buttons_theme;
+	
+	void init(Engine *engine);
+	void draw();
+	bool draw_entity_list(const char *list_name, u32 list_count, Entity_Type type);
+};
+
 struct Editor {
 	Editor();
 	~Editor();
 
 	bool is_draw_make_entity_window = false;
 	Make_Entity_Window make_entity_window;
+	Game_World_Window game_world_window;
 
 	void init();
 	void render();
