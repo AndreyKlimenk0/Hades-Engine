@@ -52,14 +52,6 @@ Deffer<F> defer_func(F f)
 #define DELETE_PTR(x) {if (x) delete x, x = NULL;}
 #define DELETE_ARRAY(x) {if (x) delete[] x, x = NULL;}
 
-inline void free_com_object(IUnknown *object)
-{
-	if (object) {
-		object->Release();
-		object = NULL;
-	}
-}
-
 template <typename... Args>
 void print(Args... args)
 {

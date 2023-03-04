@@ -312,6 +312,11 @@ char *to_string(Rect_s32 *rect)
 	return format("Rect_s32({}, {}, {}, {})", rect->x, rect->y, rect->width, rect->height);
 }
 
+char *to_string(Rect_f32 * rect)
+{
+	return format("Rect_f32({}, {}, {}, {})", rect->x, rect->y, rect->width, rect->height);
+}
+
 char *to_string(Point_s32 *point)
 {
 	return format("Point_s32({}, {})", point->x, point->y);

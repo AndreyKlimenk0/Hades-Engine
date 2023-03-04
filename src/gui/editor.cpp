@@ -43,7 +43,7 @@ void Make_Entity_Window::reset_state()
 	geometry_index = 0;
 	box;
 	position = { 0.0f, 0.0f, 0.0f };
-	direction = { 0.2, -1.0, 0.2f };
+	direction = { 0.2f, -1.0f, 0.2f };
 	color = { 255.0, 255.0, 255.0 };
 }
 

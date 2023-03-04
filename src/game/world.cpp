@@ -60,7 +60,7 @@ Light *Game_World::make_direction_light(const Vector3 &direction, const Vector3 
 
 	UPDATE_LIGHT_HASH();
 
-	return &light;
+	return &lights.last_item();
 }
 
 Light *Game_World::make_point_light(const Vector3 &position, const Vector3 &color, float range)
@@ -74,7 +74,7 @@ Light *Game_World::make_point_light(const Vector3 &position, const Vector3 &colo
 
 	UPDATE_LIGHT_HASH();
 
-	return &light;
+	return &lights.last_item();
 }
 
 Light  *Game_World::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
@@ -89,7 +89,7 @@ Light  *Game_World::make_spot_light(const Vector3 &position, const Vector3 &dire
 
 	UPDATE_LIGHT_HASH();
 
-	return &light;
+	return &lights.last_item();
 }
 
 void Game_World::init()

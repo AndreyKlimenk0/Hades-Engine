@@ -44,6 +44,7 @@ char *to_string(Vector2 *vector);
 char *to_string(Vector3 *vector);
 char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
+char *to_string(Rect_f32 *rect);
 char *to_string(Point_s32 *point);
 
 int is_format_string(const char *string);
