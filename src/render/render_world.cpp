@@ -247,7 +247,7 @@ void Shadows_Map::update_map()
 	//texture_desc.width = 200;
 	//texture_desc.height = 200;
 	//texture_desc.mip_levels = 1;
-	//Texture *temp = gpu_device->create_texture_2d(&texture_desc);
+	//Texture2D *temp = gpu_device->create_texture_2d(&texture_desc);
 	//u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
 	//render_pipeline->update_subresource(temp, (void *)pixel_buffer, temp->get_row_pitch());
 	//DELETE_PTR(pixel_buffer);
@@ -510,7 +510,7 @@ void Render_World::render()
 	texture_desc.width = 200;
 	texture_desc.height = 200;
 	texture_desc.mip_levels = 1;
-	Texture temp;
+	Texture2D temp;
 	gpu_device->create_texture_2d(&texture_desc, &temp);
 	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
 	render_pipeline->update_subresource(&temp, (void *)pixel_buffer, temp.get_row_pitch());

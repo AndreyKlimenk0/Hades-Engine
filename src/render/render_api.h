@@ -34,8 +34,8 @@ typedef ComPtr<ID3D11HullShader> Hull_Shader;
 typedef ComPtr<ID3D11DomainShader> Domain_Shader;
 typedef ComPtr<ID3D11PixelShader> Pixel_Shader;
 
-typedef ComPtr<ID3D11Resource> Gpu_Resource;
-typedef ComPtr<ID3D11Texture2D> Texture_2D;
+typedef ComPtr<ID3D11Resource> Dx11_Resource;
+typedef ComPtr<ID3D11Texture2D> Dx11_Texture_2D;
 typedef ComPtr<ID3D11Buffer> Dx11_Buffer;
 
 struct Struct_Buffer;
@@ -81,6 +81,12 @@ enum Resource_Usage {
 	RESOURCE_USAGE_STAGING
 };
 
+template <typename T>
+struct Gpu_Resource {
+	ComPtr<T> gpu_resource;
+};
+
+
 struct Gpu_Buffer_Desc {
 	void *data = NULL;
 	
@@ -95,12 +101,11 @@ struct Gpu_Buffer_Desc {
 	Resource_Usage usage;
 };
 
-struct Gpu_Buffer {
+struct Gpu_Buffer : Gpu_Resource<ID3D11Buffer> {
 	Gpu_Buffer() {};
 
 	u32 data_size = 0;
 	u32 data_count = 0;
-	Dx11_Buffer dx11buffer;
 
 	void free();
 	bool is_empty() { return data_count == 0; }
@@ -247,7 +252,7 @@ struct Shader_Resource_Desc {
 			u32 first_element;
 			u32 element_count;
 		} buffer;
-		struct Texture_2D {
+		struct Dx11_Texture_2D {
 			u32 most_detailed_mip;
 			u32 mip_levels;
 		} texture_2d;
@@ -273,7 +278,7 @@ struct Depth_Stencil_View_Desc {
 	DXGI_FORMAT format;
 	Depth_Stencil_View_Type type;
 	union {
-		struct Texture_2D {
+		struct Dx11_Texture_2D {
 			u32 mip_slice;
 		} texture_2d;
 		struct Texture_2D_Array {
@@ -296,17 +301,17 @@ struct Texture_Desc {
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 };
 
-struct Texture {
-	Texture() {}
+struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
+	Texture2D() {}
 
 	u32 width = 0;
 	u32 height = 0;
 	u32 format_size = 0;
-
-	Texture_2D texture_2d;
+	
+	String name;
+	
 	Shader_Resource_View shader_resource;
 
-	String name;
 	u32 get_row_pitch();
 };
 
@@ -328,14 +333,14 @@ struct Gpu_Device {
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *);
 
 	void create_sampler(Sampler_State *sampler_state);
-	void create_texture_2d(Texture_Desc *texture_desc, Texture *texture);
-	void create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture *texture);
+	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture);
+	void create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture);
 
-	void create_depth_stencil_view(Texture *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
+	void create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
 
-	void create_shader_resource_view(Texture *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
+	void create_shader_resource_view(Texture2D *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 	void create_shader_resource_view(Gpu_Buffer *gpu_buffer, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
-	void create_shader_resource_view(const Gpu_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
+	void create_shader_resource_view(const Dx11_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 
 	void create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state);
 	void create_blending_state(Blending_Test_Desc *blending_desc, Blend_State *blend_state);
@@ -360,7 +365,7 @@ struct Render_Pipeline {
 	Dx11_Device_Context pipeline;
 
 	//@Note can I these fields not use in this struct ?
-	Texture_2D depth_stencil_texture;
+	Dx11_Texture_2D depth_stencil_texture;
 	Render_Target_View render_target_view;
 	Depth_Stencil_View depth_stencil_view;
 
@@ -373,7 +378,7 @@ struct Render_Pipeline {
 	void unmap(Gpu_Buffer *gpu_buffer);
 
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
-	void update_subresource(Texture *gpu_resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
+	void update_subresource(Texture2D *gpu_resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
 	void generate_mips(const Shader_Resource_View &shader_resource);
 	
 	//@Note: may be this should be removed from code.
