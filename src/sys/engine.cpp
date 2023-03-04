@@ -47,6 +47,7 @@ void Engine::frame()
 	render_world.render();
 
 	editor.render();
+	
 	render_sys.end_frame();
 
 	clear_event_queue();

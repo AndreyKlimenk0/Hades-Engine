@@ -16,8 +16,8 @@ struct Struct_Buffer {
 	u32 size = 0;
 	u32 shader_resource_register = 0;
 	
-	Gpu_Buffer *gpu_buffer = NULL;
-	Shader_Resource shader_resource;
+	Gpu_Buffer gpu_buffer;
+	Shader_Resource_View shader_resource;
 
 	template <typename T>
 	void allocate(u32 elements_count);
@@ -52,6 +52,16 @@ struct Shadows_Map {
 	void update_map();
 };
 
+struct Render_Pass {
+	virtual void setup_pipeline_state() = 0;
+	virtual void render() = 0;
+};
+
+struct Forwar_Light_Pass : Render_Pass {
+	void setup_pipeline_state();
+	void render();
+};
+
 struct Render_World {
 	u32 light_hash;
 
@@ -65,8 +75,8 @@ struct Render_World {
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
 	
-	Gpu_Buffer *pass_data_cbuffer = NULL;
-	Gpu_Buffer *frame_info_cbuffer = NULL;
+	Gpu_Buffer pass_data_cbuffer;
+	Gpu_Buffer frame_info_cbuffer;
 
 	Array<Matrix4> world_matrices;
 	

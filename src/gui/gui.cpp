@@ -1952,20 +1952,19 @@ static Gui_Manager gui_manager;
 
 //@Note: Gpu_Device must be removed. it is used for testing
 
-static Texture *texture = NULL;
+static Texture texture;
 static Gpu_Device *device = NULL;
-static Texture *create_texture_from_file(const char *file_name);
+static void create_texture_from_file(const char *file_name, Texture *texture);
 
 void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font, Gpu_Device *gpu_device)
 {
 	device = gpu_device;
-	texture = create_texture_from_file("Background_Albedo.png");
+	create_texture_from_file("Background_Albedo.png", &texture);
 	gui_manager.init(render_2d, win32_info, font);
 }
 
 void gui::shutdown()
 {
-	RELEASE_COM(texture->gpu_resource);
 	gui_manager.shutdown();
 }
 
@@ -2419,21 +2418,19 @@ static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *
 }
 
 
-static Texture *create_texture_from_file(const char *file_name)
+static void create_texture_from_file(const char *file_name, Texture *texture)
 {
 	String file_extension;
 	extract_file_extension(file_name, file_extension);
 
 	if (file_extension != "png") {
 		print("create_texture_from_file: the fucntion supports only png file");
-		return NULL;
 	}
 
 	String texture_path;
 	build_full_path_to_texture_file(file_name, texture_path);
 	if (!file_exists(texture_path)) {
 		print("create_texture_from_file: file with name {} was not found", file_name);
-		return NULL;
 	}
 
 	u8 *png_image_buffer = NULL;
@@ -2445,7 +2442,6 @@ static Texture *create_texture_from_file(const char *file_name)
 	if (!result) {
 		print("create_texture_from_file: Loading png file {} was failed.", file_name);
 		DELETE_PTR(png_image_buffer);
-		return NULL;
 	}
 
 	Texture_Desc desc;
@@ -2454,9 +2450,7 @@ static Texture *create_texture_from_file(const char *file_name)
 	desc.data = (void *)png_image_buffer;
 	desc.mip_levels = 1;
 
-	Texture *texture = device->create_texture_2d(&desc);
+	device->create_texture_2d(&desc, texture);
 	DELETE_PTR(png_image_buffer);
-
-	return texture;
 }
 
