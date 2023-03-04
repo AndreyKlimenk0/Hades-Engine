@@ -75,9 +75,8 @@ void Render_World::init()
 	index_struct_buffer.allocate<u32>(100000);
 	vertex_struct_buffer.allocate<Vertex_XNUV>(100000);
 
-	frame_info_cbuffer = gpu_device->create_constant_buffer((sizeof(Frame_Info)));
-	pass_data_cbuffer = gpu_device->create_constant_buffer((sizeof(Pass_Data)));
-
+	gpu_device->create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
+	gpu_device->create_constant_buffer(sizeof(Pass_Data), &pass_data_cbuffer);
 
 	Box box;
 	box.depth = 10;
@@ -189,37 +188,33 @@ void Shadows_Map::update()
 		}
 	}
 
-	if (texture_map) {
-		texture_map->free();
-	}
+	//Texture_Desc texture_desc;
+	//texture_desc.width = 1024;
+	//texture_desc.height = 1024;
+	//texture_desc.mip_levels = 1;
+	//texture_desc.array_count = directional_light_count;
+	//texture_desc.format = DXGI_FORMAT_R32_TYPELESS;
+	//texture_desc.bind = BIND_SHADER_RESOURCE | BIND_DEPTH_STENCIL;
 
-	Texture_Desc texture_desc;
-	texture_desc.width = 1024;
-	texture_desc.height = 1024;
-	texture_desc.mip_levels = 1;
-	texture_desc.array_count = directional_light_count;
-	texture_desc.format = DXGI_FORMAT_R32_TYPELESS;
-	texture_desc.bind = BIND_SHADER_RESOURCE | BIND_DEPTH_STENCIL;
+	//Shader_Resource_Desc shader_resource_desc;
+	//shader_resource_desc.format = DXGI_FORMAT_R32_FLOAT;
+	//shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY;
+	//shader_resource_desc.resource.texture_2d_array.count = directional_light_count;
+	//shader_resource_desc.resource.texture_2d_array.mip_levels = 1;
+	//shader_resource_desc.resource.texture_2d_array.most_detailed_mip = 0;
 
-	Shader_Resource_Desc shader_resource_desc;
-	shader_resource_desc.format = DXGI_FORMAT_R32_FLOAT;
-	shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY;
-	shader_resource_desc.resource.texture_2d_array.count = directional_light_count;
-	shader_resource_desc.resource.texture_2d_array.mip_levels = 1;
-	shader_resource_desc.resource.texture_2d_array.most_detailed_mip = 0;
+	//texture_map = gpu_device->create_texture_2d(&texture_desc, &shader_resource_desc);
 
-	texture_map = gpu_device->create_texture_2d(&texture_desc, &shader_resource_desc);
+	//Depth_Stencil_View_Desc depth_stencil_view_desc;
+	//depth_stencil_view_desc.format = DXGI_FORMAT_D32_FLOAT;
+	//depth_stencil_view_desc.type = DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY;
+	//depth_stencil_view_desc.view.texture_2d_array.mip_slice = 0;
+	//depth_stencil_view_desc.view.texture_2d_array.first_array_slice = 0;
+	//depth_stencil_view_desc.view.texture_2d_array.array_count = directional_light_count;
 
-	Depth_Stencil_View_Desc depth_stencil_view_desc;
-	depth_stencil_view_desc.format = DXGI_FORMAT_D32_FLOAT;
-	depth_stencil_view_desc.type = DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY;
-	depth_stencil_view_desc.view.texture_2d_array.mip_slice = 0;
-	depth_stencil_view_desc.view.texture_2d_array.first_array_slice = 0;
-	depth_stencil_view_desc.view.texture_2d_array.array_count = directional_light_count;
+	//gpu_device->create_depth_stencil_view(texture_map, &depth_stencil_view_desc, dsv);
 
-	gpu_device->create_depth_stencil_view(texture_map, &depth_stencil_view_desc, dsv);
-
-	update_map();
+	//update_map();
 }
 
 void Shadows_Map::update_map()
@@ -504,25 +499,26 @@ void Render_World::render()
 	render_pipeline->set_vertex_shader_resource(1, frame_info_cbuffer);
 	render_pipeline->set_pixel_shader_resource(1, frame_info_cbuffer);
 	
-	render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
+	render_pipeline->update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
 
-	render_pipeline->set_vertex_shader_resource(&mesh_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(&vertex_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(&index_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(mesh_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(world_matrix_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(vertex_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(index_struct_buffer);
 
 	Texture_Desc texture_desc;
 	texture_desc.width = 200;
 	texture_desc.height = 200;
 	texture_desc.mip_levels = 1;
-	Texture *temp = gpu_device->create_texture_2d(&texture_desc);
+	Texture temp;
+	gpu_device->create_texture_2d(&texture_desc, &temp);
 	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
-	render_pipeline->update_subresource(temp, (void *)pixel_buffer, temp->get_row_pitch());
+	render_pipeline->update_subresource(&temp, (void *)pixel_buffer, temp.get_row_pitch());
 	DELETE_PTR(pixel_buffer);
 	
 	render_pipeline->set_pixel_shader_sampler(Engine::get_render_system()->sampler);
-	render_pipeline->set_pixel_shader_resource(temp->shader_resource);
-	render_pipeline->set_pixel_shader_resource(&light_struct_buffer);
+	render_pipeline->set_pixel_shader_resource(temp.shader_resource);
+	render_pipeline->set_pixel_shader_resource(light_struct_buffer);
 
 	Render_Entity *render_entity = NULL;
 	For(render_entities, render_entity) {
@@ -530,15 +526,11 @@ void Render_World::render()
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
-		render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
+		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
 
 		render_pipeline->draw(mesh_instances[render_entity->mesh_idx].index_count);
 	}
-
-	RELEASE_COM(temp->gpu_resource);
-	RELEASE_COM(temp->shader_resource);
-	DELETE_PTR(temp);
 
 	draw_bounding_boxs(&entity_ids);
 }
@@ -557,9 +549,14 @@ void Struct_Buffer::allocate(u32 elements_count)
 	desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
 	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
-	gpu_buffer = gpu_device->create_gpu_buffer(&desc);
+	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
 
-	gpu_device->create_shader_resource_for_struct_buffer(gpu_buffer, elements_count, &shader_resource);
+
+	Shader_Resource_Desc shader_resource_desc;
+	shader_resource_desc.format = DXGI_FORMAT_UNKNOWN;
+	shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_BUFFER;
+	shader_resource_desc.resource.buffer.element_count = elements_count;
+	gpu_device->create_shader_resource_view(&gpu_buffer, &shader_resource_desc, &shader_resource);
 
 	size = elements_count;
 }
@@ -578,16 +575,47 @@ void Struct_Buffer::update(Array<T> *array)
 		allocate<T>(array->count);
 	}
 
-	T *buffer = (T *)render_pipeline->map(gpu_buffer);
+	T *buffer = (T *)render_pipeline->map(&gpu_buffer);
 	memcpy((void *)buffer, (void *)&array->items[0], sizeof(T) * array->count);
-	render_pipeline->unmap(gpu_buffer);
+	render_pipeline->unmap(&gpu_buffer);
 	count += array->count;
 }
 
 void Struct_Buffer::free()
 {
-	if (gpu_buffer) {
-		gpu_buffer->free();
+	if (!gpu_buffer.is_empty()) {
+		gpu_buffer.free();
 	}
-	shader_resource.free();
+}
+
+struct Render_Resources {
+	struct Render_Pipeline_States {
+
+	};
+
+	struct Gpu_Buffer {
+		Struct_Buffer vertices;
+		Struct_Buffer indices;
+		Struct_Buffer mesh_instances;
+		Struct_Buffer world_matrices;
+		Struct_Buffer lights;
+	} buffer;
+};
+
+struct Pipeline_State {
+	Render_Primitive_Type primitive_type;
+	String vertex_shader;
+	String pixel_shader;
+};
+
+void Forwar_Light_Pass::setup_pipeline_state()
+{
+	Pipeline_State state;
+	state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
+	state.vertex_shader = "forward_light.hlsl";
+	state.pixel_shader = "foward_light.hlsl";
+}
+
+void Forwar_Light_Pass::render()
+{
 }

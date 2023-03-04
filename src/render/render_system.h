@@ -38,7 +38,7 @@ struct Primitive_2D {
 
 struct Render_Primitive_2D {
 	Primitive_2D *primitive = NULL;
-	Texture *gpu_resource = NULL;
+	Texture *texture = NULL;
 	Color color;
 	Rect_s32 clip_rect;
 	Matrix4 transform_matrix;
@@ -86,20 +86,16 @@ struct Render_Primitive_List {
 struct Render_2D {
 	~Render_2D();
 
-	Texture *font_atlas = NULL;
-	Texture *default_texture = NULL;
-	Texture *temp = NULL;
+	Texture font_atlas;
+	Texture default_texture;
 	
-	Gpu_Buffer *constant_buffer = NULL;
-	Gpu_Buffer *vertex_buffer = NULL;
-	Gpu_Buffer *index_buffer = NULL;
+	Gpu_Buffer constant_buffer;
+	Gpu_Buffer vertex_buffer;
+	Gpu_Buffer index_buffer;
 
-	Gpu_Buffer *font_vertex_buffer = NULL;
-	Gpu_Buffer *font_index_buffer = NULL;
-
-	Rasterizer *rasterizer = NULL;
-	Blending_Test *blending_test = NULL;
-	Depth_Stencil_Test *depth_test = NULL;
+	Rasterizer_State rasterizer_state;
+	Blend_State blend_state;
+	Depth_Stencil_State depth_stencil_state;
 
 	Shader *render_2d = NULL;
 	
@@ -111,7 +107,6 @@ struct Render_2D {
 
 	u32 total_vertex_count = 0;
 	u32 total_index_count = 0;
-
 
 	Array<Primitive_2D *> primitives;
 	Array<Render_Primitive_List *> draw_list;
@@ -145,7 +140,7 @@ struct Render_System {
 	//@Note: may be I can delete this var and use functions instead of it.
 	Win32_Info *win32_info;
 
-	Texture_Sampler *sampler = NULL;
+	Sampler_State sampler;
 	ID3D11ShaderResourceView *shader_resource = NULL;
 
 	View_Info view_info;
