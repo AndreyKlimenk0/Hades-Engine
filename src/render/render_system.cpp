@@ -363,7 +363,7 @@ void Render_Primitive_List::add_rect(float x, float y, float width, float height
 	render_2d->add_primitive(primitive);
 }
 
-void Render_Primitive_List::add_texture(int x, int y, int width, int height, Texture *gpu_resource)
+void Render_Primitive_List::add_texture(int x, int y, int width, int height, Texture2D *gpu_resource)
 {
 	String hash = String(width + height);
 
@@ -429,7 +429,7 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 	render_2d->add_primitive(primitive);
 }
 
-Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_matrix, Texture *texture, const Color &color, String &primitve_hash)
+Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_matrix, Texture2D *texture, const Color &color, String &primitve_hash)
 {
 	Render_Primitive_2D render_primitive;
 	render_primitive.color.value = color.value;

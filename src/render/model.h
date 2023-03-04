@@ -40,9 +40,9 @@ struct Triangle_Mesh {
 //	Render_Mesh() {}
 //	~Render_Mesh() {};
 //	
-//	Texture *normal_texture = NULL;
-//	Texture *diffuse_texture = NULL;
-//	Texture *specular_texture = NULL;
+//	Texture2D *normal_texture = NULL;
+//	Texture2D *diffuse_texture = NULL;
+//	Texture2D *specular_texture = NULL;
 //
 //	Matrix4 position;
 //	Matrix4 orientation;

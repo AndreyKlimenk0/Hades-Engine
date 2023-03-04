@@ -44,7 +44,7 @@ struct Shadows_Map {
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
 
-	Texture *texture_map = NULL;
+	Texture2D *texture_map = NULL;
 	Depth_Stencil_View *dsv = NULL;
 
 	void init(Render_World *render_world);

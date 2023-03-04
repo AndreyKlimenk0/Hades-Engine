@@ -354,7 +354,7 @@ void Gpu_Buffer::free()
 {
 	data_size = 0;
 	data_count = 0;
-	dx11buffer.Reset();
+	gpu_resource.Reset();
 }
 
 u32 Gpu_Buffer::get_data_width()
@@ -387,9 +387,9 @@ void Gpu_Device::create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer)
 		D3D11_SUBRESOURCE_DATA resource_data_desc;
 		ZeroMemory(&resource_data_desc, sizeof(D3D11_SUBRESOURCE_DATA));
 		resource_data_desc.pSysMem = (void *)desc->data;
-		HR(device->CreateBuffer(&buffer_desc, &resource_data_desc, buffer->dx11buffer.ReleaseAndGetAddressOf()));
+		HR(device->CreateBuffer(&buffer_desc, &resource_data_desc, buffer->gpu_resource.ReleaseAndGetAddressOf()));
 	} else {
-		HR(device->CreateBuffer(&buffer_desc, NULL, buffer->dx11buffer.ReleaseAndGetAddressOf()));
+		HR(device->CreateBuffer(&buffer_desc, NULL, buffer->gpu_resource.ReleaseAndGetAddressOf()));
 	}
 }
 
@@ -419,7 +419,7 @@ void Gpu_Device::create_sampler(Sampler_State *sampler)
 	HR(device->CreateSamplerState(&sampler_desc, sampler->ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture *texture)
+void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture)
 {
 	texture->width = texture_desc->width;
 	texture->height = texture_desc->height;
@@ -450,9 +450,9 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture *texture)
 		subresource_desc.pSysMem = texture_desc->data;
 		subresource_desc.SysMemPitch = texture_desc->width * texture->format_size;
 
-		HR(device->CreateTexture2D(&texture_2d_desc, &subresource_desc, texture->texture_2d.ReleaseAndGetAddressOf()));
+		HR(device->CreateTexture2D(&texture_2d_desc, &subresource_desc, texture->gpu_resource.ReleaseAndGetAddressOf()));
 	} else {
-		HR(device->CreateTexture2D(&texture_2d_desc, NULL, texture->texture_2d.ReleaseAndGetAddressOf()));
+		HR(device->CreateTexture2D(&texture_2d_desc, NULL, texture->gpu_resource.ReleaseAndGetAddressOf()));
 	}
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc;
@@ -461,10 +461,10 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture *texture)
 	shader_resource_desc.Texture2D.MostDetailedMip = 0;
 	shader_resource_desc.Texture2D.MipLevels = texture_desc->mip_levels == 1 ? 1 : (texture_desc->mip_levels == 0 ? -1 : texture_desc->mip_levels);
 
-	HR(device->CreateShaderResourceView(texture->texture_2d.Get(), &shader_resource_desc, &texture->shader_resource));
+	HR(device->CreateShaderResourceView(texture->gpu_resource.Get(), &shader_resource_desc, &texture->shader_resource));
 }
 
-void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture *texture)
+void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture)
 {
 	texture->width = texture_desc->width;
 	texture->height = texture_desc->height;
@@ -495,14 +495,14 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_D
 		subresource_desc.pSysMem = texture_desc->data;
 		subresource_desc.SysMemPitch = texture_desc->width * texture->format_size;
 
-		HR(device->CreateTexture2D(&texture_2d_desc, &subresource_desc, texture->texture_2d.ReleaseAndGetAddressOf()));
+		HR(device->CreateTexture2D(&texture_2d_desc, &subresource_desc, texture->gpu_resource.ReleaseAndGetAddressOf()));
 	} else {
-		HR(device->CreateTexture2D(&texture_2d_desc, NULL, texture->texture_2d.ReleaseAndGetAddressOf()));
+		HR(device->CreateTexture2D(&texture_2d_desc, NULL, texture->gpu_resource.ReleaseAndGetAddressOf()));
 	}
 	create_shader_resource_view(texture, shader_resource_desc, &texture->shader_resource);
 }
 
-void Gpu_Device::create_depth_stencil_view(Texture *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view)
+void Gpu_Device::create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view)
 {
 	D3D11_DEPTH_STENCIL_VIEW_DESC d3d11_depth_stencil_view_desc;
 	ZeroMemory(&d3d11_depth_stencil_view_desc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
@@ -518,24 +518,24 @@ void Gpu_Device::create_depth_stencil_view(Texture *texture, Depth_Stencil_View_
 	} else {
 		assert(false);
 	}
-	HR(device->CreateDepthStencilView(texture->texture_2d.Get(), &d3d11_depth_stencil_view_desc, depth_stencil_view->ReleaseAndGetAddressOf()));
+	HR(device->CreateDepthStencilView(texture->gpu_resource.Get(), &d3d11_depth_stencil_view_desc, depth_stencil_view->ReleaseAndGetAddressOf()));
 }
 
 void Gpu_Device::create_shader_resource_view(Gpu_Buffer *gpu_buffer, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
 {
-	Gpu_Resource gpu_resource;
-	gpu_buffer->dx11buffer.As(&gpu_resource);
+	Dx11_Resource gpu_resource;
+	gpu_buffer->gpu_resource.As(&gpu_resource);
 	create_shader_resource_view(gpu_resource, shader_resource_desc, shader_resource);
 }
 
-void Gpu_Device::create_shader_resource_view(Texture *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
+void Gpu_Device::create_shader_resource_view(Texture2D *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
 {
-	Gpu_Resource gpu_resource;
-	texture->texture_2d.As(&gpu_resource);
+	Dx11_Resource gpu_resource;
+	texture->gpu_resource.As(&gpu_resource);
 	create_shader_resource_view(gpu_resource, shader_resource_desc, shader_resource);
 }
 
-void Gpu_Device::create_shader_resource_view(const Gpu_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
+void Gpu_Device::create_shader_resource_view(const Dx11_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
 {
 	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
 	ZeroMemory(&shader_resource_view_desc, sizeof(shader_resource_view_desc));
@@ -677,7 +677,7 @@ void Gpu_Device::create_shader(u8 * byte_code, u32 byte_code_size, Shader_Type s
 		//		type = "Consttanc buffer";
 		//		break;
 		//	case D3D11_CT_TBUFFER:
-		//		type = "Texture buffer";
+		//		type = "Texture2D buffer";
 		//		break;
 		//	case D3D11_CT_INTERFACE_POINTERS:
 		//		type = "Interface buffer";
@@ -739,7 +739,7 @@ void Gpu_Device::create_shader(u8 * byte_code, u32 byte_code_size, Shader_Type s
 		//		type = "Consttanc buffer";
 		//		break;
 		//	case D3D11_CT_TBUFFER:
-		//		type = "Texture buffer";
+		//		type = "Texture2D buffer";
 		//		break;
 		//	case D3D11_CT_INTERFACE_POINTERS:
 		//		type = "Interface buffer";
@@ -781,7 +781,7 @@ void Render_Pipeline::resize(Gpu_Device *gpu_device, u32 window_width, u32 windo
 
 	HR(swap_chain->ResizeBuffers(1, window_width, window_height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 
-	Texture_2D back_buffer;
+	Dx11_Texture_2D back_buffer;
 	HR(swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(back_buffer.GetAddressOf())));
 	HR(gpu_device->device->CreateRenderTargetView(back_buffer.Get(), 0, render_target_view.ReleaseAndGetAddressOf()));
 
@@ -837,19 +837,19 @@ void Render_Pipeline::shutdown()
 
 void Render_Pipeline::copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buffer)
 {
-	pipeline->CopyResource(dst_buffer->dx11buffer.Get(), src_buffer->dx11buffer.Get());
+	pipeline->CopyResource(dst_buffer->gpu_resource.Get(), src_buffer->gpu_resource.Get());
 }
 
 void *Render_Pipeline::map(Gpu_Buffer *gpu_buffer, Map_Type map_type)
 {
 	D3D11_MAPPED_SUBRESOURCE subresource;
-	HR(pipeline->Map(gpu_buffer->dx11buffer.Get(), 0, to_dx11_map_type(map_type), 0, &subresource));
+	HR(pipeline->Map(gpu_buffer->gpu_resource.Get(), 0, to_dx11_map_type(map_type), 0, &subresource));
 	return subresource.pData;
 }
 
 void Render_Pipeline::unmap(Gpu_Buffer *gpu_buffer)
 {
-	pipeline->Unmap(gpu_buffer->dx11buffer.Get(), 0);
+	pipeline->Unmap(gpu_buffer->gpu_resource.Get(), 0);
 }
 
 void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
@@ -864,7 +864,7 @@ void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
 	unmap(gpu_buffer);
 }
 
-void Render_Pipeline::update_subresource(Texture *texture, void *data, u32 row_pitch, Rect_u32 *rect)
+void Render_Pipeline::update_subresource(Texture2D *texture, void *data, u32 row_pitch, Rect_u32 *rect)
 {
 	if (rect) {
 		D3D11_BOX box;
@@ -874,10 +874,10 @@ void Render_Pipeline::update_subresource(Texture *texture, void *data, u32 row_p
 		box.bottom = rect->y + rect->height;
 		box.front = 0;
 		box.back = 1;
-		pipeline->UpdateSubresource(texture->texture_2d.Get(), 0, &box, (const void *)data, row_pitch, 0);
+		pipeline->UpdateSubresource(texture->gpu_resource.Get(), 0, &box, (const void *)data, row_pitch, 0);
 		return;
 	}
-	pipeline->UpdateSubresource(texture->texture_2d.Get(), 0, NULL, (const void *)data, row_pitch, 0);
+	pipeline->UpdateSubresource(texture->gpu_resource.Get(), 0, NULL, (const void *)data, row_pitch, 0);
 }
 
 void Render_Pipeline::generate_mips(const Shader_Resource_View &shader_resource)
@@ -904,12 +904,12 @@ void Render_Pipeline::set_vertex_buffer(Gpu_Buffer *gpu_buffer)
 {
 	u32 strides = gpu_buffer->data_size;
 	u32 offsets = 0;
-	pipeline->IASetVertexBuffers(0, 1, gpu_buffer->dx11buffer.GetAddressOf(), &strides, &offsets);
+	pipeline->IASetVertexBuffers(0, 1, gpu_buffer->gpu_resource.GetAddressOf(), &strides, &offsets);
 }
 
 void Render_Pipeline::set_index_buffer(Gpu_Buffer *gpu_buffer)
 {
-	pipeline->IASetIndexBuffer(gpu_buffer->dx11buffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	pipeline->IASetIndexBuffer(gpu_buffer->gpu_resource.Get(), DXGI_FORMAT_R32_UINT, 0);
 }
 
 void Render_Pipeline::set_vertex_shader(Shader *shader)
@@ -950,7 +950,7 @@ void Render_Pipeline::set_pixel_shader(Shader *shader)
 
 void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer)
 {
-	pipeline->VSSetConstantBuffers(gpu_register, 1, constant_buffer.dx11buffer.GetAddressOf());
+	pipeline->VSSetConstantBuffers(gpu_register, 1, constant_buffer.gpu_resource.GetAddressOf());
 }
 
 void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, const Shader_Resource_View &shader_resource)
@@ -970,7 +970,7 @@ void Render_Pipeline::set_pixel_shader_sampler(const Sampler_State &sampler_stat
 
 void Render_Pipeline::set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer)
 {
-	pipeline->PSSetConstantBuffers(gpu_register, 1, constant_buffer.dx11buffer.GetAddressOf());
+	pipeline->PSSetConstantBuffers(gpu_register, 1, constant_buffer.gpu_resource.GetAddressOf());
 }
 
 void Render_Pipeline::set_pixel_shader_resource(const Shader_Resource_View &shader_resource_view)
@@ -1120,7 +1120,7 @@ Depth_Stencil_Test_Desc::Depth_Stencil_Test_Desc(Stencil_Operation _stencil_fail
 	compare_func = _compare_func;
 }
 
-u32 Texture::get_row_pitch()
+u32 Texture2D::get_row_pitch()
 {
 	return width * format_size;
 }

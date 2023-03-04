@@ -410,7 +410,7 @@ struct Gui_Manager {
 
 	void text(const char *some_text);
 	bool add_tab(const char *tab_name);
-	void image(Texture *texture, s32 width, s32 height);
+	void image(Texture2D *texture, s32 width, s32 height);
 	void list_box(Array<String> *array, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
 	void radio_button(const char *name, bool *state);
@@ -1143,7 +1143,7 @@ bool Gui_Manager::add_tab(const char *tab_name)
 	return (active_tab == tab_gui_id);
 }
 
-void Gui_Manager::image(Texture *texture, s32 width, s32 height)
+void Gui_Manager::image(Texture2D *texture, s32 width, s32 height)
 {
 	assert(texture);
 
@@ -1952,9 +1952,9 @@ static Gui_Manager gui_manager;
 
 //@Note: Gpu_Device must be removed. it is used for testing
 
-static Texture texture;
+static Texture2D texture;
 static Gpu_Device *device = NULL;
-static void create_texture_from_file(const char *file_name, Texture *texture);
+static void create_texture_from_file(const char *file_name, Texture2D *texture);
 
 void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font, Gpu_Device *gpu_device)
 {
@@ -1973,7 +1973,7 @@ bool gui::add_tab(const char *tab_name)
 	return gui_manager.add_tab(tab_name);
 }
 
-void gui::image(Texture *texture, s32 width, s32 height)
+void gui::image(Texture2D *texture, s32 width, s32 height)
 {
 	gui_manager.image(texture, width, height);
 }
@@ -2418,7 +2418,7 @@ static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *
 }
 
 
-static void create_texture_from_file(const char *file_name, Texture *texture)
+static void create_texture_from_file(const char *file_name, Texture2D *texture)
 {
 	String file_extension;
 	extract_file_extension(file_name, file_extension);
