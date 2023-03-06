@@ -19,7 +19,6 @@
 struct Render_System;
 struct Render_2D;
 
-
 struct Primitive_2D {
 	//Vars is set by Render_2D
 	u32 vertex_offset = 0;
@@ -134,6 +133,7 @@ struct View_Info {
 	void update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane);
 };
 
+
 struct Render_System {
 	~Render_System();
 
@@ -141,18 +141,18 @@ struct Render_System {
 	Win32_Info *win32_info;
 
 	Sampler_State sampler;
-	ID3D11ShaderResourceView *shader_resource = NULL;
 
 	View_Info view_info;
 	
 	Render_2D render_2d;
-	Hash_Table<String, Shader *> shaders;
 
 	Gpu_Device gpu_device;
 	Render_Pipeline render_pipeline;
+	
+	Hash_Table<String, Shader *> shader_table;
 
 	void init(Win32_Info *_win32_Info, Font *font);
-	void init_shaders();
+	
 	void resize(u32 window_width, u32 window_height);
 	void shutdown();
 

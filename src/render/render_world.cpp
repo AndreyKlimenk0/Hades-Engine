@@ -1,6 +1,9 @@
-#include "render_world.h"
-#include "../sys/engine.h"
 #include <stdint.h>
+
+#include "render_world.h"
+#include "render_pass.h"
+
+#include "../sys/engine.h"
 #include "../gui/gui.h"
 
 
@@ -60,8 +63,13 @@ void Render_World::init()
 	Render_System *render_sys = Engine::get_render_system();
 	
 	view_info = &render_sys->view_info;
+	
 	gpu_device = &render_sys->gpu_device;
 	render_pipeline = &render_sys->render_pipeline;
+	
+	init_render_passes();
+	
+	gpu_device->create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
 
 	light_struct_buffer.shader_resource_register = 6;
 	mesh_struct_buffer.shader_resource_register = 2;
@@ -75,8 +83,17 @@ void Render_World::init()
 	index_struct_buffer.allocate<u32>(100000);
 	vertex_struct_buffer.allocate<Vertex_XNUV>(100000);
 
-	gpu_device->create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
-	gpu_device->create_constant_buffer(sizeof(Pass_Data), &pass_data_cbuffer);
+	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
+	
+	Texture_Desc texture_desc;
+	texture_desc.width = 200;
+	texture_desc.height = 200;
+	texture_desc.mip_levels = 1;
+	
+	gpu_device->create_texture_2d(&texture_desc, &default_texture);
+	render_pipeline->update_subresource(&default_texture, (void *)pixel_buffer, default_texture.get_row_pitch());
+	
+	DELETE_PTR(pixel_buffer);
 
 	Box box;
 	box.depth = 10;
@@ -126,6 +143,22 @@ void Render_World::init()
 	game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
 }
 
+void Render_World::init_render_passes()
+{
+	Forwar_Light_Pass *forward_light_pass = new Forwar_Light_Pass((void *)this);
+	render_passes.push(forward_light_pass);
+
+	Render_System *render_sys = Engine::get_render_system();
+	for (u32 i = 0; i < render_passes.count; i++) {
+		
+		render_passes[i]->init(gpu_device);
+		if (!render_passes[i]->setup_pipeline_state(render_sys)) {
+			DELETE_PTR(render_passes[i]);
+			render_passes.remove(i);
+		}
+	}
+}
+
 void Render_World::update()
 {
 	if (!gui::were_events_handled()) {
@@ -171,7 +204,7 @@ void Render_World::update_lights()
 	light_struct_buffer.update(&shader_lights);
 }
 
-void Shadows_Map::init(Render_World *render_world)
+void Shadows_Map::setup(Render_World *render_world)
 {
 	game_world = render_world->game_world;
 	gpu_device = render_world->gpu_device;
@@ -220,7 +253,7 @@ void Shadows_Map::update()
 void Shadows_Map::update_map()
 {
 	//Shader *shader;
-	//if (!Engine::get_render_system()->shaders.get("depth_map", &shader)) {
+	//if (!Engine::get_render_system()->shader_table.get("depth_map", &shader)) {
 	//	loop_print("Shadows_Map::update_map: Can not found shader");
 	//	return;
 	//}
@@ -316,7 +349,7 @@ void Render_World::update_depth_maps()
 	//gpu_device->create_depth_stencil_view(depth_maps, &depth_stencil_view_desc, depth_stencil_view);
 
 	//Shader *shader;
-	//if (!Engine::get_render_system()->shaders.get("draw_lines", &shader)) {
+	//if (!Engine::get_render_system()->shader_table.get("draw_lines", &shader)) {
 	//	loop_print("Can not found shader");
 	//	return;
 	//}
@@ -408,6 +441,19 @@ void Render_World::make_render_entity(Entity_Id entity_idx, Mesh_Idx mesh_idx)
 	render_entities.push(render_entity);
 }
 
+void Render_World::render()
+{
+	render_pipeline->update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
+
+	render_pipeline->set_vertex_shader_resource(1, frame_info_cbuffer);
+	render_pipeline->set_pixel_shader_resource(1, frame_info_cbuffer);
+	
+	Render_Pass *render_pass = NULL;
+	For(render_passes, render_pass) {
+		render_pass->render(render_pipeline);
+	}
+}
+
 void Render_World::update_world_matrices()
 {
 	world_matrices.count = 0;
@@ -419,120 +465,6 @@ void Render_World::update_world_matrices()
 		matrix.translate(&entity->position);
 		world_matrices.push(matrix);
 	}
-}
-
-void Render_World::draw_bounding_boxs(Array<Entity_Id> *entity_ids)
-{
-	//static Render_Meshes_Data<Vector3> render_data;
-	//static bool data_initialized = false;
-	//if (!data_initialized) {
-	//	data_initialized = true;
-	//	render_data.init(t0_register, t1_register, t2_register);
-	//}
-
-	//for (u32 i = 0; i < entity_ids->count; i++) {
-	//	Entity_Id entity_id = entity_ids->get(i);
-	//	Entity *entity = game_world->get_entity(entity_id);
-
-	//	char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
-	//	defer(free_string(name));
-
-	//	if ((entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) && (!render_data.mesh_table.key_in_table(fast_hash(name)))) {
-	//		Array<Vector3> vertices;
-	//		Array<u32> indices;
-	//		make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &vertices, &indices);
-
-	//		Mesh_Idx mesh_idx = render_data.add_mesh(name, &vertices, &indices);
-	//		Render_Entity *render_entity = find_render_entity(entity_id);
-	//		if (render_entity) {
-	//			Render_Entity new_render_entity;
-	//			new_render_entity.entity_idx = entity_id;
-	//			new_render_entity.mesh_idx = mesh_idx;
-	//			new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
-
-	//			render_data.render_entities.push(new_render_entity);
-	//		}
-	//	}
-	//}
-
-	//Shader *shader;
-	//if (!Engine::get_render_system()->shaders.get("draw_lines", &shader)) {
-	//	loop_print("Can not found shader");
-	//	return;
-	//}
-	//
-	//render_pipeline->set_input_layout(NULL);
-	//render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
-	//render_pipeline->set_vertex_shader(shader);
-	//render_pipeline->set_pixel_shader(shader);
-
-	//render_pipeline->set_vertex_shader_resource(b1_register, frame_info_cbuffer);
-	//render_pipeline->set_pixel_shader_resource(b1_register, frame_info_cbuffer);
-	//
-	//render_pipeline->update_constant_buffer(frame_info_cbuffer, (void *)&frame_info);
-	//render_pipeline->set_vertex_shader_resource(&render_data.vertex_struct_buffer);
-	//render_pipeline->set_vertex_shader_resource(&render_data.index_struct_buffer);
-	//render_pipeline->set_vertex_shader_resource(&render_data.mesh_instance_struct_buffer);
-	//render_pipeline->set_vertex_shader_resource(&world_matrix_struct_buffer);
-
-	//Render_Entity *render_entity = NULL;
-	//For(render_data.render_entities, render_entity) {
-	//	Pass_Data pass_data;
-	//	pass_data.mesh_idx = render_entity->mesh_idx;
-	//	pass_data.world_matrix_idx = render_entity->world_matrix_idx;
-
-	//	render_pipeline->update_constant_buffer(pass_data_cbuffer, (void *)&pass_data);
-	//	render_pipeline->draw(render_data.mesh_instances[render_entity->mesh_idx].index_count);
-	//}
-}
-
-void Render_World::render()
-{
-	render_pipeline->set_input_layout(NULL);
-	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
-
-	Shader *forward_light = Engine::get_render_system()->get_shader("forward_light");
-
-	render_pipeline->set_vertex_shader(forward_light);
-	render_pipeline->set_pixel_shader(forward_light);
-	
-	render_pipeline->set_vertex_shader_resource(1, frame_info_cbuffer);
-	render_pipeline->set_pixel_shader_resource(1, frame_info_cbuffer);
-	
-	render_pipeline->update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
-
-	render_pipeline->set_vertex_shader_resource(mesh_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(world_matrix_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(vertex_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(index_struct_buffer);
-
-	Texture_Desc texture_desc;
-	texture_desc.width = 200;
-	texture_desc.height = 200;
-	texture_desc.mip_levels = 1;
-	Texture2D temp;
-	gpu_device->create_texture_2d(&texture_desc, &temp);
-	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
-	render_pipeline->update_subresource(&temp, (void *)pixel_buffer, temp.get_row_pitch());
-	DELETE_PTR(pixel_buffer);
-	
-	render_pipeline->set_pixel_shader_sampler(Engine::get_render_system()->sampler);
-	render_pipeline->set_pixel_shader_resource(temp.shader_resource);
-	render_pipeline->set_pixel_shader_resource(light_struct_buffer);
-
-	Render_Entity *render_entity = NULL;
-	For(render_entities, render_entity) {
-		Pass_Data pass_data;
-		pass_data.mesh_idx = render_entity->mesh_idx;
-		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
-
-		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
-		render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
-
-		render_pipeline->draw(mesh_instances[render_entity->mesh_idx].index_count);
-	}
-
-	draw_bounding_boxs(&entity_ids);
 }
 
 template<typename T>
@@ -586,36 +518,4 @@ void Struct_Buffer::free()
 	if (!gpu_buffer.is_empty()) {
 		gpu_buffer.free();
 	}
-}
-
-struct Render_Resources {
-	struct Render_Pipeline_States {
-
-	};
-
-	struct Gpu_Buffer {
-		Struct_Buffer vertices;
-		Struct_Buffer indices;
-		Struct_Buffer mesh_instances;
-		Struct_Buffer world_matrices;
-		Struct_Buffer lights;
-	} buffer;
-};
-
-struct Pipeline_State {
-	Render_Primitive_Type primitive_type;
-	String vertex_shader;
-	String pixel_shader;
-};
-
-void Forwar_Light_Pass::setup_pipeline_state()
-{
-	Pipeline_State state;
-	state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
-	state.vertex_shader = "forward_light.hlsl";
-	state.pixel_shader = "foward_light.hlsl";
-}
-
-void Forwar_Light_Pass::render()
-{
 }

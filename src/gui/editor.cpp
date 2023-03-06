@@ -142,10 +142,8 @@ void Editor::render()
 			gui::edit_field("Position", &camera->position);
 			gui::edit_field("Direction", &camera->target);
 		}
-
 		gui::end_window();
 	}
-
 	gui::end_frame();
 }
 
@@ -217,7 +215,6 @@ void Game_World_Window::draw()
 				}
 			}
 		}
-
 		gui::end_child();
 	}
 }

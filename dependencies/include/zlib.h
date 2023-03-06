@@ -134,7 +134,7 @@ typedef gz_header FAR *gz_headerp;
      The application must update next_in and avail_in when avail_in has dropped
    to zero.  It must update next_out and avail_out when avail_out has dropped
    to zero.  The application must initialize zalloc, zfree and opaque before
-   calling the init function.  All other fields are set by the compression
+   calling the setup function.  All other fields are set by the compression
    library and must not be updated by the application.
 
      The opaque value provided by the application will be passed as the first

@@ -77,7 +77,7 @@ struct Render_Model {
 	String name;
 	Array<Triangle_Mesh> render_meshes;
 
-	void init(const char *render_model_name, u32 render_mesh_count = 1);
+	void setup(const char *render_model_name, u32 render_mesh_count = 1);
 	void init_from_file(const char *file_name);
 	void load_fbx_model(const char *file_name);
 	bool is_single_mesh_model();

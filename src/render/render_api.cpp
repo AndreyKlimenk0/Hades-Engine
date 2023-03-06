@@ -7,6 +7,11 @@
 //#include <D3DCompiler.inl>
 
 
+Rasterizer_State Render_Pipeline_States::default_rasterizer_state;
+Depth_Stencil_State Render_Pipeline_States::default_depth_stencil_state;
+Blend_State Render_Pipeline_States::default_blend_state;
+Sampler_State Render_Pipeline_States::default_sampler_state;
+
 inline D3D11_DSV_DIMENSION to_dx11_dsv_dimension(Depth_Stencil_View_Type type)
 {
 	switch (type) {
@@ -368,6 +373,7 @@ Input_Layout Gpu_Device::vertex_xuv;
 
 void Gpu_Device::create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer)
 {
+	assert(buffer);
 	assert(desc->data_count > 0);
 	assert(desc->data_size > 0);
 
@@ -395,6 +401,8 @@ void Gpu_Device::create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer)
 
 void Gpu_Device::create_constant_buffer(u32 data_size, Gpu_Buffer *buffer)
 {
+	assert(buffer);
+
 	Gpu_Buffer_Desc buffer_desc;
 	buffer_desc.data_count = 1;
 	buffer_desc.data_size = data_size;
@@ -406,6 +414,8 @@ void Gpu_Device::create_constant_buffer(u32 data_size, Gpu_Buffer *buffer)
 
 void Gpu_Device::create_sampler(Sampler_State *sampler)
 {
+	assert(sampler);
+
 	D3D11_SAMPLER_DESC sampler_desc;
 	ZeroMemory(&sampler_desc, sizeof(sampler_desc));
 	sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -421,6 +431,9 @@ void Gpu_Device::create_sampler(Sampler_State *sampler)
 
 void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture)
 {
+	assert(texture);
+	assert(texture_desc);
+
 	texture->width = texture_desc->width;
 	texture->height = texture_desc->height;
 	texture->format_size = size_of_dxgi_format(texture_desc->format);
@@ -466,6 +479,10 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *textur
 
 void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture)
 {
+	assert(texture_desc);
+	assert(shader_resource_desc);
+	assert(texture);
+
 	texture->width = texture_desc->width;
 	texture->height = texture_desc->height;
 	texture->format_size = size_of_dxgi_format(texture_desc->format);
@@ -504,6 +521,10 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_D
 
 void Gpu_Device::create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view)
 {
+	assert(texture);
+	assert(depth_stencil_view_desc);
+	assert(depth_stencil_view);
+
 	D3D11_DEPTH_STENCIL_VIEW_DESC d3d11_depth_stencil_view_desc;
 	ZeroMemory(&d3d11_depth_stencil_view_desc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
 	d3d11_depth_stencil_view_desc.Flags = 0;
@@ -537,6 +558,9 @@ void Gpu_Device::create_shader_resource_view(Texture2D *texture, Shader_Resource
 
 void Gpu_Device::create_shader_resource_view(const Dx11_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
 {
+	assert(shader_resource_desc);
+	assert(shader_resource);
+
 	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
 	ZeroMemory(&shader_resource_view_desc, sizeof(shader_resource_view_desc));
 	shader_resource_view_desc.Format = shader_resource_desc->format;
@@ -563,8 +587,11 @@ void Gpu_Device::create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Raste
 	HR(device->CreateRasterizerState(&rasterizer_desc->desc, rasterizer_state->ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_blending_state(Blending_Test_Desc *blending_desc, Blend_State *blend_state)
+void Gpu_Device::create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state)
 {	
+	assert(blending_desc);
+	assert(blend_state);
+	
 	D3D11_BLEND_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.AlphaToCoverageEnable = false;
@@ -580,8 +607,11 @@ void Gpu_Device::create_blending_state(Blending_Test_Desc *blending_desc, Blend_
 	HR(device->CreateBlendState(&desc, blend_state->ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_depth_stencil_state(Depth_Stencil_Test_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state)
+void Gpu_Device::create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state)
 {
+	assert(depth_stencil_desc);
+	assert(depth_stencil_state);
+
 	D3D11_DEPTH_STENCIL_DESC desc;
 	ZeroMemory(&desc, sizeof(D3D11_DEPTH_STENCILOP_DESC));
 
@@ -612,7 +642,7 @@ void Gpu_Device::create_depth_stencil_state(Depth_Stencil_Test_Desc *depth_stenc
 	HR(device->CreateDepthStencilState(&desc, depth_stencil_state->ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_input_layouts(Hash_Table<String, Shader *> &shaders)
+void Gpu_Device::create_input_layouts(Hash_Table<String, Shader *> &shader_table)
 {
 	const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2] = {
 	{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -630,143 +660,76 @@ void Gpu_Device::create_input_layouts(Hash_Table<String, Shader *> &shaders)
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
 
-	Shader *forward_light = shaders["forward_light"];
-	Shader *text = shaders["draw_text"];
+	Shader *forward_light = shader_table["forward_light.hlsl"];
+	Shader *text = shader_table["draw_text.hlsl"];
 
 	//HR(directx11.device->CreateInputLayout(vertex_col_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, &vertex_color));
 	HR(device->CreateInputLayout(vertex_xnuv_desc, 3, (void *)forward_light->byte_code, forward_light->byte_code_size, Gpu_Device::vertex_xnuv.ReleaseAndGetAddressOf()));
 	HR(device->CreateInputLayout(vertex_xuv_desc, 2, (void *)text->byte_code, text->byte_code_size, Gpu_Device::vertex_xuv.ReleaseAndGetAddressOf()));
 }
 
-//#include "d3dcompiler.h"
-//FORCEINLINE HRESULT
-//D3D11Reflect(_In_reads_bytes_(SrcDataSize) LPCVOID pSrcData,
-//	_In_ SIZE_T SrcDataSize,
-//	_Out_ ID3D11ShaderReflection** ppReflector)
-//{
-//	return D3DReflect(pSrcData, SrcDataSize,
-//		IID_ID3D11ShaderReflection, (void**)ppReflector);
-//}
-
-void Gpu_Device::create_shader(u8 * byte_code, u32 byte_code_size, Shader_Type shader_type, Shader * shader)
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Shader_Type shader_type, Shader *shader)
 {
+	assert(shader);
 	switch (shader_type) {
-	case VERTEX_SHADER:
-	{
-		HR(device->CreateVertexShader((void *)byte_code, byte_code_size, NULL, shader->vertex_shader.ReleaseAndGetAddressOf()));
-
-		//print("{}.hlsl: Vertex shader", shader->name);
-
-		//ID3D11ShaderReflection* pReflector = NULL;
-		//D3D11Reflect((void *)byte_code, byte_code_size, &pReflector);
-
-		//D3D11_SHADER_DESC shaderDesc;
-		//pReflector->GetDesc(&shaderDesc);
-		//u32 buffer_count = shaderDesc.ConstantBuffers;
-
-
-		//for (u32 i = 0; i < buffer_count; i++) {
-		//	ID3D11ShaderReflectionConstantBuffer* cbuffer = pReflector->GetConstantBufferByIndex(i);
-		//	D3D11_SHADER_BUFFER_DESC sbuffer;
-		//	cbuffer->GetDesc(&sbuffer);
-
-		//	String type;
-		//	switch (sbuffer.Type)
-		//	{
-		//	case D3D11_CT_CBUFFER:
-		//		type = "Consttanc buffer";
-		//		break;
-		//	case D3D11_CT_TBUFFER:
-		//		type = "Texture2D buffer";
-		//		break;
-		//	case D3D11_CT_INTERFACE_POINTERS:
-		//		type = "Interface buffer";
-		//		break;
-		//	case D3D11_CT_RESOURCE_BIND_INFO:
-		//		type = "Bind buffer";
-		//		break;
-		//	default:
-		//		break;
-		//	}
-		//	print("	Index [{}] buffer name [{}]", i, sbuffer.Name);
-
-		//}
-		break;
+		case VERTEX_SHADER: {
+			HR(device->CreateVertexShader((void *)byte_code, byte_code_size, NULL, shader->vertex_shader.ReleaseAndGetAddressOf()));
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			HR(device->CreateGeometryShader((void *)byte_code, byte_code_size, NULL, shader->geometry_shader.ReleaseAndGetAddressOf()));
+			break;
+		}
+		case COMPUTE_SHADER: {
+			HR(device->CreateComputeShader((void *)byte_code, byte_code_size, NULL, shader->compute_shader.ReleaseAndGetAddressOf()));
+			break;
+		}
+		case HULL_SHADER: {
+			HR(device->CreateHullShader((void *)byte_code, byte_code_size, NULL, shader->hull_shader.ReleaseAndGetAddressOf()));
+			break;
+		}
+		case DOMAIN_SHADER: {
+			HR(device->CreateDomainShader((void *)byte_code, byte_code_size, NULL, shader->domain_shader.ReleaseAndGetAddressOf()));
+			break;
+		}
+		case PIXEL_SHADER: {
+			HR(device->CreatePixelShader((void *)byte_code, byte_code_size, NULL, shader->pixel_shader.ReleaseAndGetAddressOf()));
+			break;
+		}
 	}
-	case GEOMETRY_SHADER:
-	{
-		HR(device->CreateGeometryShader((void *)byte_code, byte_code_size, NULL, shader->geometry_shader.ReleaseAndGetAddressOf()));
-		break;
+}
+
+bool Render_Pipeline_State::setup(Render_System *render_sys)
+{
+	assert(render_sys);
+
+	if (!render_sys->shader_table.get(shader_name, &shader)) {
+		print("Render_Pipeline_State::init: Shader {} was not found. Pipeline_State can't be initialized.", shader_name);
+		return false;
 	}
-	case COMPUTE_SHADER:
-	{
-		HR(device->CreateComputeShader((void *)byte_code, byte_code_size, NULL, shader->compute_shader.ReleaseAndGetAddressOf()));
-		break;
+
+	if (!blend_state) {
+		blend_state = Render_Pipeline_States::default_blend_state;
 	}
-	case HULL_SHADER:
-	{
-		HR(device->CreateHullShader((void *)byte_code, byte_code_size, NULL, shader->hull_shader.ReleaseAndGetAddressOf()));
-		break;
+
+	if (!depth_stencil_state) {
+		depth_stencil_state = Render_Pipeline_States::default_depth_stencil_state;
 	}
-	case DOMAIN_SHADER:
-	{
-		HR(device->CreateDomainShader((void *)byte_code, byte_code_size, NULL, shader->domain_shader.ReleaseAndGetAddressOf()));
-		break;
+
+	if (!rasterizer_state) {
+		rasterizer_state = Render_Pipeline_States::default_rasterizer_state;
 	}
-	case PIXEL_SHADER:
-	{
-		HR(device->CreatePixelShader((void *)byte_code, byte_code_size, NULL, shader->pixel_shader.ReleaseAndGetAddressOf()));
 
-		print("{}.hlsl: Pixel Shader", shader->name);
-
-		//ID3D11ShaderReflection* pReflector = NULL;
-		//D3D11Reflect((void *)byte_code, byte_code_size, &pReflector);
-
-		//D3D11_SHADER_DESC shaderDesc;
-		//pReflector->GetDesc(&shaderDesc);
-		//u32 buffer_count = shaderDesc.ConstantBuffers;
-
-
-		//for (u32 i = 0; i < buffer_count; i++) {
-		//	ID3D11ShaderReflectionConstantBuffer* cbuffer = pReflector->GetConstantBufferByIndex(i);
-		//	D3D11_SHADER_BUFFER_DESC sbuffer;
-		//	cbuffer->GetDesc(&sbuffer);
-
-		//	String type;
-		//	switch (sbuffer.Type)
-		//	{
-		//	case D3D11_CT_CBUFFER:
-		//		type = "Consttanc buffer";
-		//		break;
-		//	case D3D11_CT_TBUFFER:
-		//		type = "Texture2D buffer";
-		//		break;
-		//	case D3D11_CT_INTERFACE_POINTERS:
-		//		type = "Interface buffer";
-		//		break;
-		//	case D3D11_CT_RESOURCE_BIND_INFO:
-		//		type = "Bind buffer";
-		//		break;
-		//	default:
-		//		break;
-		//	}
-		//	print("	Index [{}] buffer name [{}]", i, sbuffer.Name);
-		//}
-
-		//u32 bind_count = shaderDesc.BoundResources;
-		//for (u32 i = 0; i < bind_count; i++) {
-		//	D3D11_SHADER_INPUT_BIND_DESC bind_desc;
-		//	pReflector->GetResourceBindingDesc(i, &bind_desc);
-		//	print("	Bind Resource: Name [{}]", bind_desc.Name);
-
-		//}
-		break;
+	if (sampler_state) {
+		sampler_state = Render_Pipeline_States::default_sampler_state;
 	}
-	}
+
+	return true;
 }
 
 void Render_Pipeline::resize(Gpu_Device *gpu_device, u32 window_width, u32 window_height)
 {
+	assert(gpu_device);
 	assert(gpu_device->device);
 	assert(pipeline);
 	assert(swap_chain);
@@ -840,8 +803,26 @@ void Render_Pipeline::copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buff
 	pipeline->CopyResource(dst_buffer->gpu_resource.Get(), src_buffer->gpu_resource.Get());
 }
 
+void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
+{
+	set_input_layout(NULL);
+	set_vertex_buffer(NULL);
+	set_index_buffer(NULL);
+
+	set_vertex_shader(render_pipeline_state->shader);
+
+	set_blend_state(render_pipeline_state->blend_state);
+	set_depth_stencil_state(render_pipeline_state->depth_stencil_state);
+
+	set_rasterizer_state(render_pipeline_state->rasterizer_state);
+
+	set_pixel_shader(render_pipeline_state->shader);
+}
+
 void *Render_Pipeline::map(Gpu_Buffer *gpu_buffer, Map_Type map_type)
 {
+	assert(gpu_buffer);
+
 	D3D11_MAPPED_SUBRESOURCE subresource;
 	HR(pipeline->Map(gpu_buffer->gpu_resource.Get(), 0, to_dx11_map_type(map_type), 0, &subresource));
 	return subresource.pData;
@@ -866,6 +847,8 @@ void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
 
 void Render_Pipeline::update_subresource(Texture2D *texture, void *data, u32 row_pitch, Rect_u32 *rect)
 {
+	assert(texture);
+
 	if (rect) {
 		D3D11_BOX box;
 		box.left = rect->x;
@@ -902,14 +885,23 @@ void Render_Pipeline::set_primitive(Render_Primitive_Type primitive_type)
 
 void Render_Pipeline::set_vertex_buffer(Gpu_Buffer *gpu_buffer)
 {
-	u32 strides = gpu_buffer->data_size;
 	u32 offsets = 0;
-	pipeline->IASetVertexBuffers(0, 1, gpu_buffer->gpu_resource.GetAddressOf(), &strides, &offsets);
+	u32 strides = 0;
+	if (gpu_buffer) {
+		strides = gpu_buffer->data_size;
+		pipeline->IASetVertexBuffers(0, 1, gpu_buffer->gpu_resource.GetAddressOf(), &strides, &offsets);
+	} else {
+		pipeline->IASetVertexBuffers(0, 0, NULL, &strides, &offsets);
+	}
 }
 
 void Render_Pipeline::set_index_buffer(Gpu_Buffer *gpu_buffer)
 {
-	pipeline->IASetIndexBuffer(gpu_buffer->gpu_resource.Get(), DXGI_FORMAT_R32_UINT, 0);
+	if (gpu_buffer) {
+		pipeline->IASetIndexBuffer(gpu_buffer->gpu_resource.Get(), DXGI_FORMAT_R32_UINT, 0);
+	} else {
+		pipeline->IASetIndexBuffer(NULL, DXGI_FORMAT_R32_UINT, 0);
+	}
 }
 
 void Render_Pipeline::set_vertex_shader(Shader *shader)
@@ -983,7 +975,7 @@ void Render_Pipeline::set_pixel_shader_resource(const Struct_Buffer &struct_buff
 	pipeline->PSSetShaderResources(struct_buffer.shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
 }
 
-void Render_Pipeline::set_rasterizer(const Rasterizer_State &rasterizer_state)
+void Render_Pipeline::set_rasterizer_state(const Rasterizer_State &rasterizer_state)
 {
 	pipeline->RSSetState(rasterizer_state.Get());
 }
@@ -1075,13 +1067,13 @@ Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void * data, Resource_Usa
 Rasterizer_Desc::Rasterizer_Desc()
 {
 	desc.FillMode = D3D11_FILL_SOLID;
-	desc.CullMode = D3D11_CULL_FRONT;
+	desc.CullMode = D3D11_CULL_BACK;
 	desc.FrontCounterClockwise = false;
 	desc.DepthBias = false;
 	desc.DepthBiasClamp = 0;
 	desc.SlopeScaledDepthBias = 0;
 	desc.DepthClipEnable = true;
-	desc.ScissorEnable = true;
+	desc.ScissorEnable = false;
 	desc.MultisampleEnable = false;
 	desc.AntialiasedLineEnable = false;
 }
@@ -1096,19 +1088,19 @@ void Rasterizer_Desc::set_counter_clockwise(bool state)
 	desc.FrontCounterClockwise = state;
 }
 
-Blending_Test_Desc::Blending_Test_Desc()
+Blend_State_Desc::Blend_State_Desc()
 {
-	bool enable = true;
-	Blend_Option src = BLEND_ONE;
-	Blend_Option dest = BLEND_ZERO;
-	Blend_Operation blend_op = BLEND_OP_ADD;
-	Blend_Option src_alpha = BLEND_ONE;
-	Blend_Option dest_alpha = BLEND_ZERO;
-	Blend_Operation blend_op_alpha = BLEND_OP_ADD;
-	u8 write_mask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	enable = true;
+	src = BLEND_ONE;
+	dest = BLEND_ZERO;
+	blend_op = BLEND_OP_ADD;
+	src_alpha = BLEND_ONE;
+	dest_alpha = BLEND_ZERO;
+	blend_op_alpha = BLEND_OP_ADD;
+	write_mask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
 
-Depth_Stencil_Test_Desc::Depth_Stencil_Test_Desc(Stencil_Operation _stencil_failed, Stencil_Operation _depth_failed, Stencil_Operation _pass, Comparison_Func _compare_func, u32 _write_mask, u32 _read_mask, bool _enable_depth_test)
+Depth_Stencil_State_Desc::Depth_Stencil_State_Desc(Stencil_Operation _stencil_failed, Stencil_Operation _depth_failed, Stencil_Operation _pass, Comparison_Func _compare_func, u32 _write_mask, u32 _read_mask, bool _enable_depth_test)
 {
 	enable_depth_test = _enable_depth_test;
 	enalbe_stencil_test = true;
@@ -1231,4 +1223,18 @@ u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
 Shader_Resource_Desc::Shader_Resource_Desc()
 {
 	ZeroMemory(this, sizeof(Shader_Resource_Desc));
+}
+
+void Render_Pipeline_States::init(Gpu_Device *gpu_device)
+{
+	Rasterizer_Desc default_rasterizer_state_desc;
+	gpu_device->create_rasterizer_state(&default_rasterizer_state_desc, &Render_Pipeline_States::default_rasterizer_state);
+
+	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
+	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &Render_Pipeline_States::default_depth_stencil_state);
+
+	Blend_State_Desc blend_state_desc;
+	gpu_device->create_blend_state(&blend_state_desc, &Render_Pipeline_States::default_blend_state);
+
+	gpu_device->create_sampler(&Render_Pipeline_States::default_sampler_state);
 }
