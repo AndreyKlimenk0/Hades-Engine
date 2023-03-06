@@ -83,9 +83,9 @@ enum Resource_Usage {
 
 template <typename T>
 struct Gpu_Resource {
+	Gpu_Resource() {}
 	ComPtr<T> gpu_resource;
 };
-
 
 struct Gpu_Buffer_Desc {
 	void *data = NULL;
@@ -102,7 +102,7 @@ struct Gpu_Buffer_Desc {
 };
 
 struct Gpu_Buffer : Gpu_Resource<ID3D11Buffer> {
-	Gpu_Buffer() {};
+	Gpu_Buffer() : Gpu_Resource<ID3D11Buffer>() {};
 
 	u32 data_size = 0;
 	u32 data_count = 0;
@@ -126,7 +126,7 @@ struct Rasterizer_Desc {
 };
 
 enum Blend_Option {
-	BLEND_ZERO ,
+	BLEND_ZERO,
 	BLEND_ONE,
 	BLEND_SRC_COLOR,
 	BLEND_INV_SRC_COLOR,
@@ -153,8 +153,8 @@ enum Blend_Operation {
 	BLEND_OP_MAX
 };
 
-struct Blending_Test_Desc {
-	Blending_Test_Desc();
+struct Blend_State_Desc {
+	Blend_State_Desc();
 
 	bool enable;
 	Blend_Option src;
@@ -187,9 +187,9 @@ enum Comparison_Func {
 	COMPARISON_ALWAYS 
 };
 
-struct Depth_Stencil_Test_Desc {
-	Depth_Stencil_Test_Desc() {};
-	Depth_Stencil_Test_Desc(Stencil_Operation _stencil_failed, Stencil_Operation _depth_failed, Stencil_Operation _pass, Comparison_Func _compare_func, u32 _write_mask = 0xff, u32 _read_mask = 0xff, bool _enable_depth_test = true);
+struct Depth_Stencil_State_Desc {
+	Depth_Stencil_State_Desc() {};
+	Depth_Stencil_State_Desc(Stencil_Operation _stencil_failed, Stencil_Operation _depth_failed, Stencil_Operation _pass, Comparison_Func _compare_func, u32 _write_mask = 0xff, u32 _read_mask = 0xff, bool _enable_depth_test = true);
 
 	bool enable_depth_test = true;
 	bool enalbe_stencil_test = false;
@@ -326,11 +326,11 @@ struct Gpu_Device {
 	static Input_Layout vertex_xnuv;
 	static Input_Layout vertex_xuv;
 
-	void create_input_layouts(Hash_Table<String, Shader *> &shaders);
+	void create_input_layouts(Hash_Table<String, Shader *> &shader_table);
 	void create_shader(u8 *byte_code, u32 byte_code_size, Shader_Type shader_type, Shader *shader);
 	
 	void create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer);
-	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *);
+	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
 
 	void create_sampler(Sampler_State *sampler_state);
 	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture);
@@ -343,8 +343,17 @@ struct Gpu_Device {
 	void create_shader_resource_view(const Dx11_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 
 	void create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state);
-	void create_blending_state(Blending_Test_Desc *blending_desc, Blend_State *blend_state);
-	void create_depth_stencil_state(Depth_Stencil_Test_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
+	void create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state);
+	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
+};
+
+struct Render_Pipeline_States {
+	static Rasterizer_State default_rasterizer_state;
+	static Depth_Stencil_State default_depth_stencil_state;
+	static Blend_State default_blend_state;
+	static Sampler_State default_sampler_state;
+
+	static void init(Gpu_Device *gpu_device);
 };
 
 enum Render_Primitive_Type {
@@ -360,6 +369,18 @@ enum Map_Type {
 	MAP_TYPE_MAP_WRITE_NO_OVERWRITE
 };
 
+struct Render_Pipeline_State {
+	Render_Primitive_Type primitive_type;
+	String shader_name;
+	Shader *shader = NULL;
+	Blend_State blend_state;
+	Depth_Stencil_State depth_stencil_state;
+	Rasterizer_State rasterizer_state;
+	Sampler_State sampler_state;
+
+	bool setup(Render_System *render_sys);
+};
+
 struct Render_Pipeline {
 	DXGI_Swap_Chain swap_chain;
 	Dx11_Device_Context pipeline;
@@ -373,6 +394,8 @@ struct Render_Pipeline {
 	void shutdown();
 
 	void copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buffer);
+
+	void apply(Render_Pipeline_State *render_pipeline_state);
 	
 	void *map(Gpu_Buffer *gpu_buffer, Map_Type map_type = MAP_TYPE_WRITE_DISCARD);
 	void unmap(Gpu_Buffer *gpu_buffer);
@@ -406,7 +429,7 @@ struct Render_Pipeline {
 	void set_pixel_shader_resource(const Shader_Resource_View &shader_resource_view);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 
-	void set_rasterizer(const Rasterizer_State &rasterizer_state);
+	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
 	void reset_rasterizer();
 

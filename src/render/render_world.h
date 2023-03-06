@@ -8,6 +8,7 @@
 #include "../render/model.h"
 #include "render_system.h"
 
+struct Render_Pass;
 typedef u32 Render_Model_Idx;
 typedef u32 Mesh_Idx;
 
@@ -47,49 +48,38 @@ struct Shadows_Map {
 	Texture2D *texture_map = NULL;
 	Depth_Stencil_View *dsv = NULL;
 
-	void init(Render_World *render_world);
+	void setup(Render_World *render_world);
 	void update();
 	void update_map();
-};
-
-struct Render_Pass {
-	virtual void setup_pipeline_state() = 0;
-	virtual void render() = 0;
-};
-
-struct Forwar_Light_Pass : Render_Pass {
-	void setup_pipeline_state();
-	void render();
 };
 
 struct Render_World {
 	u32 light_hash;
 
 	Frame_Info frame_info;
-
 	Camera camera;
 
 	Game_World *game_world = NULL;
-
 	View_Info *view_info = NULL;
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
 	
-	Gpu_Buffer pass_data_cbuffer;
-	Gpu_Buffer frame_info_cbuffer;
-
 	Array<Matrix4> world_matrices;
 	
 	Array<Vertex_XNUV> unified_vertices;
 	Array<u32> unified_indices;
 	Array<Mesh_Instance> mesh_instances;
+	Hash_Table<String_Id, Mesh_Idx> mesh_table;
 
 	//temp code
 	Array<Entity_Id> entity_ids;
 	
 	Array<Render_Entity> render_entities;
+	Array<Render_Pass *> render_passes;
 	
-	Hash_Table<String_Id, Mesh_Idx> mesh_table;
+	Gpu_Buffer frame_info_cbuffer;
+	
+	Texture2D default_texture;
 
 	Struct_Buffer vertex_struct_buffer;
 	Struct_Buffer index_struct_buffer;
@@ -97,15 +87,16 @@ struct Render_World {
 	Struct_Buffer world_matrix_struct_buffer;
 	Struct_Buffer light_struct_buffer;
 
-
 	void init();
+	void init_render_passes();
+
 	void update();
 	void update_lights();
 	void update_depth_maps();
-	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
 	void update_world_matrices();
-	void draw_outlines(Array<Entity_Id> *entity_ids);
-	void draw_bounding_boxs(Array<Entity_Id> *entity_ids);
+	
+	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
+
 	void render();
 	
 	Render_Entity *find_render_entity(Entity_Id entity_id);

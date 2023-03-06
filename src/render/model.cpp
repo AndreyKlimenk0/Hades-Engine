@@ -21,7 +21,7 @@
 //Render_Model::~Render_Model()
 //{}
 //
-//void Render_Model::init(const char *render_model_name, u32 render_mesh_count)
+//void Render_Model::setup(const char *render_model_name, u32 render_mesh_count)
 //{
 //	name = render_model_name;
 //	render_meshes.set_count(render_mesh_count);
@@ -100,7 +100,7 @@
 //Render_Model *Render_Model_Manager::make_render_model(const char *name)
 //{
 //	Render_Model *render_model = new Render_Model();
-//	render_model->init(name);
+//	render_model->setup(name);
 //	render_models.set(name, render_model);
 //	return render_model;
 //}

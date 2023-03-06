@@ -5,6 +5,7 @@
 
 //#define DRAW_TEST_GUI
 
+static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
 
 void Engine::init(Win32_Info *_win32_info)
@@ -14,7 +15,7 @@ void Engine::init(Win32_Info *_win32_info)
 	win32_info = *_win32_info;
 	init_os_path();
 
-	font.init(11);
+	font.init(FONT_SIZE);
 
 	render_sys.init(&win32_info, &font);
 	gui::init_gui(&render_sys.render_2d, &win32_info, &font, &render_sys.gpu_device);
