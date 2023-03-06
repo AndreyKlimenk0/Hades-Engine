@@ -1,14 +1,16 @@
 #include <assert.h>
 
 #include "font.h"
+#include "render_pass.h"
 #include "render_system.h"
+
 #include "../gui/gui.h"
+#include "../sys/engine.h"
 #include "../sys/sys_local.h"
 #include "../win32/win_local.h"
 #include "../libs/math/common.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
-#include "../sys/engine.h"
 
 
 const String HLSL_FILE_EXTENSION = "cso";
@@ -99,6 +101,62 @@ static bool get_shader_type_from_file_name(const char *file_name, Shader_Type *s
 	return true;
 }
 
+static void init_shaders_table(Gpu_Device *gpu_device, Hash_Table<String, Shader *> *shader_table)
+{
+	print("init_shaders_table: Load hlsl shaders.");
+
+	String path_to_shader_dir;
+	get_path_to_data_dir("shader", path_to_shader_dir);
+
+	Array<String> file_names;
+	bool success = get_file_names_from_dir(path_to_shader_dir + "\\", &file_names);
+	
+	if (!success) {
+		error("init_shaders_table: has not found compiled shader files.");
+	}
+
+	for (int i = 0; i < file_names.count; i++) {
+		Shader_Type shader_type;
+		if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
+			continue;
+		}
+
+		String path_to_shader_file;
+		build_full_path_to_shader_file(file_names[i], path_to_shader_file);
+
+		int file_size;
+		char *compiled_shader = read_entire_file(path_to_shader_file, "rb", &file_size);
+		if (!compiled_shader) {
+			continue;
+		}
+
+		String shader_name;
+		get_shader_name_from_file(file_names[i].c_str(), shader_name);
+		shader_name.append(".hlsl");
+
+		Shader *existing_shader = NULL;
+		if (shader_table->get(shader_name, existing_shader)) {
+			gpu_device->create_shader((u8 *)compiled_shader, file_size, shader_type, existing_shader);
+
+			if (shader_type == VERTEX_SHADER) {
+				existing_shader->byte_code = (u8 *)compiled_shader;
+				existing_shader->byte_code_size = file_size;
+			}
+		} else {
+			Shader *new_shader = new Shader();
+			new_shader->name = shader_name;
+			gpu_device->create_shader((u8 *)compiled_shader, file_size, shader_type, new_shader);
+
+			if (shader_type == VERTEX_SHADER) {
+				new_shader->byte_code = (u8 *)compiled_shader;
+				new_shader->byte_code_size = file_size;
+			}
+
+			shader_table->set(shader_name, new_shader);
+			print("init_shaders_table: {} was loaded.", shader_name);
+		}
+	}
+}
 
 static int compare_rects_u32(const void *first_rect, const void *second_rect)
 {
@@ -472,6 +530,10 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	font = _font;
 	
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
+
+	Gpu_Buffer buffer_temp;
+	gpu_device->create_constant_buffer(sizeof(Forwar_Light_Pass), &buffer_temp);
+
 	Texture_Desc texture_desc;
 	texture_desc.width = 100;
 	texture_desc.height = 100;
@@ -483,17 +545,16 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	DELETE_PTR(pixel_buffer);
 
 	Rasterizer_Desc rasterizer_desc;
-	rasterizer_desc.set_counter_clockwise(true);
 	rasterizer_desc.set_sciccor(true);
 	
 	gpu_device->create_rasterizer_state(&rasterizer_desc, &rasterizer_state);
 
-	Depth_Stencil_Test_Desc depth_stencil_test_desc;
+	Depth_Stencil_State_Desc depth_stencil_test_desc;
 	depth_stencil_test_desc.enable_depth_test = false;
 	
 	gpu_device->create_depth_stencil_state(&depth_stencil_test_desc, &depth_stencil_state);
 
-	Blending_Test_Desc blending_test_desc;
+	Blend_State_Desc blending_test_desc;
 	blending_test_desc.enable = true;
 	blending_test_desc.src = BLEND_SRC_ALPHA;
 	blending_test_desc.dest = BLEND_INV_SRC_ALPHA;
@@ -503,7 +564,7 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	blending_test_desc.dest_alpha = BLEND_INV_SRC_ALPHA;
 	blending_test_desc.blend_op_alpha = BLEND_OP_ADD;
 
-	gpu_device->create_blending_state(&blending_test_desc, &blend_state);
+	gpu_device->create_blend_state(&blending_test_desc, &blend_state);
 
 	init_font_rendering();
 }
@@ -654,7 +715,7 @@ void Render_2D::render_frame()
 	render_pipeline->set_pixel_shader(render_2d);
 	render_pipeline->set_pixel_shader_sampler(render_system->sampler);
 
-	render_pipeline->set_rasterizer(rasterizer_state);
+	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
 	render_pipeline->set_depth_stencil_state(depth_stencil_state);
 
@@ -710,70 +771,15 @@ void Render_System::init(Win32_Info *_win32_info, Font *font)
 	view_info.update_projection_matries(win32_info->window_width, win32_info->window_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline, win32_info);
-	init_shaders();
+	
+	init_shaders_table(&gpu_device, &shader_table);
+	
+	Render_Pipeline_States::init(&gpu_device);
 
-	Shader *render_2d_shader = shaders["render_2d"];
+	Shader *render_2d_shader = shader_table["render_2d.hlsl"];
 	render_2d.init(this, render_2d_shader, font);
 
-	gpu_device.create_sampler(&sampler);
-
-	gpu_device.create_input_layouts(shaders);
-}
-
-void Render_System::init_shaders()
-{
-	Array<String> file_names;
-
-	String path_to_shader_dir;
-	get_path_to_data_dir("shader", path_to_shader_dir);
-
-	bool success = get_file_names_from_dir(path_to_shader_dir + "\\", &file_names);
-	if (file_names.is_empty() || !success) {
-		error("Shader_Manamager::init: has not found compiled shader files.");
-	}
-
-	for (int i = 0; i < file_names.count; i++) {
-
-		Shader_Type shader_type;
-		if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
-			continue;
-		}
-
-		String path_to_shader_file;
-		build_full_path_to_shader_file(file_names[i], path_to_shader_file);
-
-
-		int file_size;
-		char *compiled_shader = read_entire_file(path_to_shader_file, "rb", &file_size);
-		if (!compiled_shader) {
-			continue;
-		}
-
-		String shader_name;
-		get_shader_name_from_file(file_names[i].c_str(), shader_name);
-
-
-		Shader *existing_shader = NULL;
-		if (shaders.get(shader_name, existing_shader)) {
-			gpu_device.create_shader((u8 *)compiled_shader, file_size, shader_type, existing_shader);
-
-			if (shader_type == VERTEX_SHADER) {
-				existing_shader->byte_code = (u8 *)compiled_shader;
-				existing_shader->byte_code_size = file_size;
-			}
-		} else {
-			Shader *new_shader = new Shader();
-			new_shader->name = shader_name;
-			gpu_device.create_shader((u8 *)compiled_shader, file_size, shader_type, new_shader);
-
-			if (shader_type == VERTEX_SHADER) {
-				new_shader->byte_code = (u8 *)compiled_shader;
-				new_shader->byte_code_size = file_size;
-			}
-
-			shaders.set(shader_name, new_shader);
-		}
-	}
+	gpu_device.create_input_layouts(shader_table);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -810,5 +816,5 @@ void Render_System::end_frame()
 
 Shader *Render_System::get_shader(const char *name)
 {
-	return shaders[name];
+	return shader_table[name];
 }
