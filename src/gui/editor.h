@@ -60,6 +60,8 @@ struct Game_World_Window : Editor_Window {
 	Gui_Window_Theme world_entities_window_theme;
 	Gui_Window_Theme entity_info_window_theme;
 	Gui_Text_Button_Theme buttons_theme;
+
+	Hash_Table<u32, bool> draw_AABB_states;
 	
 	void init(Engine *engine);
 	void draw();

@@ -27,6 +27,6 @@ struct Sphere {
 void make_grid_mesh(Grid *grid, Triangle_Mesh *mesh);
 void make_box_mesh(Box *box,  Triangle_Mesh *mesh);
 void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh);
-void make_AABB_mesh(Vector3 *min, Vector3 *max, Array<Vector3> *vertices, Array<u32> *indices);
+void make_AABB_mesh(Vector3 *min, Vector3 *max, Line_Mesh *mesh);
 
 #endif
