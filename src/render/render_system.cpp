@@ -713,7 +713,7 @@ void Render_2D::render_frame()
 
 	render_pipeline->set_vertex_shader(render_2d);
 	render_pipeline->set_pixel_shader(render_2d);
-	render_pipeline->set_pixel_shader_sampler(render_system->sampler);
+	render_pipeline->set_pixel_shader_sampler(Render_Pipeline_States::default_sampler_state);
 
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);

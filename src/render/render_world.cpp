@@ -7,15 +7,18 @@
 #include "../gui/gui.h"
 
 
-const u32 t0_register = 0;
-const u32 t1_register = 1;
-const u32 t2_register = 2;
-const u32 t3_register = 3;
-const u32 t4_register = 4;
-
-const u32 b0_register = 0;
-const u32 b1_register = 1;
-const u32 b2_register = 2;
+Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index)
+{
+	for (u32 i = 0; i < render_entities->count; i++) {
+		if (render_entities->get(i).entity_id == entity_id) {
+			if (index) {
+				*index = i;
+			}
+			return &render_entities->get(i);
+		}
+	}
+	return NULL;
+}
 
 struct Pass_Data {
 	u32 mesh_idx;
@@ -57,31 +60,64 @@ void make_AABB(Entity_Id entity_id, Triangle_Mesh *mesh)
 	entity->AABB_box.max = max;
 }
 
+template<typename T>
+void Unified_Mesh_Storate<T>::allocate_gpu_memory()
+{
+	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
+	index_struct_buffer.allocate<u32>(100000);
+	vertex_struct_buffer.allocate<Vertex_XNUV>(100000);
+}
+
+template<typename T>
+bool Unified_Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx)
+{
+	assert(mesh_name);
+
+	if ((mesh->vertices.count == 0) || (mesh->indices.count == 0)) {
+		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.", mesh_name);
+		return false;
+	}
+
+	String_Id string_id = fast_hash(mesh_name);
+
+	Mesh_Idx mesh_idx;
+	if (mesh_table.get(string_id, &mesh_idx)) {
+		*_mesh_idx = mesh_idx;
+		return true;
+	}
+
+	Mesh_Instance mesh_info;
+	mesh_info.vertex_count = mesh->vertices.count;
+	mesh_info.index_count = mesh->indices.count;
+	mesh_info.vertex_offset = unified_vertices.count;
+	mesh_info.index_offset = unified_indices.count;
+
+	mesh_idx = mesh_instances.push(mesh_info);
+	merge(&unified_vertices, &mesh->vertices);
+	merge(&unified_indices, &mesh->indices);
+
+	mesh_struct_buffer.update(&mesh_instances);
+	vertex_struct_buffer.update(&unified_vertices);
+	index_struct_buffer.update(&unified_indices);
+
+	mesh_table.set(string_id, mesh_idx);
+	
+	*_mesh_idx = mesh_idx;
+	return true;
+}
+
+
 void Render_World::init()
 {	
 	game_world = Engine::get_game_world();
-	Render_System *render_sys = Engine::get_render_system();
-	
-	view_info = &render_sys->view_info;
-	
-	gpu_device = &render_sys->gpu_device;
-	render_pipeline = &render_sys->render_pipeline;
-	
+	render_sys = Engine::get_render_system();
+
 	init_render_passes();
 	
-	gpu_device->create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
-
-	light_struct_buffer.shader_resource_register = 6;
-	mesh_struct_buffer.shader_resource_register = 2;
-	world_matrix_struct_buffer.shader_resource_register = 3;
-	index_struct_buffer.shader_resource_register = 4;
-	vertex_struct_buffer.shader_resource_register = 5;
+	render_sys->gpu_device.create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
 
 	light_struct_buffer.allocate<Shader_Light>(100);
-	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
 	world_matrix_struct_buffer.allocate<Matrix4>(1000);
-	index_struct_buffer.allocate<u32>(100000);
-	vertex_struct_buffer.allocate<Vertex_XNUV>(100000);
 
 	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
 	
@@ -90,8 +126,8 @@ void Render_World::init()
 	texture_desc.height = 200;
 	texture_desc.mip_levels = 1;
 	
-	gpu_device->create_texture_2d(&texture_desc, &default_texture);
-	render_pipeline->update_subresource(&default_texture, (void *)pixel_buffer, default_texture.get_row_pitch());
+	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
+	render_sys->render_pipeline.update_subresource(&default_texture, (void *)pixel_buffer, default_texture.get_row_pitch());
 	
 	DELETE_PTR(pixel_buffer);
 
@@ -106,7 +142,8 @@ void Render_World::init()
 	make_box_mesh(&box, &mesh);
 
 	char *mesh_name = format(box.width, box.height, box.depth);
-	Mesh_Idx box_mesh_id = add_mesh(mesh_name, &mesh);
+	Mesh_Idx box_mesh_id;
+	add_mesh(mesh_name, &mesh, &box_mesh_id);
 
 	make_render_entity(entity_id, box_mesh_id);
 	free_string(mesh_name);
@@ -121,7 +158,8 @@ void Render_World::init()
 	grid.columns_count = 10;
 	make_grid_mesh(&grid, &grid_mesh);
 
-	Mesh_Idx grid_mesh_id = add_mesh("grid_mesh", &grid_mesh);
+	Mesh_Idx grid_mesh_id;
+	add_mesh("grid_mesh", &grid_mesh, &grid_mesh_id);
 
 	Entity_Id grid_entity_id = game_world->make_geometry_entity(Vector3(0.0f, 0.0f, 0.0f), GEOMETRY_TYPE_GRID, (void *)&grid);
 	make_render_entity(grid_entity_id, grid_mesh_id);
@@ -135,7 +173,8 @@ void Render_World::init()
 
 	char *sphere_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
 
-	Mesh_Idx mesh_idx = add_mesh(sphere_name, &sphere_mesh);
+	Mesh_Idx mesh_idx;
+	add_mesh(sphere_name, &sphere_mesh, &mesh_idx);
 	make_AABB(sphere_id, &sphere_mesh);
 
 	make_render_entity(sphere_id, mesh_idx);	
@@ -146,12 +185,15 @@ void Render_World::init()
 void Render_World::init_render_passes()
 {
 	Forwar_Light_Pass *forward_light_pass = new Forwar_Light_Pass((void *)this);
+	Draw_Lines_Pass *draw_lines_pass = new Draw_Lines_Pass((void *)this);
+
 	render_passes.push(forward_light_pass);
+	render_passes.push(draw_lines_pass);
 
 	Render_System *render_sys = Engine::get_render_system();
 	for (u32 i = 0; i < render_passes.count; i++) {
 		
-		render_passes[i]->init(gpu_device);
+		render_passes[i]->init(&render_sys->gpu_device);
 		if (!render_passes[i]->setup_pipeline_state(render_sys)) {
 			DELETE_PTR(render_passes[i]);
 			render_passes.remove(i);
@@ -171,7 +213,7 @@ void Render_World::update()
 	}
 
 	frame_info.view_matrix = camera.get_view_matrix();
-	frame_info.perspective_matrix = view_info->perspective_matrix;
+	frame_info.perspective_matrix = render_sys->view_info.perspective_matrix;
 	frame_info.camera_position = camera.position;
 	frame_info.camera_direction = camera.target;
 
@@ -206,9 +248,9 @@ void Render_World::update_lights()
 
 void Shadows_Map::setup(Render_World *render_world)
 {
-	game_world = render_world->game_world;
-	gpu_device = render_world->gpu_device;
-	render_pipeline = render_world->render_pipeline;
+	//game_world = render_world->game_world;
+	//gpu_device = render_world->gpu_device;
+	//render_pipeline = render_world->render_pipeline;
 }
 
 void Shadows_Map::update()
@@ -383,54 +425,20 @@ Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
 {
 	Render_Entity *render_entity = NULL;
 	For(render_entities, render_entity) {
-		if (render_entity->entity_idx == entity_id) {
+		if (render_entity->entity_id == entity_id) {
 			return render_entity;
 		}
 	}
 	return NULL;
 }
 
-Mesh_Idx Render_World::add_mesh(const char *mesh_name, Triangle_Mesh *mesh)
-{
-	assert(mesh_name);
-	
-	if ((mesh->vertices.count == 0) || (mesh->indices.count == 0)) {
-		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.", mesh_name);
-		return UINT32_MAX;
-	}
-
-	String_Id string_id = fast_hash(mesh_name);
-	
-	Mesh_Idx mesh_idx;
-	if (mesh_table.get(string_id, &mesh_idx)) {
-		return mesh_idx;
-	}
-
-	Mesh_Instance mesh_info;
-	mesh_info.vertex_count = mesh->vertices.count;
-	mesh_info.index_count = mesh->indices.count;
-	mesh_info.vertex_offset = unified_vertices.count;
-	mesh_info.index_offset = unified_indices.count;
-
-	mesh_idx = mesh_instances.push(mesh_info);
-	merge(&unified_vertices, &mesh->vertices);
-	merge(&unified_indices, &mesh->indices);
-
-	mesh_struct_buffer.update(&mesh_instances);
-	vertex_struct_buffer.update(&unified_vertices);
-	index_struct_buffer.update(&unified_indices);
-	
-	mesh_table.set(string_id, mesh_idx);
-	return mesh_idx;
-}
-
-void Render_World::make_render_entity(Entity_Id entity_idx, Mesh_Idx mesh_idx)
+void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx)
 {
 	Render_Entity render_entity;
-	render_entity.entity_idx = entity_idx;
+	render_entity.entity_id = entity_id;
 	render_entity.mesh_idx = mesh_idx;
 
-	Entity *entity = game_world->get_entity(entity_idx);
+	Entity *entity = game_world->get_entity(entity_id);
 
 	Matrix4 matrix;
 	matrix.translate(&entity->position);
@@ -441,16 +449,26 @@ void Render_World::make_render_entity(Entity_Id entity_idx, Mesh_Idx mesh_idx)
 	render_entities.push(render_entity);
 }
 
+bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx)
+{
+	return triangle_meshes.add_mesh(mesh_name, mesh, mesh_idx);
+}
+
+bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx)
+{
+	return line_meshes.add_mesh(mesh_name, mesh, mesh_idx);
+}
+
 void Render_World::render()
 {
-	render_pipeline->update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
+	render_sys->render_pipeline.update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
 
-	render_pipeline->set_vertex_shader_resource(1, frame_info_cbuffer);
-	render_pipeline->set_pixel_shader_resource(1, frame_info_cbuffer);
+	render_sys->render_pipeline.set_vertex_shader_resource(1, frame_info_cbuffer);
+	render_sys->render_pipeline.set_pixel_shader_resource(1, frame_info_cbuffer);
 	
 	Render_Pass *render_pass = NULL;
 	For(render_passes, render_pass) {
-		render_pass->render(render_pipeline);
+		render_pass->render(&render_sys->render_pipeline);
 	}
 }
 
@@ -459,7 +477,7 @@ void Render_World::update_world_matrices()
 	world_matrices.count = 0;
 	
 	for (u32 index = 0; index < render_entities.count; index++) {
-		Entity *entity = game_world->get_entity(render_entities[index].entity_idx);
+		Entity *entity = game_world->get_entity(render_entities[index].entity_id);
 		
 		Matrix4 matrix;
 		matrix.translate(&entity->position);
@@ -482,7 +500,6 @@ void Struct_Buffer::allocate(u32 elements_count)
 
 	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
 	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
-
 
 	Shader_Resource_Desc shader_resource_desc;
 	shader_resource_desc.format = DXGI_FORMAT_UNKNOWN;

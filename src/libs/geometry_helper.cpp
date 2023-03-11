@@ -172,54 +172,54 @@ void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 	}
 }
 
-void make_AABB_mesh(Vector3 *min, Vector3 *max, Array<Vector3> *vertices, Array<u32> *indices)
+void make_AABB_mesh(Vector3 *min, Vector3 *max, Line_Mesh *mesh)
 {
 	// Go  for clockwise.
 	// Back cube side.
-	vertices->push(*min);
-	vertices->push(Vector3(min->x, max->y, min->z));
-	vertices->push(Vector3(max->x, max->y, min->z));
-	vertices->push(Vector3(max->x, min->y, min->z));
+	mesh->vertices.push(*min);
+	mesh->vertices.push(Vector3(min->x, max->y, min->z));
+	mesh->vertices.push(Vector3(max->x, max->y, min->z));
+	mesh->vertices.push(Vector3(max->x, min->y, min->z));
 
 	// Front cuve side.
-	vertices->push(Vector3(min->x, min->y, max->z));
-	vertices->push(Vector3(min->x, max->y, max->z));
-	vertices->push(*max);
-	vertices->push(Vector3(max->x, min->y, max->z));
+	mesh->vertices.push(Vector3(min->x, min->y, max->z));
+	mesh->vertices.push(Vector3(min->x, max->y, max->z));
+	mesh->vertices.push(*max);
+	mesh->vertices.push(Vector3(max->x, min->y, max->z));
 
-	indices->push(0);
-	indices->push(1);
+	mesh->indices.push(0);
+	mesh->indices.push(1);
 
-	indices->push(1);
-	indices->push(2);
+	mesh->indices.push(1);
+	mesh->indices.push(2);
 
-	indices->push(2);
-	indices->push(3);
+	mesh->indices.push(2);
+	mesh->indices.push(3);
 
-	indices->push(3);
-	indices->push(0);
+	mesh->indices.push(3);
+	mesh->indices.push(0);
 
-	indices->push(0 + 4);
-	indices->push(1 + 4);
+	mesh->indices.push(0 + 4);
+	mesh->indices.push(1 + 4);
 
-	indices->push(1 + 4);
-	indices->push(2 + 4);
+	mesh->indices.push(1 + 4);
+	mesh->indices.push(2 + 4);
 
-	indices->push(2 + 4);
-	indices->push(3 + 4);
+	mesh->indices.push(2 + 4);
+	mesh->indices.push(3 + 4);
 
-	indices->push(3 + 4);
-	indices->push(0 + 4);
+	mesh->indices.push(3 + 4);
+	mesh->indices.push(0 + 4);
 
-	indices->push(0);
-	indices->push(0 + 4);
+	mesh->indices.push(0);
+	mesh->indices.push(0 + 4);
 
-	indices->push(1);
-	indices->push(1 + 4);
+	mesh->indices.push(1);
+	mesh->indices.push(1 + 4);
 
-	indices->push(2);
-	indices->push(2 + 4);
+	mesh->indices.push(2);
+	mesh->indices.push(2 + 4);
 
-	indices->push(3);
-	indices->push(3 + 4);
+	mesh->indices.push(3);
+	mesh->indices.push(3 + 4);
 }
