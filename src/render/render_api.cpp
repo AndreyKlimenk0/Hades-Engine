@@ -9,6 +9,7 @@
 
 Rasterizer_State Render_Pipeline_States::default_rasterizer_state;
 Depth_Stencil_State Render_Pipeline_States::default_depth_stencil_state;
+Depth_Stencil_State Render_Pipeline_States::disabled_depth_test;
 Blend_State Render_Pipeline_States::default_blend_state;
 Sampler_State Render_Pipeline_States::default_sampler_state;
 
@@ -805,6 +806,7 @@ void Render_Pipeline::copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buff
 
 void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 {
+	set_primitive(render_pipeline_state->primitive_type);
 	set_input_layout(NULL);
 	set_vertex_buffer(NULL);
 	set_index_buffer(NULL);
@@ -950,9 +952,9 @@ void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, const Shader_
 	pipeline->VSSetShaderResources(gpu_register, 1, shader_resource.GetAddressOf());
 }
 
-void Render_Pipeline::set_vertex_shader_resource(const Struct_Buffer &struct_buffer)
+void Render_Pipeline::set_vertex_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)
 {
-	pipeline->VSSetShaderResources(struct_buffer.shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
+	pipeline->VSSetShaderResources(shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
 }
 
 void Render_Pipeline::set_pixel_shader_sampler(const Sampler_State &sampler_state)
@@ -970,9 +972,9 @@ void Render_Pipeline::set_pixel_shader_resource(const Shader_Resource_View &shad
 	pipeline->PSSetShaderResources(0, 1, shader_resource_view.GetAddressOf());
 }
 
-void Render_Pipeline::set_pixel_shader_resource(const Struct_Buffer &struct_buffer)
+void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)
 {
-	pipeline->PSSetShaderResources(struct_buffer.shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
+	pipeline->PSSetShaderResources(shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
 }
 
 void Render_Pipeline::set_rasterizer_state(const Rasterizer_State &rasterizer_state)
@@ -1232,6 +1234,9 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 
 	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
 	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &Render_Pipeline_States::default_depth_stencil_state);
+	
+	default_depth_stencil_state_desc.enable_depth_test = false;
+	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &Render_Pipeline_States::disabled_depth_test);
 
 	Blend_State_Desc blend_state_desc;
 	gpu_device->create_blend_state(&blend_state_desc, &Render_Pipeline_States::default_blend_state);

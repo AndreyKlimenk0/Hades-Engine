@@ -93,7 +93,7 @@ namespace gui {
 	void next_line();
 
 	bool button(const char *text, bool *state = NULL);
-	void radio_button(const char *name, bool *state);
+	bool radio_button(const char *name, bool *state);
 
 	bool add_tab(const char *tab_name);
 

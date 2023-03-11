@@ -413,7 +413,7 @@ struct Gui_Manager {
 	void image(Texture2D *texture, s32 width, s32 height);
 	void list_box(Array<String> *array, u32 *item_index);
 	void scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar);
-	void radio_button(const char *name, bool *state);
+	bool radio_button(const char *name, bool *state);
 	
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
@@ -698,8 +698,9 @@ Rect_s32 calculate_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 	return clip_rect;
 }
 
-void Gui_Manager::radio_button(const char *name, bool *state)
+bool Gui_Manager::radio_button(const char *name, bool *state)
 {
+	bool was_click = false;
 	Rect_s32 true_rect = radio_button_theme.true_rect;
 	Rect_s32 radio_rect = radio_button_theme.radio_rect;
 	Rect_s32 rect = radio_button_theme.rect;
@@ -720,6 +721,7 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 		update_active_and_hot_state(window, radio_button_gui_id, &radio_rect);
 
 		if ((hot_item == radio_button_gui_id) && (was_click_by_left_mouse_button())) {
+			was_click = true;
 			if (*state) {
 				*state = false;
 			} else {
@@ -737,6 +739,7 @@ void Gui_Manager::radio_button(const char *name, bool *state)
 		render_list->pop_clip_rect();
 	}
 	radio_button_count++;
+	return was_click;
 }
 
 static bool is_symbol_int_valid(char symbol)
@@ -1983,9 +1986,9 @@ void gui::list_box(Array<String> *array, u32 *item_index)
 	gui_manager.list_box(array, item_index);
 }
 
-void gui::radio_button(const char *name, bool *state)
+bool gui::radio_button(const char *name, bool *state)
 {
-	gui_manager.radio_button(name, state);
+	return gui_manager.radio_button(name, state);
 }
 
 void gui::edit_field(const char *name, int *value)

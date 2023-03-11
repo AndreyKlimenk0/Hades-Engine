@@ -78,15 +78,16 @@ void Make_Entity_Window::draw()
 			gui::edit_field("Depth", &box.depth);
 
 			if (gui::button("Make")) {
-				Entity_Id entity_idx = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
+				Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
 
 				Triangle_Mesh mesh;
 				make_box_mesh(&box, &mesh);
 
 				char *mesh_name = format(box.width, box.height, box.depth);
-				Mesh_Idx mesh_idx = render_world->add_mesh(mesh_name, &mesh);
+				Mesh_Idx mesh_idx;
+				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				render_world->make_render_entity(entity_idx, mesh_idx);
+				render_world->make_render_entity(entity_id, mesh_idx);
 
 				free_string(mesh_name);
 			}
@@ -96,18 +97,27 @@ void Make_Entity_Window::draw()
 			gui::edit_field("Stack count", (s32 *)&sphere.stack_count);
 
 			if (gui::button("Make")) {
-				Entity_Id entity_idx = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
+				Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
 
 				Triangle_Mesh mesh;
 				make_sphere_mesh(&sphere, &mesh);
 
 				char *mesh_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
-				Mesh_Idx mesh_idx = render_world->add_mesh(mesh_name, &mesh);
+				Mesh_Idx mesh_idx;
+				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				render_world->make_render_entity(entity_idx, mesh_idx);
+				render_world->make_render_entity(entity_id, mesh_idx);
 
 				free_string(mesh_name);
 			}
+		}
+	}
+
+	if (type != DIRECTIONAL_LIGHT_TYPE) {
+		static bool draw_addbb = false;
+		gui::radio_button("Draw AABB", &draw_addbb);
+		if (draw_addbb) {
+
 		}
 	}
 }
@@ -179,7 +189,7 @@ void Game_World_Window::draw()
 		gui::set_theme(&buttons_theme);
 
 		Game_World *game_world = Engine::get_game_world();
-		draw_entity_list("Lights", game_world->lights.count, ENTITY_TYPE_LIGHT);
+		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
 		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
 
 		gui::reset_button_theme();
@@ -190,28 +200,70 @@ void Game_World_Window::draw()
 	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
 	if (gui::begin_child("Entity Info", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
 
+		Entity *entity = NULL;
 		if (entity_type == ENTITY_TYPE_GEOMETRY) {
-			Geometry_Entity *entity = &game_world->geometry_entities[entity_index];
-			gui::edit_field("Position", &entity->position);
-			if (entity->geometry_type == GEOMETRY_TYPE_BOX) {
-				gui::edit_field("Width", &entity->box.width);
-				gui::edit_field("Height", &entity->box.height);
-				gui::edit_field("Depth", &entity->box.depth);
-			} else if (entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
-				gui::edit_field("Radius", &entity->sphere.radius);
-				gui::edit_field("Slice Count", (s32 *)&entity->sphere.slice_count);
-				gui::edit_field("Stack Count", (s32 *)&entity->sphere.stack_count);
-			} else if (entity->geometry_type == GEOMETRY_TYPE_GRID) {
-				gui::edit_field("Width", &entity->grid.width);
-				gui::edit_field("Depth", &entity->grid.depth);
-				gui::edit_field("Rows count", (s32 *)&entity->grid.rows_count);
-				gui::edit_field("Columns count", (s32 *)&entity->grid.columns_count);
+			entity = &game_world->geometry_entities[entity_index];
+			Geometry_Entity *geometry_entity = &game_world->geometry_entities[entity_index];
+			gui::edit_field("Position", &geometry_entity->position);
+			if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
+				gui::text("Geometry type: Box");
+				gui::edit_field("Width", &geometry_entity->box.width);
+				gui::edit_field("Height", &geometry_entity->box.height);
+				gui::edit_field("Depth", &geometry_entity->box.depth);
+			} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
+				gui::text("Geometry type: Sphere");
+				gui::edit_field("Radius", &geometry_entity->sphere.radius);
+				gui::edit_field("Slice Count", (s32 *)&geometry_entity->sphere.slice_count);
+				gui::edit_field("Stack Count", (s32 *)&geometry_entity->sphere.stack_count);
+			} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_GRID) {
+				gui::text("Geometry type: Grid");
+				gui::edit_field("Width", &geometry_entity->grid.width);
+				gui::edit_field("Depth", &geometry_entity->grid.depth);
+				gui::edit_field("Rows count", (s32 *)&geometry_entity->grid.rows_count);
+				gui::edit_field("Columns count", (s32 *)&geometry_entity->grid.columns_count);
 			}
 		} else if (entity_type == ENTITY_TYPE_LIGHT) {
 			Light *light = &game_world->lights[entity_index];
 			if (light->type == DIRECTIONAL_LIGHT_TYPE) {
+				gui::text("Direction Light");
 				if (gui::edit_field("Direction", &light->direction) || gui::edit_field("Color", &light->color, "R", "G", "B")) {
 					render_world->update_lights();
+				}
+			}
+		}
+		if (entity && (entity->bounding_box_type != BOUNDING_BOX_TYPE_UNKNOWN) && (entity_type != DIRECTIONAL_LIGHT_TYPE) && (entity_type != ENTITY_TYPE_UNKNOWN)) {
+			if (!draw_AABB_states.key_in_table(entity->id)) {
+				draw_AABB_states[entity->id] = false;
+			}
+			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->id]);
+			Entity_Id entity_id = Entity_Id(entity_type, entity_index);
+
+			if (was_click && draw_AABB_states[entity->id]) {
+				Render_Entity *render_entity = render_world->find_render_entity(entity_id);
+
+				if (render_entity) {
+					char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
+					String_Id string_id = fast_hash(name);
+
+					Mesh_Idx mesh_idx;
+					if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
+						Line_Mesh AABB_mesh;
+						make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
+						render_world->line_meshes.add_mesh(name, &AABB_mesh, &mesh_idx);
+					}
+					free_string(name);
+
+					Render_Entity new_render_entity;
+					new_render_entity.entity_id = Entity_Id(entity_type, entity_index);
+					new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
+					new_render_entity.mesh_idx = mesh_idx;
+
+					render_world->bounding_box_entities.push(new_render_entity);
+				}
+			} else if (was_click && !draw_AABB_states[entity->id]) {
+				u32 render_entity_index = 0;
+				if (find_render_entity(&render_world->bounding_box_entities, entity_id, &render_entity_index)) {
+					render_world->bounding_box_entities.remove(render_entity_index);
 				}
 			}
 		}

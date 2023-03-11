@@ -140,7 +140,6 @@ struct Render_System {
 	//@Note: may be I can delete this var and use functions instead of it.
 	Win32_Info *win32_info;
 
-	Sampler_State sampler;
 
 	View_Info view_info;
 	

@@ -26,15 +26,14 @@ struct Material {
 	Vector4 specular;
 };
 
-struct Triangle_Mesh {
-	Triangle_Mesh() {};
-	~Triangle_Mesh() {};
-
-	Array<Vertex_XNUV> vertices;
+template <typename T>
+struct Mesh {
+	Array<T> vertices;
 	Array<u32> indices;
-
-	DELETE_COPING(Triangle_Mesh);
 };
+
+typedef Mesh<Vertex_XNUV> Triangle_Mesh;
+typedef Mesh<Vector3> Line_Mesh;
 
 //struct Render_Mesh {
 //	Render_Mesh() {}

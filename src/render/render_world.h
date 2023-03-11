@@ -15,7 +15,6 @@ typedef u32 Mesh_Idx;
 struct Struct_Buffer {
 	u32 count = 0;
 	u32 size = 0;
-	u32 shader_resource_register = 0;
 	
 	Gpu_Buffer gpu_buffer;
 	Shader_Resource_View shader_resource;
@@ -28,10 +27,12 @@ struct Struct_Buffer {
 };
 
 struct Render_Entity {
-	Entity_Id entity_idx;
+	Entity_Id entity_id;
 	Mesh_Idx mesh_idx;
 	u32 world_matrix_idx;
 };
+
+Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
 
 struct Mesh_Instance {
 	u32 vertex_count = 0;
@@ -53,6 +54,21 @@ struct Shadows_Map {
 	void update_map();
 };
 
+template <typename T>
+struct Unified_Mesh_Storate {
+	Array<T> unified_vertices;
+	Array<u32> unified_indices;
+	Array<Mesh_Instance> mesh_instances;
+	Hash_Table<String_Id, Mesh_Idx> mesh_table;
+
+	Struct_Buffer vertex_struct_buffer;
+	Struct_Buffer index_struct_buffer;
+	Struct_Buffer mesh_struct_buffer;
+
+	void allocate_gpu_memory();
+	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx);
+};
+
 struct Render_World {
 	u32 light_hash;
 
@@ -60,30 +76,25 @@ struct Render_World {
 	Camera camera;
 
 	Game_World *game_world = NULL;
-	View_Info *view_info = NULL;
-	Gpu_Device *gpu_device = NULL;
-	Render_Pipeline *render_pipeline = NULL;
+	Render_System *render_sys = NULL;
 	
 	Array<Matrix4> world_matrices;
-	
-	Array<Vertex_XNUV> unified_vertices;
-	Array<u32> unified_indices;
-	Array<Mesh_Instance> mesh_instances;
-	Hash_Table<String_Id, Mesh_Idx> mesh_table;
 
 	//temp code
 	Array<Entity_Id> entity_ids;
 	
 	Array<Render_Entity> render_entities;
+	Array<Render_Entity> bounding_box_entities;
+	Array<Render_Entity> mesh_outline_entities;
+	
 	Array<Render_Pass *> render_passes;
+
+	Unified_Mesh_Storate<Vertex_XNUV> triangle_meshes;
+	Unified_Mesh_Storate<Vector3> line_meshes;
 	
 	Gpu_Buffer frame_info_cbuffer;
-	
 	Texture2D default_texture;
 
-	Struct_Buffer vertex_struct_buffer;
-	Struct_Buffer index_struct_buffer;
-	Struct_Buffer mesh_struct_buffer;
 	Struct_Buffer world_matrix_struct_buffer;
 	Struct_Buffer light_struct_buffer;
 
@@ -100,6 +111,7 @@ struct Render_World {
 	void render();
 	
 	Render_Entity *find_render_entity(Entity_Id entity_id);
-	Mesh_Idx add_mesh(const char *mesh_name, Triangle_Mesh *mesh);
+	bool add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx);
+	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx);
 };
 #endif

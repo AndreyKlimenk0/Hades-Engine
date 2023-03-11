@@ -350,6 +350,7 @@ struct Gpu_Device {
 struct Render_Pipeline_States {
 	static Rasterizer_State default_rasterizer_state;
 	static Depth_Stencil_State default_depth_stencil_state;
+	static Depth_Stencil_State disabled_depth_test;
 	static Blend_State default_blend_state;
 	static Sampler_State default_sampler_state;
 
@@ -422,10 +423,10 @@ struct Render_Pipeline {
 
 	void set_vertex_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_vertex_shader_resource(u32 gpu_register, const Shader_Resource_View &shader_resource);
-	void set_vertex_shader_resource(const Struct_Buffer &struct_buffer);
+	void set_vertex_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer);
 	
 	void set_pixel_shader_sampler(const Sampler_State &sampler_state);
-	void set_pixel_shader_resource(const Struct_Buffer &struct_buffer);
+	void set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer);
 	void set_pixel_shader_resource(const Shader_Resource_View &shader_resource_view);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 
