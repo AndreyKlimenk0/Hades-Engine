@@ -7,12 +7,13 @@
 struct Frame_Info {
 	Matrix4 view_matrix;
 	Matrix4 perspective_matrix;
-	Vector3 camera_position;
-	int pad1;
-	Vector3 camera_direction;
-	int pad2;
+	Matrix4 orthographic_matrix;
+	Vector4 camera_position;
+	Vector4 camera_direction;
+	float near_plane;
+	float far_plane;
 	u32 light_count;
-	Vector3 pad3;
+	u32 pad;
 };
 
 

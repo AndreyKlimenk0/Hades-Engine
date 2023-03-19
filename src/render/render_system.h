@@ -75,7 +75,7 @@ struct Render_Primitive_List {
 	void add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void add_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 
-	void add_texture(int x, int y, int width, int height, Texture2D *gpu_resource);
+	void add_texture(int x, int y, int width, int height, Texture2D *resource);
 
 	void add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thicknesss = 0.5f);
 

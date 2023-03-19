@@ -108,6 +108,9 @@
     <ClCompile Include="src\render\render_pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\libs\math\common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\win32\win_local.h">

@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include "../ds/array.h"
 #include "../../win32/win_types.h"
 
 const float PI = 3.1415926535f;
@@ -268,5 +269,7 @@ inline Size<T> Rect<T>::get_size()
 typedef Rect<u32> Rect_u32;
 typedef Rect<s32> Rect_s32;
 typedef Rect<float> Rect_f32;
+
+void pack_rects_in_rect(Rect_u32 *main_rect, Array<Rect_u32 *> &rects);
 
 #endif

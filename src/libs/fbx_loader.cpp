@@ -131,15 +131,15 @@ static String fbx_file_name;
 //					FbxLayeredTexture* layered_texture = FbxCast<FbxLayeredTexture>(prop.GetSrcObject<FbxLayeredTexture>(j));
 //					int lcount = layered_texture->GetSrcObjectCount<FbxTexture>();
 //					for (int k = 0; k < lcount; k++) {
-//						FbxTexture* gpu_resource = FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
-//						return gpu_resource;
+//						FbxTexture* resource = FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
+//						return resource;
 //					}
 //				}
 //			} else {
 //				int texture_count = prop.GetSrcObjectCount<FbxTexture>();
 //				for (int j = 0; j < texture_count; j++) {
-//					FbxTexture* gpu_resource = FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
-//					return gpu_resource;
+//					FbxTexture* resource = FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
+//					return resource;
 //				}
 //			}
 //		}
@@ -175,13 +175,13 @@ static String fbx_file_name;
 //
 //bool get_texture_file_name(FbxNode *mesh_node, const char *texture_type, String *file_name)
 //{
-//	FbxTexture *gpu_resource = find_texture(mesh_node, texture_type);
-//	if (!gpu_resource) {
+//	FbxTexture *resource = find_texture(mesh_node, texture_type);
+//	if (!resource) {
 //		print("FbxTexture of type {} was not found in the file", texture_type, fbx_file_name);
 //		return false;
 //	}
 //
-//	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(gpu_resource);
+//	FbxFileTexture *file_texture = FbxCast<FbxFileTexture>(resource);
 //	String file_texture_name = file_texture->GetRelativeFileName();
 //
 //	Array<String> buffer;

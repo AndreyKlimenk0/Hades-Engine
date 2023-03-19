@@ -4,6 +4,7 @@
 #include "hlsl.h"
 #include "model.h"
 #include "../libs/ds/array.h"
+#include "../libs/math/common.h"
 #include "../game/world.h"
 #include "../render/model.h"
 #include "render_system.h"
@@ -69,6 +70,13 @@ struct Unified_Mesh_Storate {
 	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx);
 };
 
+struct Shadow_Map {
+	Entity_Id light_id;
+	u32 width = 0;
+	u32 height = 0;
+	Rect_u32 coordinates_in_atlas;
+};
+
 struct Render_World {
 	u32 light_hash;
 
@@ -78,35 +86,38 @@ struct Render_World {
 	Game_World *game_world = NULL;
 	Render_System *render_sys = NULL;
 	
-	Array<Matrix4> world_matrices;
-
 	//temp code
 	Array<Entity_Id> entity_ids;
 	
+	Array<Matrix4> world_matrices;
 	Array<Render_Entity> render_entities;
 	Array<Render_Entity> bounding_box_entities;
 	Array<Render_Entity> mesh_outline_entities;
-	
+	Array<Shadow_Map> shadow_maps;
 	Array<Render_Pass *> render_passes;
 
 	Unified_Mesh_Storate<Vertex_XNUV> triangle_meshes;
 	Unified_Mesh_Storate<Vector3> line_meshes;
 	
-	Gpu_Buffer frame_info_cbuffer;
 	Texture2D default_texture;
-
+	Texture2D shadow_atlas;
+	Depth_Stencil_Buffer temp_shadow_storage;
+	
+	Gpu_Buffer frame_info_cbuffer;
 	Struct_Buffer world_matrix_struct_buffer;
 	Struct_Buffer light_struct_buffer;
 
 	void init();
+	void init_shadow_rendering();
 	void init_render_passes();
 
 	void update();
 	void update_lights();
-	void update_depth_maps();
+	void update_shadow_atlas();
 	void update_world_matrices();
 	
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
+	void make_shadow(Entity_Id entity_id);
 
 	void render();
 	
