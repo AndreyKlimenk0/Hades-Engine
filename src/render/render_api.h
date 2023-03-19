@@ -84,7 +84,7 @@ enum Resource_Usage {
 template <typename T>
 struct Gpu_Resource {
 	Gpu_Resource() {}
-	ComPtr<T> gpu_resource;
+	ComPtr<T> resource;
 };
 
 struct Gpu_Buffer_Desc {
@@ -317,6 +317,16 @@ struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
 
 u32 *create_color_buffer(u32 width, u32 height, const Color &color);
 
+struct Depth_Stencil_Buffer {
+	Texture2D texture;
+	Depth_Stencil_View view;
+};
+
+struct Render_Target {
+	Texture2D texture;
+	Render_Target_View view;
+};
+
 struct Gpu_Device {
 	u32 quality_levels = 0;
 	Dx11_Device device;
@@ -340,11 +350,14 @@ struct Gpu_Device {
 
 	void create_shader_resource_view(Texture2D *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 	void create_shader_resource_view(Gpu_Buffer *gpu_buffer, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
-	void create_shader_resource_view(const Dx11_Resource &gpu_resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
+	void create_shader_resource_view(const Dx11_Resource &resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 
 	void create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state);
 	void create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state);
 	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
+
+	void create_depth_stencil_buffer(Texture_Desc *depth_stencil_texture_desc, Depth_Stencil_Buffer *depth_stencil_buffer);
+	void create_render_target(Texture_Desc *target_texture_desc, Texture_Desc *depth_stencil_texture_desc, Render_Target *render_target);
 };
 
 struct Render_Pipeline_States {
@@ -378,6 +391,8 @@ struct Render_Pipeline_State {
 	Depth_Stencil_State depth_stencil_state;
 	Rasterizer_State rasterizer_state;
 	Sampler_State sampler_state;
+	Depth_Stencil_Buffer depth_stencil_buffer;
+	Render_Target render_target;
 
 	bool setup(Render_System *render_sys);
 };
@@ -387,14 +402,18 @@ struct Render_Pipeline {
 	Dx11_Device_Context pipeline;
 
 	//@Note can I these fields not use in this struct ?
-	Dx11_Texture_2D depth_stencil_texture;
+	Dx11_Texture_2D texture;
 	Render_Target_View render_target_view;
 	Depth_Stencil_View depth_stencil_view;
 
 	void resize(Gpu_Device *gpu_device, u32 window_width, u32 window_height);
 	void shutdown();
 
-	void copy_resource(Gpu_Buffer *dst_buffer, Gpu_Buffer *src_buffer);
+	template <typename T>
+	void copy_resource(const Gpu_Resource<T> &dst, const Gpu_Resource<T> &src);
+	
+	template <typename T>
+	void copy_subresource(const Gpu_Resource<T> &dst, u32 dst_x, u32 dst_y, const Gpu_Resource<T> &src);
 
 	void apply(Render_Pipeline_State *render_pipeline_state);
 	
@@ -402,7 +421,7 @@ struct Render_Pipeline {
 	void unmap(Gpu_Buffer *gpu_buffer);
 
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
-	void update_subresource(Texture2D *gpu_resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
+	void update_subresource(Texture2D *resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
 	void generate_mips(const Shader_Resource_View &shader_resource);
 	
 	//@Note: may be this should be removed from code.
@@ -444,7 +463,20 @@ struct Render_Pipeline {
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 };
 
+template<typename T>
+inline void Render_Pipeline::copy_resource(const Gpu_Resource<T> &dst, const Gpu_Resource<T> &src)
+{
+	pipeline->CopyResource(dst.resource.Get(), src.resource.Get());
+}
+
+template<typename T>
+inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 dst_x, u32 dst_y, const Gpu_Resource<T> &src)
+{
+	pipeline->CopySubresourceRegion(dst.resource.Get(), 0, dst_x, dst_y, 0, src.resource.Get(), 0, NULL);
+}
+
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_Info *win32_state);
 u32 *r8_to_rgba32(u8 *data, u32 width, u32 height);
 
 #endif
+

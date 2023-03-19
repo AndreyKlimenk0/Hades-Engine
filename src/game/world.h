@@ -36,7 +36,7 @@ enum Entity_Type {
 };
 
 struct Entity_Id {
-	Entity_Id();
+	Entity_Id(); // @Note: may be better to delete this constructor
 	Entity_Id(Entity_Type type, u32 index);
 
 	Entity_Type type;
@@ -110,9 +110,9 @@ struct Game_World {
 
 	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
 	
-	Light  *make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
-	Light  *make_point_light(const Vector3 &position, const Vector3 &color, float range);
-	Light  *make_direction_light(const Vector3 &direction, const Vector3 &color);
+	Entity_Id make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
+	Entity_Id make_point_light(const Vector3 &position, const Vector3 &color, float range);
+	Entity_Id make_direction_light(const Vector3 &direction, const Vector3 &color);
 
 };
 #endif

@@ -2,11 +2,8 @@
 #define __DEPTH_MAP__
 
 #include "cbuffer.hlsl"
+#include "vertex.hlsl"
 
-StructuredBuffer<float3> unified_vertices : register(t0);
-StructuredBuffer<uint> unified_indices : register(t1);
-StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
-StructuredBuffer<float4x4> world_matrices : register(t3);
 
 cbuffer Pass_Data : register(b2) {
 	uint mesh_id;
@@ -15,19 +12,35 @@ cbuffer Pass_Data : register(b2) {
 	uint pad22;
 }
 
-float4 vs_main(uint vertex_id : SV_VertexID) : SV_POSITION
+struct Vertex_Out {
+	float4 screen_position : SV_POSITION;
+	float3 world_position : POSITION; //@Note: May be better pass only z
+};
+
+StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
+StructuredBuffer<float4x4> world_matrices : register(t3);
+StructuredBuffer<uint> unified_index_buffer : register(t4);
+StructuredBuffer<Vertex_XNUV> unified_vertex_buffer : register(t5);
+
+Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 {
 	Mesh_Instance mesh_instance = mesh_instances[mesh_id];
-	uint index = unified_indices[mesh_instance.index_offset + vertex_id];
-	float3 position = unified_vertices[mesh_instance.vertex_offset + index];
 	
+	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
+	Vertex_XNUV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
+
 	float4x4 world_matrix = transpose(world_matrices[world_matrix_id]);
-	float4x4 result = mul(mul(world_matrix, view_matrix), perspective_matrix);
-	return mul(float4(position, 1.0f), result);
+	float4x4 wvp_matrix = mul(mul(world_matrix, view_matrix), frame_orthographics_matrix);
+
+	Vertex_Out vertex_out;
+	vertex_out.screen_position = mul(float4(vertex.position, 1.0f), wvp_matrix);
+	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix).xyz;
+	return vertex_out;
 }
 
-float4 ps_main(float4 position : SV_POSITION) : SV_TARGET
+float4 ps_main(Vertex_Out vertex_out) : SV_TARGET
 {
-	return float4(1.0f, 0.0f, 0.0f, 1.0f);
+	float depth_value = vertex_out.world_position.z / abs(far_plane - near_plane);
+	return float4(depth_value, depth_value, depth_value, 1.0f);
 }
 #endif
