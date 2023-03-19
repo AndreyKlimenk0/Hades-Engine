@@ -49,21 +49,20 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 
 #define UPDATE_LIGHT_HASH() light_hash += (u32)light.light_type + 1
 
-Light *Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
+Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
 	Light light;
 	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 0.0f, 0.0f));
 	light.direction = direction;
 	light.color = color;
-	light.light_type = DIRECTIONAL_LIGHT_TYPE;
-	lights.push(light);
+	light.light_type = DIRECTIONAL_LIGHT_TYPE;;
 
 	UPDATE_LIGHT_HASH();
 
-	return &lights.last_item();
+	return Entity_Id(ENTITY_TYPE_LIGHT, lights.push(light));
 }
 
-Light *Game_World::make_point_light(const Vector3 &position, const Vector3 &color, float range)
+Entity_Id Game_World::make_point_light(const Vector3 &position, const Vector3 &color, float range)
 {
 	Light light;
 	init_entity(&light, ENTITY_TYPE_LIGHT, position);
@@ -74,10 +73,10 @@ Light *Game_World::make_point_light(const Vector3 &position, const Vector3 &colo
 
 	UPDATE_LIGHT_HASH();
 
-	return &lights.last_item();
+	return Entity_Id(ENTITY_TYPE_LIGHT, lights.push(light));
 }
 
-Light  *Game_World::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
+Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
 {
 	Light light;
 	init_entity(&light, ENTITY_TYPE_LIGHT, position);
@@ -89,7 +88,7 @@ Light  *Game_World::make_spot_light(const Vector3 &position, const Vector3 &dire
 
 	UPDATE_LIGHT_HASH();
 
-	return &lights.last_item();
+	return Entity_Id(ENTITY_TYPE_LIGHT, lights.push(light));
 }
 
 void Game_World::init()

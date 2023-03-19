@@ -163,6 +163,7 @@
     <ClCompile Include="src\gui\gui.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\ds\dict.cpp" />
+    <ClCompile Include="src\libs\math\common.cpp" />
     <ClCompile Include="src\libs\os\camera.cpp" />
     <ClCompile Include="src\libs\os\event.cpp" />
     <ClCompile Include="src\libs\os\file.cpp" />

@@ -169,38 +169,6 @@ static int compare_rects_u32(const void *first_rect, const void *second_rect)
 	return first->height > second->height;
 }
 
-static void pack_rects_in_rect(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
-{
-	qsort(rects.items, rects.count, sizeof(rects[0]), compare_rects_u32);
-
-	u32 x_pos = 0;
-	u32 y_pos = 0;
-	u32 large = 0;
-
-	Rect_u32 *rect = NULL;
-	For(rects, rect) {
-
-		if ((rect->width + x_pos) > main_rect->width) {
-			y_pos += large;
-			x_pos = 0;
-			large = 0;
-		}
-
-		if ((y_pos + rect->height) > main_rect->height) {
-			break;
-		}
-		
-		rect->x = x_pos;
-		rect->y = y_pos;
-
-		x_pos += rect->width;
-
-		if (rect->height > large) {
-			large = rect->height;
-		}
-	}
-}
-
 void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float rounding)
 {
 	add_rounded_points(x, y, width, height, rect_side, rounding, rounding);
@@ -421,7 +389,7 @@ void Render_Primitive_List::add_rect(float x, float y, float width, float height
 	render_2d->add_primitive(primitive);
 }
 
-void Render_Primitive_List::add_texture(int x, int y, int width, int height, Texture2D *gpu_resource)
+void Render_Primitive_List::add_texture(int x, int y, int width, int height, Texture2D *resource)
 {
 	String hash = String(width + height);
 
@@ -429,7 +397,7 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 	Matrix4 transform_matrix;
 	transform_matrix.translate(&position);
 
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, gpu_resource, Color::White, hash);
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, resource, Color::White, hash);
 	if (!primitive) {
 		return;
 	}
@@ -530,9 +498,6 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	font = _font;
 	
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
-
-	Gpu_Buffer buffer_temp;
-	gpu_device->create_constant_buffer(sizeof(Forwar_Light_Pass), &buffer_temp);
 
 	Texture_Desc texture_desc;
 	texture_desc.width = 100;
