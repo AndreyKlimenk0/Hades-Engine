@@ -25,3 +25,14 @@ Color::Color(int r, int g, int b, int a)
 	value.z = b / 255.0f;
 	value.w = a / 255.0f;
 }
+
+u32 Color::get_packed_rgba()
+{
+	//Change bits order because nvidia gpu uses little endian
+	u32 rgba = 0;
+	rgba |= u32(value.x * 255.0f);
+	rgba |= u32(value.y * 255.0f) << 8;
+	rgba |= u32(value.z * 255.0f) << 16;
+	rgba |= u32(value.w * 255.0f) << 24;
+	return rgba;
+}

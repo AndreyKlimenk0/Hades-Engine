@@ -1,7 +1,10 @@
 #include "editor.h"
-#include "../sys/sys_local.h"
 #include "../sys/engine.h"
+#include "../sys/sys_local.h"
 #include "../libs/geometry_helper.h"
+#include "../render/render_api.h"
+#include "../render/render_system.h"
+
 
 void Editor_Window::init(Engine *engine)
 {
@@ -135,6 +138,7 @@ void Editor::init()
 	Engine *engine = Engine::get_instance();
 	make_entity_window.init(engine);
 	game_world_window.init(engine);
+	render_world_window.init(engine);
 }
 
 void Editor::render()
@@ -151,6 +155,9 @@ void Editor::render()
 			gui::text("Camera Type: Free");
 			gui::edit_field("Position", &camera->position);
 			gui::edit_field("Direction", &camera->target);
+		}
+
+		if (gui::add_tab("Render World")) {
 		}
 		gui::end_window();
 	}
@@ -281,4 +288,41 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 		}
 	}
 	return false;
+}
+
+void Render_World_Window::init(Engine *engine)
+{
+	Texture_Desc shadows_texture_desc;
+	shadows_texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
+	shadows_texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
+	shadows_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	shadows_texture_desc.mip_levels = 1;
+	shadows_texture_desc.usage = RESOURCE_USAGE_DYNAMIC;
+	shadows_texture_desc.bind = BIND_SHADER_RESOURCE;
+	shadows_texture_desc.cpu_access = CPU_ACCESS_WRITE;
+
+	Engine::get_render_system()->gpu_device.create_texture_2d(&shadows_texture_desc, &shadows_texture);
+}
+
+void Render_World_Window::update()
+{
+	//void *shadow_atlas_pixels = Engine::get_render_system()->render_pipeline.map(render_world->shadow_atlas, MAP_TYPE_READ);
+}
+
+void Render_World_Window::draw()
+{
+	update();
+
+	static bool state = false;
+
+	gui::button("Shadow atls", &state);
+
+	if (state) {
+		gui::set_next_window_size(1000, 700);
+		if (gui::begin_window("Shadow atls")) {
+			Render_World *render_world = Engine::get_render_world();
+			gui::image(&render_world->shadow_atlas, 900, 600);
+			gui::end_window();
+		}
+	}
 }

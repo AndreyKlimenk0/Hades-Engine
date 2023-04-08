@@ -6,6 +6,7 @@
 #include "../libs/ds/array.h"
 #include "../libs/enum_helper.h"
 #include "../game/world.h"
+#include "../render/render_world.h"
 
 struct Engine;
 
@@ -68,6 +69,14 @@ struct Game_World_Window : Editor_Window {
 	bool draw_entity_list(const char *list_name, u32 list_count, Entity_Type type);
 };
 
+struct Render_World_Window : Editor_Window {
+	Texture2D shadows_texture;
+
+	void init(Engine *engine);
+	void update();
+	void draw();
+};
+
 struct Editor {
 	Editor();
 	~Editor();
@@ -75,6 +84,7 @@ struct Editor {
 	bool is_draw_make_entity_window = false;
 	Make_Entity_Window make_entity_window;
 	Game_World_Window game_world_window;
+	Render_World_Window render_world_window;
 
 	void init();
 	void render();

@@ -56,6 +56,9 @@ const u32 BIND_VIDEO_ENCODER = 0x400L;
 const u32 CPU_ACCESS_WRITE = 0x10000L;
 const u32 CPU_ACCESS_READ = 0x20000L;
 
+const u32 CLEAR_DEPTH_BUFFER = 0x1L;
+const u32 CLEAR_STENCIL_BUFFER = 0x2L;
+
 const u32 RESOURCE_MISC_GENERATE_MIPS = 0x1L;
 const u32 RESOURCE_MISC_SHARED = 0x2L;
 const u32 RESOURCE_MISC_TEXTURECUBE = 0x4L;
@@ -85,7 +88,22 @@ template <typename T>
 struct Gpu_Resource {
 	Gpu_Resource() {}
 	ComPtr<T> resource;
+
+	void release();
+	T *get();
 };
+
+template<typename T>
+inline void Gpu_Resource<T>::release()
+{
+	resource.Reset();
+}
+
+template<typename T>
+inline T *Gpu_Resource<T>::get()
+{
+	return resource.Get();
+}
 
 struct Gpu_Buffer_Desc {
 	void *data = NULL;
@@ -115,6 +133,14 @@ struct Gpu_Buffer : Gpu_Resource<ID3D11Buffer> {
 Gpu_Buffer_Desc make_vertex_buffer_desc(u32 data_count, u32 data_size, void *data, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, u32 cpu_access = 0);
 Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void *data, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, u32 cpu_access = 0);
 
+struct View_Port {
+	u32 x = 0;
+	u32 y = 0;
+	u32 width = 0;
+	u32 height = 0;
+	float min_depth = 0.0f;
+	float max_depth = 1.0f;
+};
 
 struct Rasterizer_Desc {
 	Rasterizer_Desc();
@@ -307,29 +333,36 @@ struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
 	u32 width = 0;
 	u32 height = 0;
 	u32 format_size = 0;
+	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
 	
 	String name;
 	
-	Shader_Resource_View shader_resource;
+	Shader_Resource_View view;
 
-	u32 get_row_pitch();
+	u32 get_pitch();
+	u32 get_size();
+
+	void release();
 };
-
-u32 *create_color_buffer(u32 width, u32 height, const Color &color);
 
 struct Depth_Stencil_Buffer {
 	Texture2D texture;
 	Depth_Stencil_View view;
+
+	void release();
 };
 
 struct Render_Target {
 	Texture2D texture;
 	Render_Target_View view;
+
+	void release();
 };
 
 struct Gpu_Device {
+	u32 sample_count = 4;
 	u32 quality_levels = 0;
-	Dx11_Device device;
+	Dx11_Device dx11_device;
 	Dx11_Debug debug;
 	
 	static Input_Layout vertex_xc;
@@ -343,7 +376,7 @@ struct Gpu_Device {
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
 
 	void create_sampler(Sampler_State *sampler_state);
-	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture);
+	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture, bool create_shader_resource = true);
 	void create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture);
 
 	void create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
@@ -357,7 +390,8 @@ struct Gpu_Device {
 	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
 
 	void create_depth_stencil_buffer(Texture_Desc *depth_stencil_texture_desc, Depth_Stencil_Buffer *depth_stencil_buffer);
-	void create_render_target(Texture_Desc *target_texture_desc, Texture_Desc *depth_stencil_texture_desc, Render_Target *render_target);
+	void create_render_target(Texture2D *texture, Render_Target *render_target);
+	void create_render_target(Texture_Desc *target_texture_desc, Render_Target *render_target);
 };
 
 struct Render_Pipeline_States {
@@ -391,23 +425,23 @@ struct Render_Pipeline_State {
 	Depth_Stencil_State depth_stencil_state;
 	Rasterizer_State rasterizer_state;
 	Sampler_State sampler_state;
-	Depth_Stencil_Buffer depth_stencil_buffer;
-	Render_Target render_target;
+	View_Port *view_port = NULL;
+	Depth_Stencil_Buffer *depth_stencil_buffer = NULL;
+	Render_Target *render_target = NULL;
 
 	bool setup(Render_System *render_sys);
 };
 
+struct Swap_Chain {
+	Texture2D back_buffer;
+	DXGI_Swap_Chain dxgi_swap_chain;
+
+	void init(Gpu_Device *gpu_device, Win32_Info *win32_info);
+	void resize(u32 window_width, u32 window_height);
+};
+
 struct Render_Pipeline {
-	DXGI_Swap_Chain swap_chain;
-	Dx11_Device_Context pipeline;
-
-	//@Note can I these fields not use in this struct ?
-	Dx11_Texture_2D texture;
-	Render_Target_View render_target_view;
-	Depth_Stencil_View depth_stencil_view;
-
-	void resize(Gpu_Device *gpu_device, u32 window_width, u32 window_height);
-	void shutdown();
+	Dx11_Device_Context dx11_context;
 
 	template <typename T>
 	void copy_resource(const Gpu_Resource<T> &dst, const Gpu_Resource<T> &src);
@@ -417,8 +451,10 @@ struct Render_Pipeline {
 
 	void apply(Render_Pipeline_State *render_pipeline_state);
 	
-	void *map(Gpu_Buffer *gpu_buffer, Map_Type map_type = MAP_TYPE_WRITE_DISCARD);
-	void unmap(Gpu_Buffer *gpu_buffer);
+	template <typename T>
+	void *map(Gpu_Resource<T> &resource, Map_Type map_type = MAP_TYPE_WRITE_DISCARD);
+	template <typename T>
+	void unmap(Gpu_Resource<T> &resource);
 
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
 	void update_subresource(Texture2D *resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
@@ -451,6 +487,7 @@ struct Render_Pipeline {
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
+	void set_view_port(View_Port *view_port);
 	void reset_rasterizer();
 
 	void set_blend_state(const Blend_State &blend_state);
@@ -459,6 +496,9 @@ struct Render_Pipeline {
 	void set_depth_stencil_state(const Depth_Stencil_State &depth_stencil_state, u32 stencil_ref = 0);
 	void reset_depth_stencil_test();
 
+	void set_only_depth_stencil_buffer(const Depth_Stencil_Buffer &depth_stencil_buffer);
+	void set_render_target(const Render_Target &render_target, const Depth_Stencil_Buffer &depth_stencil_buffer);
+
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 };
@@ -466,13 +506,13 @@ struct Render_Pipeline {
 template<typename T>
 inline void Render_Pipeline::copy_resource(const Gpu_Resource<T> &dst, const Gpu_Resource<T> &src)
 {
-	pipeline->CopyResource(dst.resource.Get(), src.resource.Get());
+	dx11_context->CopyResource(dst.resource.Get(), src.resource.Get());
 }
 
 template<typename T>
 inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 dst_x, u32 dst_y, const Gpu_Resource<T> &src)
 {
-	pipeline->CopySubresourceRegion(dst.resource.Get(), 0, dst_x, dst_y, 0, src.resource.Get(), 0, NULL);
+	dx11_context->CopySubresourceRegion(dst.resource.Get(), 0, dst_x, dst_y, 0, src.resource.Get(), 0, NULL);
 }
 
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_Info *win32_state);

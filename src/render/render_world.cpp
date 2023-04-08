@@ -2,15 +2,12 @@
 
 #include "render_world.h"
 #include "render_pass.h"
+#include "render_helpers.h"
 
-#include "../sys/engine.h"
 #include "../gui/gui.h"
+#include "../sys/engine.h"
 
-
-const u32 SHADOW_ATLAS_WIDTH = 8192;
-const u32 SHADOW_ATLAS_HEIGHT = 8192;
-const u32 DIRECTION_SHADOW_MAP_WIDTH = 1024;
-const u32 DIRECTION_SHADOW_MAP_HEIGHT = 1024;
+const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index)
 {
@@ -124,8 +121,6 @@ void Render_World::init()
 
 	light_struct_buffer.allocate<Shader_Light>(100);
 	world_matrix_struct_buffer.allocate<Matrix4>(1000);
-
-	u32 *pixel_buffer = create_color_buffer(200, 200, Color(74, 82, 90));
 	
 	Texture_Desc texture_desc;
 	texture_desc.width = 200;
@@ -133,9 +128,7 @@ void Render_World::init()
 	texture_desc.mip_levels = 1;
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
-	render_sys->render_pipeline.update_subresource(&default_texture, (void *)pixel_buffer, default_texture.get_row_pitch());
-	
-	DELETE_PTR(pixel_buffer);
+	fill_texture_with_value(&default_texture, (void *)&DEFAULT_MESH_COLOR);
 
 	Box box;
 	box.depth = 10;
@@ -191,22 +184,30 @@ void Render_World::init()
 
 void Render_World::init_shadow_rendering()
 {
+	R24U8 depth_value = R24U8(0xffffff, 0);
+
 	Texture_Desc texture_desc;
-	texture_desc.width = SHADOW_ATLAS_WIDTH;
-	texture_desc.height = SHADOW_ATLAS_HEIGHT;
-	texture_desc.format = DXGI_FORMAT_R32_FLOAT;
+	texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
+	//texture_desc.width = SHADOW_ATLAS_WIDTH;
+	//texture_desc.height = SHADOW_ATLAS_HEIGHT;
+	texture_desc.height = DIRECTION_SHADOW_MAP_WIDTH;
+	texture_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	texture_desc.mip_levels = 1;
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &shadow_atlas);
+
+	fill_texture_with_value(&shadow_atlas, &depth_value);
 	
 	Texture_Desc depth_stencil_desc;
 	depth_stencil_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
 	depth_stencil_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
-	depth_stencil_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
+	depth_stencil_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depth_stencil_desc.mip_levels = 1;
-	depth_stencil_desc.bind = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	depth_stencil_desc.bind = BIND_DEPTH_STENCIL;
 
 	render_sys->gpu_device.create_depth_stencil_buffer(&depth_stencil_desc, &temp_shadow_storage);
+
+	fill_texture_with_value(&temp_shadow_storage.texture, &depth_value);
 }
 
 void Render_World::init_render_passes()
@@ -243,7 +244,8 @@ void Render_World::update()
 
 	frame_info.view_matrix = camera.get_view_matrix();
 	frame_info.perspective_matrix = render_sys->view_info.perspective_matrix;
-	frame_info.orthographic_matrix = render_sys->view_info.orthogonal_matrix;
+	//frame_info.orthographic_matrix = render_sys->view_info.orthogonal_matrix;
+	frame_info.orthographic_matrix = render_sys->view_info.perspective_matrix;
 	frame_info.camera_position = camera.position;
 	frame_info.camera_direction = camera.target;
 	frame_info.near_plane = render_sys->view_info.near_plane;
@@ -415,9 +417,9 @@ void Struct_Buffer::update(Array<T> *array)
 		allocate<T>(array->count);
 	}
 
-	T *buffer = (T *)render_pipeline->map(&gpu_buffer);
+	T *buffer = (T *)render_pipeline->map(gpu_buffer);
 	memcpy((void *)buffer, (void *)&array->items[0], sizeof(T) * array->count);
-	render_pipeline->unmap(&gpu_buffer);
+	render_pipeline->unmap(gpu_buffer);
 	count += array->count;
 }
 
