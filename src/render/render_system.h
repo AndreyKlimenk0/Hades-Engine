@@ -133,27 +133,31 @@ struct View_Info {
 	void update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane);
 };
 
-
 struct Render_System {
-	~Render_System();
-
-	//@Note: may be I can delete this var and use functions instead of it.
+	//@Note: Why I need to have this var here ?
 	Win32_Info *win32_info;
-
-
+	//@Note: Why I need to have this var here ?
 	View_Info view_info;
-	
+	//@Note: Why I need to have this var here ?
 	Render_2D render_2d;
 
+	struct Render_Targes {
+		Render_Target back_buffer;
+		Depth_Stencil_Buffer back_buffer_depth;
+	} render_targes;
+
+	View_Port screen_view;
+
+	Swap_Chain swap_chain;
 	Gpu_Device gpu_device;
 	Render_Pipeline render_pipeline;
-	
+
 	Hash_Table<String, Shader *> shader_table;
 
 	void init(Win32_Info *_win32_Info, Font *font);
+	void init_render_targets(u32 window_width, u32 window_height);
 	
 	void resize(u32 window_width, u32 window_height);
-	void shutdown();
 
 	void new_frame();
 	void end_frame();

@@ -37,10 +37,4 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix).xyz;
 	return vertex_out;
 }
-
-float4 ps_main(Vertex_Out vertex_out) : SV_TARGET
-{
-	float depth_value = vertex_out.world_position.z / abs(far_plane - near_plane);
-	return float4(depth_value, depth_value, depth_value, 1.0f);
-}
 #endif

@@ -13,6 +13,11 @@ struct Render_Pass;
 typedef u32 Render_Model_Idx;
 typedef u32 Mesh_Idx;
 
+const u32 SHADOW_ATLAS_WIDTH = 8192;
+const u32 SHADOW_ATLAS_HEIGHT = 8192;
+const u32 DIRECTION_SHADOW_MAP_WIDTH = 1024;
+const u32 DIRECTION_SHADOW_MAP_HEIGHT = 1024;
+
 struct Struct_Buffer {
 	u32 count = 0;
 	u32 size = 0;

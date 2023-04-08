@@ -1,8 +1,6 @@
 #ifndef MCOLOR_H
 #define MCOLOR_H
 
-#include <d2d1.h>
-
 #include "math/vector.h"
 #include "../win32/win_types.h"
 
@@ -24,16 +22,14 @@ struct Color {
 	Color(int r, int g, int b, int a = 255);
 	Color(float r, float g, float b, float a = 1.0f) : value(r, g, b, a) {}
 
-	operator D2D1_COLOR_F();
 	operator Vector4();
+
+	u32 get_packed_rgba();
 };
 
-inline Color::operator D2D1_COLOR_F()
-{
-	return D2D1::ColorF(D2D1::ColorF(value.x, value.y, value.z, value.w));
-}
 inline Color::operator Vector4()
 {
 	return value;
 }
+
 #endif

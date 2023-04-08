@@ -3,6 +3,7 @@
 #include "font.h"
 #include "render_pass.h"
 #include "render_system.h"
+#include "render_helpers.h"
 
 #include "../gui/gui.h"
 #include "../sys/engine.h"
@@ -505,9 +506,7 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	texture_desc.mip_levels = 1;
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
 
-	u32 *pixel_buffer = create_color_buffer(default_texture.width, default_texture.height, Color::White);
-	render_pipeline->update_subresource(&default_texture, (void *)pixel_buffer, default_texture.get_row_pitch());
-	DELETE_PTR(pixel_buffer);
+	fill_texture_with_value(&default_texture, (void *)&Color::White);
 
 	Rasterizer_Desc rasterizer_desc;
 	rasterizer_desc.set_sciccor(true);
@@ -570,9 +569,7 @@ void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs
 
 	gpu_device->create_texture_2d(&texture_desc, &font_atlas);
 
-	u32 *pixel_buffer = create_color_buffer(font_atlas.width, font_atlas.height, Color::Red);
-	render_pipeline->update_subresource(&font_atlas, (void *)pixel_buffer, font_atlas.get_row_pitch());
-	DELETE_PTR(pixel_buffer);
+	fill_texture_with_value(&font_atlas, (void *)&Color::Red);
 
 	Array<Rect_u32 *> rects;
 	Hash_Table<char, Rect_u32> table;
@@ -654,8 +651,8 @@ void Render_2D::render_frame()
 		gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
 		gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
 		
-		Vertex_X2UV *vertices = (Vertex_X2UV *)render_pipeline->map(&vertex_buffer);
-		u32 *indices = (u32 *)render_pipeline->map(&index_buffer);
+		Vertex_X2UV *vertices = (Vertex_X2UV *)render_pipeline->map(vertex_buffer);
+		u32 *indices = (u32 *)render_pipeline->map(index_buffer);
 
 		Primitive_2D *primitive = NULL;
 		For(primitives, primitive) {
@@ -666,8 +663,8 @@ void Render_2D::render_frame()
 			indices += primitive->indices.count;
 		}
 		
-		render_pipeline->unmap(&vertex_buffer);
-		render_pipeline->unmap(&index_buffer);
+		render_pipeline->unmap(vertex_buffer);
+		render_pipeline->unmap(index_buffer);
 	}
 
 	render_pipeline->set_input_layout(Gpu_Device::vertex_xuv);
@@ -683,6 +680,7 @@ void Render_2D::render_frame()
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
 	render_pipeline->set_depth_stencil_state(depth_stencil_state);
+	render_pipeline->set_render_target(render_system->render_targes.back_buffer, render_system->render_targes.back_buffer_depth);
 
 	CB_Render_2d_Info cb_render_info;
 
@@ -700,8 +698,8 @@ void Render_2D::render_frame()
 			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
 			render_pipeline->set_vertex_shader_resource(0, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(0, constant_buffer);
-			if (render_primitive->texture->get_row_pitch()) {
-				render_pipeline->set_pixel_shader_resource(render_primitive->texture->shader_resource);
+			if (render_primitive->texture->get_pitch()) {
+				render_pipeline->set_pixel_shader_resource(render_primitive->texture->view);
 			}
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
@@ -723,19 +721,19 @@ void View_Info::update_projection_matries(u32 width, u32 height, float _near_pla
 	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 }
 
-Render_System::~Render_System()
-{
-	shutdown();
-}
-
 void Render_System::init(Win32_Info *_win32_info, Font *font)
 {
 	win32_info = _win32_info;
 	win32_info->render_sys = this;
 
+	screen_view.width = win32_info->window_width;
+	screen_view.height = win32_info->window_height;
+
 	view_info.update_projection_matries(win32_info->window_width, win32_info->window_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline, win32_info);
+
+	swap_chain.init(&gpu_device, _win32_info);
 	
 	init_shaders_table(&gpu_device, &shader_table);
 	
@@ -745,26 +743,37 @@ void Render_System::init(Win32_Info *_win32_info, Font *font)
 	render_2d.init(this, render_2d_shader, font);
 
 	gpu_device.create_input_layouts(shader_table);
+
+	init_render_targets(win32_info->window_width, win32_info->window_height);
+}
+
+void Render_System::init_render_targets(u32 window_width, u32 window_height)
+{	
+	gpu_device.create_render_target(&swap_chain.back_buffer, &render_targes.back_buffer);
+
+	Texture_Desc depth_texture_desc;
+	depth_texture_desc.width = window_width;
+	depth_texture_desc.height = window_height;
+	depth_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depth_texture_desc.mip_levels = 1;
+	depth_texture_desc.bind = BIND_DEPTH_STENCIL;
+
+	gpu_device.create_depth_stencil_buffer(&depth_texture_desc, &render_targes.back_buffer_depth);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
 {
 	if (Engine::initialized()) {
 		view_info.update_projection_matries(window_width, window_height, 1.0f, 10000.0f);
+		assert(false);
+		//swap_chain.resize(window_width, window_height);
 	}
-}
-
-void Render_System::shutdown()
-{
 }
 
 void Render_System::new_frame()
 {
-	assert(render_pipeline.render_target_view);
-	assert(render_pipeline.depth_stencil_view);
-
-	render_pipeline.pipeline->ClearRenderTargetView(render_pipeline.render_target_view.Get(), (float *)&Color::LightSteelBlue);
-	render_pipeline.pipeline->ClearDepthStencilView(render_pipeline.depth_stencil_view.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	render_pipeline.dx11_context->ClearRenderTargetView(render_targes.back_buffer.view.Get(), (float *)&Color::LightSteelBlue);
+	render_pipeline.dx11_context->ClearDepthStencilView(render_targes.back_buffer_depth.view.Get(), CLEAR_DEPTH_BUFFER | CLEAR_STENCIL_BUFFER, 1.0f, 0);
 
 	render_2d.new_frame();
 }
@@ -772,7 +781,7 @@ void Render_System::new_frame()
 void Render_System::end_frame()
 {
 	render_2d.render_frame();
-	HR(render_pipeline.swap_chain->Present(0, 0));
+	HR(swap_chain.dxgi_swap_chain->Present(0, 0));
 
 #ifdef REPORT_LIVE_OBJECTS
 	gpu_device.debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
