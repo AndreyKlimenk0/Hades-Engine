@@ -506,7 +506,7 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	texture_desc.mip_levels = 1;
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
 
-	fill_texture_with_value(&default_texture, (void *)&Color::White);
+	fill_texture_with_value((void *)&Color::White, &default_texture);
 
 	Rasterizer_Desc rasterizer_desc;
 	rasterizer_desc.set_sciccor(true);
@@ -569,7 +569,7 @@ void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs
 
 	gpu_device->create_texture_2d(&texture_desc, &font_atlas);
 
-	fill_texture_with_value(&font_atlas, (void *)&Color::Red);
+	fill_texture_with_value((void *)&Color::Red, &font_atlas);
 
 	Array<Rect_u32 *> rects;
 	Hash_Table<char, Rect_u32> table;

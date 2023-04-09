@@ -4,6 +4,7 @@
 #include "../libs/geometry_helper.h"
 #include "../render/render_api.h"
 #include "../render/render_system.h"
+#include "../render/render_helpers.h"
 
 
 void Editor_Window::init(Engine *engine)
@@ -158,6 +159,7 @@ void Editor::render()
 		}
 
 		if (gui::add_tab("Render World")) {
+			render_world_window.draw();
 		}
 		gui::end_window();
 	}
@@ -292,6 +294,8 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 
 void Render_World_Window::init(Engine *engine)
 {
+	Editor_Window::init(engine);
+
 	Texture_Desc shadows_texture_desc;
 	shadows_texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
 	shadows_texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
@@ -301,12 +305,51 @@ void Render_World_Window::init(Engine *engine)
 	shadows_texture_desc.bind = BIND_SHADER_RESOURCE;
 	shadows_texture_desc.cpu_access = CPU_ACCESS_WRITE;
 
-	Engine::get_render_system()->gpu_device.create_texture_2d(&shadows_texture_desc, &shadows_texture);
+	Engine::get_render_system()->gpu_device.create_texture_2d(&shadows_texture_desc, &shadow_display_texture);
+
+	fill_texture_with_value((void *)&Color::Red, &shadow_display_texture);
 }
 
 void Render_World_Window::update()
 {
-	//void *shadow_atlas_pixels = Engine::get_render_system()->render_pipeline.map(render_world->shadow_atlas, MAP_TYPE_READ);
+	Texture_Desc texture_desc;
+	texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
+	texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
+	texture_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	texture_desc.mip_levels = 1;
+	texture_desc.usage = RESOURCE_USAGE_STAGING;
+	texture_desc.bind = 0;
+	texture_desc.cpu_access = CPU_ACCESS_READ | CPU_ACCESS_WRITE;
+
+	Texture2D temp_shadow_atlas;
+
+	//Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &temp_shadow_atlas, false);
+	//Engine::get_render_system()->render_pipeline.copy_resource(temp_shadow_atlas, render_world->shadow_atlas);
+
+	//u32 *shadow_atlas_pixel = (u32 *)Engine::get_render_system()->render_pipeline.map(temp_shadow_atlas, MAP_TYPE_READ);
+	//u32 *shadow_dispaly_pixel = (u32 *)Engine::get_render_system()->render_pipeline.map(shadow_display_texture);
+	//
+	//for (u32 row = 0; row < shadow_display_texture.height; row++) {
+	//	for (u32 column = 0; column < shadow_display_texture.width; column++) {
+	//		R24U8 depth = R24U8(shadow_atlas_pixel[column]);
+	//		if (depth.get_unorm_value() < 1.0f) {
+	//			u8 value = u8(depth.numerator >> 8);
+	//			int i = 0;
+	//		}
+	//		u8 r = u8(depth.numerator >> 24);
+	//		u8 g = u8(depth.numerator >> 16);
+	//		u8 b = u8(depth.numerator >> 11);
+	//		Color color = Color(b, b, b);
+	//		shadow_dispaly_pixel[column] = color.get_packed_rgba();
+	//	}
+	//	shadow_atlas_pixel += shadow_display_texture.width;
+	//	shadow_dispaly_pixel += shadow_display_texture.width;
+	//}
+
+	//Engine::get_render_system()->render_pipeline.unmap(temp_shadow_atlas);
+	//Engine::get_render_system()->render_pipeline.unmap(shadow_display_texture);
+
+	temp_shadow_atlas.release();
 }
 
 void Render_World_Window::draw()
@@ -318,10 +361,10 @@ void Render_World_Window::draw()
 	gui::button("Shadow atls", &state);
 
 	if (state) {
-		gui::set_next_window_size(1000, 700);
+		gui::set_next_window_size(1000, 800);
 		if (gui::begin_window("Shadow atls")) {
 			Render_World *render_world = Engine::get_render_world();
-			gui::image(&render_world->shadow_atlas, 900, 600);
+			gui::image(&shadow_display_texture, 700, 700);
 			gui::end_window();
 		}
 	}

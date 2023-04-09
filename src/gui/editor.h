@@ -70,7 +70,7 @@ struct Game_World_Window : Editor_Window {
 };
 
 struct Render_World_Window : Editor_Window {
-	Texture2D shadows_texture;
+	Texture2D shadow_display_texture;
 
 	void init(Engine *engine);
 	void update();
