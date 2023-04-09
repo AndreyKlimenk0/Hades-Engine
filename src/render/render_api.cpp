@@ -80,23 +80,6 @@ inline D3D11_SRV_DIMENSION to_dx11_src_dimension(Shader_Resource_Type type)
 	}
 }
 
-inline D3D11_MAP to_dx11_map_type(Map_Type map_type)
-{
-	switch (map_type) {
-		case MAP_TYPE_READ:
-			return D3D11_MAP_READ;
-		case MAP_TYPE_WRITE:
-			return D3D11_MAP_WRITE;
-		case MAP_TYPE_READ_WRITE:
-			return D3D11_MAP_READ_WRITE;
-		case MAP_TYPE_WRITE_DISCARD:
-			return D3D11_MAP_WRITE_DISCARD;
-		case MAP_TYPE_MAP_WRITE_NO_OVERWRITE:
-			return D3D11_MAP_WRITE_NO_OVERWRITE;
-	}
-	assert(false);
-}
-
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
 {
 	switch (primitive_type)
@@ -434,6 +417,7 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *textur
 	texture->height = texture_desc->height;
 	texture->format = texture_desc->format;
 	texture->format_size = dxgi_format_size(texture_desc->format);
+	texture->usage = texture_desc->usage;
 
 	D3D11_TEXTURE2D_DESC texture_2d_desc;
 	ZeroMemory(&texture_2d_desc, sizeof(D3D11_TEXTURE2D_DESC));
@@ -486,7 +470,9 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_D
 
 	texture->width = texture_desc->width;
 	texture->height = texture_desc->height;
+	texture->format = texture_desc->format;
 	texture->format_size = dxgi_format_size(texture_desc->format);
+	texture->usage = texture_desc->usage;
 
 	D3D11_TEXTURE2D_DESC texture_2d_desc;
 	ZeroMemory(&texture_2d_desc, sizeof(D3D11_TEXTURE2D_DESC));
@@ -811,20 +797,6 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 	} else {
 		set_only_depth_stencil_buffer(*render_pipeline_state->depth_stencil_buffer);
 	}
-}
-
-template <typename T>
-void *Render_Pipeline::map(Gpu_Resource<T> &resource, Map_Type map_type)
-{
-	D3D11_MAPPED_SUBRESOURCE subresource;
-	HR(dx11_context->Map(resource.get(), 0, to_dx11_map_type(map_type), 0, &subresource));
-	return subresource.pData;
-}
-
-template <typename T>
-void Render_Pipeline::unmap(Gpu_Resource<T> &resource)
-{
-	dx11_context->Unmap(resource.get(), 0);
 }
 
 void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)

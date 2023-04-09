@@ -333,6 +333,7 @@ struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
 	u32 width = 0;
 	u32 height = 0;
 	u32 format_size = 0;
+	Resource_Usage usage;
 	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
 	
 	String name;
@@ -502,6 +503,40 @@ struct Render_Pipeline {
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 };
+
+template <typename T>
+inline void *Render_Pipeline::map(Gpu_Resource<T> &resource, Map_Type map_type)
+{
+	D3D11_MAP dx11_map_type;
+	switch (map_type) {
+		case MAP_TYPE_READ:
+			dx11_map_type = D3D11_MAP_READ;
+			break;
+		case MAP_TYPE_WRITE:
+			dx11_map_type = D3D11_MAP_WRITE;
+			break;
+		case MAP_TYPE_READ_WRITE:
+			dx11_map_type = D3D11_MAP_READ_WRITE;
+			break;
+		case MAP_TYPE_WRITE_DISCARD:
+			dx11_map_type = D3D11_MAP_WRITE_DISCARD;
+			break;
+		case MAP_TYPE_MAP_WRITE_NO_OVERWRITE:
+			dx11_map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
+			break;
+		default:
+			assert(false);
+	}
+	D3D11_MAPPED_SUBRESOURCE subresource;
+	HR(dx11_context->Map(resource.get(), 0, dx11_map_type, 0, &subresource));
+	return subresource.pData;
+}
+
+template <typename T>
+inline void Render_Pipeline::unmap(Gpu_Resource<T> &resource)
+{
+	dx11_context->Unmap(resource.get(), 0);
+}
 
 template<typename T>
 inline void Render_Pipeline::copy_resource(const Gpu_Resource<T> &dst, const Gpu_Resource<T> &src)

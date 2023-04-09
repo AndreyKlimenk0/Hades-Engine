@@ -128,7 +128,7 @@ void Render_World::init()
 	texture_desc.mip_levels = 1;
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
-	fill_texture_with_value(&default_texture, (void *)&DEFAULT_MESH_COLOR);
+	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
 
 	Box box;
 	box.depth = 10;
@@ -196,7 +196,7 @@ void Render_World::init_shadow_rendering()
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &shadow_atlas);
 
-	fill_texture_with_value(&shadow_atlas, &depth_value);
+	fill_texture_with_value((void *)&depth_value, &shadow_atlas);
 	
 	Texture_Desc depth_stencil_desc;
 	depth_stencil_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
@@ -207,7 +207,7 @@ void Render_World::init_shadow_rendering()
 
 	render_sys->gpu_device.create_depth_stencil_buffer(&depth_stencil_desc, &temp_shadow_storage);
 
-	fill_texture_with_value(&temp_shadow_storage.texture, &depth_value);
+	fill_texture_with_value((void *)&depth_value, &temp_shadow_storage.texture);
 }
 
 void Render_World::init_render_passes()
