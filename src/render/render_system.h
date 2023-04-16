@@ -133,6 +133,22 @@ struct View_Info {
 	void update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane);
 };
 
+struct Projection_Plane {
+	u32 width;
+	u32 height;
+	float ratio;
+	float fov_y_ratio;
+	float near_plane;
+	float far_plane;
+};
+
+struct Projection_Matries {
+	Matrix4 perspective_matrix;
+	Matrix4 orthogonal_matrix;
+
+	void update();
+};
+
 struct Render_System {
 	//@Note: Why I need to have this var here ?
 	Win32_Info *win32_info;

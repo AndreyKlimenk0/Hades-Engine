@@ -11,7 +11,6 @@ using namespace DirectX;
 
 Camera::Camera()
 {
-
 	position = Vector3(0.0f, 20.0f, 250.0f);
 	target = Vector3(0.0f, 10.0f, 1.0f);
 	up = Vector3(0.0f, 1.0f, 0.0f);
@@ -51,7 +50,6 @@ void Camera::handle_event(Event *event)
 		normalized_target *= 2;
 		position -= normalized_target;
 	}
-
 	
 	if ((event->type == EVENT_TYPE_MOUSE) && captured) {
 		s32 mouse_x_delta = event->mouse_info.x - last_mouse_x;
@@ -59,7 +57,6 @@ void Camera::handle_event(Event *event)
 
 		float x_angle = degress_to_radians(mouse_x_delta);
 		float y_angle = -degress_to_radians(mouse_y_delta);
-
 
 		Matrix4 rotate_about_y = XMMatrixRotationY(0.5 * x_angle);
 		Matrix4 rotate_about_x = XMMatrixRotationX(0.5 * y_angle);

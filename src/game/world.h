@@ -8,25 +8,9 @@
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
 #include "../win32/win_types.h"
-#include "../render/model.h"
 #include "../libs/geometry_helper.h"
+#include "../collision/collision.h"
 
-
-const u32 MAX_NUMBER_LIGHT_IN_WORLD = 255;
-
-//typedef u32 Entity_Id;
-struct Render_World;
-
-enum Boudning_Box_Type {
-	BOUNDING_BOX_TYPE_UNKNOWN,
-	BOUNDING_BOX_TYPE_AABB,
-	BOUNDING_BOX_TYPE_OBB
-};
-
-struct AABB {
-	Vector3 min;
-	Vector3 max;
-};
 
 enum Entity_Type {
 	ENTITY_TYPE_UNKNOWN,
@@ -98,13 +82,14 @@ struct Light : Entity {
 struct Game_World {
 	u32 light_hash = 0;
 	u32 id_count = 0;
-	Render_World *render_world = NULL;
 	
 	Array<Entity> entities;
 	Array<Light> lights;
 	Array<Geometry_Entity> geometry_entities;
 
 	void init();
+
+	void set_entity_AABB(Entity_Id entity_id, AABB *bounding_box);
 
 	Entity *get_entity(Entity_Id entity_id);
 
