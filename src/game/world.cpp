@@ -52,7 +52,7 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
 	Light light;
-	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 0.0f, 0.0f));
+	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 100.0f, 0.0f));
 	light.direction = direction;
 	light.color = color;
 	light.light_type = DIRECTIONAL_LIGHT_TYPE;;
@@ -93,7 +93,17 @@ Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &di
 
 void Game_World::init()
 {
-	render_world = Engine::get_render_world();
+}
+
+void Game_World::set_entity_AABB(Entity_Id entity_id, AABB *bounding_box)
+{
+	Entity *entity = get_entity(entity_id);
+	if (entity) {
+		entity->bounding_box_type = BOUNDING_BOX_TYPE_AABB;
+		entity->AABB_box = *bounding_box;
+		return;
+	}
+	print("Game_World::set_entity_AABB: Failed to set AABB for a entity. The entity was not found.");
 }
 
 Entity_Id::Entity_Id()

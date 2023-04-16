@@ -158,6 +158,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\collision\collision.cpp" />
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\gui\editor.cpp" />
     <ClCompile Include="src\gui\gui.cpp" />
@@ -193,6 +194,7 @@
     <ClCompile Include="src\win32\win_time.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\collision\collision.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\gui\editor.h" />
     <ClInclude Include="src\gui\gui.h" />
