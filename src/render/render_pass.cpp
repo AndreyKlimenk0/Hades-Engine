@@ -1,13 +1,14 @@
 #include "render_pass.h"
+#include "render_helpers.h"
 
 
 Render_Pass::Render_Pass(void *render_context) : render_context(render_context)
 {
 }
 
-void Render_Pass::init(Gpu_Device *gpu_device)
+void Render_Pass::init(Render_System *render_sys)
 {
-	gpu_device->create_constant_buffer(sizeof(Render_Pass::Pass_Data), &pass_data_cbuffer);
+	render_sys->gpu_device.create_constant_buffer(sizeof(Render_Pass::Pass_Data), &pass_data_cbuffer);
 }
 
 bool Render_Pass::setup_pipeline_state(const char *render_pass_name, Render_System *render_system)
@@ -58,6 +59,7 @@ void Forwar_Light_Pass::render(Render_Pipeline *render_pipeline)
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
+		//@Note: Must I set constant buffer after updating ?
 		render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
@@ -98,6 +100,7 @@ void Draw_Lines_Pass::render(Render_Pipeline *render_pipeline)
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
+		//@Note: Must I set constant buffer after updating ?
 		render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
 
 		render_pipeline->draw(render_world->line_meshes.mesh_instances[render_entity->mesh_idx].index_count);
@@ -106,6 +109,15 @@ void Draw_Lines_Pass::render(Render_Pipeline *render_pipeline)
 
 Shadow_Pass::Shadow_Pass(void *render_context) : Render_Pass(render_context)
 {
+}
+
+void Shadow_Pass::init(Render_System *render_sys)
+{
+	Render_World *render_world = (Render_World *)render_context;
+	render_sys->gpu_device.create_constant_buffer(sizeof(Render_World::Light_Projections), &light_projections_cbuffer);
+	render_sys->render_pipeline.update_constant_buffer(&light_projections_cbuffer, (void *)&render_world->light_projections);
+	
+	render_sys->gpu_device.create_constant_buffer(sizeof(Shadow_Pass::Pass_Data), &pass_data_cbuffer);
 }
 
 bool Shadow_Pass::setup_pipeline_state(Render_System *render_system)
@@ -124,7 +136,11 @@ void Shadow_Pass::render(Render_Pipeline *render_pipeline)
 {
 	Render_World *render_world = (Render_World *)render_context;
 
+	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &render_world->temp_shadow_storage.texture);
+
 	render_pipeline->apply(&render_pipeline_state);
+
+	render_pipeline->set_vertex_shader_resource(3, light_projections_cbuffer);
 
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrix_struct_buffer);
 
@@ -133,16 +149,21 @@ void Shadow_Pass::render(Render_Pipeline *render_pipeline)
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
 	Render_Entity *render_entity = NULL;
-	Forwar_Light_Pass::Pass_Data pass_data;
+	Shadow_Pass::Pass_Data pass_data;
 
 	Shadow_Map *shadow_map = NULL;
 	For(render_world->shadow_maps, shadow_map) {
+		
+		pass_data.light_view = shadow_map->light_view;
+		
 		For(render_world->render_entities, render_entity) {
 
 			pass_data.mesh_idx = render_entity->mesh_idx;
 			pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 			render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
+
+			//@Note: Must I set constant buffer after updating ?
 			render_pipeline->set_vertex_shader_resource(2, pass_data_cbuffer);
 
 			render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);

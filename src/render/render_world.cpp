@@ -2,12 +2,13 @@
 
 #include "render_world.h"
 #include "render_pass.h"
-#include "render_helpers.h"
+#include "../collision/collision.h"
 
 #include "../gui/gui.h"
 #include "../sys/engine.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
+
 
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index)
 {
@@ -20,46 +21,6 @@ Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_
 		}
 	}
 	return NULL;
-}
-
-struct Pass_Data {
-	u32 mesh_idx;
-	u32 world_matrix_idx;
-	u32 pad1;
-	u32 pad2;
-};
-
-void make_AABB(Entity_Id entity_id, Triangle_Mesh *mesh)
-{
-	Game_World *game_world = Engine::get_game_world();
-	Entity *entity = game_world->get_entity(entity_id);
-
-	Vector3 min = { 0.0f, 0.0f, 0.0f };
-	Vector3 max = { 0.0f, 0.0f, 0.0f };
-	for (u32 i = 0; i < mesh->vertices.count; i++) {
-		Vector3 position = mesh->vertices[i].position;
-		if (position.x < min.x) {
-			min.x = position.x;
-		}
-		if (position.y < min.y) {
-			min.y = position.y;
-		}
-		if (position.z > min.z) {
-			min.z = position.z;
-		}
-		if (position.x > max.x) {
-			max.x = position.x;
-		}
-		if (position.y > max.y) {
-			max.y = position.y;
-		}
-		if (position.z < max.z) {
-			max.z = position.z;
-		}
-	}
-	entity->bounding_box_type = BOUNDING_BOX_TYPE_AABB;
-	entity->AABB_box.min = min;
-	entity->AABB_box.max = max;
 }
 
 template<typename T>
@@ -108,14 +69,16 @@ bool Unified_Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mes
 	return true;
 }
 
-
 void Render_World::init()
 {	
 	game_world = Engine::get_game_world();
 	render_sys = Engine::get_render_system();
 
-	init_render_passes();
 	init_shadow_rendering();
+
+	light_projections.init();
+
+	init_render_passes();
 	
 	render_sys->gpu_device.create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
 
@@ -134,7 +97,7 @@ void Render_World::init()
 	box.depth = 10;
 	box.width = 10;
 	box.height = 10;
-	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 10.0f), GEOMETRY_TYPE_BOX, (void *)&box);
+	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 50.0f), GEOMETRY_TYPE_BOX, (void *)&box);
 	entity_ids.push(entity_id);
 	
 	Triangle_Mesh mesh;
@@ -145,14 +108,21 @@ void Render_World::init()
 	add_mesh(mesh_name, &mesh, &box_mesh_id);
 
 	make_render_entity(entity_id, box_mesh_id);
+	entity_id = game_world->make_geometry_entity(Vector3(0.0f, 200.0f, 0.0f), GEOMETRY_TYPE_BOX, (void *)&box);
+	make_render_entity(entity_id, box_mesh_id);
 	free_string(mesh_name);
 
-	make_AABB(entity_id, &mesh);
+	AABB aabb = make_AABB(&mesh);
+	game_world->set_entity_AABB(entity_id, &aabb);
 
 	Triangle_Mesh grid_mesh;
 	Grid grid;
-	grid.width = 100000.0f;
-	grid.depth = 100000.0f;
+	//grid.width = 1000.0f;
+	//grid.depth = 1000.0f;
+	//grid.rows_count = 1000;
+	//grid.columns_count = 1000;	
+	grid.width = 100.0f;
+	grid.depth = 100.0f;
 	grid.rows_count = 10;
 	grid.columns_count = 10;
 	make_grid_mesh(&grid, &grid_mesh);
@@ -164,7 +134,7 @@ void Render_World::init()
 	make_render_entity(grid_entity_id, grid_mesh_id);
 
 	Sphere sphere;
-	Entity_Id sphere_id = game_world->make_geometry_entity(Vector3(20.0, 20.0f, 0.0f), GEOMETRY_TYPE_SPHERE, (void *)&sphere);
+	Entity_Id sphere_id = game_world->make_geometry_entity(Vector3(0.0, 20.0f, 0.0f), GEOMETRY_TYPE_SPHERE, (void *)&sphere);
 	entity_ids.push(sphere_id);
 	
 	Triangle_Mesh sphere_mesh;
@@ -174,18 +144,19 @@ void Render_World::init()
 
 	Mesh_Idx mesh_idx;
 	add_mesh(sphere_name, &sphere_mesh, &mesh_idx);
-	make_AABB(sphere_id, &sphere_mesh);
+	
+	aabb = make_AABB(&sphere_mesh);
+	game_world->set_entity_AABB(sphere_id, &aabb);
 
 	make_render_entity(sphere_id, mesh_idx);	
 
-	Entity_Id light_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
+	//Entity_Id light_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
+	Entity_Id light_id = game_world->make_direction_light(Vector3(0.0f, -1.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f));
 	make_shadow(light_id);
 }
 
 void Render_World::init_shadow_rendering()
 {
-	R24U8 depth_value = R24U8(0xffffff, 0);
-
 	Texture_Desc texture_desc;
 	texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
 	//texture_desc.width = SHADOW_ATLAS_WIDTH;
@@ -196,7 +167,7 @@ void Render_World::init_shadow_rendering()
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &shadow_atlas);
 
-	fill_texture_with_value((void *)&depth_value, &shadow_atlas);
+	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
 	
 	Texture_Desc depth_stencil_desc;
 	depth_stencil_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
@@ -207,7 +178,7 @@ void Render_World::init_shadow_rendering()
 
 	render_sys->gpu_device.create_depth_stencil_buffer(&depth_stencil_desc, &temp_shadow_storage);
 
-	fill_texture_with_value((void *)&depth_value, &temp_shadow_storage.texture);
+	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &temp_shadow_storage.texture);
 }
 
 void Render_World::init_render_passes()
@@ -223,7 +194,7 @@ void Render_World::init_render_passes()
 	Render_System *render_sys = Engine::get_render_system();
 	for (u32 i = 0; i < render_passes.count; i++) {
 		
-		render_passes[i]->init(&render_sys->gpu_device);
+		render_passes[i]->init(render_sys);
 		if (!render_passes[i]->setup_pipeline_state(render_sys)) {
 			DELETE_PTR(render_passes[i]);
 			render_passes.remove(i);
@@ -326,6 +297,12 @@ void Render_World::make_shadow(Entity_Id entity_id)
 		return;
 	}
 	Light *light = static_cast<Light *>(game_world->get_entity(entity_id));
+	
+	Vector3 light_diretion = light->direction;
+	light_diretion.normalize();
+	light_diretion *= -1.0f;
+	Vector3 light_position = (world_bounding_sphere.radious * 4.0f) * light_diretion;
+	light->position = light_position;
 
 	Shadow_Map shadow_map;
 	shadow_map.light_id = entity_id;
@@ -335,6 +312,9 @@ void Render_World::make_shadow(Entity_Id entity_id)
 			shadow_map.width = DIRECTION_SHADOW_MAP_WIDTH;
 			shadow_map.height = DIRECTION_SHADOW_MAP_HEIGHT;
 			shadow_map.coordinates_in_atlas.set_size(shadow_map.width, shadow_map.height);
+			//shadow_map.light_view = XMMatrixLookAtLH(light_position, light->direction, Vector3(1.0f, 0.0f, 0.0f));
+			shadow_map.light_view = XMMatrixLookAtLH(Vector3(0.0f, 200.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f));
+			//shadow_map.light_view = XMMatrixLookAtLH(light_position, Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
 			break;
 		}
 		assert(false);
@@ -344,12 +324,21 @@ void Render_World::make_shadow(Entity_Id entity_id)
 
 bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx)
 {
+	Bounding_Sphere temp = make_bounding_sphere(Vector3(0.0f, 0.0f, 0.0f), mesh);
+	if (temp.radious > world_bounding_sphere.radious) {
+		world_bounding_sphere = temp;
+	}
 	return triangle_meshes.add_mesh(mesh_name, mesh, mesh_idx);
 }
 
 bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx)
 {
 	return line_meshes.add_mesh(mesh_name, mesh, mesh_idx);
+}
+
+inline float _get_angle_between_vectors(Vector2 &first_vector, Vector2 &second_vector)
+{
+	return math::arccos(first_vector.dot(second_vector) / (first_vector.length() * second_vector.length()));
 }
 
 void Render_World::render()
@@ -428,4 +417,21 @@ void Struct_Buffer::free()
 	if (!gpu_buffer.is_empty()) {
 		gpu_buffer.free();
 	}
+}
+
+void Render_World::Light_Projections::init()
+{
+	float projection_plane_width = 100.0f;
+	float projection_plane_height = 100.0f;
+	float near_plane = 0.0f;
+	float far_plane = 1000.0f;
+
+	float ratio = (float)1000.0f / (float)1000.0f;
+	float fov_y_ratio = XMConvertToRadians(45);
+	direction_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, ratio, 1.0f, far_plane);
+
+	//direction_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);
+	direction_matrix = XMMatrixOrthographicOffCenterLH(-projection_plane_width, projection_plane_width, -projection_plane_height, projection_plane_height, near_plane, far_plane);
+	point_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);
+	spot_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);
 }
