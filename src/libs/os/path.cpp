@@ -9,6 +9,7 @@ const char GITHUB_ENGINE_NAME[] = "hades-engine";
 
 struct Os_Path {
 	String base_path;
+	//@Note: May be better to git rid of this hash table. Just hard code
 	Hash_Table<String, String> data_dir_paths;
 };
 

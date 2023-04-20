@@ -218,7 +218,7 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	return true;
 }
 
-bool File::read(void *data, u32 data_size)
+void File::read(void *data, u32 data_size)
 {
 	DWORD bytes_read = 0;
 	DWORD bytes_to_read = data_size;
@@ -230,17 +230,16 @@ bool File::read(void *data, u32 data_size)
 		char *error_message = get_str_error_message_from_hresult_description(error_id);
 		print("File::read failed. Error message: ", error_message);
 		free_string(error_message);
-		return false;
+		return;
 	}
 
 	if (bytes_to_read != bytes_read) {
 		print("[Warning] File::read: wrote data in file {} less than must be", file_name);
-		return false;
+		return;
 	}
-	return true;
 }
 
-bool File::write(void *data, u32 data_size)
+void File::write(void *data, u32 data_size)
 {
 	DWORD bytes_written = 0;
 	DWORD bytes_to_write = data_size;
@@ -252,17 +251,17 @@ bool File::write(void *data, u32 data_size)
 		char *error_message = get_str_error_message_from_hresult_description(error_id);
 		print("File::write failed. Error message: ", error_message);
 		free_string(error_message);
-		return false;
+		return;
 	}
 
 	if (bytes_to_write != bytes_written) {
 		print("[Warning] File::write: wrote data in file {} less than must be", file_name);
-		return false;
+		return;
 	}
-	return true;
+	return;
 }
 
-bool File::write(const char *string, bool new_line)
+void File::write(const char *string, bool new_line)
 {
 	DWORD bytes_written = 0;
 	DWORD bytes_to_write = (DWORD)strlen(string);
@@ -274,12 +273,11 @@ bool File::write(const char *string, bool new_line)
 		char *error_message = get_str_error_message_from_hresult_description(error_id);
 		print("File::write failed. Error message: ", error_message);
 		free_string(error_message);
-		return false;
+		return;
 	}
 
 	if (bytes_to_write != bytes_written) {
 		print("[Warning] File::write: wrote data in file {} less than must be", file_name);
-		return false;
+		return;
 	}
-	return true;
 }

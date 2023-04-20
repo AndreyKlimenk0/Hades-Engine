@@ -4,7 +4,6 @@
 #include "../render/model.h"
 #include "../win32/win_types.h"
 
-
 struct Box {
 	float width = 10.0f;
 	float height = 10.0f;

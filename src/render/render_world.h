@@ -9,6 +9,7 @@
 #include "../libs/math/common.h"
 #include "../game/world.h"
 
+
 struct Render_Pass;
 typedef u32 Render_Model_Idx;
 typedef u32 Mesh_Idx;

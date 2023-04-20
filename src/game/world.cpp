@@ -4,10 +4,8 @@
 #include "../sys/engine.h"
 
 
-static void init_entity(Entity *entity, Entity_Type type, const Vector3 &position)
+inline void make_entity(Entity *entity, Entity_Type type, const Vector3 &position)
 {
-	static u32 entity_count = 0;
-	entity->id = entity_count++;
 	entity->type = type;
 	entity->position = position;
 }
@@ -28,9 +26,10 @@ Entity *Game_World::get_entity(Entity_Id entity_id)
 Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data)
 {
 	Geometry_Entity geometry_entity;
-	init_entity(&geometry_entity, ENTITY_TYPE_GEOMETRY, position);
+	make_entity(&geometry_entity, ENTITY_TYPE_GEOMETRY, position);
 	
 	geometry_entity.geometry_type = geometry_type;
+	geometry_entity.idx = geometry_entities.count;
 	
 	if (geometry_type == GEOMETRY_TYPE_BOX) {
 		geometry_entity.box = *((Box *)data);
@@ -43,8 +42,7 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 		return Entity_Id();
 	}
 	geometry_entities.push(geometry_entity);
-	
-	return Entity_Id(ENTITY_TYPE_GEOMETRY, geometry_entities.count - 1);
+	return get_entity_id(&geometry_entity);
 }
 
 #define UPDATE_LIGHT_HASH() light_hash += (u32)light.light_type + 1
@@ -52,47 +50,84 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
 	Light light;
-	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 100.0f, 0.0f));
+	make_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 100.0f, 0.0f));
 	light.direction = direction;
 	light.color = color;
 	light.light_type = DIRECTIONAL_LIGHT_TYPE;;
+	light.idx = lights.count;
 
 	UPDATE_LIGHT_HASH();
 
-	return Entity_Id(ENTITY_TYPE_LIGHT, lights.push(light));
+	lights.push(light);
+	return get_entity_id(&light);
 }
 
 Entity_Id Game_World::make_point_light(const Vector3 &position, const Vector3 &color, float range)
 {
 	Light light;
-	init_entity(&light, ENTITY_TYPE_LIGHT, position);
+	make_entity(&light, ENTITY_TYPE_LIGHT, position);
 	light.color = color;
 	light.light_type = POINT_LIGHT_TYPE;
 	light.range = range;
-	lights.push(light);
+	light.idx = lights.count;
 
 	UPDATE_LIGHT_HASH();
 
-	return Entity_Id(ENTITY_TYPE_LIGHT, lights.push(light));
+	lights.push(light);
+	return get_entity_id(&light);
 }
 
 Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
 {
 	Light light;
-	init_entity(&light, ENTITY_TYPE_LIGHT, position);
+	make_entity(&light, ENTITY_TYPE_LIGHT, position);
 	light.direction = direction;
 	light.color = color;
 	light.light_type = SPOT_LIGHT_TYPE;
 	light.radius = radius;
-	lights.push(light);
+	light.idx = lights.count;
 
 	UPDATE_LIGHT_HASH();
 
-	return Entity_Id(ENTITY_TYPE_LIGHT, lights.push(light));
+	lights.push(light);
+	return get_entity_id(&light);
 }
 
 void Game_World::init()
 {
+}
+
+void Game_World::init_from_file()
+{
+	String full_path_to_map_file;
+	build_full_path_to_map_file("temp_map.bmap", full_path_to_map_file);
+
+	File file;
+	if (!file.open(full_path_to_map_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
+		print("Game_World::init_from_file: Failed to init game world from temp_map.bmap file.");
+		return;
+	}
+
+	file.read(&light_hash);
+	file.read(&entities);
+	file.read(&lights);
+	file.read(&geometry_entities);
+}
+
+void Game_World::save_to_file()
+{
+	String full_path_to_map_file;
+	build_full_path_to_map_file("temp_map.bmap", full_path_to_map_file);
+
+	File file;
+	if (!file.open(full_path_to_map_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
+		print("Game_World::save_to_file: Failed to save game world to temp_map.bmap file.");
+		return;
+	}
+	file.write(&light_hash);
+	file.write(&entities);
+	file.write(&lights);
+	file.write(&geometry_entities);
 }
 
 void Game_World::set_entity_AABB(Entity_Id entity_id, AABB *bounding_box)
@@ -113,3 +148,4 @@ Entity_Id::Entity_Id()
 Entity_Id::Entity_Id(Entity_Type type, u32 index) : type(type), index(index)
 {
 }
+

@@ -55,11 +55,50 @@ struct File {
 	String file_name;
 
 	bool open(const char *path_to_file, File_Mode mode, File_Creation file_creation);
-	bool read(void *data, u32 data_size);
-	bool write(void *data, u32 data_size);
-	bool write(const char *string, bool new_line = true);
+	void read(void *data, u32 data_size);
+	void write(void *data, u32 data_size);
+	//@Node: Get rid of the method ?
+	void write(const char *string, bool new_line = true);
 
+	template< typename T>
+	void read(T *data);
+	template< typename T>
+	void read(Array<T> *array);
+	
+	template< typename T>
+	void write(T *data);
+	template< typename T>
+	void write(Array<T> *array);
 };
 
+template<typename T>
+inline void File::read(T * data)
+{
+	return read((void *)data, sizeof(T));
+}
+
+template<typename T>
+inline void File::write(T *data)
+{
+	return write((void *)data, sizeof(T));
+}
+
+template<typename T>
+inline void File::read(Array<T> *array)
+{
+	u32 count = 0;
+	read(&count);
+	if (count > 0) {
+		array->reserve(count);
+		read((void *)array->items, array->get_size());
+	}
+}
+
+template<typename T>
+inline void File::write(Array<T> *array)
+{
+	write(&array->count);
+	write((void *)array->items, array->get_size());
+}
 
 #endif
