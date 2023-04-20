@@ -127,7 +127,7 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 
 	switch (message) {
 		case  WM_CLOSE: {
-			gui::shutdown();
+			Engine::get_instance()->shutdown();
 			ExitProcess(0);
 			break;
 		}

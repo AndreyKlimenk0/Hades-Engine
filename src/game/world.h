@@ -10,6 +10,7 @@
 #include "../win32/win_types.h"
 #include "../libs/geometry_helper.h"
 #include "../collision/collision.h"
+#include "../libs/os/file.h"
 
 
 enum Entity_Type {
@@ -37,13 +38,18 @@ struct Entity_Id {
 
 struct Entity {
 	Entity() { type = ENTITY_TYPE_COMMON; bounding_box_type = BOUNDING_BOX_TYPE_UNKNOWN; }
-	u32 id;
+	u32 idx;
 	Entity_Type type;
 	Vector3 position;
 	
 	Boudning_Box_Type bounding_box_type;
 	AABB AABB_box;
 };
+
+inline Entity_Id get_entity_id(Entity *entity)
+{
+	return Entity_Id(entity->type, entity->idx);
+}
 
 enum Geometry_Type {
 	GEOMETRY_TYPE_BOX,
@@ -81,13 +87,15 @@ struct Light : Entity {
 
 struct Game_World {
 	u32 light_hash = 0;
-	u32 id_count = 0;
-	
+
 	Array<Entity> entities;
 	Array<Light> lights;
 	Array<Geometry_Entity> geometry_entities;
 
 	void init();
+	void shutdown();
+	void init_from_file();
+	void save_to_file();
 
 	void set_entity_AABB(Entity_Id entity_id, AABB *bounding_box);
 

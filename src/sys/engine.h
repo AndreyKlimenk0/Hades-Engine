@@ -35,7 +35,9 @@ struct Engine {
 	Render_Model_Manager model_manager;
 
 	void init(Win32_Info *_win32_state);
+	void init_from_file();
 	void frame();
+	void save_to_file();
 	void shutdown();
 
 	static bool initialized();

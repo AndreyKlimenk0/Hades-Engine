@@ -1390,7 +1390,7 @@ void Gui_Manager::shutdown()
 
 	File save_file;
 	if (!save_file.open(path_to_save_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
-		print("Gui_Manager::shutdown: Hades gui data can not be save in file from path {}.", path_to_save_file);
+		print("Gui_Manager::shutdown: Hades gui data can not be save in file by path {}.", path_to_save_file);
 		return;
 	}
 
@@ -1619,6 +1619,11 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	if (reset_window_params & SET_WINDOW_SIZE) {
 		rect->set_size(window_rect.width, window_rect.height);
 		reset_window_params &= ~SET_WINDOW_SIZE;
+	}
+
+	if (reset_window_params & SET_WINDOW_THEME) {
+		backup_window_theme = window_theme;
+		window_theme = future_window_theme;
 	}
 	
 	Render_Primitive_List *render_list = GET_RENDER_LIST();

@@ -2,6 +2,7 @@
 #include "../gui/gui.h"
 #include "../win32/test.h"
 #include "../win32/win_time.h"
+#include "../libs/os/file.h"
 
 //#define DRAW_TEST_GUI
 
@@ -21,12 +22,54 @@ void Engine::init(Win32_Info *_win32_info)
 	gui::init_gui(&render_sys.render_2d, &win32_info, &font, &render_sys.gpu_device);
 
 	game_world.init();
-	
 	render_world.init();
+	
+	String path;
+	build_full_path_to_map_file("temp_map.bmap", path);
+	if (file_exists(path)) {
+		init_from_file();
+	}
 
 	editor.init();
 
 	engine->is_initialized = true;
+}
+
+void Engine::init_from_file()
+{
+	game_world.init_from_file();
+
+	Geometry_Entity *geometry_entity = NULL;
+	For(game_world.geometry_entities, geometry_entity) {
+		
+		char *mesh_name = NULL;
+		Mesh_Idx mesh_idx;
+		Triangle_Mesh triangle_mesh;
+		if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
+			make_box_mesh(&geometry_entity->box, &triangle_mesh);
+			mesh_name = format("Box", geometry_entity->box.width, geometry_entity->box.height, geometry_entity->box.depth);
+		
+		} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
+			make_sphere_mesh(&geometry_entity->sphere, &triangle_mesh);
+			mesh_name = format("Sphere", geometry_entity->sphere.radius, geometry_entity->sphere.slice_count, geometry_entity->sphere.stack_count);
+		
+		} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_GRID) {
+			make_grid_mesh(&geometry_entity->grid, &triangle_mesh);
+			mesh_name = format("Grid", geometry_entity->grid.width, geometry_entity->grid.depth, geometry_entity->grid.rows_count, geometry_entity->grid.columns_count);
+		
+		} else {
+			print("Engine::init_from_file: Unknown geometry type.");
+		}
+		render_world.add_mesh(mesh_name, &triangle_mesh, &mesh_idx);
+		render_world.make_render_entity(get_entity_id(geometry_entity), mesh_idx);
+		
+		free_string(mesh_name);
+	}
+
+	Light *light = NULL;
+	For(game_world.lights, light) {
+		render_world.make_shadow(get_entity_id(light));
+	}
 }
 
 void Engine::frame()
@@ -58,8 +101,15 @@ void Engine::frame()
 	frame_time = milliseconds_counter() - start_time;
 }
 
+void Engine::save_to_file()
+{
+	game_world.save_to_file();
+}
+
 void Engine::shutdown()
 {
+	gui::shutdown();
+	save_to_file();
 }
 
 bool Engine::initialized()

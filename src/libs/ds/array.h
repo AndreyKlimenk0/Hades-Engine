@@ -24,14 +24,15 @@ struct Array {
 	Array(const Array<T> &other);
 	Array<T> &operator=(const Array<T> &other);
 
-	bool is_empty();
 	void resize(int _size);
 	void remove(int index);
 	void reserve(int _count);
 	void shutdown();
-	u32 push(const T &item);
 	void set_pointer_to_item(T *ptr, int index);
 	void set_pointer_to_item(T **ptr, int index);
+	bool is_empty();
+	u32 push(const T &item);
+	u32 get_size();
 
 	T &operator[](int i);
 	const T &operator[](int i) const;
@@ -178,6 +179,12 @@ u32 Array<T>::push(const T &item)
 	}
 	items[count] = item;
 	return count++;
+}
+
+template<typename T>
+inline u32 Array<T>::get_size()
+{
+	return sizeof(T) * count;
 }
 
 template <typename T>
