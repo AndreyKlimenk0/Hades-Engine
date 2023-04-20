@@ -72,7 +72,7 @@ struct String {
 	~String();
 
 	char *data = NULL;
-	int len = 0;
+	u32 len = 0;
 
 	explicit String(char _char);
 	explicit String(int number);
@@ -80,8 +80,8 @@ struct String {
 	String(const char *string);
 	String(const String *other);
 	String(const String &other);
-	String(const char *string, int start, int end);
-	String(const String &string, int start, int end);
+	String(const char *string, u32 start, u32 end);
+	String(const String &string, u32 start, u32 end);
 
 	operator const char*();
 	operator const char*() const;
@@ -93,8 +93,8 @@ struct String {
 	void print();
 	void to_lower();
 	void pop_char();
-	void insert(int index, char c);
-	void remove(int index);
+	void insert(u32 index, char c);
+	void remove(u32 index);
 	void removee_all(char c);
 	void replace(char from, char on);
 	void append(char c);
@@ -108,7 +108,7 @@ struct String {
 
 	bool is_empty() { return data == NULL && len == 0; }
 	
-	int find_text(const char *text, int start = 0);
+	u32 find_text(const char *text, u32 start = 0);
 
 	const char *c_str() { return data; }
 	

@@ -51,13 +51,13 @@ static void get_shader_name_from_file(const char *file_name, String &name)
 	String f_name = file_name;
 
 	Array<String> buffer;
-	split(&f_name, "_", &buffer);
-
-	for (int i = 0; i < (buffer.count - 1); i++) {
-		if (i != 0) {
-			name.append("_");
+	if (split(&f_name, "_", &buffer)) {
+		for (u32 i = 0; i < (buffer.count - 1); i++) {
+			if (i != 0) {
+				name.append("_");
+			}
+			name.append(buffer[i]);
 		}
-		name.append(buffer[i]);
 	}
 }
 
@@ -116,7 +116,7 @@ static void init_shaders_table(Gpu_Device *gpu_device, Hash_Table<String, Shader
 		error("init_shaders_table: has not found compiled shader files.");
 	}
 
-	for (int i = 0; i < file_names.count; i++) {
+	for (u32 i = 0; i < file_names.count; i++) {
 		Shader_Type shader_type;
 		if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
 			continue;
@@ -170,9 +170,9 @@ static int compare_rects_u32(const void *first_rect, const void *second_rect)
 	return first->height > second->height;
 }
 
-void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float rounding)
+void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)
 {
-	add_rounded_points(x, y, width, height, rect_side, rounding, rounding);
+	add_rounded_points(x, y, width, height, rect_side, (float)rounding, (float)rounding);
 }
 
 void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float x_rounding, float y_rounding)
@@ -199,8 +199,7 @@ void Primitive_2D::add_rounded_points(float x, float y, float width, float heigh
 		point2 = Vector2(x + width - x_rounding, y + height);
 	}
 
-	s32 points_count_in_rounding = 20;
-	s32 temp = 0;
+	u32 points_count_in_rounding = 20;
 	float point_count = 1.0f / (float)points_count_in_rounding;
 	float point_position = 0.0f;
 
@@ -213,7 +212,7 @@ void Primitive_2D::add_rounded_points(float x, float y, float width, float heigh
 
 void Primitive_2D::make_triangle_polygon()
 {
-	for (int i = 2; i < vertices.count; i++) {
+	for (u32 i = 2; i < vertices.count; i++) {
 		indices.push(0);
 		indices.push(i - 1);
 		indices.push(i);
@@ -291,15 +290,15 @@ void Render_Primitive_List::add_outlines(int x, int y, int width, int height, co
 		return;
 	}
 	bool is_rounded = rounding > 0;
-	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, width + outline_width * 2, height + outline_width * 2, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(-outline_width, -outline_width));
-	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, width + outline_width * 2, height + outline_width * 2, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2((float)width + outline_width, -outline_width));
-	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, width + outline_width * 2, height + outline_width * 2, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2((float)width + outline_width, (float)height + outline_width));
-	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, width + outline_width * 2, height + outline_width * 2, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(-outline_width, (float)height + outline_width));
+	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(-outline_width, -outline_width));
+	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2((float)width + outline_width, -outline_width));
+	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2((float)width + outline_width, (float)height + outline_width));
+	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(-outline_width, (float)height + outline_width));
 
-	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2(width, 0.0f));
-	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2(width, height));
-	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(0.0f, height));
+	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
+	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2((float)width, 0.0f));
+	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2((float)width, (float)height));
+	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
 
 	primitive->make_outline_triangle_polygons();
 	render_2d->add_primitive(primitive);
@@ -314,14 +313,16 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 {
 	assert(text);
 
-	u32 len = strlen(text);
+	u32 len = (u32)strlen(text);
 	u32 max_height = render_2d->font->get_text_size(text).height;
 
 	for (u32 i = 0; i < len; i++) {
 
 		char c = text[i];
 		Font_Char &font_char = render_2d->font->characters[c];
-		Vector2 position = Vector2(x + font_char.bearing.width, y + (max_height - font_char.size.height) + (font_char.size.height - font_char.bearing.height));
+		float x_pos = (float)x + (float)font_char.bearing.width;
+		float y_pos = (float)y + (float)(max_height - font_char.size.height) + (float)(font_char.size.height - font_char.bearing.height);
+		Vector2 position = Vector2(x_pos, y_pos);
 		
 		Render_Primitive_2D info;
 		info.texture = &render_2d->font_atlas;
@@ -439,7 +440,7 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 	Matrix4 transform_matrix;
 	transform_matrix = rotation_matrix * position_matrix;
 
-	float line_width = distance(first_point, second_point);
+	float line_width = (float)distance(first_point, second_point);
 	String hash = String(line_width + thickness);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);

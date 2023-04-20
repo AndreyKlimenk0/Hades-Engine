@@ -14,7 +14,7 @@
 #define bytes_of(type, count) (sizeof(type) * count)
 
 #define COPY_STRING_TO_CHAR_ARRAY(string, char_array) {\
-	int s_len = strlen(string); \
+	u32 s_len = (u32)strlen(string); \
 	while ((char_array->size - char_array->count) < s_len) { \
 		char_array->resize(char_array->size * 2);\
 	} \
@@ -41,9 +41,9 @@ void split(const char *string, const char *characters, Array<char *> *array)
 
 bool split(String *string, const char *symbols, Array<String> *array)
 {
-	int curr_pos = 0;
-	int prev_pos = 0;
-	int	len = strlen(symbols);
+	u32 curr_pos = 0;
+	u32 prev_pos = 0;
+	u32	len = (u32)strlen(symbols);
 
 	while ((curr_pos = string->find_text(symbols, curr_pos)) != -1) {
 		array->push(String(string->data, prev_pos, curr_pos));
@@ -81,7 +81,7 @@ void to_upper_first_letter(String *string)
 
 bool is_alphabet(const char *string)
 {
-	u32 len = strlen(string);
+	u32 len = (u32)strlen(string);
 
 	for (u32 i = 0; i < len; i++) {
 		if (!isalpha(string[i])) {
@@ -97,7 +97,7 @@ static void format_string(const char *format_string, Array<char> *formatting_str
 	assert(formatting_string);
 	assert(vars);
 
-	int var_index = 0;
+	u32 var_index = 0;
 	const char *f_string = format_string;
 
 	while (*f_string) {
@@ -121,11 +121,11 @@ char * __do_formatting(Array<char *> *strings)
 	Array<char>   formatting_string;
 	Array<char *> vars_buffer;
 
-	for (int i = 0; i < strings->count; i++) {
+	for (u32 i = 0; i < strings->count; i++) {
 		char *string = strings->get(i);
 		int result = is_format_string(string);
 		if (result) {
-			assert(strings->count >= result);
+			assert(strings->count >= (u32)result);
 			int var_index = i + 1;
 			for (int j = 0; j < result; j++, i++) {
 				vars_buffer.push(strings->get(var_index++));
@@ -147,9 +147,9 @@ char * __do_formatting(Array<char *> *strings)
 
 char *concatenate_c_str(const char *str1, const char *str2)
 {
-	int str1_len = strlen(str1);
-	int str2_len = strlen(str2);
-	int len = str1_len + str2_len;
+	u32 str1_len = (s32)strlen(str1);
+	u32 str2_len = (s32)strlen(str2);
+	u32 len = str1_len + str2_len;
 	char *new_string = new char[len + 1];
 
 	memcpy(new_string, str1, str1_len);
@@ -379,12 +379,12 @@ String::String(const char *string)
 	allocate_and_copy_string(string);
 }
 
-String::String(const char *string, int start, int end)
+String::String(const char *string, u32 start, u32 end)
 {
 	copy(string, (u32)start, (u32)end);
 }
 
-String::String(const String &string, int start, int end)
+String::String(const String &string, u32 start, u32 end)
 {
 	copy(string, (u32)start, (u32)end);
 }
@@ -445,7 +445,7 @@ void String::to_lower()
 {
 	assert(len > 0);
 
-	for (int i = 0; i < len; i++) {
+	for (u32 i = 0; i < len; i++) {
 		if (isupper(data[i])) {
 			data[i] += ('a' - 'A');
 		}
@@ -464,7 +464,7 @@ void String::pop_char()
 	DELETE_PTR(other_str);
 }
 
-void String::insert(int index, char c)
+void String::insert(u32 index, char c)
 {
 	assert(len >= index);
 
@@ -492,7 +492,7 @@ void String::insert(int index, char c)
 	DELETE_PTR(copied_str);
 }
 
-void String::remove(int index)
+void String::remove(u32 index)
 {
 	assert(len > index);
 
@@ -530,7 +530,7 @@ void String::removee_all(char c)
 
 void String::replace(char from, char on)
 {
-	for (int i = 0; i < len; i++) {
+	for (u32 i = 0; i < len; i++) {
 		if (data[i] == from) {
 			data[i] = on;
 		}
@@ -556,7 +556,7 @@ void String::append(const char *string)
 		return;
 	}
 
-	int new_len = len + strlen(string);
+	u32 new_len = len + (u32)strlen(string);
 	char *new_string = new char[new_len + 1];
 
 	memset(new_string, 0, sizeof(char) * new_len + 1);
@@ -586,7 +586,7 @@ void String::allocate_and_copy_string(const char *string)
 	assert(string);
 	assert(data == NULL);
 
-	int string_len = strlen(string);
+	int string_len = (u32)strlen(string);
 	len = string_len;
 	data = new char[string_len + 1];
 	memcpy(data, string, sizeof(char) * (string_len + 1));
@@ -599,18 +599,18 @@ void String::place_end_char()
 	}
 }
 
-int String::find_text(const char *text, int start)
+u32 String::find_text(const char *text, u32 start)
 {
 	assert(text);
 
-	int result = -1;
-	int l = strlen(text);
-	int i = start > 0 ? start : 0;
+	u32 result = -1;
+	u32 l = (u32)strlen(text);
+	u32 i = start > 0 ? start : 0;
 
 	for (; i < len; i++) {
 		if (data[i] == text[0]) {
 			result = i;
-			for (int j = ++i, k = 1; k < l && j < len; j++, k++) {
+			for (u32 j = ++i, k = 1; k < l && j < len; j++, k++) {
 				if (data[j] != text[k]) {
 					result = -1;
 					break;
