@@ -30,7 +30,7 @@ void Make_Entity_Window::init(Engine *engine)
 	Editor_Window::init(engine);
 	
 	set_normal_enum_formatting();
-	entity_type_helper = MAKE_ENUM_HELPER(Entity_Type, ENTITY_TYPE_COMMON, ENTITY_TYPE_LIGHT, ENTITY_TYPE_GEOMETRY);
+	entity_type_helper = MAKE_ENUM_HELPER(Entity_Type, ENTITY_TYPE_UNKNOWN, ENTITY_TYPE_COMMON, ENTITY_TYPE_LIGHT, ENTITY_TYPE_GEOMETRY);
 	entity_type_helper->get_string_enums(&entity_types);
 
 	light_type_helper = MAKE_ENUM_HELPER(Light_Type, SPOT_LIGHT_TYPE, POINT_LIGHT_TYPE, DIRECTIONAL_LIGHT_TYPE);
@@ -58,9 +58,7 @@ void Make_Entity_Window::draw()
 
 	Entity_Type type = entity_type_helper->from_string(entity_types[entity_index]);
 
-	if (type == ENTITY_TYPE_COMMON) {
-
-	} else if (type == ENTITY_TYPE_LIGHT) {
+	if (type == ENTITY_TYPE_LIGHT) {
 		gui::list_box(&light_types, &light_index);
 		Light_Type light_type = light_type_helper->from_string(light_types[light_index]);
 
@@ -87,7 +85,7 @@ void Make_Entity_Window::draw()
 				Triangle_Mesh mesh;
 				make_box_mesh(&box, &mesh);
 
-				char *mesh_name = format(box.width, box.height, box.depth);
+				char *mesh_name = format("Box", box.width, box.height, box.depth);
 				Mesh_Idx mesh_idx;
 				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
@@ -106,7 +104,7 @@ void Make_Entity_Window::draw()
 				Triangle_Mesh mesh;
 				make_sphere_mesh(&sphere, &mesh);
 
-				char *mesh_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
+				char *mesh_name = format("Sphere", sphere.radius, sphere.slice_count, sphere.stack_count);
 				Mesh_Idx mesh_idx;
 				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
@@ -115,14 +113,8 @@ void Make_Entity_Window::draw()
 				free_string(mesh_name);
 			}
 		}
-	}
-
-	if (type != DIRECTIONAL_LIGHT_TYPE) {
-		static bool draw_addbb = false;
-		gui::radio_button("Draw AABB", &draw_addbb);
-		if (draw_addbb) {
-
-		}
+	} else {
+		print("Make_Entity_Window::draw: Unknown Entity Type.");
 	}
 }
 
@@ -146,6 +138,11 @@ void Editor::render()
 {
 	gui::begin_frame();
 	if (gui::begin_window("Editor")) {
+
+
+		if (gui::add_tab("Make Entity")) {
+			make_entity_window.draw();
+		}
 
 		if (gui::add_tab("Game World")) {
 			game_world_window.draw();
@@ -241,13 +238,13 @@ void Game_World_Window::draw()
 			}
 		}
 		if (entity && (entity->bounding_box_type != BOUNDING_BOX_TYPE_UNKNOWN) && (entity_type != DIRECTIONAL_LIGHT_TYPE) && (entity_type != ENTITY_TYPE_UNKNOWN)) {
-			if (!draw_AABB_states.key_in_table(entity->id)) {
-				draw_AABB_states[entity->id] = false;
+			if (!draw_AABB_states.key_in_table(entity->idx)) {
+				draw_AABB_states[entity->idx] = false;
 			}
-			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->id]);
+			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->idx]);
 			Entity_Id entity_id = Entity_Id(entity_type, entity_index);
 
-			if (was_click && draw_AABB_states[entity->id]) {
+			if (was_click && draw_AABB_states[entity->idx]) {
 				Render_Entity *render_entity = render_world->find_render_entity(entity_id);
 
 				if (render_entity) {
@@ -269,7 +266,7 @@ void Game_World_Window::draw()
 
 					render_world->bounding_box_entities.push(new_render_entity);
 				}
-			} else if (was_click && !draw_AABB_states[entity->id]) {
+			} else if (was_click && !draw_AABB_states[entity->idx]) {
 				u32 render_entity_index = 0;
 				if (find_render_entity(&render_world->bounding_box_entities, entity_id, &render_entity_index)) {
 					render_world->bounding_box_entities.remove(render_entity_index);

@@ -7,6 +7,7 @@
 #include "../gui/gui.h"
 #include "../sys/engine.h"
 
+
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
 
@@ -92,67 +93,6 @@ void Render_World::init()
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
 	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
-
-	Box box;
-	box.depth = 10;
-	box.width = 10;
-	box.height = 10;
-	Entity_Id entity_id = game_world->make_geometry_entity(Vector3(0.0f, 20.0f, 50.0f), GEOMETRY_TYPE_BOX, (void *)&box);
-	entity_ids.push(entity_id);
-	
-	Triangle_Mesh mesh;
-	make_box_mesh(&box, &mesh);
-
-	char *mesh_name = format(box.width, box.height, box.depth);
-	Mesh_Idx box_mesh_id;
-	add_mesh(mesh_name, &mesh, &box_mesh_id);
-
-	make_render_entity(entity_id, box_mesh_id);
-	entity_id = game_world->make_geometry_entity(Vector3(0.0f, 200.0f, 0.0f), GEOMETRY_TYPE_BOX, (void *)&box);
-	make_render_entity(entity_id, box_mesh_id);
-	free_string(mesh_name);
-
-	AABB aabb = make_AABB(&mesh);
-	game_world->set_entity_AABB(entity_id, &aabb);
-
-	Triangle_Mesh grid_mesh;
-	Grid grid;
-	//grid.width = 1000.0f;
-	//grid.depth = 1000.0f;
-	//grid.rows_count = 1000;
-	//grid.columns_count = 1000;	
-	grid.width = 100.0f;
-	grid.depth = 100.0f;
-	grid.rows_count = 10;
-	grid.columns_count = 10;
-	make_grid_mesh(&grid, &grid_mesh);
-
-	Mesh_Idx grid_mesh_id;
-	add_mesh("grid_mesh", &grid_mesh, &grid_mesh_id);
-
-	Entity_Id grid_entity_id = game_world->make_geometry_entity(Vector3(0.0f, 0.0f, 0.0f), GEOMETRY_TYPE_GRID, (void *)&grid);
-	make_render_entity(grid_entity_id, grid_mesh_id);
-
-	Sphere sphere;
-	Entity_Id sphere_id = game_world->make_geometry_entity(Vector3(0.0, 20.0f, 0.0f), GEOMETRY_TYPE_SPHERE, (void *)&sphere);
-	entity_ids.push(sphere_id);
-	
-	Triangle_Mesh sphere_mesh;
-	make_sphere_mesh(&sphere, &sphere_mesh);
-
-	char *sphere_name = format(sphere.radius, sphere.slice_count, sphere.stack_count);
-
-	Mesh_Idx mesh_idx;
-	add_mesh(sphere_name, &sphere_mesh, &mesh_idx);
-	
-	aabb = make_AABB(&sphere_mesh);
-	game_world->set_entity_AABB(sphere_id, &aabb);
-
-	make_render_entity(sphere_id, mesh_idx);	
-
-	//Entity_Id light_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
-	Entity_Id light_id = game_world->make_direction_light(Vector3(0.0f, -1.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f));
-	make_shadow(light_id);
 }
 
 void Render_World::init_shadow_rendering()
