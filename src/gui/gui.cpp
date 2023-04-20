@@ -3,6 +3,7 @@
 
 #include "../win32/win_local.h"
 #include "../win32/win_time.h"
+#include "../win32/win_types.h"
 #include "../sys/sys_local.h"
 
 #include "../libs/str.h"
@@ -560,7 +561,7 @@ Gui_Window *Gui_Manager::find_window(const char *name, u32 *window_index)
 {
 	Gui_ID window_id = fast_hash(name);
 
-	for (int i = 0; i < windows.count; i++) {
+	for (u32 i = 0; i < windows.count; i++) {
 		if (name == windows[i].name) {
 			*window_index = i;
 			return &windows[i];
@@ -573,7 +574,7 @@ Gui_Window *Gui_Manager::find_window_in_order(const char *name, int *window_inde
 {
 	Gui_ID window_id = fast_hash(name);
 	
-	for (int i = 0; i < windows_order.count; i++) {
+	for (u32 i = 0; i < windows_order.count; i++) {
 		Gui_Window *window = get_window_by_index(&windows_order, i);
 		if (name == window->name) {
 			*window_index = i;
@@ -785,15 +786,15 @@ bool Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, c
 	
 	same_line();
 	if (edit_field(x, x_str, 12, &is_symbol_float_valid, Color(color, 0, 0))) {
-		vector->x = atof(edit_field_state.data.c_str());
+		vector->x = (float)atof(edit_field_state.data.c_str());
 		was_data_updated = true;
 	}
 	if (edit_field(y, y_str, 12, &is_symbol_float_valid, Color(0, color, 0))) {
-		vector->y = atof(edit_field_state.data.c_str());
+		vector->y = (float)atof(edit_field_state.data.c_str());
 		was_data_updated = true;
 	}
 	if (edit_field(z, z_str, 12, &is_symbol_float_valid, Color(0, 0, color))) {
-		vector->z = atof(edit_field_state.data.c_str());
+		vector->z = (float)atof(edit_field_state.data.c_str());
 		was_data_updated = true;
 	}
 	text(name);
@@ -987,7 +988,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					edit_field_state.caret_index_for_inserting -= 1;
 				}
 			} else if (event->is_key_down(VK_RIGHT)) {
-				if (edit_field_state.caret_index_in_text < edit_field_state.data.len) {
+				if (edit_field_state.caret_index_in_text < (s32)edit_field_state.data.len) {
 
 					edit_field_state.caret_index_in_text += 1;
 					edit_field_state.caret_index_for_inserting += 1;
@@ -1040,8 +1041,8 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 
 void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	s32 text_width = font->get_text_size(edit_field_state.data).width;
-	s32 mouse_x_relative_text = mouse_x - rect->x - edit_field_theme.text_shift;
+	u32 text_width = font->get_text_size(edit_field_state.data).width;
+	u32 mouse_x_relative_text = (u32)math::abs(mouse_x - rect->x - edit_field_theme.text_shift);
 
 	if (mouse_x_relative_text > text_width) {
 		edit_field_state.caret.x = editing_value_rect->x + text_width;
@@ -1348,7 +1349,7 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	u32 window_count = 0;
 	save_file.read((void *)&window_count, sizeof(u32));
 
-	for (int i = 0; i < window_count; i++) {
+	for (u32 i = 0; i < window_count; i++) {
 		u32 window_style = 0;
 		save_file.read((void *)&window_style, sizeof(u32));
 		
@@ -1455,7 +1456,7 @@ void Gui_Manager::new_frame()
 	for (u32 i = 0; i < windows_order.count; i++) {
 		Gui_Window *window = get_window_by_index(&windows_order, i);
 		if (detect_collision(&window->rect)) {
-			if (window->index_in_windows_order > max_windows_order_index) {
+			if (window->index_in_windows_order > (s32)max_windows_order_index) {
 				max_windows_order_index = window->index_in_windows_order;
 				first_drawing_window_id = window->gui_id;
 			}
@@ -1497,7 +1498,7 @@ void Gui_Manager::end_frame()
 		print("Gui_Manager::end_frame: Remove window with name = {}; window index = {}", window->name, window_index);
 #endif
 		windows_order.remove(window_index);
-		for (int i = 0; i < windows_order.count; i++) {
+		for (u32 i = 0; i < windows_order.count; i++) {
 			Gui_Window *window = get_window_by_index(&windows_order, i);
 			window->set_index_with_offset(i);
 		}
@@ -1655,7 +1656,7 @@ void Gui_Manager::end_window()
 		windows_order.remove(window->get_index_with_offset());
 		windows_order.push(window_index);
 		curr_parent_windows_index_sum = 0;
-		for (int i = 0; i < windows_order.count; i++) {
+		for (u32 i = 0; i < windows_order.count; i++) {
 			Gui_Window *local_window = get_window_by_index(&windows_order, i);
 			local_window->set_index_with_offset(i);
 			curr_parent_windows_index_sum += local_window->index_in_windows_order;
@@ -1758,10 +1759,10 @@ void Gui_Manager::begin_child(const char *name, Window_Style window_style)
 	Render_Primitive_List *render_list = &child_window->render_list;
 	Rect_s32 clip_rect = calculate_clip_rect(&parent_window->rect, &child_window->rect);
 	if (child_window->style & WINDOW_WITH_OUTLINES) {
-		clip_rect.x -= window_theme.outlines_width;
-		clip_rect.y -= window_theme.outlines_width;
-		clip_rect.width += window_theme.outlines_width * 2;
-		clip_rect.height += window_theme.outlines_width * 2;
+		clip_rect.x -= (s32)window_theme.outlines_width;
+		clip_rect.y -= (s32)window_theme.outlines_width;
+		clip_rect.width += (s32)window_theme.outlines_width * 2;
+		clip_rect.height += (s32)window_theme.outlines_width * 2;
 	}
 	render_list->push_clip_rect(&clip_rect);
 	render_list->add_rect(&child_window->rect, window_theme.background_color, window_theme.rounded_border);
@@ -1866,7 +1867,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 	s32 content_size = window->content_rect.get_size()[axis];
 
 	float ratio = (float)(window_size) / (float)content_size;
-	s32 scroll_size = (ratio < 1.0f) ? (s32)((float)window_size) * ratio : window_size;
+	s32 scroll_size = (ratio < 1.0f) ? (s32)((float)window_size * ratio) : window_size;
 
 	s32 scroll_bar_width = 8;
 	s32 scroll_offset = math::abs(window->scroll[axis] - window->view_rect[axis]);
@@ -1912,7 +1913,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 
 		s32 scroll_pos = scroll_rect[axis] - window->view_rect[axis];
 		float scroll_ration = (float)scroll_pos / window->view_rect.get_size()[axis];
-		s32 result = window->content_rect.get_size()[axis] * scroll_ration;
+		s32 result = (s32)(window->content_rect.get_size()[axis] * scroll_ration);
 		window->content_rect[axis] = window->view_rect[axis] - result;
 	}
 

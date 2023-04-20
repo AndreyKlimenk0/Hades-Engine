@@ -28,7 +28,7 @@ struct Primitive_2D {
 	Array<u32> indices;
 
 	void add_point(const Vector2 &point, const Vector2 &uv = Vector2(0.0f, 0.0f)) { vertices.push(Vertex_X2UV(point, uv)); }
-	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float rounding);
+	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding);
 	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float x_rounding, float y_rounding);
 
 	void make_triangle_polygon();

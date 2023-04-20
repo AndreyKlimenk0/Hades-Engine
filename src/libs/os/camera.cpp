@@ -19,8 +19,8 @@ Camera::Camera()
 
 void Camera::handle_event(Event *event)
 {
-	static int last_mouse_x = 0.0f;
-	static int last_mouse_y = 0.0f;
+	static int last_mouse_x = 0;
+	static int last_mouse_y = 0;
 
 	static s32 sum = 0;
 	if (event->type == EVENT_TYPE_KEY) {
@@ -58,13 +58,13 @@ void Camera::handle_event(Event *event)
 		float x_angle = degress_to_radians(mouse_x_delta);
 		float y_angle = -degress_to_radians(mouse_y_delta);
 
-		Matrix4 rotate_about_y = XMMatrixRotationY(0.5 * x_angle);
-		Matrix4 rotate_about_x = XMMatrixRotationX(0.5 * y_angle);
+		Matrix4 rotate_about_y = XMMatrixRotationY(0.5f * x_angle);
+		Matrix4 rotate_about_x = XMMatrixRotationX(0.5f * y_angle);
 
 		Vector3 normalized_target = (target - position);
 		normalized_target.normalize();
 		
-		Vector4 result = rotate_about_x * rotate_about_y * Vector4(normalized_target, 1.0);
+		Vector4 result = rotate_about_x * rotate_about_y * Vector4(normalized_target, 1.0f);
 		
 		result += Vector4(position, 1.0f);
 		target = result;

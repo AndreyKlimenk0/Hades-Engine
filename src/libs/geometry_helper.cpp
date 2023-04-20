@@ -22,21 +22,21 @@ void make_grid_mesh(Grid *grid, Triangle_Mesh *mesh)
 	float du = 1.0f / (grid->columns_count - 1);
 	float dv = 1.0f / (grid->rows_count - 1);
 
-	for (int i = 0; i < grid->rows_count; ++i) {
+	for (u32 i = 0; i < grid->rows_count; ++i) {
 		float z = half_depth - i * dz;
-		for (int j = 0; j < grid->columns_count; ++j) {
+		for (u32 j = 0; j < grid->columns_count; ++j) {
 			float x = -half_width + j * dx;
 
 			mesh->vertices[i * grid->columns_count + j].position = Vector3(x, 0.0f, z);
 			mesh->vertices[i * grid->columns_count + j].normal = Vector3(0.0f, 1.0f, 0.0f);
-			mesh->vertices[i * grid->columns_count + j].uv.x = j;
-			mesh->vertices[i * grid->columns_count + j].uv.y = i;
+			mesh->vertices[i * grid->columns_count + j].uv.x = (float)j;
+			mesh->vertices[i * grid->columns_count + j].uv.y = (float)i;
 		}
 	}
 
-	int k = 0;
-	for (int i = 0; i < grid->rows_count - 1; ++i) {
-		for (int j = 0; j < grid->columns_count - 1; ++j) {
+	u32 k = 0;
+	for (u32 i = 0; i < grid->rows_count - 1; ++i) {
+		for (u32 j = 0; j < grid->columns_count - 1; ++j) {
 			mesh->indices[k] = i * grid->columns_count + j;
 			mesh->indices[k + 1] = i * grid->columns_count + j + 1;
 			mesh->indices[k + 2] = (i + 1) * grid->columns_count + j;

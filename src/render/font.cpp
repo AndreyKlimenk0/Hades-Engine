@@ -75,7 +75,7 @@ Size_u32 Font::get_text_size(const char *text)
 {
 	assert(text);
 
-	u32 len = strlen(text);
+	u32 len = (u32)strlen(text);
 	u32 max_height = 0;
 	Size_u32 result = { 0, 0 };
 

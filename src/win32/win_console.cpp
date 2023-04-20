@@ -76,24 +76,6 @@ LRESULT CALLBACK console_winproc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 LRESULT CALLBACK console_input_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	char temp[300];
-	switch (uMsg) {
-		//case WM_CHAR: {
-		//	switch (wParam) {
-		//		case VK_BACK: {
-		//			GetWindowText(win_console.input_line_buffer, temp, 300);
-		//			char *last_char = &temp[strlen(temp)];
-		//			if (*last_char == ':') {
-		//				return 1;
-		//			} else {
-		//				last_char = '\0';
-		//				SetWindowText(win_console.input_line_buffer, "");
-		//			}
-		//		}
-		//	}
-		//	break;
-		//}
-	}
 	return CallWindowProc(win_console.input_edit_proc, hwnd, uMsg, wParam, lParam);;
 }
 
@@ -144,7 +126,7 @@ bool create_console(Win32_Info *win32_state)
 	UpdateWindow(win_console.window);
 	SetFocus(win_console.input_line_buffer);
 	
-	win_console.input_edit_proc = (WNDPROC)SetWindowLong(win_console.input_line_buffer, GWLP_WNDPROC, (long)console_input_proc);
+	win_console.input_edit_proc = (WNDPROC)SetWindowLongPtr(win_console.input_line_buffer, GWLP_WNDPROC, (LONG_PTR)console_input_proc);
 
 	HFONT text_buffer_font = create_font(11, "Consolas");
 	HFONT intput_line_font = create_font(11, "Consolas");

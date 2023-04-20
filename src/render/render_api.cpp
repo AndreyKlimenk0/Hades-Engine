@@ -30,10 +30,9 @@ inline D3D11_DSV_DIMENSION to_dx11_dsv_dimension(Depth_Stencil_View_Type type)
 			return D3D11_DSV_DIMENSION_TEXTURE2DMS;
 		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS_ARRAY:
 			return D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
-		default:
-			assert(false);
-			break;
 	}
+	assert(false);
+	return D3D11_DSV_DIMENSION_UNKNOWN;
 }
 
 inline D3D11_SRV_DIMENSION to_dx11_src_dimension(Shader_Resource_Type type)
@@ -74,10 +73,9 @@ inline D3D11_SRV_DIMENSION to_dx11_src_dimension(Shader_Resource_Type type)
 		
 		case SHADER_RESOURCE_TYPE_BUFFEREX:
 			return D3D11_SRV_DIMENSION_BUFFEREX;
-		default:
-			assert(false);
-			break;
 	}
+	assert(false);
+	return D3D_SRV_DIMENSION_UNKNOWN;
 }
 
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
@@ -90,6 +88,7 @@ inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type pri
 			return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 	}
 	assert(false);
+	return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 }
 
 inline D3D11_USAGE to_dx11_resource_usage(Resource_Usage usage)
@@ -105,6 +104,7 @@ inline D3D11_USAGE to_dx11_resource_usage(Resource_Usage usage)
 			return D3D11_USAGE_STAGING;
 	}
 	assert(false);
+	return D3D11_USAGE_DEFAULT;
 }
 
 inline D3D11_BLEND to_dx11_blend(Blend_Option blend_option)
@@ -147,6 +147,7 @@ inline D3D11_BLEND to_dx11_blend(Blend_Option blend_option)
 			return D3D11_BLEND_INV_SRC1_ALPHA;
 	}
 	assert(false);
+	return D3D11_BLEND_ZERO;
 }
 
 inline D3D11_BLEND_OP to_dx11_blend_op(Blend_Operation blend_operation)
@@ -165,6 +166,7 @@ inline D3D11_BLEND_OP to_dx11_blend_op(Blend_Operation blend_operation)
 			return D3D11_BLEND_OP_MAX;
 	}
 	assert(false);
+	return D3D11_BLEND_OP_ADD;
 }
 
 inline D3D11_STENCIL_OP to_dx11_stencil_op(Stencil_Operation stencil_operation)
@@ -189,6 +191,7 @@ inline D3D11_STENCIL_OP to_dx11_stencil_op(Stencil_Operation stencil_operation)
 			return D3D11_STENCIL_OP_DECR;
 	}
 	assert(false);
+	return D3D11_STENCIL_OP_KEEP;
 }
 
 inline D3D11_COMPARISON_FUNC to_dx11_comparison_func(Comparison_Func func)
@@ -213,6 +216,7 @@ inline D3D11_COMPARISON_FUNC to_dx11_comparison_func(Comparison_Func func)
 			return D3D11_COMPARISON_ALWAYS;
 	}
 	assert(false);
+	return D3D11_COMPARISON_NEVER;
 }
 
 inline u32 dxgi_format_size(DXGI_FORMAT format)
@@ -637,8 +641,9 @@ inline DXGI_FORMAT to_depth_stencil_format(DXGI_FORMAT format)
 		case DXGI_FORMAT_R24G8_TYPELESS:
 		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
 			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-		default: assert(false);
 	}
+	assert(false);
+	return DXGI_FORMAT_UNKNOWN;
 }
 
 inline DXGI_FORMAT to_depth_stencil_view_format(DXGI_FORMAT format)
@@ -647,8 +652,9 @@ inline DXGI_FORMAT to_depth_stencil_view_format(DXGI_FORMAT format)
 		case DXGI_FORMAT_R24G8_TYPELESS:
 		case DXGI_FORMAT_D24_UNORM_S8_UINT:
 			return DXGI_FORMAT_D24_UNORM_S8_UINT;
-		default: assert(false);
 	}
+	assert(false);
+	return DXGI_FORMAT_UNKNOWN;
 }
 
 void Gpu_Device::create_depth_stencil_buffer(Texture_Desc *depth_stencil_texture_desc, Depth_Stencil_Buffer *depth_stencil_buffer)

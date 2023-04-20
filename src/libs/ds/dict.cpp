@@ -25,7 +25,7 @@ void Args::get(const char *string, int *value)
 void Args::get(const char *string, float *value)
 {
 	String str = storage[string];
-	*value = atof(str);
+	*value = (float)atof(str);
 }
 
 void Args::get(const char *string, Vector3 *value)
@@ -35,9 +35,9 @@ void Args::get(const char *string, Vector3 *value)
 	Array<String> buffer;
 	split(&str, " ", &buffer);
 	
-	value->x = atof(buffer[0]);
-	value->y = atof(buffer[1]);
-	value->z = atof(buffer[2]);
+	value->x = (float)atof(buffer[0]);
+	value->y = (float)atof(buffer[1]);
+	value->z = (float)atof(buffer[2]);
 }
 
 #define MAKE_DATA_PTR(string, type, value) { \

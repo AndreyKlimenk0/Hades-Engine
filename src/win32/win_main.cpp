@@ -180,19 +180,19 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 			break;
 		}
 		case WM_SYSKEYDOWN: {
-			push_event(EVENT_TYPE_KEY, wparam, 1);
+			push_event(EVENT_TYPE_KEY, (int)wparam, 1);
 			break;
 		}
 		case WM_SYSKEYUP: {
-			push_event(EVENT_TYPE_KEY, wparam, 0);
+			push_event(EVENT_TYPE_KEY, (int)wparam, 0);
 			break;
 		}
 		case WM_KEYDOWN: {
-			push_event(EVENT_TYPE_KEY, wparam, 1);
+			push_event(EVENT_TYPE_KEY, (int)wparam, 1);
 			break;
 		}
 		case WM_KEYUP:{
-			push_event(EVENT_TYPE_KEY, wparam, 0);
+			push_event(EVENT_TYPE_KEY, (int)wparam, 0);
 			break;
 		}
 		case WM_CHAR:{

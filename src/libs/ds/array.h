@@ -10,36 +10,36 @@
 #define DO_STRING_JOIN(arg1, arg2) arg1 ## arg2
 #define STRING_JOIN(arg1, arg2) DO_STRING_JOIN(arg1, arg2)
 
-#define For(data_struct, ptr) for (int _i = 0; (_i < data_struct.count ? data_struct.set_pointer_to_item(&ptr, _i), true : false); _i++)
+#define For(data_struct, ptr) for (u32 _i = 0; (_i < data_struct.count ? data_struct.set_pointer_to_item(&ptr, _i), true : false); _i++)
 
 template <typename T>
 struct Array {
-	Array(int _size = 8);
+	Array(u32 _size = 8);
 	~Array();
 
 	T *items = NULL;
-	int count;
-	int size;
+	u32 count;
+	u32 size;
 
 	Array(const Array<T> &other);
 	Array<T> &operator=(const Array<T> &other);
 
-	void resize(int _size);
-	void remove(int index);
-	void reserve(int _count);
+	void resize(u32 _size);
+	void remove(u32 index);
+	void reserve(u32 _count);
 	void shutdown();
-	void set_pointer_to_item(T *ptr, int index);
-	void set_pointer_to_item(T **ptr, int index);
+	void set_pointer_to_item(T *ptr, u32 index);
+	void set_pointer_to_item(T **ptr, u32 index);
 	bool is_empty();
 	u32 push(const T &item);
 	u32 get_size();
 
-	T &operator[](int i);
-	const T &operator[](int i) const;
+	T &operator[](u32 i);
+	const T &operator[](u32 i) const;
 
 	T &pop();
-	T &get(int index);
-	const T &get(int index) const;
+	T &get(u32 index);
+	const T &get(u32 index) const;
 
 	T &first_item()
 	{
@@ -76,26 +76,26 @@ inline void merge(Array<T> *dst, Array<T> *src)
 
 
 template <typename T>
-void Array<T>::reserve(int _count)
+void Array<T>::reserve(u32 _count)
 {
 	resize(_count);
 	count = _count;
 }
 
 template <typename T>
-T &Array<T>::get(int index)
+T &Array<T>::get(u32 index)
 {
 	return items[index];
 }
 
 template <typename T>
-const T &Array<T>::get(int index) const
+const T &Array<T>::get(u32 index) const
 {
 	return items[index];
 }
 
 template <typename T>
-Array<T>::Array(int _size)
+Array<T>::Array(u32 _size)
 {
 	items = NULL;
 	count = 0;
@@ -114,21 +114,21 @@ Array<T>::~Array()
 }
 
 template <typename T>
-inline T &Array<T>::operator[](int i)
+inline T &Array<T>::operator[](u32 i)
 {
 	assert(size > i);
 	return items[i];
 }
 
 template <typename T>
-inline const T &Array<T>::operator[](int i) const
+inline const T &Array<T>::operator[](u32 i) const
 {
 	assert(size > i);
 	return items[i];
 }
 
 template <typename T>
-void Array<T>::resize(int new_size)
+void Array<T>::resize(u32 new_size)
 {
 	if (!items) {
 		items = new T[new_size];
@@ -139,7 +139,7 @@ void Array<T>::resize(int new_size)
 	items = new T[new_size];
 
 
-	for (int i = 0; i < count; i++) {
+	for (u32 i = 0; i < count; i++) {
 		items[i] = temp_array[i];
 	}
 
@@ -148,7 +148,7 @@ void Array<T>::resize(int new_size)
 }
 
 template<typename T>
-inline void Array<T>::remove(int index)
+inline void Array<T>::remove(u32 index)
 {
 	assert(count > index);
 
@@ -219,7 +219,7 @@ inline Array<T>& Array<T>::operator=(const Array<T>& other)
 	size = other.size;
 	if (items) delete[] items, items = NULL;
 	items = new T[other.size];
-	for (int i = 0; i < count; i++) {
+	for (u32 i = 0; i < count; i++) {
 		items[i] = other.items[i];
 	}
 	return *this;
@@ -234,7 +234,7 @@ inline bool Array<T>::is_empty()
 }
 
 template <typename T>
-inline void Array<T>::set_pointer_to_item(T *ptr, int index)
+inline void Array<T>::set_pointer_to_item(T *ptr, u32 index)
 {
 	assert(count > index);
 
@@ -242,7 +242,7 @@ inline void Array<T>::set_pointer_to_item(T *ptr, int index)
 }
 
 template <typename T>
-inline void Array<T>::set_pointer_to_item(T **ptr, int index)
+inline void Array<T>::set_pointer_to_item(T **ptr, u32 index)
 {
 	assert(count > index);
 	*ptr = &items[index];

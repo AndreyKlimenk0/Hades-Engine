@@ -65,7 +65,7 @@
 
 u32 fast_hash(const char *data)
 {
-	u32 len = strlen(data);
+	u32 len = (u32)strlen(data);
 	u32 hash = len, tmp;
 	int rem;
 
