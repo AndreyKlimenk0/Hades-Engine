@@ -128,7 +128,7 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 	rewind(f);
 
 	char *buffer = new char[size + 1];
-	int result = fread(buffer, sizeof(char), size, f);
+	fread(buffer, sizeof(char), (size_t)size, f);
 	buffer[size] = '\0';
 	fclose(f);
 	return buffer;
@@ -168,6 +168,7 @@ static DWORD file_mode_to_win32(File_Mode file_mode)
 			return GENERIC_WRITE;
 	}
 	assert(false);
+	return 0;
 }
 
 static DWORD file_creation_to_win32(File_Creation file_creation)
@@ -184,6 +185,7 @@ static DWORD file_creation_to_win32(File_Creation file_creation)
 			return OPEN_EXISTING;
 	}
 	assert(false);
+	return 0;
 }
 
 File::~File()
@@ -202,18 +204,20 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	if (file_handle == INVALID_HANDLE_VALUE) {
 		DWORD error_id = GetLastError();
 		char *error_message = get_str_error_message_from_hresult_description(error_id);
-		int len = strlen(error_message);
-		error_message[len - 1] = '\0';
-		print("[Error] File::open: ", error_message);
-		is_file_open = false;
-		free_string(error_message);
+		u32 len = (u32)strlen(error_message);
+		if (len > 0) {
+			error_message[len - 1] = '\0';
+			print("[Error] File::open: ", error_message);
+			is_file_open = false;
+			free_string(error_message);
+		}
 		return false;
 	}
 	LARGE_INTEGER size;
 	if (!GetFileSizeEx(file_handle, &size)) {
 		print("[Error] File::open: Failed to get file size from {}.", file_name);
 	}
-	file_size = size.QuadPart;
+	file_size = (u32)size.QuadPart;
 	is_file_open = true;
 	return true;
 }
