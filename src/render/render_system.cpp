@@ -320,9 +320,14 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 
 		char c = text[i];
 		Font_Char &font_char = render_2d->font->characters[c];
-		float x_pos = (float)x + (float)font_char.bearing.width;
-		float y_pos = (float)y + (float)(max_height - font_char.size.height) + (float)(font_char.size.height - font_char.bearing.height);
-		Vector2 position = Vector2(x_pos, y_pos);
+		u32 x_pos = (u32)x + font_char.bearing.width;
+		u32 y_pos = 0;
+		if (font_char.size.height >= font_char.bearing.height) {
+			y_pos = (u32)y + (max_height - font_char.size.height) + (font_char.size.height - font_char.bearing.height);
+		} else {
+			y_pos = (u32)y + max_height - font_char.size.height - font_char.bearing.height;
+		}
+		Vector2 position = Vector2((float)x_pos, (float)y_pos);
 		
 		Render_Primitive_2D info;
 		info.texture = &render_2d->font_atlas;

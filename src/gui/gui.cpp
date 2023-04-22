@@ -1024,6 +1024,12 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					return;
 				}
 
+				// The 'if' was added from float edit_field in order to not let add more then one '-' symbol
+				//@Note: May be 'if' should be placed in another place
+				if ((event->char_key == '-') && (edit_field_state.data.len > 0) && (edit_field_state.data[0] == '-')) {
+					return;
+				}
+
 				if (edit_field_state.caret_index_in_text == (edit_field_state.data.len - 1)) {
 					edit_field_state.data.append(event->char_key);
 				} else {
@@ -2123,232 +2129,12 @@ void gui::draw_test_gui()
 {
 	begin_frame();
 
-	//begin_window("Window1", WINDOW_WITH_SCROLL_BAR);
-	//if (button("Window1")) {
-	//	print("Window1 button was pressed");
-	//}
-	//button("Window1");
-	//button("Window2");
-	//button("Window3");
-	//button("Window4");
-	//button("Window5");
-	//button("Window6");
-	//button("Window7");
-	//end_window();
-
-	begin_window("Line window");
-
-	if (add_tab("Render System")) {
-		button("Window1");
-		button("Window2");
-		button("Window3");
-		button("Window4");
-		button("Window5");
-		button("Window6");
-		button("Window7");
+	if (begin_window("Line window")) {
+		static float x = 0.0f;
+		edit_field("Label", &x);
 	}
-
-	if (add_tab("Render settings")) {
-		button("Window122");
-		button("Window222");
-		button("Window322");
-		button("Window422");
-		button("Window522");
-		button("Window622");
-		button("Window722");
-	}
-
-	if (add_tab("Game World")) {
-		button("Window133");
-		button("Window233");
-		button("Window333");
-		button("Window4233");
-		button("Window533");
-		button("Window633");
-		button("Window722");
-	}
-	button("Window4");
-
-	if (add_tab("Tab 2")) {
-
-	}
-
 	end_window();
-	//
-	//begin_window("Window3");
-	//button("Window3");
-	//end_window();
-
-	//
-
-	//if (begin_window("Test window")) {
-
-	//	const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-	//	static u32 item_index = 123124;
-	//	list_box(str, 7, &item_index);
-
-	//	if (texture) {
-	//		image(texture, 200, 200);
-	//	}
-
-	//	const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
-	//	static u32 item_index2 = 123124;
-	//	list_box(str2, 7, &item_index2);
-
-	//	button("seperating button");
-
-	//	const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
-	//	static u32 item_index3 = 0;
-	//	list_box(str3, 7, &item_index3);
-
-	//	static bool state = false;
-	//	static bool state1 = false;
-	//	radio_button("Trun on light", &state1);
-	//	radio_button("Render shadows", &state);
-	//	//if (button("Click")) {
-	//	//	print("Was click by bottom");
-	//	//}
-	//	static int position = 12345;
-	//	edit_field("Position: x", &position);
-
-	//	static int position1 = 85959;
-	//	edit_field("Position: y", &position1);
-
-	//	static float max_window_content_width = 2345.234f;
-	//	edit_field("Float x posiiton", &max_window_content_width);
-
-	//	static float temp1 = 0.0;
-	//	edit_field("Float x0 posiiton", &temp1);
-
-	//	static float temp2 = 10000.0;
-	//	edit_field("Float x2 posiiton", &temp2);
-
-	//	static float temp3 = 10000.1;
-	//	edit_field("Float x3 posiiton", &temp3);
-
-	//	if (button("next line1")) {
-	//		print("Was click next line 1");
-	//	}
-	//	button("next line2");
-	//	button("next line3");
-	//	button("next line4");
-	//	button("next line5");
-	//	button("next line6");
-	//	button("next line7");
-	//	button("next line8");
-	//	button("next line9");
-
-	//	const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-	//	static u32 item_index1 = 123124;
-	//	list_box(str1, 7, &item_index1);
-
-	//	end_window();
-	//}
-
-	//for (int i = 0; i < 3; i++) {
-	//	String s = "test" + String(i);
-	//	if (begin_window(s.c_str())) {
-
-	//		const char *str[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-	//		static u32 item_index = 123124;
-	//		list_box(str, 7, &item_index);
-
-	//		if (texture) {
-	//			image(texture, 200, 200);
-	//		}
-
-	//		const char *str2[] = { "test11", "test22", "test33", "test44", "test55", "test66", "test77", };
-	//		static u32 item_index2 = 123124;
-	//		list_box(str2, 7, &item_index2);
-
-	//		button("seperating button");
-
-	//		const char *str3[] = { "test311", "test322", "test333", "test344", "test355", "test366", "test377", };
-	//		static u32 item_index3 = 0;
-	//		list_box(str3, 7, &item_index3);
-
-	//		static bool state = false;
-	//		static bool state1 = false;
-	//		radio_button("Trun on light", &state1);
-	//		radio_button("Render shadows", &state);
-	//		//if (button("Click")) {
-	//		//	print("Was click by bottom");
-	//		//}
-	//		static int position = 12345;
-	//		edit_field("Position: x", &position);
-
-	//		static int position1 = 85959;
-	//		edit_field("Position: y", &position1);
-
-	//		static float max_window_content_width = 2345.234f;
-	//		edit_field("Float x posiiton", &max_window_content_width);
-
-	//		static float temp1 = 0.0;
-	//		edit_field("Float x0 posiiton", &temp1);
-
-	//		static float temp2 = 10000.0;
-	//		edit_field("Float x2 posiiton", &temp2);
-
-	//		static float temp3 = 10000.1;
-	//		edit_field("Float x3 posiiton", &temp3);
-
-	//		if (button("next line1")) {
-	//			print("Was click next line 1");
-	//		}
-	//		button("next line2");
-	//		button("next line3");
-	//		button("next line4");
-	//		button("next line5");
-	//		button("next line6");
-	//		button("next line7");
-	//		button("next line8");
-	//		button("Tab 2");
-
-	//		const char *str1[] = { "test1", "test2", "test3", "test4", "test5", "test6", "test7", };
-	//		static u32 item_index1 = 123124;
-	//		list_box(str1, 7, &item_index1);
-
-	//		end_window();
-	//	}
-	//}
-
-	//static u32 id = 0;
-	//static bool entity_window = false;
-	//if (begin_window("Entities")) {
-
-	//	Entity_Manager *manager = &world.entity_manager;
-	//	Entity *entity = NULL;
-	//	
-	//	#define to_string(x) #x
-	//	
-	//	For(manager->entities, entity) {
-	//		String name = "entity id = " + String((int)entity->id);
-	//		
-	//		if (button(name.c_str())) {
-	//			id = entity->id;
-	//			handle_click(&entity_window);
-	//		}
-
-	//		if (entity_window) {
-	//			begin_window("Entity");
-	//			Entity *e = manager->find_entity(id);
-	//			if (e) {
-	//				edit_field("Entity position x", &e->position.x);
-	//				edit_field("Entity position y", &e->position.y);
-	//				edit_field("Entity position z", &e->position.z);
-	//			}
-	//			end_window();
-	//		}
-	//	}
-
-	//	end_window();
-	//}
-
-
-	//	const char *str2[] = { "first2", "second2", "third2" };
-	//	static u32 item_index2 = 0;
-	//	list_box(str2, 3, &item_index2);
-
+	
 	end_frame();
 }
 

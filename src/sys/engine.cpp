@@ -4,7 +4,7 @@
 #include "../win32/win_time.h"
 #include "../libs/os/file.h"
 
-//#define DRAW_TEST_GUI
+#define DRAW_TEST_GUI 0
 
 static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
@@ -83,14 +83,14 @@ void Engine::frame()
 	render_world.update();
 
 	render_sys.new_frame();
-	
-#ifdef DRAW_TEST_GUI
-	gui::draw_test_gui();
-#endif
 
 	render_world.render();
 
+#if DRAW_TEST_GUI
+	gui::draw_test_gui();
+#else
 	editor.render();
+#endif
 	
 	render_sys.end_frame();
 
