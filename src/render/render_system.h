@@ -5,6 +5,8 @@
 #include <DirectXMath.h>
 
 #include "font.h"
+#include "render_api.h"
+#include "vertex.h"
 #include "../game/world.h"
 #include "../libs/math/matrix.h"
 #include "../libs/math/common.h"
@@ -13,7 +15,6 @@
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/array.h"
 #include "../libs/ds/linked_list.h"
-#include "render_api.h"
 
 
 struct Render_System;

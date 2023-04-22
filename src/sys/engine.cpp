@@ -150,6 +150,11 @@ Render_System *Engine::get_render_system()
 	return &engine->render_sys;
 }
 
+Mesh_Loader *Engine::get_mesh_loader()
+{
+	return &engine->mesh_loader;
+}
+
 u32 get_window_width()
 {
 	return engine->win32_info.window_width;
