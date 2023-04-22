@@ -7,7 +7,6 @@
 #include "../gui/gui.h"
 #include "../sys/engine.h"
 
-
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
 
@@ -93,6 +92,20 @@ void Render_World::init()
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
 	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
+
+	//Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
+	//mesh_loader->load("Scene_Demo1.fbx");
+
+	//Mesh_Loader::Mesh_Instance *mesh_instance = NULL;
+	//For(mesh_loader->mesh_instances, mesh_instance) {
+	//	Mesh_Idx mesh_idx;
+	//	if (add_mesh(mesh_instance->name, &mesh_instance->mesh, &mesh_idx)) {
+	//		for (u32 j = 0; j < mesh_instance->positions.count; j++) {
+	//			Entity_Id entity_id = game_world->make_entity(mesh_instance->positions[j]);
+	//			make_render_entity(entity_id, mesh_idx);
+	//		}
+	//	}
+	//}
 }
 
 void Render_World::init_shadow_rendering()

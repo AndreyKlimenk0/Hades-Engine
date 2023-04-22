@@ -131,6 +131,7 @@ bool create_console(Win32_Info *win32_state)
 	HFONT text_buffer_font = create_font(11, "Consolas");
 	HFONT intput_line_font = create_font(11, "Consolas");
 	SendMessage(win_console.text_buffer, WM_SETFONT, (WPARAM)text_buffer_font, 0);
+	SendMessage (win_console.text_buffer, EM_SETLIMITTEXT, 20000000, 0);
 	SendMessage(win_console.input_line_buffer, WM_SETFONT, (WPARAM)intput_line_font, 0);
 	return true;
 }

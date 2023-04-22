@@ -62,6 +62,8 @@ struct Array {
 		size = 8;
 		resize(size);
 	}
+
+	bool find(const T &item);
 };
 
 template <typename T>
@@ -83,15 +85,26 @@ void Array<T>::reserve(u32 _count)
 }
 
 template <typename T>
-T &Array<T>::get(u32 index)
+inline T &Array<T>::get(u32 index)
 {
 	return items[index];
 }
 
 template <typename T>
-const T &Array<T>::get(u32 index) const
+inline const T &Array<T>::get(u32 index) const
 {
 	return items[index];
+}
+
+template<typename T>
+inline bool Array<T>::find(const T & item)
+{
+	for (u32 i = 0; i < count; i++) {
+		if (item == items[i]) {
+			return true;
+		}
+	}
+	return false;
 }
 
 template <typename T>

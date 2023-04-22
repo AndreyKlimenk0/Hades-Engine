@@ -4,7 +4,7 @@
 #include "../sys/engine.h"
 
 
-inline void make_entity(Entity *entity, Entity_Type type, const Vector3 &position)
+inline void init_entity(Entity *entity, Entity_Type type, const Vector3 &position)
 {
 	entity->type = type;
 	entity->position = position;
@@ -23,10 +23,19 @@ Entity *Game_World::get_entity(Entity_Id entity_id)
 	return NULL;
 }
 
+Entity_Id Game_World::make_entity(const Vector3 &position)
+{
+	Entity entity;
+	init_entity(&entity, ENTITY_TYPE_COMMON, position);
+	entity.idx = entities.count;
+	entities.push(entity);
+	return get_entity_id(&entity);
+}
+
 Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data)
 {
 	Geometry_Entity geometry_entity;
-	make_entity(&geometry_entity, ENTITY_TYPE_GEOMETRY, position);
+	init_entity(&geometry_entity, ENTITY_TYPE_GEOMETRY, position);
 	
 	geometry_entity.geometry_type = geometry_type;
 	geometry_entity.idx = geometry_entities.count;
@@ -50,7 +59,7 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
 	Light light;
-	make_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 100.0f, 0.0f));
+	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 100.0f, 0.0f));
 	light.direction = direction;
 	light.color = color;
 	light.light_type = DIRECTIONAL_LIGHT_TYPE;;
@@ -65,7 +74,7 @@ Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vecto
 Entity_Id Game_World::make_point_light(const Vector3 &position, const Vector3 &color, float range)
 {
 	Light light;
-	make_entity(&light, ENTITY_TYPE_LIGHT, position);
+	init_entity(&light, ENTITY_TYPE_LIGHT, position);
 	light.color = color;
 	light.light_type = POINT_LIGHT_TYPE;
 	light.range = range;
@@ -80,7 +89,7 @@ Entity_Id Game_World::make_point_light(const Vector3 &position, const Vector3 &c
 Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &direction, const Vector3 &color, float radius)
 {
 	Light light;
-	make_entity(&light, ENTITY_TYPE_LIGHT, position);
+	init_entity(&light, ENTITY_TYPE_LIGHT, position);
 	light.direction = direction;
 	light.color = color;
 	light.light_type = SPOT_LIGHT_TYPE;

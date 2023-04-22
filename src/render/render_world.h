@@ -42,15 +42,15 @@ struct Render_Entity {
 
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
 
-struct Mesh_Instance {
-	u32 vertex_count = 0;
-	u32 index_count = 0;
-	u32 vertex_offset = 0;
-	u32 index_offset = 0;
-};
-
 template <typename T>
 struct Unified_Mesh_Storate {
+	struct Mesh_Instance {
+		u32 vertex_count = 0;
+		u32 index_count = 0;
+		u32 vertex_offset = 0;
+		u32 index_offset = 0;
+	};
+
 	Array<T> unified_vertices;
 	Array<u32> unified_indices;
 	Array<Mesh_Instance> mesh_instances;

@@ -192,6 +192,18 @@ inline void Hash_Table<_Key_, _Value_>::clear()
 		}
 	}
 	nodes.clear();
+
+	rand();
+	count = 0;
+	size = 8;
+	hash_factor1 = rand();
+	hash_facotr2 = rand() % 256;
+	table_size = size * 2;
+	max_loop = table_size;
+
+	nodes.resize(table_size);
+
+	memset(nodes.items, 0, sizeof(Table_Entry *) * table_size);
 }
 
 template<typename _Key_, typename _Value_>
