@@ -93,6 +93,8 @@ void Render_World::init()
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
 	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
 
+	game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
+
 	//Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
 	//mesh_loader->load("Scene_Demo1.fbx");
 
