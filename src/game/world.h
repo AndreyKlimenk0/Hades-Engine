@@ -101,6 +101,8 @@ struct Game_World {
 
 	Entity *get_entity(Entity_Id entity_id);
 
+	Entity_Id make_entity(const Vector3 &position);
+
 	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
 	
 	Entity_Id make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);

@@ -399,10 +399,5 @@ void Map_Parser::report_error(Token_Type expecting_token, Token_Type actual_toke
 
 void test()
 {
-	float theta = degress_to_radians(109);
-	float phi = degress_to_radians(48);
 
-	float x = 4 * math::sin(theta) * math::cos(phi);
-	float y = 4 * math::sin(theta) * math::sin(phi);
-	float z = 4 * math::cos(phi);
 }
