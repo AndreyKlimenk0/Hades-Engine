@@ -14,9 +14,9 @@ cbuffer Pass_Data : register(b2) {
 }
 
 cbuffer Light_Projections : register(b3) {
-	float4x4 direction_matrix;
-	float4x4 point_matrix;
-	float4x4 spot_matrix;
+	float4x4 direction_light_matrix;
+	float4x4 point_light_matrix;
+	float4x4 spot_light_matrix;
 };
 
 struct Vertex_Out {
@@ -37,7 +37,7 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	Vertex_XNUV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
 
 	float4x4 world_matrix = transpose(world_matrices[world_matrix_id]);
-	float4x4 wvp_matrix = mul(world_matrix, mul(light_view, direction_matrix));
+	float4x4 wvp_matrix = mul(world_matrix, mul(light_view, direction_light_matrix));
 
 	Vertex_Out vertex_out;
 	vertex_out.screen_position = mul(float4(vertex.position, 1.0f), wvp_matrix);

@@ -1965,16 +1965,9 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 
 static Gui_Manager gui_manager;
 
-//@Note: Gpu_Device must be removed. it is used for testing
 
-static Texture2D texture;
-static Gpu_Device *device = NULL;
-static void create_texture_from_file(const char *file_name, Texture2D *texture);
-
-void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font, Gpu_Device *gpu_device)
+void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font)
 {
-	device = gpu_device;
-	create_texture_from_file("Background_Albedo.png", &texture);
 	gui_manager.init(render_2d, win32_info, font);
 }
 
@@ -2115,14 +2108,15 @@ void gui::text(const char *some_text)
 	gui_manager.text(some_text);
 }
 
-struct Enum_String {
-	s32 enum_id;
-	String string_enum;
-};
-
-inline void handle_click(bool *state)
+bool gui::were_events_handled()
 {
-	*state = *state ? false : true;
+	for (u32 i = 0; i < gui_manager.windows_order.count; i++) {
+		Gui_Window * window = gui_manager.get_window_by_index(&gui_manager.windows_order, i);
+		if (detect_collision(&window->rect)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void gui::draw_test_gui()
@@ -2137,115 +2131,3 @@ void gui::draw_test_gui()
 	
 	end_frame();
 }
-
-bool gui::were_events_handled()
-{
-	for (u32 i = 0; i < gui_manager.windows_order.count; i++) {
-		Gui_Window *window = gui_manager.get_window_by_index(&gui_manager.windows_order, i);
-		if (detect_collision(&window->rect)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-#include "../libs/spng.h"
-
-static bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *width, u32 *height)
-{
-	FILE *png_file;
-	errno_t error =fopen_s(&png_file, path_to_file, "rb");
-	if (!png_file || error) {
-		String file_name;
-		extract_file_name(path_to_file, file_name);
-		print("Can not open PNG file with name {}", file_name);
-		return false;
-	}
-
-	spng_ctx *ctx = spng_ctx_new(0);
-	spng_set_crc_action(ctx, SPNG_CRC_USE, SPNG_CRC_USE);
-
-	spng_set_png_file(ctx, png_file);
-
-	struct spng_ihdr ihdr;
-	int result = spng_get_ihdr(ctx, &ihdr);
-
-	if (result) {
-		print("spng_get_ihdr() error: {}", spng_strerror(result));
-		spng_ctx_free(ctx);
-		fclose(png_file);
-		return false;
-	}
-
-	*width = ihdr.width;
-	*height = ihdr.height;
-
-	if (*png_image_buffer) {
-		delete *png_image_buffer;
-	}
-
-	int size = ihdr.width * ihdr.width * 4;
-
-	*png_image_buffer = new u8[size];
-
-
-	result = spng_decode_chunks(ctx);
-	if (result) {
-		print("spng_decode_chunks() error: {}", spng_strerror(result));
-		delete *png_image_buffer;
-		spng_ctx_free(ctx);
-		fclose(png_file);
-		return false;
-	}
-
-	result = spng_decode_image(ctx, (void *)*png_image_buffer, size, SPNG_FMT_RGBA8, 0);
-	if (result) {
-		print("spng_decode_image() error: {}", spng_strerror(result));
-		delete *png_image_buffer;
-		spng_ctx_free(ctx);
-		fclose(png_file);
-		return false;
-	}
-
-	spng_ctx_free(ctx);
-	fclose(png_file);
-	return true;
-}
-
-
-static void create_texture_from_file(const char *file_name, Texture2D *texture)
-{
-	String file_extension;
-	extract_file_extension(file_name, file_extension);
-
-	if (file_extension != "png") {
-		print("create_texture_from_file: the fucntion supports only png file");
-	}
-
-	String texture_path;
-	build_full_path_to_texture_file(file_name, texture_path);
-	if (!file_exists(texture_path)) {
-		print("create_texture_from_file: file with name {} was not found", file_name);
-	}
-
-	u8 *png_image_buffer = NULL;
-	u32 png_image_width;
-	u32 png_image_height;
-
-	bool result = load_png_file(texture_path, &png_image_buffer, &png_image_width, &png_image_height);
-
-	if (!result) {
-		print("create_texture_from_file: Loading png file {} was failed.", file_name);
-		DELETE_PTR(png_image_buffer);
-	}
-
-	Texture_Desc desc;
-	desc.width = png_image_width;
-	desc.height = png_image_height;
-	desc.data = (void *)png_image_buffer;
-	desc.mip_levels = 1;
-
-	device->create_texture_2d(&desc, texture);
-	DELETE_PTR(png_image_buffer);
-}
-
