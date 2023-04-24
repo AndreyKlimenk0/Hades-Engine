@@ -27,6 +27,7 @@ struct Mesh_Instance {
 };
 
 Texture2D<float4> texture_map : register(t0);
+Texture2D<float4> shadow_atlas : register(t1);
 
 SamplerState sampler_anisotropic : register(s0);
 

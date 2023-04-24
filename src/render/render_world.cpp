@@ -9,7 +9,6 @@
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
-
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index)
 {
 	for (u32 i = 0; i < render_entities->count; i++) {
@@ -116,7 +115,7 @@ void Render_World::init_shadow_rendering()
 	texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
 	//texture_desc.width = SHADOW_ATLAS_WIDTH;
 	//texture_desc.height = SHADOW_ATLAS_HEIGHT;
-	texture_desc.height = DIRECTION_SHADOW_MAP_WIDTH;
+	texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
 	texture_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	texture_desc.mip_levels = 1;
 	
@@ -170,8 +169,7 @@ void Render_World::update()
 
 	frame_info.view_matrix = camera.get_view_matrix();
 	frame_info.perspective_matrix = render_sys->view_info.perspective_matrix;
-	//frame_info.orthographic_matrix = render_sys->view_info.orthogonal_matrix;
-	frame_info.orthographic_matrix = render_sys->view_info.perspective_matrix;
+	frame_info.orthographic_matrix = render_sys->view_info.orthogonal_matrix;
 	frame_info.camera_position = camera.position;
 	frame_info.camera_direction = camera.target;
 	frame_info.near_plane = render_sys->view_info.near_plane;
@@ -255,8 +253,8 @@ void Render_World::make_shadow(Entity_Id entity_id)
 	
 	Vector3 light_diretion = light->direction;
 	light_diretion.normalize();
-	light_diretion *= -1.0f;
-	Vector3 light_position = (world_bounding_sphere.radious * 4.0f) * light_diretion;
+	light_diretion.negete();
+	Vector3 light_position = (world_bounding_sphere.radious * 2.0f) * light_diretion;
 	light->position = light_position;
 
 	Shadow_Map shadow_map;
@@ -267,9 +265,7 @@ void Render_World::make_shadow(Entity_Id entity_id)
 			shadow_map.width = DIRECTION_SHADOW_MAP_WIDTH;
 			shadow_map.height = DIRECTION_SHADOW_MAP_HEIGHT;
 			shadow_map.coordinates_in_atlas.set_size(shadow_map.width, shadow_map.height);
-			//shadow_map.light_view = XMMatrixLookAtLH(light_position, light->direction, Vector3(1.0f, 0.0f, 0.0f));
-			shadow_map.light_view = XMMatrixLookAtLH(Vector3(0.0f, 200.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f));
-			//shadow_map.light_view = XMMatrixLookAtLH(light_position, Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
+			shadow_map.light_view = XMMatrixLookAtLH(light_position, light->direction, Vector3(0.0f, 1.0f, 0.0f));
 			break;
 		}
 		assert(false);
@@ -376,16 +372,11 @@ void Struct_Buffer::free()
 
 void Render_World::Light_Projections::init()
 {
-	float projection_plane_width = 100.0f;
-	float projection_plane_height = 100.0f;
+	float projection_plane_width = DIRECTION_SHADOW_MAP_WIDTH / 2.0f;
+	float projection_plane_height = DIRECTION_SHADOW_MAP_HEIGHT / 2.0f;
 	float near_plane = 0.0f;
 	float far_plane = 1000.0f;
 
-	float ratio = (float)1000.0f / (float)1000.0f;
-	float fov_y_ratio = XMConvertToRadians(45);
-	direction_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, ratio, 1.0f, far_plane);
-
-	//direction_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);
 	direction_matrix = XMMatrixOrthographicOffCenterLH(-projection_plane_width, projection_plane_width, -projection_plane_height, projection_plane_height, near_plane, far_plane);
 	point_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);
 	spot_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);

@@ -19,7 +19,7 @@ void Engine::init(Win32_Info *_win32_info)
 	font.init(FONT_SIZE);
 
 	render_sys.init(&win32_info, &font);
-	gui::init_gui(&render_sys.render_2d, &win32_info, &font, &render_sys.gpu_device);
+	gui::init_gui(&render_sys.render_2d, &win32_info, &font);
 
 	game_world.init();
 	render_world.init();

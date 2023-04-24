@@ -65,7 +65,7 @@ struct Gui_Window_Theme {
 };
 
 namespace gui {
-	void init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font, Gpu_Device *gpu_device);
+	void init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font);
 	void shutdown();
 	void draw_test_gui();
 

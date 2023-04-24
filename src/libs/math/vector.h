@@ -223,6 +223,7 @@ struct Vector3 {
 	operator float *();
 
 	void normalize();
+	void negete();
 
 	float length();
 	float dot(const Vector3 & other);
@@ -397,6 +398,13 @@ inline void Vector3::normalize()
 	x /= len; 
 	y /= len; 
 	z /= len;
+}
+
+inline void Vector3::negete()
+{
+	x = -x;
+	y = -y;
+	z = -z;
 }
 
 inline float Vector3::dot(const Vector3 &other)
