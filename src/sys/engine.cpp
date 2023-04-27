@@ -65,11 +65,6 @@ void Engine::init_from_file()
 		
 		free_string(mesh_name);
 	}
-
-	Light *light = NULL;
-	For(game_world.lights, light) {
-		render_world.make_shadow(get_entity_id(light));
-	}
 }
 
 void Engine::frame()

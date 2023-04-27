@@ -42,13 +42,11 @@ struct Draw_Lines_Pass : Render_Pass {
 struct Shadow_Pass : Render_Pass {
 	Shadow_Pass(void *render_context);
 
-	Gpu_Buffer light_projections_cbuffer;
 	struct Pass_Data {
 		u32 mesh_idx;
 		u32 world_matrix_idx;
-		u32 pad1;
-		u32 pad2;
-		Matrix4 light_view;
+		u32 light_view_matrix_idx;
+		u32 pad;
 	};
 
 	void init(Render_System *render_sys);

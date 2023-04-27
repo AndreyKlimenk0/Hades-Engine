@@ -16,10 +16,14 @@ struct Light {
 	float4 position;
 	float4 direction;
 	float4 color;
-	uint light_type;
 	float radius;
 	float range;
-	float pad;
+	uint light_type;
+	uint shadow_map_idx;
+};
+
+struct Shadow_Map {
+	uint light_view_matrix_idx;
 };
 
 struct Material {
@@ -163,19 +167,37 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	Vertex_XNUV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
 
 	float4x4 world_matrix = transpose(world_matrices[world_matrix_id]);
-
-	float4x4 temp = mul(view_matrix, perspective_matrix);
-	float4x4 temp2 = mul(world_matrix, temp);
 	
 	Vertex_Out vertex_out;
-	vertex_out.position = mul(float4(vertex.position, 1.0f), temp2); 
-	vertex_out.world_position = mul(vertex.position, (float3x3)world_matrix);
+	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(view_matrix, perspective_matrix))); 
+	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix);
 	vertex_out.normal = mul(vertex.normal, (float3x3)world_matrix);
 	vertex_out.uv = vertex.uv;
 	return vertex_out;
 }
 
-StructuredBuffer<Light> lights : register(t6);
+StructuredBuffer<Light> lights : register(t7);
+StructuredBuffer<Shadow_Map> shadow_maps : register(ps, t6);
+StructuredBuffer<float4x4> light_view_matrices : register(ps, t8);
+
+float calculate_shadow(float3 world_position, uint light_view_matrix_idx, float3 normal, Light light)
+{
+	float4x4 light_view_matrix = transpose(light_view_matrices[light_view_matrix_idx]);
+	
+	float4 position_from_light_perspective = mul(float4(world_position, 1.0f), mul(light_view_matrix, direction_light_matrix));
+
+	float2 projection_coordinates;
+	
+	projection_coordinates.x = 0.5f + ((position_from_light_perspective.x / position_from_light_perspective.w) * 0.5f);
+	projection_coordinates.y = 0.5f - ((position_from_light_perspective.y / position_from_light_perspective.w) * 0.5f);
+
+	float depth_from_light_perspective = shadow_atlas.Sample(sampler_anisotropic, projection_coordinates.xy);
+	
+	float depth_from_camera_perspective = position_from_light_perspective.z /  position_from_light_perspective.w;
+	
+	float bias = 0.005f;
+	return (depth_from_camera_perspective - bias)  > depth_from_light_perspective ? 0.4f : 1.0f;
+}
 
 float4 ps_main(Vertex_Out pixel) : SV_Target
 {
@@ -191,18 +213,26 @@ float4 ps_main(Vertex_Out pixel) : SV_Target
 	material.specular = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	float4 final_color = { 0.0f, 0.0f, 0.0f, 0.0f };
-	for (int i = 0; i < light_count; i++) {
-		switch (lights[i].light_type) {
-			case SPOT_LIGHT_TYPE:
-				final_color += calculate_spot_light(lights[i], material, pixel.normal, pixel.world_position);
-				break;
-			case POINT_LIGHT_TYPE:
-				final_color += calculate_point_light(lights[i], material, pixel.normal, pixel.world_position);
-				break;
-			case DIRECTIONAL_LIGHT_TYPE:
-				final_color += calculate_directional_light(lights[i], material, pixel.normal, pixel.world_position);
-				break;
+	for (uint i = 0; i < light_count; i++) {
+
+		Light light = lights[i];
+		Shadow_Map shadow_map = shadow_maps[light.shadow_map_idx];
+
+		float shadow_factor = calculate_shadow(pixel.world_position, shadow_map.light_view_matrix_idx, pixel.normal, light);
+		if (shadow_factor > 0.0f) {
+			switch (light.light_type) {
+				case SPOT_LIGHT_TYPE:
+					final_color += calculate_spot_light(light, material, pixel.normal, pixel.world_position);
+					break;
+				case POINT_LIGHT_TYPE:
+					final_color += calculate_point_light(light, material, pixel.normal, pixel.world_position);
+					break;
+				case DIRECTIONAL_LIGHT_TYPE:
+					final_color += calculate_directional_light(light, material, pixel.normal, pixel.world_position);
+					break;
+			}
 		}
+		final_color *= shadow_factor;
 	}
 
 	float4 r = final_color * test;
