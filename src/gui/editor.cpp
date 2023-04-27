@@ -330,7 +330,7 @@ void Render_World_Window::update()
 			R24U8 depth = R24U8(shadow_atlas_pixel[column]);
 			u8 r = u8(depth.numerator >> 24);
 			u8 g = u8(depth.numerator >> 16);
-			u8 b = u8(depth.numerator >> 15);
+			u8 b = u8(depth.numerator >> 13);
 			//u8 b = u8(depth.numerator >> 16);
 			Color color = Color(b, b, b);
 			shadow_dispaly_pixel[column] = color.get_packed_rgba();

@@ -16,8 +16,11 @@ typedef u32 Mesh_Idx;
 
 const u32 SHADOW_ATLAS_WIDTH = 8192;
 const u32 SHADOW_ATLAS_HEIGHT = 8192;
-const u32 DIRECTION_SHADOW_MAP_WIDTH = 2048;
-const u32 DIRECTION_SHADOW_MAP_HEIGHT = 2048;
+//const u32 DIRECTION_SHADOW_MAP_WIDTH = 2048;
+//const u32 DIRECTION_SHADOW_MAP_HEIGHT = 2048;
+
+const u32 DIRECTION_SHADOW_MAP_WIDTH = 1900;
+const u32 DIRECTION_SHADOW_MAP_HEIGHT = 980;
 
 const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
@@ -66,11 +69,7 @@ struct Unified_Mesh_Storate {
 };
 
 struct Shadow_Map {
-	Entity_Id light_id;
-	u32 width = 0;
-	u32 height = 0;
-	Rect_u32 coordinates_in_atlas;
-	Matrix4 light_view;
+	u32 light_view_matrix_idx;
 };
 
 struct Render_World {
@@ -88,6 +87,7 @@ struct Render_World {
 	Array<Entity_Id> entity_ids;
 	
 	Array<Matrix4> world_matrices;
+	Array<Matrix4> light_view_matrices;
 	Array<Render_Entity> render_entities;
 	Array<Render_Entity> bounding_box_entities;
 	Array<Render_Entity> mesh_outline_entities;
@@ -110,8 +110,12 @@ struct Render_World {
 	Depth_Stencil_Buffer temp_shadow_storage;
 	
 	Gpu_Buffer frame_info_cbuffer;
+	Gpu_Buffer light_projections_cbuffer;
+
 	Struct_Buffer world_matrix_struct_buffer;
-	Struct_Buffer light_struct_buffer;
+	Struct_Buffer light_view_matrices_struct_buffer;
+	Struct_Buffer lights_struct_buffer;
+	Struct_Buffer shadow_maps_struct_buffer;
 
 	void init();
 	void init_shadow_rendering();
@@ -123,7 +127,7 @@ struct Render_World {
 	void update_world_matrices();
 	
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
-	void make_shadow(Entity_Id entity_id);
+	u32 make_shadow(Light *light);
 
 	void render();
 	

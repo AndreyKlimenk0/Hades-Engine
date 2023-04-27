@@ -19,6 +19,12 @@ cbuffer Frame_Info : register(b1) {
 	uint pad;
 };
 
+cbuffer Light_Projections : register(b2) {
+	float4x4 direction_light_matrix;
+	float4x4 point_light_matrix;
+	float4x4 spot_light_matrix;
+};
+
 struct Mesh_Instance {
 	uint vertex_count;
 	uint index_count;
@@ -27,7 +33,7 @@ struct Mesh_Instance {
 };
 
 Texture2D<float4> texture_map : register(t0);
-Texture2D<float4> shadow_atlas : register(t1);
+Texture2D<float> shadow_atlas : register(t1);
 
 SamplerState sampler_anisotropic : register(s0);
 

@@ -21,10 +21,10 @@ struct Shader_Light {
 	Vector4 position;
 	Vector4 direction;
 	Vector4 color;
-	u32 light_type;
 	float radius;
 	float range;
-	float pad;
+	u32 light_type;
+	u32 shadow_map_idx;
 };
 
 #endif

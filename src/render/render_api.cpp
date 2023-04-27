@@ -936,9 +936,9 @@ void Render_Pipeline::set_pixel_shader_resource(u32 gpu_register, const Gpu_Buff
 	dx11_context->PSSetConstantBuffers(gpu_register, 1, constant_buffer.resource.GetAddressOf());
 }
 
-void Render_Pipeline::set_pixel_shader_resource(const Shader_Resource_View &shader_resource_view)
+void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view)
 {
-	dx11_context->PSSetShaderResources(0, 1, shader_resource_view.GetAddressOf());
+	dx11_context->PSSetShaderResources(shader_resource_register, 1, shader_resource_view.GetAddressOf());
 }
 
 void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)

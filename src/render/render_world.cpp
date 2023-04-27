@@ -75,14 +75,14 @@ void Render_World::init()
 
 	init_shadow_rendering();
 
-	light_projections.init();
-
 	init_render_passes();
 	
 	render_sys->gpu_device.create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
 
-	light_struct_buffer.allocate<Shader_Light>(100);
+	lights_struct_buffer.allocate<Shader_Light>(100);
 	world_matrix_struct_buffer.allocate<Matrix4>(1000);
+	light_view_matrices_struct_buffer.allocate<Matrix4>(1000);
+	shadow_maps_struct_buffer.allocate<Shadow_Map>(100);
 	
 	Texture_Desc texture_desc;
 	texture_desc.width = 200;
@@ -133,17 +133,21 @@ void Render_World::init_shadow_rendering()
 	render_sys->gpu_device.create_depth_stencil_buffer(&depth_stencil_desc, &temp_shadow_storage);
 
 	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &temp_shadow_storage.texture);
+
+	light_projections.init();
+	render_sys->gpu_device.create_constant_buffer(sizeof(Render_World::Light_Projections), &light_projections_cbuffer);
+	render_sys->render_pipeline.update_constant_buffer(&light_projections_cbuffer, (void *)&light_projections);
 }
 
 void Render_World::init_render_passes()
 {
-	Forwar_Light_Pass *forward_light_pass = new Forwar_Light_Pass((void *)this);
-	Draw_Lines_Pass *draw_lines_pass = new Draw_Lines_Pass((void *)this);
 	Shadow_Pass *shadow_pass = new Shadow_Pass((void *)this);
+	Draw_Lines_Pass *draw_lines_pass = new Draw_Lines_Pass((void *)this);
+	Forwar_Light_Pass *forward_light_pass = new Forwar_Light_Pass((void *)this);
 
-	render_passes.push(forward_light_pass);
-	render_passes.push(draw_lines_pass);
 	render_passes.push(shadow_pass);
+	render_passes.push(draw_lines_pass);
+	render_passes.push(forward_light_pass);
 
 	Render_System *render_sys = Engine::get_render_system();
 	for (u32 i = 0; i < render_passes.count; i++) {
@@ -195,12 +199,19 @@ void Render_World::update_lights()
 		hlsl_light.position = light->position;
 		hlsl_light.direction = light->direction;
 		hlsl_light.color = light->color;
-		hlsl_light.light_type = light->light_type;
 		hlsl_light.radius = light->radius;
 		hlsl_light.range = light->range;
+		hlsl_light.light_type = light->light_type;
+		hlsl_light.shadow_map_idx = make_shadow(light);
 		shader_lights.push(hlsl_light);
 	}
-	light_struct_buffer.update(&shader_lights);
+	lights_struct_buffer.update(&shader_lights);
+	//light_view_matrices.clear();
+	//Matrix4 m;
+	//m.matrix[0] = Color::Red;
+	//light_view_matrices.push(m);
+	light_view_matrices_struct_buffer.update(&light_view_matrices);
+	shadow_maps_struct_buffer.update(&shadow_maps);
 }
 
 void Render_World::update_shadow_atlas()
@@ -208,7 +219,7 @@ void Render_World::update_shadow_atlas()
 	Array<Rect_u32 *> shadow_map_coordinates;
 	Shadow_Map *shadow_map = NULL;
 	For(shadow_maps, shadow_map) {
-		shadow_map_coordinates.push(&shadow_map->coordinates_in_atlas);
+		//shadow_map_coordinates.push(&shadow_map->coordinates_in_atlas);
 	}
 
 	Rect_u32 shadow_atlas_rect;
@@ -243,34 +254,24 @@ void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx)
 	render_entities.push(render_entity);
 }
 
-void Render_World::make_shadow(Entity_Id entity_id)
-{
-	if (entity_id.type != ENTITY_TYPE_LIGHT) {
-		print("Render_World::make_shadow: Shadow map can not be created because entity id has not light type.");
-		return;
-	}
-	Light *light = static_cast<Light *>(game_world->get_entity(entity_id));
-	
+u32 Render_World::make_shadow(Light *light)
+{	
 	Vector3 light_diretion = light->direction;
 	light_diretion.normalize();
 	light_diretion.negete();
-	Vector3 light_position = (world_bounding_sphere.radious * 2.0f) * light_diretion;
+	Vector3 light_position = (world_bounding_sphere.radious * 1.0f) * light_diretion;
 	light->position = light_position;
 
 	Shadow_Map shadow_map;
-	shadow_map.light_id = entity_id;
 
 	switch (light->light_type) {
 		case DIRECTIONAL_LIGHT_TYPE: {
-			shadow_map.width = DIRECTION_SHADOW_MAP_WIDTH;
-			shadow_map.height = DIRECTION_SHADOW_MAP_HEIGHT;
-			shadow_map.coordinates_in_atlas.set_size(shadow_map.width, shadow_map.height);
-			shadow_map.light_view = XMMatrixLookAtLH(light_position, light->direction, Vector3(0.0f, 1.0f, 0.0f));
+			shadow_map.light_view_matrix_idx = light_view_matrices.push(XMMatrixLookAtLH(light_position, light->direction, Vector3(0.0f, 1.0f, 0.0f)));
 			break;
 		}
 		assert(false);
 	}
-	shadow_maps.push(shadow_map);
+	return shadow_maps.push(shadow_map);
 }
 
 bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx)
@@ -374,8 +375,8 @@ void Render_World::Light_Projections::init()
 {
 	float projection_plane_width = DIRECTION_SHADOW_MAP_WIDTH / 2.0f;
 	float projection_plane_height = DIRECTION_SHADOW_MAP_HEIGHT / 2.0f;
-	float near_plane = 0.0f;
-	float far_plane = 1000.0f;
+	float near_plane = 1.0f;
+	float far_plane = 10000.0f;
 
 	direction_matrix = XMMatrixOrthographicOffCenterLH(-projection_plane_width, projection_plane_width, -projection_plane_height, projection_plane_height, near_plane, far_plane);
 	point_matrix = XMMatrixOrthographicLH(projection_plane_width, projection_plane_height, near_plane, far_plane);
