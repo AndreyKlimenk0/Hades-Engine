@@ -705,7 +705,7 @@ void Render_2D::render_frame()
 			render_pipeline->set_vertex_shader_resource(0, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(0, constant_buffer);
 			if (render_primitive->texture->get_pitch()) {
-				render_pipeline->set_pixel_shader_resource(render_primitive->texture->view);
+				render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->view);
 			}
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
