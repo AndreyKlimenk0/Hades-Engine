@@ -55,6 +55,7 @@ const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
 const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 
 struct Render_Primitive_List {	
+	//@Note: default construcor should be deleted. 
 	Render_Primitive_List() {}
 	Render_Primitive_List(Render_2D *render_2d);
 	

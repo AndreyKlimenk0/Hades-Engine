@@ -36,9 +36,10 @@ struct Engine {
 	Render_System render_sys;
 
 	void init(Win32_Info *_win32_state);
-	void init_from_file();
+	void init_from_map();
 	void frame();
 	void save_to_file();
+	void display_performace_info();
 	void shutdown();
 
 	static bool initialized();

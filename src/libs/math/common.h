@@ -101,16 +101,16 @@ inline T &Size<T>::operator[](u32 index)
 typedef Size<u32> Size_u32;
 typedef Size<s32> Size_s32;
 
-template <typename T>
+template <typename T, typename U>
 struct Pair {
 	Pair() {}
-	Pair(const T &first, const T &second) : first(first), second(second) {}
+	Pair(const T &first, const U &second) : first(first), second(second) {}
 	
 	T first;
-	T second;
+	U second;
 };
 
-typedef Pair<s32> Pair_s32;
+typedef Pair<s32, s32> Pair_s32;
 
 template <typename T>
 struct Point_V2 {

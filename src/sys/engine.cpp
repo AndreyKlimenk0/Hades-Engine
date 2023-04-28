@@ -27,7 +27,7 @@ void Engine::init(Win32_Info *_win32_info)
 	String path;
 	build_full_path_to_map_file("temp_map.bmap", path);
 	if (file_exists(path)) {
-		init_from_file();
+		init_from_map();
 	}
 
 	editor.init();
@@ -35,7 +35,7 @@ void Engine::init(Win32_Info *_win32_info)
 	engine->is_initialized = true;
 }
 
-void Engine::init_from_file()
+void Engine::init_from_map()
 {
 	game_world.init_from_file();
 
@@ -86,19 +86,38 @@ void Engine::frame()
 #else
 	editor.render();
 #endif
-	
+
+	display_performace_info();
+
 	render_sys.end_frame();
 
 	clear_event_queue();
 
-	s64 elapsed_ticks = cpu_ticks_counter() - ticks_counter;
-	fps = cpu_ticks_per_second() / elapsed_ticks;
+	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
 	frame_time = milliseconds_counter() - start_time;
 }
 
 void Engine::save_to_file()
 {
 	game_world.save_to_file();
+}
+
+void Engine::display_performace_info()
+{
+	static auto render_list = Render_Primitive_List(&render_sys.render_2d);
+	
+	char *test = format("Fps", fps);
+	char *test2 = format("Frame time {} ms", frame_time);
+	u32 text_width = font.get_text_width(test2);
+	
+	s32 x = win32_info.window_width - text_width - 10;
+
+	render_list.add_text(x, 20, test);
+	render_list.add_text(x, 40, test2);
+	free_string(test);
+	free_string(test2);
+
+	render_sys.render_2d.add_render_primitive_list(&render_list);
 }
 
 void Engine::shutdown()
