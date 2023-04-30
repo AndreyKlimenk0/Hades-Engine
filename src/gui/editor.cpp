@@ -113,8 +113,6 @@ void Make_Entity_Window::draw()
 				free_string(mesh_name);
 			}
 		}
-	} else {
-		print("Make_Entity_Window::draw: Unknown Entity Type.");
 	}
 }
 

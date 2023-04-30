@@ -4,6 +4,8 @@
 #include "../libs/ds/array.h"
 #include "../render/render_system.h"
 
+struct Engine;
+
 typedef u32 Window_Style;
 const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_WITH_HEADER = 0x1;
@@ -65,8 +67,9 @@ struct Gui_Window_Theme {
 };
 
 namespace gui {
-	void init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font);
+	void init_gui(Engine *engine, const char *font_name, u32 font_size);
 	void shutdown();
+	void set_font(const char *font_name, u32 font_size);
 	void draw_test_gui();
 
 	bool were_events_handled();

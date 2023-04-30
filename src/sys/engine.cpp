@@ -16,10 +16,13 @@ void Engine::init(Win32_Info *_win32_info)
 	win32_info = *_win32_info;
 	init_os_path();
 
-	font.init(FONT_SIZE);
+	font_manager.init();
 
-	render_sys.init(&win32_info, &font);
-	gui::init_gui(&render_sys.render_2d, &win32_info, &font);
+	render_sys.init(this);
+	
+	gui::init_gui(this, "consola", FONT_SIZE);
+
+	performance_displayer.init(this);
 
 	game_world.init();
 	render_world.init();
@@ -87,7 +90,7 @@ void Engine::frame()
 	editor.render();
 #endif
 
-	display_performace_info();
+	performance_displayer.display();
 
 	render_sys.end_frame();
 
@@ -100,24 +103,6 @@ void Engine::frame()
 void Engine::save_to_file()
 {
 	game_world.save_to_file();
-}
-
-void Engine::display_performace_info()
-{
-	static auto render_list = Render_Primitive_List(&render_sys.render_2d);
-	
-	char *test = format("Fps", fps);
-	char *test2 = format("Frame time {} ms", frame_time);
-	u32 text_width = font.get_text_width(test2);
-	
-	s32 x = win32_info.window_width - text_width - 10;
-
-	render_list.add_text(x, 20, test);
-	render_list.add_text(x, 40, test2);
-	free_string(test);
-	free_string(test2);
-
-	render_sys.render_2d.add_render_primitive_list(&render_list);
 }
 
 void Engine::shutdown()
@@ -139,14 +124,14 @@ void Engine::resize_window(u32 window_width, u32 window_height)
 	engine->render_sys.resize(window_width, window_height);
 }
 
+Win32_Info *Engine::get_win32_info()
+{
+	return &engine->win32_info;
+}
+
 Engine *Engine::get_instance()
 {
 	return engine;
-}
-
-Font *Engine::get_font()
-{
-	return &engine->font;
 }
 
 Game_World *Engine::get_game_world()
@@ -164,17 +149,41 @@ Render_System *Engine::get_render_system()
 	return &engine->render_sys;
 }
 
+Font_Manager *Engine::get_font_manager()
+{
+	return &engine->font_manager;
+}
+
 Mesh_Loader *Engine::get_mesh_loader()
 {
 	return &engine->mesh_loader;
 }
 
-u32 get_window_width()
+void Engine::Performance_Displayer::init(Engine *_engine)
 {
-	return engine->win32_info.window_width;
+	engine = _engine;
+	font = engine->font_manager.get_font("consola", 14);
+	if (!font) {
+		print("Engine::Performance_Displayer::init: Failed to get font.");
+		return;
+	}
+	Render_Font *render_font = engine->render_sys.render_2d.get_render_font(font);
+	render_list = Render_Primitive_List(&engine->render_sys.render_2d, font, render_font);
 }
 
-u32 get_window_height()
+void Engine::Performance_Displayer::display()
 {
-	return engine->win32_info.window_height;
+	char *test = format("Fps", engine->fps);
+	char *test2 = format("Frame time {} ms", engine->frame_time);
+	u32 text_width = font->get_text_width(test2);
+
+	s32 x = engine->win32_info.window_width - text_width - 10;
+
+	render_list.add_text(x, 5, test);
+	render_list.add_text(x, 20, test2);
+	free_string(test);
+	free_string(test2);
+
+	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
 }
+

@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include "gui.h"
 
-#include "../win32/win_local.h"
-#include "../win32/win_time.h"
-#include "../win32/win_types.h"
+#include "../sys/engine.h"
 #include "../sys/sys_local.h"
+
+#include "../win32/win_time.h"
+#include "../win32/win_local.h"
+#include "../win32/win_types.h"
 
 #include "../libs/str.h"
 #include "../libs/os/path.h"
@@ -18,8 +20,6 @@
 
 #include "../render/font.h"
 
-//@Note included for testing
-#include "../game/world.h"
 
 #define PRINT_GUI_INFO 0
 #define DRAW_WINDOW_DEBUG_RECTS 0
@@ -361,9 +361,10 @@ struct Gui_Manager {
 	Gui_ID probably_resizing_window;
 	Gui_ID window_events_handler_id;
 
-	Font *font = NULL;
 	Win32_Info *win32_info = NULL;
-	//2D render api
+	
+	Font *font = NULL;
+	Render_Font *render_font = NULL;
 	Render_2D *render_2d = NULL;
 
 	Rect_s32 window_rect;
@@ -385,7 +386,8 @@ struct Gui_Manager {
 
 	void handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
-	void init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font);
+	void init(Engine *engine, const char *font_name, u32 font_size);
+	void set_font(const char *font_name, u32 font_size);
 	void shutdown();
 	
 	void new_frame();
@@ -596,7 +598,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	window.content_rect.set(window_rect.x, window_rect.y);
 	window.scroll = { window_rect.x, window_rect.y };
 
-	window.render_list = Render_Primitive_List(render_2d);
+	window.render_list = Render_Primitive_List(render_2d, font, render_font);
 
 	windows.push(window);
 	window_rect.x += window.rect.width + 40;
@@ -622,7 +624,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	window.content_rect.set(rect->x, rect->y);
 	window.scroll = { rect->x, rect->y };
 
-	window.render_list = Render_Primitive_List(render_2d);
+	window.render_list = Render_Primitive_List(render_2d, font, render_font);
 
 	window.index_in_windows_array = windows.count;
 	windows.push(window);
@@ -755,11 +757,11 @@ static bool is_symbol_float_valid(char symbol)
 
 void Gui_Manager::edit_field(const char *name, int *value)
 {
-	char *str_value = to_string(*value);
-	if (edit_field(name, str_value, 10, &is_symbol_int_valid)) {
-		*value = atoi(edit_field_state.data.c_str());
-	}
-	free_string(str_value);
+	//char *str_value = to_string(*value);
+	//if (edit_field(name, str_value, 10, &is_symbol_int_valid)) {
+	//	*value = atoi(edit_field_state.data.c_str());
+	//}
+	//free_string(str_value);
 }
 
 void Gui_Manager::edit_field(const char *name, float *value)
@@ -1327,12 +1329,11 @@ bool Gui_Manager::can_window_be_resized(Gui_Window *window)
 	return true;
 }
 
-void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_font)
+void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 {
 	print("[Init Hades gui]");
-	render_2d = _render_2d;
-	win32_info = _win32_info;
-	font = _font;
+	render_2d = &engine->render_sys.render_2d;
+	win32_info = &engine->win32_info;
 
 	any_window_was_moved = false;
 	handle_events_for_one_window = false;
@@ -1342,6 +1343,8 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	curr_parent_windows_index_sum = 0;
 	prev_parent_windows_index_sum = 0;
 	window_theme = DEFAULT_WINDOW_THEME;
+
+	set_font(font_name, font_size);
 
 	String path_to_save_file;
 	build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
@@ -1390,6 +1393,24 @@ void Gui_Manager::init(Render_2D *_render_2d, Win32_Info *_win32_info, Font *_fo
 	}
 }
 
+void Gui_Manager::set_font(const char *font_name, u32 font_size)
+{
+	Font *new_font = Engine::get_font_manager()->get_font(font_name, font_size);
+	if (!new_font) {
+		print(" Gui_Manager::set_font: Failed to set new font '{}' wit size {}. Font was not found.", font_name, font_size);
+	}
+	font = new_font;
+	
+	Render_Font *new_render_font = NULL;
+	char *formatted_font_name = format("{}_{}", font_name, font_size);
+	if (!render_2d->render_fonts.get(formatted_font_name, &new_render_font)) {
+		print(" Gui_Manager::set_font: Failed to set new font '{}' wit size {}. Render font was not found.", font_name, font_size);
+		free_string(formatted_font_name);
+	}
+	free_string(formatted_font_name);
+	render_font = new_render_font;
+}
+
 void Gui_Manager::shutdown()
 {
 	String path_to_save_file;
@@ -1407,7 +1428,6 @@ void Gui_Manager::shutdown()
 	int i = 0;
 	For(windows, window) {
 		if (window->type == WINDOW_TYPE_PARENT) {
-
 			save_file.write((void *)&window->style, sizeof(u32));
 			save_file.write((void *)&window->name.len, sizeof(int));
 			save_file.write((void *)&window->name.data[0], window->name.len);
@@ -1802,8 +1822,6 @@ void Gui_Manager::end_child()
 	Rect_s32 bottom_scroll_bar;
 
 	if (((window->style & WINDOW_WITH_SCROLL_BAR) && ((window->content_rect.height > window->view_rect.height)) || (window->scroll[Y_AXIS] > window->view_rect.y))) {
-		print("Content rect", &window->content_rect);
-		print("View rect", &window->view_rect);
 		right_scroll_bar = window->get_scrollbar_rect(Y_AXIS);
 		draw_right_scroll_bar = true;
 	}
@@ -1966,14 +1984,19 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 static Gui_Manager gui_manager;
 
 
-void gui::init_gui(Render_2D *render_2d, Win32_Info *win32_info, Font *font)
+void gui::init_gui(Engine *engine, const char *font_name, u32 font_size)
 {
-	gui_manager.init(render_2d, win32_info, font);
+	gui_manager.init(engine, font_name, font_size);
 }
 
 void gui::shutdown()
 {
 	gui_manager.shutdown();
+}
+
+void gui::set_font(const char *font_name, u32 font_size)
+{
+	gui_manager.set_font(font_name, font_size);
 }
 
 bool gui::add_tab(const char *tab_name)
@@ -2123,9 +2146,8 @@ void gui::draw_test_gui()
 {
 	begin_frame();
 
-	if (begin_window("Line window")) {
+	if (begin_window("Line window asdhfa;wtuwqieutshzx()|~")) {
 		static float x = 0.0f;
-		edit_field("Label", &x);
 	}
 	end_window();
 	

@@ -17,8 +17,10 @@
 #include "../libs/ds/linked_list.h"
 
 
+struct Engine;
 struct Render_System;
 struct Render_2D;
+struct Render_Font;
 
 struct Primitive_2D {
 	//Vars is set by Render_2D
@@ -57,9 +59,11 @@ const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 struct Render_Primitive_List {	
 	//@Note: default construcor should be deleted. 
 	Render_Primitive_List() {}
-	Render_Primitive_List(Render_2D *render_2d);
+	Render_Primitive_List(Render_2D *render, Font *font, Render_Font *render_font);
 	
 	Render_2D *render_2d = NULL;
+	Font *font = NULL;
+	Render_Font *render_font = NULL;
 	
 	Array<Rect_s32> clip_rects;
 	Array<Render_Primitive_2D> render_primitives;
@@ -84,10 +88,17 @@ struct Render_Primitive_List {
 	Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture2D *texture, const Color &color, String &primitve_hash);
 };
 
+struct Render_Font {
+	Texture2D font_atlas;
+	Hash_Table<u8, Primitive_2D *> lookup_table;
+
+	void init(Render_2D *render_2d, Font *font);
+	void make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
+};
+
 struct Render_2D {
 	~Render_2D();
 
-	Texture2D font_atlas;
 	Texture2D default_texture;
 	
 	Gpu_Buffer constant_buffer;
@@ -100,8 +111,6 @@ struct Render_2D {
 
 	Shader *render_2d = NULL;
 	
-	Font *font = NULL;
-	
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
 	Render_System *render_system = NULL;
@@ -112,12 +121,12 @@ struct Render_2D {
 	Array<Primitive_2D *> primitives;
 	Array<Render_Primitive_List *> draw_list;
 	Hash_Table<String, Primitive_2D *> lookup_table;
+	Hash_Table<String, Render_Font *> render_fonts;
 
-	void init(Render_System *_render_system, Shader *_render_2d, Font *_font);
-	void init_font_rendering();
-	void init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
+	void init(Engine *engine);
 	void add_primitive(Primitive_2D *primitive);
 	void add_render_primitive_list(Render_Primitive_List *render_primitive_list);
+	Render_Font *get_render_font(Font *font);
 	
 	void new_frame();
 	void render_frame(); // @Clean up change name 
@@ -172,7 +181,7 @@ struct Render_System {
 
 	Hash_Table<String, Shader *> shader_table;
 
-	void init(Win32_Info *_win32_Info, Font *font);
+	void init(Engine *engine);
 	void init_render_targets(u32 window_width, u32 window_height);
 	
 	void resize(u32 window_width, u32 window_height);

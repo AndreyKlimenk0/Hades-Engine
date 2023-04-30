@@ -135,3 +135,30 @@ float R24U8::get_unorm_value()
 	assert(MAX_U24 >= numerator);
 	return (float)numerator / (float)MAX_U24;
 }
+
+u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
+{
+	u32 *new_data = new u32[width * height];
+
+	u8* pixels = (u8*)new_data;
+	for (u32 row = 0; row < height; row++) {
+		u32 row_start = row * (width * sizeof(u32));
+		u32 row_2 = row * (width * sizeof(u8));
+
+		for (u32 col = 0; col < width; col++) {
+			u32 col_start = col * 4;
+			if (data[row_2 + col] > 0) {
+				pixels[row_start + col_start + 0] = 255;
+				pixels[row_start + col_start + 1] = 255;
+				pixels[row_start + col_start + 2] = 255;
+				pixels[row_start + col_start + 3] = data[row_2 + col];
+			} else {
+				pixels[row_start + col_start + 0] = 255;
+				pixels[row_start + col_start + 1] = 0;
+				pixels[row_start + col_start + 2] = 0;
+				pixels[row_start + col_start + 3] = 0;
+			}
+		}
+	}
+	return new_data;
+}
