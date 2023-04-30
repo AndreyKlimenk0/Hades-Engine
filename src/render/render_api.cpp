@@ -878,36 +878,43 @@ void Render_Pipeline::set_index_buffer(Gpu_Buffer *gpu_buffer)
 
 void Render_Pipeline::set_vertex_shader(Shader *shader)
 {
-	assert(shader->vertex_shader);
+	//assert(shader);
+	//assert(shader->vertex_shader);
 	dx11_context->VSSetShader(shader->vertex_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_geometry_shader(Shader *shader)
 {
-	assert(shader->geometry_shader);
+	//assert(shader);
+	//assert(shader->geometry_shader);
 	dx11_context->GSSetShader(shader->geometry_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_computer_shader(Shader *shader)
 {
-	assert(shader->compute_shader);
+	//assert(shader);
+	//assert(shader->compute_shader);
 	dx11_context->CSSetShader(shader->compute_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_hull_shader(Shader *shader)
 {
-	assert(shader->hull_shader);
+	//assert(shader);
+	//assert(shader->hull_shader);
 	dx11_context->HSSetShader(shader->hull_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_domain_shader(Shader *shader)
 {
-	assert(shader->domain_shader);
+	//assert(shader);
+	//assert(shader->domain_shader);
 	dx11_context->DSSetShader(shader->domain_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_pixel_shader(Shader *shader)
 {
+	//assert(shader);
+	//assert(shader->pixel_shader);
 	dx11_context->PSSetShader(shader->pixel_shader.Get(), 0, 0);
 }
 
@@ -1147,26 +1154,6 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, W
 	HR(gpu_device->dx11_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, gpu_device->sample_count, &quality_levels));
 	
 	gpu_device->quality_levels = quality_levels > 0 ? quality_levels - 1 : 0;
-}
-
-u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
-{
-	u32 *new_data = new u32[width * height];
-
-	u8* pixels = (u8*)new_data;
-	for (u32 row = 0; row < height; row++) {
-		u32 row_start = row * (width * sizeof(u32));
-		u32 row_2 = row * (width * sizeof(u8));
-
-		for (u32 col = 0; col < width; col++) {
-			u32 col_start = col * 4;
-			pixels[row_start + col_start + 0] = 255;
-			pixels[row_start + col_start + 1] = 255;
-			pixels[row_start + col_start + 2] = 255;
-			pixels[row_start + col_start + 3] = data[row_2 + col];
-		}
-	}
-	return new_data;
 }
 
 Shader_Resource_Desc::Shader_Resource_Desc()

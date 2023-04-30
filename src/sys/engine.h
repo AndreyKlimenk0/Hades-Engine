@@ -20,12 +20,21 @@ enum Engine_Mode {
 };
 
 struct Engine {
+	struct Performance_Displayer {
+		Engine *engine = NULL;
+		Font *font = NULL;
+		Render_Primitive_List render_list;
+		
+		void init(Engine *_engine);
+		void display();
+	} performance_displayer;
+
 	bool is_initialized = false;
 	s64 fps = 0;
 	s64 frame_time = 0;
 	Engine_Mode engine_mode;
 
-	Font font;
+	Font_Manager font_manager;
 	Editor editor;
 	Win32_Info win32_info;
 	Mesh_Loader mesh_loader;
@@ -39,22 +48,19 @@ struct Engine {
 	void init_from_map();
 	void frame();
 	void save_to_file();
-	void display_performace_info();
 	void shutdown();
 
 	static bool initialized();
 	static void resize_window(u32 window_width, u32 window_height);
 
 	static Engine *get_instance();
-	static Font *get_font();
 	static Game_World *get_game_world();
 	static Render_World *get_render_world();
 	static Render_System *get_render_system();
+	static Font_Manager *get_font_manager();
 	static Mesh_Loader *get_mesh_loader();
+	static Win32_Info *get_win32_info();
 };
-
-u32 get_window_width();
-u32 get_window_height();
 
 struct Camera;
 

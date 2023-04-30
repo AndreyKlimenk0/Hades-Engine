@@ -223,7 +223,7 @@ void Render_World::update_shadow_atlas()
 	}
 
 	Rect_u32 shadow_atlas_rect;
-	pack_rects_in_rect(&shadow_atlas_rect, shadow_map_coordinates);
+	//pack_rects_in_rect(&shadow_atlas_rect, shadow_map_coordinates);
 }
 
 Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)

@@ -13,7 +13,6 @@
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 
-
 const String HLSL_FILE_EXTENSION = "cso";
 
 
@@ -249,8 +248,11 @@ void Primitive_2D::make_outline_triangle_polygons()
 	}
 }
 
-Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d) : render_2d(render_2d)
+Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d, Font *font, Render_Font *render_font) : render_2d(render_2d), font(font), render_font(render_font)
 {
+	Rect_s32 rect;
+	rect.set_size(Engine::get_win32_info()->window_width, Engine::get_win32_info()->window_height);
+	clip_rects.push(rect);
 }
 
 void Render_Primitive_List::push_clip_rect(Rect_s32 *rect)
@@ -265,16 +267,9 @@ void Render_Primitive_List::pop_clip_rect()
 	}
 }
 
-void Render_Primitive_List::get_clip_rect(Rect_s32 * rect)
+void Render_Primitive_List::get_clip_rect(Rect_s32 *rect)
 {
-	if (clip_rects.count > 0) {
-		*rect = clip_rects.last_item();
-	} else {
-		rect->x = 0;
-		rect->y = 0;
-		rect->width = render_2d->render_system->win32_info->window_width;
-		rect->height = render_2d->render_system->win32_info->window_height;
-	}
+	*rect = clip_rects.last_item();
 }
 
 void Render_Primitive_List::add_outlines(int x, int y, int width, int height, const Color & color, float outline_width, u32 rounding, u32 flags)
@@ -314,29 +309,29 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 	assert(text);
 
 	u32 len = (u32)strlen(text);
-	u32 max_height = render_2d->font->get_text_size(text).height;
+	u32 max_height = font->get_text_size(text).height;
 
 	for (u32 i = 0; i < len; i++) {
 
-		char c = text[i];
-		Font_Char &font_char = render_2d->font->characters[c];
-		u32 x_pos = (u32)x + font_char.bearing.width;
+		u8 c = text[i];
+		Font_Char *font_char = font->get_font_char(c);
+		u32 x_pos = (u32)x + font_char->bearing.width;
 		u32 y_pos = 0;
-		if (font_char.size.height >= font_char.bearing.height) {
-			y_pos = (u32)y + (max_height - font_char.size.height) + (font_char.size.height - font_char.bearing.height);
+		if (font_char->size.height >= font_char->bearing.height) {
+			y_pos = (u32)y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height);
 		} else {
-			y_pos = (u32)y + max_height - font_char.size.height - font_char.bearing.height;
+			y_pos = (u32)y + max_height - font_char->size.height - font_char->bearing.height;
 		}
 		Vector2 position = Vector2((float)x_pos, (float)y_pos);
 		
 		Render_Primitive_2D info;
-		info.texture = &render_2d->font_atlas;
+		info.texture = &render_font->font_atlas;
 		info.transform_matrix.translate(&position);
 		info.color = Color::White;
-		info.primitive = render_2d->lookup_table[String(c)];
+		info.primitive = render_font->lookup_table[c];
 		get_clip_rect(&info.clip_rect);
 
-		x += (font_char.advance >> 6);
+		x += (font_char->advance_x >> 6);
 
 		render_primitives.push(info);
 	}
@@ -420,15 +415,18 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 
 void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thickness)
 {
+	u32 window_width = Engine::get_win32_info()->window_width;
+	u32 window_height = Engine::get_win32_info()->window_height;
+
 	Vector2 position = { (float)first_point->x, (float)first_point->y };
 	Matrix4 position_matrix;
 	position_matrix.translate(&position);
 
 	Point_s32 converted_point1;
-	from_win32_screen_space(get_window_width(), get_window_height(), first_point, &converted_point1);
+	from_win32_screen_space(window_width, window_height, first_point, &converted_point1);
 
 	Point_s32 converted_point2;
-	from_win32_screen_space(get_window_width(), get_window_height(), second_point, &converted_point2);
+	from_win32_screen_space(window_width, window_height, second_point, &converted_point2);
 
 	Vector2 line_direction = make_vector2(&converted_point2, &converted_point1);
 	line_direction.normalize();
@@ -485,7 +483,6 @@ Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_m
 	return primitive;
 }
 
-
 struct CB_Render_2d_Info {
 	Matrix4 position_orthographic_matrix;
 	Vector4 color;
@@ -493,16 +490,22 @@ struct CB_Render_2d_Info {
 
 Render_2D::~Render_2D()
 {
-	new_frame();
+	Primitive_2D *primitive = NULL;
+	For(primitives, primitive) {
+		DELETE_PTR(primitive);
+	}
+
+	for (u32 i = 0; i < render_fonts.count; i++) {
+		DELETE_PTR(render_fonts.get_node(i)->value);
+	}
 }
 
-void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_font)
+void Render_2D::init(Engine *engine)
 {
-	render_system = _render_system;
+	render_system = &engine->render_sys;
 	gpu_device = &render_system->gpu_device;
 	render_pipeline = &render_system->render_pipeline;
-	render_2d = _render_2d;
-	font = _font;
+	render_2d = render_system->get_shader("render_2d.hlsl");
 	
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
 
@@ -535,79 +538,6 @@ void Render_2D::init(Render_System *_render_system, Shader *_render_2d, Font *_f
 	blending_test_desc.blend_op_alpha = BLEND_OP_ADD;
 
 	gpu_device->create_blend_state(&blending_test_desc, &blend_state);
-
-	init_font_rendering();
-}
-
-void Render_2D::init_font_rendering()
-{
-	Hash_Table<char, Rect_f32> uvs;
-	init_font_atlas(font, &uvs);
-
-	for (char c = 32; c < 127; c++) {
-
-		if (font->characters.key_in_table(c)) {
-			Font_Char &font_char = font->characters[c];
-			Size_u32 &size = font_char.size;
-			Rect_f32 &uv = uvs[c];
-
-			Primitive_2D *primitive = new Primitive_2D();
-
-			primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
-			primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.x + uv.width, uv.y));
-			primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.x + uv.width, uv.y + uv.height));
-			primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.y + uv.height));
-
-			primitive->make_triangle_polygon();
-			add_primitive(primitive);
-
-			lookup_table.set(String(c), primitive);
-		}
-	}
-}
-
-void Render_2D::init_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs)
-{
-	Texture_Desc texture_desc;
-	texture_desc.width = 200;
-	texture_desc.height = 200;
-	texture_desc.mip_levels = 1;
-
-	gpu_device->create_texture_2d(&texture_desc, &font_atlas);
-
-	fill_texture_with_value((void *)&Color::Red, &font_atlas);
-
-	Array<Rect_u32 *> rects;
-	Hash_Table<char, Rect_u32> table;
-
-	for (u32 i = 32; i < 127; i++) {
-		if (font->characters.key_in_table((char)i)) {
-			Font_Char &font_char = font->characters[(char)i];
-			table.set((char)i, Rect_u32(font_char.bitmap_size));
-			rects.push(&table[(char)i]);
-		}
-	}
-	
-	Rect_u32 main_rect = Rect_u32(font_atlas.width, font_atlas.height);
-	pack_rects_in_rect(&main_rect, rects);
-
-	for (u32 i = 32; i < 127; i++) {
-		if (font->characters.key_in_table((char)i)) {
-			Font_Char &character = font->characters[(char)i];
-			
-			Rect_u32 &rect = table[(char)i];
-
-			Rect_f32 uv;
-			uv.x = static_cast<float>(rect.x) / static_cast<float>(font_atlas.width);
-			uv.y = static_cast<float>(rect.y) / static_cast<float>(font_atlas.height);
-			uv.width = static_cast<float>(rect.width) / static_cast<float>(font_atlas.width);
-			uv.height = static_cast<float>(rect.height) / static_cast<float>(font_atlas.height);
-
-			font_uvs->set((char)i, uv);
-
-			render_pipeline->update_subresource(&font_atlas, (void *)character.bitmap, sizeof(u32) * character.size.width, &rect);
-		}
-	}
 }
 
 void Render_2D::add_primitive(Primitive_2D *primitive)
@@ -624,6 +554,17 @@ void Render_2D::add_primitive(Primitive_2D *primitive)
 void Render_2D::add_render_primitive_list(Render_Primitive_List *render_primitive_list)
 {
 	draw_list.push(render_primitive_list);
+}
+
+Render_Font *Render_2D::get_render_font(Font *font)
+{
+	Render_Font *render_font = NULL;
+	if (!render_fonts.get(font->name, &render_font)) {
+		render_font = new Render_Font();
+		render_font->init(this, font);
+		render_fonts.set(font->name, render_font);
+	}
+	return render_font;
 }
 
 void Render_2D::new_frame()
@@ -727,9 +668,9 @@ void View_Info::update_projection_matries(u32 width, u32 height, float _near_pla
 	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 }
 
-void Render_System::init(Win32_Info *_win32_info, Font *font)
+void Render_System::init(Engine *engine)
 {
-	win32_info = _win32_info;
+	win32_info = &engine->win32_info;
 	win32_info->render_sys = this;
 
 	screen_view.width = win32_info->window_width;
@@ -739,14 +680,13 @@ void Render_System::init(Win32_Info *_win32_info, Font *font)
 
 	init_render_api(&gpu_device, &render_pipeline, win32_info);
 
-	swap_chain.init(&gpu_device, _win32_info);
+	swap_chain.init(&gpu_device, win32_info);
 	
 	init_shaders_table(&gpu_device, &shader_table);
 	
 	Render_Pipeline_States::init(&gpu_device);
 
-	Shader *render_2d_shader = shader_table["render_2d.hlsl"];
-	render_2d.init(this, render_2d_shader, font);
+	render_2d.init(engine);
 
 	gpu_device.create_input_layouts(shader_table);
 
@@ -797,4 +737,78 @@ void Render_System::end_frame()
 Shader *Render_System::get_shader(const char *name)
 {
 	return shader_table[name];
+}
+
+void Render_Font::init(Render_2D *render_2d, Font *font)
+{
+	assert(font);
+	assert(render_2d);
+
+	Hash_Table<char, Rect_f32> uvs;
+	make_font_atlas(font, &uvs);
+
+	// Exp (MAX_CHARACTERS - 1) skips DEL char
+	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
+
+		Size_u32 size = font->get_font_char(c)->size;
+		Rect_f32 &uv = uvs[c];
+
+		Primitive_2D *primitive = new Primitive_2D();
+
+		primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
+		primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.x + uv.width, uv.y));
+		primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.x + uv.width, uv.y + uv.height));
+		primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.y + uv.height));
+
+		primitive->make_triangle_polygon();
+		render_2d->add_primitive(primitive);
+
+		lookup_table.set(c, primitive);
+	}
+}
+
+void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs)
+{
+	assert(font);
+	assert(font_uvs);
+
+	Texture_Desc texture_desc;
+	texture_desc.width = 200;
+	texture_desc.height = 200;
+	texture_desc.mip_levels = 1;
+
+	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &font_atlas);
+
+	fill_texture_with_value((void *)&Color::Black, &font_atlas);
+
+	Array<Rect_u32 *> rect_pointers;
+	Array<Rect_u32> rects;
+	rects.reserve(MAX_CHARACTERS);
+
+	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
+		Font_Char *font_char = font->get_font_char(c);
+		rects[c] = Rect_u32(font_char->bitmap_size);
+		rect_pointers.push(&rects[c]);
+	}
+
+	Rect_u32 atlas_rect = Rect_u32(font_atlas.width, font_atlas.height);
+	pack_rects_in_rect(&atlas_rect, rect_pointers);
+
+	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {		
+		Font_Char *font_char = font->get_font_char(c);
+		Rect_u32 rect = rects[c];
+
+		Rect_f32 uv;
+		uv.x = static_cast<float>(rect.x) / static_cast<float>(font_atlas.width);
+		uv.y = static_cast<float>(rect.y) / static_cast<float>(font_atlas.height);
+		uv.width = static_cast<float>(rect.width) / static_cast<float>(font_atlas.width);
+		uv.height = static_cast<float>(rect.height) / static_cast<float>(font_atlas.height);
+
+		font_uvs->set((char)c, uv);
+
+		if ((rect.width == 0) && (rect.height == 0)) {
+			continue;
+		}
+		Engine::get_render_system()->render_pipeline.update_subresource(&font_atlas, (void *)font_char->bitmap, sizeof(u32) * font_char->size.width, &rect);
+	}
 }
