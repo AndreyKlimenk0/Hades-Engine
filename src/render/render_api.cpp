@@ -1129,7 +1129,7 @@ void Texture2D::release()
 	view.Reset();
 }
 
-void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_Info *win32_info)
+void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 {
 	UINT create_device_flag = 0;
 

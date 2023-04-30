@@ -163,8 +163,7 @@ struct Projection_Matries {
 struct Render_System {
 	static u32 screen_width;
 	static u32 screen_height;
-	//@Note: Why I need to have this var here ?
-	Win32_Info *win32_info;
+
 	//@Note: Why I need to have this var here ?
 	View_Info view_info;
 	//@Note: Why I need to have this var here ?
