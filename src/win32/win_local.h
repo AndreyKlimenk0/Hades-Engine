@@ -11,8 +11,6 @@ struct Win32_Info {
 	int window_height;
 	HINSTANCE hinstance;
 
-	Render_System *render_sys = NULL;
-
 	static LRESULT CALLBACK win32_procedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 

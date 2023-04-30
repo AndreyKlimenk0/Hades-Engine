@@ -677,17 +677,14 @@ void Render_System::init(Engine *engine)
 	Render_System::screen_width = engine->win32_info.window_width;
 	Render_System::screen_height = engine->win32_info.window_height;
 
-	win32_info = &engine->win32_info;
-	win32_info->render_sys = this;
+	screen_view.width = Render_System::screen_width;
+	screen_view.height = Render_System::screen_height;
 
-	screen_view.width = win32_info->window_width;
-	screen_view.height = win32_info->window_height;
+	view_info.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
-	view_info.update_projection_matries(win32_info->window_width, win32_info->window_height, 1.0f, 10000.0f);
+	init_render_api(&gpu_device, &render_pipeline);
 
-	init_render_api(&gpu_device, &render_pipeline, win32_info);
-
-	swap_chain.init(&gpu_device, win32_info);
+	swap_chain.init(&gpu_device, &engine->win32_info);
 	
 	init_shaders_table(&gpu_device, &shader_table);
 	
@@ -697,7 +694,7 @@ void Render_System::init(Engine *engine)
 
 	gpu_device.create_input_layouts(shader_table);
 
-	init_render_targets(win32_info->window_width, win32_info->window_height);
+	init_render_targets(Render_System::screen_width, Render_System::screen_height);
 }
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
