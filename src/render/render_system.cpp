@@ -13,7 +13,11 @@
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 
+
 const String HLSL_FILE_EXTENSION = "cso";
+
+u32 Render_System::screen_width = 0;
+u32 Render_System::screen_height = 0;
 
 
 inline void from_win32_screen_space(u32 screen_width, u32 screen_height, Point_s32 *win32_point, Point_s32 *normal_point)
@@ -251,7 +255,7 @@ void Primitive_2D::make_outline_triangle_polygons()
 Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d, Font *font, Render_Font *render_font) : render_2d(render_2d), font(font), render_font(render_font)
 {
 	Rect_s32 rect;
-	rect.set_size(Engine::get_win32_info()->window_width, Engine::get_win32_info()->window_height);
+	rect.set_size(Render_System::screen_width, Render_System::screen_height);
 	clip_rects.push(rect);
 }
 
@@ -415,8 +419,8 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 
 void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thickness)
 {
-	u32 window_width = Engine::get_win32_info()->window_width;
-	u32 window_height = Engine::get_win32_info()->window_height;
+	u32 window_width = Render_System::screen_width;
+	u32 window_height = Render_System::screen_height;
 
 	Vector2 position = { (float)first_point->x, (float)first_point->y };
 	Matrix4 position_matrix;
@@ -670,6 +674,9 @@ void View_Info::update_projection_matries(u32 width, u32 height, float _near_pla
 
 void Render_System::init(Engine *engine)
 {
+	Render_System::screen_width = engine->win32_info.window_width;
+	Render_System::screen_height = engine->win32_info.window_height;
+
 	win32_info = &engine->win32_info;
 	win32_info->render_sys = this;
 
@@ -709,6 +716,9 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 
 void Render_System::resize(u32 window_width, u32 window_height)
 {
+	Render_System::screen_width = window_width;
+	Render_System::screen_height = window_height;
+
 	if (Engine::initialized()) {
 		view_info.update_projection_matries(window_width, window_height, 1.0f, 10000.0f);
 		assert(false);
