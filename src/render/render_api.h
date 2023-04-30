@@ -551,7 +551,6 @@ inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 ds
 }
 
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline, Win32_Info *win32_state);
-u32 *r8_to_rgba32(u8 *data, u32 width, u32 height);
 
 #endif
 

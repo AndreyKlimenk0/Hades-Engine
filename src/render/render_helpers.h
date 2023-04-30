@@ -20,4 +20,5 @@ struct R24U8 {
 	float get_unorm_value();
 };
 
+u32 *r8_to_rgba32(u8 *data, u32 width, u32 height);
 #endif
