@@ -125,10 +125,15 @@ bool Shadow_Pass::setup_pipeline_state(Render_System *render_system)
 {
 	Render_World *render_world = (Render_World *)render_context;
 
+	static View_Port view_port;
+	view_port.width = DIRECTION_SHADOW_MAP_WIDTH;
+	view_port.height = DIRECTION_SHADOW_MAP_HEIGHT;
+
 	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
 	render_pipeline_state.shader_name = "depth_map.hlsl";
 	render_pipeline_state.depth_stencil_buffer = &render_world->temp_shadow_storage;
 	render_pipeline_state.render_target = NULL;
+	render_pipeline_state.view_port = &view_port;
 
 	return Render_Pass::setup_pipeline_state("Shadow_Pass", render_system);
 }
