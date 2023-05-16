@@ -171,7 +171,7 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	Vertex_Out vertex_out;
 	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(view_matrix, perspective_matrix))); 
 	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix);
-	vertex_out.normal = mul(vertex.normal, (float3x3)world_matrix);
+	vertex_out.normal = normalize(mul(vertex.normal, (float3x3)world_matrix));
 	vertex_out.uv = vertex.uv;
 	return vertex_out;
 }
@@ -180,28 +180,60 @@ StructuredBuffer<Light> lights : register(t7);
 StructuredBuffer<Shadow_Map> shadow_maps : register(ps, t6);
 StructuredBuffer<float4x4> light_view_matrices : register(ps, t8);
 
-float calculate_shadow(float3 world_position, uint light_view_matrix_idx, float3 normal, Light light)
+static const uint value = 4;
+float2 poissonDisk[value] = {
+	float2( -0.94201624, -0.39906216 ),
+	float2( 0.94558609, -0.76890725 ),
+  	float2( -0.094184101, -0.92938870 ),
+  	float2( 0.34495938, 0.29387760 )
+};
+
+float calculate_shadow(Light light, float3 normal, float3 world_position, uint light_view_matrix_idx)
 {
 	float4x4 light_view_matrix = transpose(light_view_matrices[light_view_matrix_idx]);
 	
 	float4 position_from_light_perspective = mul(float4(world_position, 1.0f), mul(light_view_matrix, direction_light_matrix));
 
-	float2 projection_coordinates;
+	float2 NDC_coordinates;
 	
-	projection_coordinates.x = 0.5f + ((position_from_light_perspective.x / position_from_light_perspective.w) * 0.5f);
-	projection_coordinates.y = 0.5f - ((position_from_light_perspective.y / position_from_light_perspective.w) * 0.5f);
+	NDC_coordinates.x = 0.5f + ((position_from_light_perspective.x / position_from_light_perspective.w) * 0.5f);
+	NDC_coordinates.y = 0.5f - ((position_from_light_perspective.y / position_from_light_perspective.w) * 0.5f);
 
-	float depth_from_light_perspective = shadow_atlas.Sample(sampler_anisotropic, projection_coordinates.xy);
+	float currect_depth = position_from_light_perspective.z /  position_from_light_perspective.w;
 	
-	float depth_from_camera_perspective = position_from_light_perspective.z /  position_from_light_perspective.w;
-	
-	float bias = 0.005f;
-	return (depth_from_camera_perspective - bias)  > depth_from_light_perspective ? 0.4f : 1.0f;
+	float bias = max(0.05f * (1.0f - dot(-light.direction, normal)), 0.0005f);
+
+//	for(uint i = 0; i < 4; i++) {
+		//float2 temp = float2(NDC_coordinates.x + poissonDisk[i] / 700.0f,NDC_coordinates.y + poissonDisk[i] / 700.0f);
+//		float shadow_map_depth = shadow_atlas.Sample(sampler_anisotropic, NDC_coordinates.xy + poissonDisk[i] / 700.0f);
+//		if ((currect_depth - bias)  > shadow_map_depth) {
+//			shadow_factor -= 0.25f;
+//		}
+//	}
+
+
+	float2 texture_size;
+	shadow_atlas.GetDimensions(texture_size.x, texture_size.y);
+
+	const float2 texel_size = { 1.0f / texture_size.x, 1.0f / texture_size.y };
+
+	float shadow_factor = 0.0f;
+	for(int x = 0; x < 1; x++) {
+		for(int y = 0; y < 1; y++) {
+			float2 offset = float2(x, y) * texel_size;
+			float shadow_map_depth = shadow_atlas.Sample(sampler_anisotropic, NDC_coordinates.xy + offset);
+			if ((currect_depth - bias)  < shadow_map_depth) {
+				shadow_factor += 1.0f;
+			}
+		}
+	}
+	return (shadow_factor / 1.0f);
 }
 
-float4 ps_main(Vertex_Out pixel) : SV_Target
+
+float4 ps_main(Vertex_Out vertex_out) : SV_Target
 {
-	float4 test = texture_map.Sample(sampler_anisotropic, pixel.uv);
+	float4 test = texture_map.Sample(sampler_anisotropic, vertex_out.uv);
 
 	if (light_count == 0) {
 		return test;
@@ -218,17 +250,17 @@ float4 ps_main(Vertex_Out pixel) : SV_Target
 		Light light = lights[i];
 		Shadow_Map shadow_map = shadow_maps[light.shadow_map_idx];
 
-		float shadow_factor = calculate_shadow(pixel.world_position, shadow_map.light_view_matrix_idx, pixel.normal, light);
+		float shadow_factor = calculate_shadow(light, vertex_out.normal, vertex_out.world_position, shadow_map.light_view_matrix_idx);
 		if (shadow_factor > 0.0f) {
 			switch (light.light_type) {
 				case SPOT_LIGHT_TYPE:
-					final_color += calculate_spot_light(light, material, pixel.normal, pixel.world_position);
+					final_color += calculate_spot_light(light, material, vertex_out.normal, vertex_out.world_position);
 					break;
 				case POINT_LIGHT_TYPE:
-					final_color += calculate_point_light(light, material, pixel.normal, pixel.world_position);
+					final_color += calculate_point_light(light, material, vertex_out.normal, vertex_out.world_position);
 					break;
 				case DIRECTIONAL_LIGHT_TYPE:
-					final_color += calculate_directional_light(light, material, pixel.normal, pixel.world_position);
+					final_color += calculate_directional_light(light, material, vertex_out.normal, vertex_out.world_position);
 					break;
 			}
 		}

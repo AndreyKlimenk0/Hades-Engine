@@ -147,6 +147,8 @@ struct Rasterizer_Desc {
 	
 	D3D11_RASTERIZER_DESC desc;
 
+	//@Note: these methods can be removed 
+	// when Rasterizer_Desc will fully wrap D3D11_RASTERIZER_DESC
 	void set_sciccor(bool state);
 	void set_counter_clockwise(bool state);
 };
@@ -315,6 +317,11 @@ struct Depth_Stencil_View_Desc {
 	} view;
 };
 
+struct Multisample_Info {
+	u32 count = 1;
+	u32 quality_levels = 0;
+};
+
 struct Texture_Desc {
 	u32 width;
 	u32 height; 
@@ -325,6 +332,7 @@ struct Texture_Desc {
 	void *data = NULL; 
 	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Multisample_Info multisample_info;
 };
 
 struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
@@ -395,16 +403,6 @@ struct Gpu_Device {
 	void create_render_target(Texture_Desc *target_texture_desc, Render_Target *render_target);
 };
 
-struct Render_Pipeline_States {
-	static Rasterizer_State default_rasterizer_state;
-	static Depth_Stencil_State default_depth_stencil_state;
-	static Depth_Stencil_State disabled_depth_test;
-	static Blend_State default_blend_state;
-	static Sampler_State default_sampler_state;
-
-	static void init(Gpu_Device *gpu_device);
-};
-
 enum Render_Primitive_Type {
 	RENDER_PRIMITIVE_TRIANGLES,
 	RENDER_PRIMITIVE_LINES,
@@ -426,11 +424,11 @@ struct Render_Pipeline_State {
 	Depth_Stencil_State depth_stencil_state;
 	Rasterizer_State rasterizer_state;
 	Sampler_State sampler_state;
-	View_Port *view_port = NULL;
+	View_Port view_port;
 	Depth_Stencil_Buffer *depth_stencil_buffer = NULL;
 	Render_Target *render_target = NULL;
 
-	bool setup(Render_System *render_sys);
+	void setup_default_state(Render_System *render_sys);
 };
 
 struct Swap_Chain {
@@ -551,6 +549,7 @@ inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 ds
 }
 
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
+void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
 
 #endif
 

@@ -20,7 +20,7 @@ struct Render_Pass {
 	Render_Pipeline_State render_pipeline_state;
 
 	virtual void init(Render_System *render_sys);
-	virtual bool setup_pipeline_state(const char *render_pass_name, Render_System *render_system);
+	virtual bool validate_render_pipeline(const char *render_pass_name, Render_System *render_system);
 	virtual bool setup_pipeline_state(Render_System *render_system) = 0;
 	virtual void render(Render_Pipeline *render_pipeline) = 0;
 };

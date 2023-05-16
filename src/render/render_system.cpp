@@ -107,7 +107,7 @@ static bool get_shader_type_from_file_name(const char *file_name, Shader_Type *s
 
 static void init_shaders_table(Gpu_Device *gpu_device, Hash_Table<String, Shader *> *shader_table)
 {
-	print("init_shaders_table: Load hlsl shaders.");
+	print("[Load hlsl shaders]");
 
 	String path_to_shader_dir;
 	get_path_to_data_dir("shader", path_to_shader_dir);
@@ -626,7 +626,7 @@ void Render_2D::render_frame()
 
 	render_pipeline->set_vertex_shader(render_2d);
 	render_pipeline->set_pixel_shader(render_2d);
-	render_pipeline->set_pixel_shader_sampler(Render_Pipeline_States::default_sampler_state);
+	render_pipeline->set_pixel_shader_sampler(render_system->render_pipeline_states.default_sampler_state);
 
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
@@ -674,27 +674,32 @@ void View_Info::update_projection_matries(u32 width, u32 height, float _near_pla
 
 void Render_System::init(Engine *engine)
 {
+	print("[Initialize Render System]");
+
 	Render_System::screen_width = engine->win32_info.window_width;
 	Render_System::screen_height = engine->win32_info.window_height;
-
-	screen_view.width = Render_System::screen_width;
-	screen_view.height = Render_System::screen_height;
+	
+	Multisample_Info multisample_info;
+	multisample_info.count = 16;
+	multisample_info.quality_levels = 1;
 
 	view_info.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
 
+	setup_multisampling(&gpu_device, &multisample_info);
+
+	render_pipeline_states.init(&gpu_device);
+
 	swap_chain.init(&gpu_device, &engine->win32_info);
+
+	init_render_targets(Render_System::screen_width, Render_System::screen_height);
 	
 	init_shaders_table(&gpu_device, &shader_table);
-	
-	Render_Pipeline_States::init(&gpu_device);
-
-	render_2d.init(engine);
 
 	gpu_device.create_input_layouts(shader_table);
 
-	init_render_targets(Render_System::screen_width, Render_System::screen_height);
+	render_2d.init(engine);
 }
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
@@ -818,4 +823,22 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 		}
 		Engine::get_render_system()->render_pipeline.update_subresource(&font_atlas, (void *)font_char->bitmap, sizeof(u32) * font_char->size.width, &rect);
 	}
+}
+
+void Render_Pipeline_States::init(Gpu_Device *gpu_device)
+{
+	Rasterizer_Desc default_rasterizer_state_desc;
+	gpu_device->create_rasterizer_state(&default_rasterizer_state_desc, &default_rasterizer_state);
+
+
+	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
+	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &default_depth_stencil_state);
+
+	default_depth_stencil_state_desc.enable_depth_test = false;
+	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &disabled_depth_test);
+
+	Blend_State_Desc blend_state_desc;
+	gpu_device->create_blend_state(&blend_state_desc, &default_blend_state);
+
+	gpu_device->create_sampler(&default_sampler_state);
 }

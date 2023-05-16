@@ -288,11 +288,6 @@ bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx
 	return line_meshes.add_mesh(mesh_name, mesh, mesh_idx);
 }
 
-inline float _get_angle_between_vectors(Vector2 &first_vector, Vector2 &second_vector)
-{
-	return math::arccos(first_vector.dot(second_vector) / (first_vector.length() * second_vector.length()));
-}
-
 void Render_World::render()
 {
 	render_sys->render_pipeline.update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
