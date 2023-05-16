@@ -7,11 +7,8 @@
 #include "../sys/engine.h"
 
 
-Rasterizer_State Render_Pipeline_States::default_rasterizer_state;
-Depth_Stencil_State Render_Pipeline_States::default_depth_stencil_state;
-Depth_Stencil_State Render_Pipeline_States::disabled_depth_test;
-Blend_State Render_Pipeline_States::default_blend_state;
-Sampler_State Render_Pipeline_States::default_sampler_state;
+static Multisample_Info render_api_multisample;
+
 
 inline D3D11_DSV_DIMENSION to_dx11_dsv_dimension(Depth_Stencil_View_Type type)
 {
@@ -401,7 +398,7 @@ void Gpu_Device::create_sampler(Sampler_State *sampler)
 
 	D3D11_SAMPLER_DESC sampler_desc;
 	ZeroMemory(&sampler_desc, sizeof(sampler_desc));
-	sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampler_desc.Filter = D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
 	sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -749,36 +746,14 @@ void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Shader_Type sh
 	}
 }
 
-bool Render_Pipeline_State::setup(Render_System *render_sys)
+void Render_Pipeline_State::setup_default_state(Render_System *render_sys)
 {
-	assert(render_sys);
-
-	if (!render_sys->shader_table.get(shader_name, &shader)) {
-		print("Render_Pipeline_State::init: Shader {} was not found. Pipeline_State can't be initialized.", shader_name);
-		return false;
-	}
-
-	if (!blend_state) {
-		blend_state = Render_Pipeline_States::default_blend_state;
-	}
-
-	if (!depth_stencil_state) {
-		depth_stencil_state = Render_Pipeline_States::default_depth_stencil_state;
-	}
-
-	if (!rasterizer_state) {
-		rasterizer_state = Render_Pipeline_States::default_rasterizer_state;
-	}
-
-	if (!sampler_state) {
-		sampler_state = Render_Pipeline_States::default_sampler_state;
-	}
-
-	if (!view_port) {
-		view_port = &render_sys->screen_view;
-	}
-
-	return true;
+	blend_state = render_sys->render_pipeline_states.default_blend_state;
+	depth_stencil_state = render_sys->render_pipeline_states.default_depth_stencil_state;
+	rasterizer_state = render_sys->render_pipeline_states.default_rasterizer_state;
+	sampler_state = render_sys->render_pipeline_states.default_sampler_state;
+	view_port.width = Render_System::screen_width;
+	view_port.height = Render_System::screen_height;
 }
 
 void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
@@ -794,8 +769,9 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 	set_depth_stencil_state(render_pipeline_state->depth_stencil_state);
 
 	set_rasterizer_state(render_pipeline_state->rasterizer_state);
-	set_view_port(render_pipeline_state->view_port);
+	set_view_port(&render_pipeline_state->view_port);
 
+	set_pixel_shader_sampler(render_pipeline_state->sampler_state);
 	set_pixel_shader(render_pipeline_state->shader);
 
 	if (render_pipeline_state->render_target) {
@@ -878,43 +854,37 @@ void Render_Pipeline::set_index_buffer(Gpu_Buffer *gpu_buffer)
 
 void Render_Pipeline::set_vertex_shader(Shader *shader)
 {
-	//assert(shader);
-	//assert(shader->vertex_shader);
+	assert(shader);
 	dx11_context->VSSetShader(shader->vertex_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_geometry_shader(Shader *shader)
 {
-	//assert(shader);
-	//assert(shader->geometry_shader);
+	assert(shader);
 	dx11_context->GSSetShader(shader->geometry_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_computer_shader(Shader *shader)
 {
-	//assert(shader);
-	//assert(shader->compute_shader);
+	assert(shader);
 	dx11_context->CSSetShader(shader->compute_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_hull_shader(Shader *shader)
 {
-	//assert(shader);
-	//assert(shader->hull_shader);
+	assert(shader);
 	dx11_context->HSSetShader(shader->hull_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_domain_shader(Shader *shader)
 {
-	//assert(shader);
-	//assert(shader->domain_shader);
+	assert(shader);
 	dx11_context->DSSetShader(shader->domain_shader.Get(), 0, 0);
 }
 
 void Render_Pipeline::set_pixel_shader(Shader *shader)
 {
-	//assert(shader);
-	//assert(shader->pixel_shader);
+	assert(shader);
 	dx11_context->PSSetShader(shader->pixel_shader.Get(), 0, 0);
 }
 
@@ -1131,6 +1101,7 @@ void Texture2D::release()
 
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 {
+	print("[Initialze render API]");
 	UINT create_device_flag = 0;
 
 #if defined(DEBUG) || defined(_DEBUG)  
@@ -1140,7 +1111,6 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 	D3D_FEATURE_LEVEL feature_level;
 
 	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, create_device_flag, 0, 0, D3D11_SDK_VERSION, &gpu_device->dx11_device, &feature_level, &render_pipeline->dx11_context);
-
 	if (FAILED(hr)) {
 		error("D3D11CreateDevice Failed.");
 		return;
@@ -1150,32 +1120,75 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 		error("Direct3D Feature Level 11 unsupported.");
 		return;
 	}
+
+	bool atleast_one_multisample_availevel = false;
+	for (u32 sample_count = D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT; 1 <= sample_count; sample_count /= 2) {
+		u32 quality_levels = 0;
+		HRESULT result = gpu_device->dx11_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, sample_count, &quality_levels);
+		if (FAILED(result) || (quality_levels == 0)) {
+			continue;
+		}
+		atleast_one_multisample_availevel = true;
+		print("init_render_api: An adapter supports multisample sample count {} and quality levels {} for DXGI_FORMAT_R8G8B8A8_UNORM.", sample_count, quality_levels);
+	}
+
 	u32 quality_levels = 0;
+	
+	if (!atleast_one_multisample_availevel) {
+		print("There is no available multisample quality levels on an adapter.");
+		gpu_device->sample_count = 1;
+		quality_levels = 0;
+	}
+
+	HR(gpu_device->dx11_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, gpu_device->sample_count, &quality_levels));
 	HR(gpu_device->dx11_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, gpu_device->sample_count, &quality_levels));
 	
 	gpu_device->quality_levels = quality_levels > 0 ? quality_levels - 1 : 0;
 }
 
+void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info)
+{
+	assert(gpu_device);
+	assert(multisample_info);
+
+	HRESULT result = gpu_device->dx11_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, multisample_info->count, &multisample_info->quality_levels);
+	if (FAILED(result) || (multisample_info->quality_levels == 0)) {
+		u32 quality_levels = 0;
+		u32 multisampling_count = 0;
+		Multisample_Info available_multisamplings[128];
+		for (u32 sample_count = 1; sample_count <= D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT; sample_count *= 2) {
+			HRESULT result = gpu_device->dx11_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, sample_count, &quality_levels);
+			if (FAILED(result) || (quality_levels == 0)) {
+				continue;
+			}
+			available_multisamplings[multisampling_count++] = { sample_count, quality_levels };
+			print("init_render_api: An adapter supports multisample sample count {} and quality levels {} for DXGI_FORMAT_R8G8B8A8_UNORM.", sample_count, quality_levels);
+		}
+
+		if (multisampling_count == 0) {
+			render_api_multisample.count = 1;
+			render_api_multisample.quality_levels = 0;
+			print("There is no available multisample quality levels on an adapter.");
+		}
+
+		if (multisampling_count == 1) {
+			render_api_multisample = available_multisamplings[1];
+		}
+
+		u32 index = 1;
+		for (; index < multisampling_count; index++) {
+			if (available_multisamplings[index].count > multisample_info->count) {
+				render_api_multisample = available_multisamplings[index - 1];
+				return;
+			}
+		}
+		render_api_multisample = available_multisamplings[index - 1];
+	}
+}
+
 Shader_Resource_Desc::Shader_Resource_Desc()
 {
 	ZeroMemory(this, sizeof(Shader_Resource_Desc));
-}
-
-void Render_Pipeline_States::init(Gpu_Device *gpu_device)
-{
-	Rasterizer_Desc default_rasterizer_state_desc;
-	gpu_device->create_rasterizer_state(&default_rasterizer_state_desc, &Render_Pipeline_States::default_rasterizer_state);
-
-	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
-	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &Render_Pipeline_States::default_depth_stencil_state);
-	
-	default_depth_stencil_state_desc.enable_depth_test = false;
-	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &Render_Pipeline_States::disabled_depth_test);
-
-	Blend_State_Desc blend_state_desc;
-	gpu_device->create_blend_state(&blend_state_desc, &Render_Pipeline_States::default_blend_state);
-
-	gpu_device->create_sampler(&Render_Pipeline_States::default_sampler_state);
 }
 
 void Depth_Stencil_Buffer::release()
