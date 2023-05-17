@@ -306,9 +306,12 @@ struct Depth_Stencil_View_Desc {
 	DXGI_FORMAT format;
 	Depth_Stencil_View_Type type;
 	union {
-		struct Dx11_Texture_2D {
+		struct Texture_2D {
 			u32 mip_slice;
 		} texture_2d;
+		struct Texture_2D_Ms {
+
+		} texture_2d_ms;
 		struct Texture_2D_Array {
 			u32 mip_slice;
 			u32 first_array_slice;
@@ -318,8 +321,8 @@ struct Depth_Stencil_View_Desc {
 };
 
 struct Multisample_Info {
-	u32 count = 1;
-	u32 quality_levels = 0;
+	u32 count = 0;
+	u32 quality = 0;
 };
 
 struct Texture_Desc {
@@ -332,7 +335,7 @@ struct Texture_Desc {
 	void *data = NULL; 
 	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	Multisample_Info multisample_info;
+	Multisample_Info multisampling;
 };
 
 struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
@@ -369,8 +372,6 @@ struct Render_Target {
 };
 
 struct Gpu_Device {
-	u32 sample_count = 4;
-	u32 quality_levels = 0;
 	Dx11_Device dx11_device;
 	Dx11_Debug debug;
 	
@@ -388,8 +389,6 @@ struct Gpu_Device {
 	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture, bool create_shader_resource = true);
 	void create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture);
 
-	void create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
-
 	void create_shader_resource_view(Texture2D *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 	void create_shader_resource_view(Gpu_Buffer *gpu_buffer, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
 	void create_shader_resource_view(const Dx11_Resource &resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
@@ -398,6 +397,7 @@ struct Gpu_Device {
 	void create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state);
 	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
 
+	void create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
 	void create_depth_stencil_buffer(Texture_Desc *depth_stencil_texture_desc, Depth_Stencil_Buffer *depth_stencil_buffer);
 	void create_render_target(Texture2D *texture, Render_Target *render_target);
 	void create_render_target(Texture_Desc *target_texture_desc, Render_Target *render_target);
