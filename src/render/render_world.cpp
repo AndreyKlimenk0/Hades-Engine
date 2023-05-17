@@ -116,10 +116,14 @@ void Render_World::init_shadow_rendering()
 	//texture_desc.width = SHADOW_ATLAS_WIDTH;
 	//texture_desc.height = SHADOW_ATLAS_HEIGHT;
 	texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
-	texture_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	texture_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
 	texture_desc.mip_levels = 1;
+
+	Shader_Resource_Desc shader_resource_desc;
+	shader_resource_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_MS;
 	
-	render_sys->gpu_device.create_texture_2d(&texture_desc, &shadow_atlas);
+	render_sys->gpu_device.create_texture_2d(&texture_desc, &shader_resource_desc, &shadow_atlas);
 
 	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
 	
