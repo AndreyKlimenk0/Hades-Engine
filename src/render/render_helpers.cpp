@@ -93,7 +93,7 @@ void fill_texture_with_value(void *value, Texture2D *texture2d)
 
 	String error_message;
 	if (!is_valid_texture(texture2d, &error_message)) {
-		print("fill_texture_with_color: {}", error_message);
+		print("fill_texture_with_value: {}", error_message);
 		return;
 	}
 
@@ -103,11 +103,11 @@ void fill_texture_with_value(void *value, Texture2D *texture2d)
 	} else if (texture2d->usage == RESOURCE_USAGE_DYNAMIC) {
 		result = fill_dynamic_resource_texture(value, texture2d);
 	} else {
-		print("fill_texture_with_color: A 2d texture can't be filled with value because the texture2d has unsupported resource usage.");
+		print("fill_texture_with_value: A 2d texture can't be filled with value because the texture2d has unsupported resource usage.");
 	}
 
 	if (!result) {
-		print("fill_texture_with_color: Failed to fill a 2d texture.");
+		print("fill_texture_with_value: Failed to fill a 2d texture.");
 	}
 }
 

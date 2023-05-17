@@ -30,3 +30,9 @@ Game_World:
         Entity:
             position Vector(0.0, 0.0, 0.0)
             render_model_name "test_name.fbx"
+
+
+SampleDesc.Quality specifies invalid value 0. For 4 samples, the current graphics implementation only supports SampleDesc.Quality less than 0. <-- if 0 is shown here for Quality, this means the graphics implementation doesn't support 4 samples at all. 
+
+Even SampleDesc.Quality = D3D11_STANDARD_MULTISAMPLE_PATTERN and D3D11_CENTER_MULTISAMPLE_PATTERN are not supported. Use CheckMultisampleQualityLevels to detect what the graphics implementation supports. [ STATE_CREATION ERROR #93: CREATETEXTURE2D_INVALIDSAMPLES]
+Exception thrown at 0x00007FF88585CB69 in hades.exe: Microsoft C++ exception: _com_error at memory location 0x0000001C5258EBA0.

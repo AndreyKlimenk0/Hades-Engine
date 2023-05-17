@@ -517,6 +517,7 @@ void Render_2D::init(Engine *engine)
 	texture_desc.width = 100;
 	texture_desc.height = 100;
 	texture_desc.mip_levels = 1;
+	texture_desc.multisampling = { 1, 0 };
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
 
 	fill_texture_with_value((void *)&Color::White, &default_texture);
@@ -680,8 +681,8 @@ void Render_System::init(Engine *engine)
 	Render_System::screen_height = engine->win32_info.window_height;
 	
 	Multisample_Info multisample_info;
-	multisample_info.count = 16;
-	multisample_info.quality_levels = 1;
+	multisample_info.count = 4;
+	multisample_info.quality = 0;
 
 	view_info.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
@@ -788,6 +789,7 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 	texture_desc.width = 200;
 	texture_desc.height = 200;
 	texture_desc.mip_levels = 1;
+	texture_desc.multisampling = { 1, 0 };
 
 	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &font_atlas);
 
