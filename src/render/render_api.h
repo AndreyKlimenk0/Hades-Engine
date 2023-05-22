@@ -321,7 +321,7 @@ struct Depth_Stencil_View_Desc {
 };
 
 struct Multisample_Info {
-	u32 count = 0;
+	u32 count = 1;
 	u32 quality = 0;
 };
 
@@ -337,6 +337,11 @@ struct Texture_Desc {
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	Multisample_Info multisampling;
 };
+
+inline bool is_multisampling_texture(Texture_Desc *texture_desc)
+{
+	return (texture_desc->multisampling.count > 1);
+}
 
 struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
 	Texture2D() {}
@@ -432,6 +437,7 @@ struct Render_Pipeline_State {
 };
 
 struct Swap_Chain {
+	Multisample_Info multisampling;
 	Texture2D back_buffer;
 	DXGI_Swap_Chain dxgi_swap_chain;
 

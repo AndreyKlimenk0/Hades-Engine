@@ -113,11 +113,12 @@ void Render_World::init_shadow_rendering()
 {
 	Texture_Desc texture_desc;
 	texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
+	texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
 	//texture_desc.width = SHADOW_ATLAS_WIDTH;
 	//texture_desc.height = SHADOW_ATLAS_HEIGHT;
-	texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
 	texture_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
 	texture_desc.mip_levels = 1;
+	texture_desc.multisampling = { 1, 0 };
 
 	Shader_Resource_Desc shader_resource_desc;
 	shader_resource_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
@@ -133,6 +134,7 @@ void Render_World::init_shadow_rendering()
 	depth_stencil_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depth_stencil_desc.mip_levels = 1;
 	depth_stencil_desc.bind = BIND_DEPTH_STENCIL;
+	depth_stencil_desc.multisampling = { 1, 0 };
 
 	render_sys->gpu_device.create_depth_stencil_buffer(&depth_stencil_desc, &temp_shadow_storage);
 
