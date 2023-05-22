@@ -148,6 +148,7 @@ void Shadow_Pass::render(Render_Pipeline *render_pipeline)
 	Render_World *render_world = (Render_World *)render_context;
 
 	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &render_world->temp_shadow_storage.texture);
+	render_world->render_sys->render_pipeline.dx11_context.Get()->ClearDepthStencilView(render_world->temp_shadow_storage.view.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	render_pipeline->apply(&render_pipeline_state);
 

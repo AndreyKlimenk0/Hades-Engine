@@ -713,6 +713,7 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	depth_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depth_texture_desc.mip_levels = 1;
 	depth_texture_desc.bind = BIND_DEPTH_STENCIL;
+	depth_texture_desc.multisampling = swap_chain.multisampling;
 
 	gpu_device.create_depth_stencil_buffer(&depth_texture_desc, &render_targes.back_buffer_depth);
 }
