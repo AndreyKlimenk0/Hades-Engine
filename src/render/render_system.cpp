@@ -519,6 +519,7 @@ void Render_2D::init(Engine *engine)
 	texture_desc.mip_levels = 1;
 	texture_desc.multisampling = { 1, 0 };
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
+	gpu_device->create_shader_resource_view(&default_texture);
 
 	fill_texture_with_value((void *)&Color::White, &default_texture);
 
@@ -597,10 +598,22 @@ void Render_2D::render_frame()
 			index_buffer.free();
 		}
 
-		Gpu_Buffer_Desc vertex_buffer_desc = make_vertex_buffer_desc(total_vertex_count, sizeof(Vertex_X2UV), NULL, RESOURCE_USAGE_DYNAMIC, CPU_ACCESS_WRITE);
-		Gpu_Buffer_Desc index_buffer_desc = make_index_buffer_desc(total_index_count, NULL, RESOURCE_USAGE_DYNAMIC, CPU_ACCESS_WRITE);
+		Gpu_Buffer_Desc vertex_buffer_desc;
+		vertex_buffer_desc.data_count = total_vertex_count;
+		vertex_buffer_desc.data_size = sizeof(Vertex_X2UV);
+		vertex_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
+		vertex_buffer_desc.bind_flags = BIND_SHADER_RESOURCE;
+		vertex_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
 		
 		gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
+
+		Gpu_Buffer_Desc index_buffer_desc;
+		index_buffer_desc.data_count = total_index_count;
+		index_buffer_desc.data_size = sizeof(u32);
+		index_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
+		index_buffer_desc.bind_flags = BIND_SHADER_RESOURCE;
+		index_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
+		
 		gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
 		
 		Vertex_X2UV *vertices = (Vertex_X2UV *)render_pipeline->map(vertex_buffer);
@@ -632,7 +645,7 @@ void Render_2D::render_frame()
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
 	render_pipeline->set_depth_stencil_state(depth_stencil_state);
-	render_pipeline->set_render_target(render_system->render_targes.back_buffer, render_system->render_targes.back_buffer_depth);
+	render_pipeline->set_render_target(render_system->back_buffer.rtv, render_system->depth_back_buffer.dsv);
 
 	CB_Render_2d_Info cb_render_info;
 
@@ -651,7 +664,7 @@ void Render_2D::render_frame()
 			render_pipeline->set_vertex_shader_resource(0, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(0, constant_buffer);
 			if (render_primitive->texture->get_pitch()) {
-				render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->view);
+				render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->srv);
 			}
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
@@ -659,8 +672,8 @@ void Render_2D::render_frame()
 	}
 
 	render_pipeline->reset_rasterizer();
-	render_pipeline->reset_blending_test();
-	render_pipeline->reset_depth_stencil_test();
+	render_pipeline->reset_blending_state();
+	render_pipeline->reset_depth_stencil_state();
 }
 
 void View_Info::update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane)
@@ -705,7 +718,8 @@ void Render_System::init(Engine *engine)
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
 {	
-	gpu_device.create_render_target(&swap_chain.back_buffer, &render_targes.back_buffer);
+	swap_chain.get_back_buffer_as_texture(&back_buffer);
+	gpu_device.create_render_target_view(&back_buffer);
 
 	Texture_Desc depth_texture_desc;
 	depth_texture_desc.width = window_width;
@@ -715,7 +729,8 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	depth_texture_desc.bind = BIND_DEPTH_STENCIL;
 	depth_texture_desc.multisampling = swap_chain.multisampling;
 
-	gpu_device.create_depth_stencil_buffer(&depth_texture_desc, &render_targes.back_buffer_depth);
+	gpu_device.create_texture_2d(&depth_texture_desc, &depth_back_buffer);
+	gpu_device.create_depth_stencil_view(&depth_back_buffer);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -732,8 +747,8 @@ void Render_System::resize(u32 window_width, u32 window_height)
 
 void Render_System::new_frame()
 {
-	render_pipeline.dx11_context->ClearRenderTargetView(render_targes.back_buffer.view.Get(), (float *)&Color::LightSteelBlue);
-	render_pipeline.dx11_context->ClearDepthStencilView(render_targes.back_buffer_depth.view.Get(), CLEAR_DEPTH_BUFFER | CLEAR_STENCIL_BUFFER, 1.0f, 0);
+	render_pipeline.dx11_context->ClearRenderTargetView(back_buffer.rtv.Get(), (float *)&Color::LightSteelBlue);
+	render_pipeline.dx11_context->ClearDepthStencilView(depth_back_buffer.dsv.Get(), CLEAR_DEPTH_BUFFER | CLEAR_STENCIL_BUFFER, 1.0f, 0);
 
 	render_2d.new_frame();
 }
@@ -793,6 +808,7 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 	texture_desc.multisampling = { 1, 0 };
 
 	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &font_atlas);
+	Engine::get_render_system()->gpu_device.create_shader_resource_view(&font_atlas);
 
 	fill_texture_with_value((void *)&Color::Black, &font_atlas);
 

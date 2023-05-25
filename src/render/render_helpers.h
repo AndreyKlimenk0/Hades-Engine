@@ -5,7 +5,6 @@
 #include "../libs/str.h"
 #include "../win32/win_types.h"
 
-
 bool is_valid_texture(Texture2D *texture2d, String *error_message = NULL);
 void fill_texture_with_value(void *value, Texture2D *texture2d);
 

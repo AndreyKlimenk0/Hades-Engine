@@ -89,7 +89,6 @@ void Engine::frame()
 #else
 	editor.render();
 #endif
-
 	performance_displayer.display();
 
 	render_sys.end_frame();

@@ -170,11 +170,6 @@ struct Render_Pipeline_States {
 	void init(Gpu_Device *gpu_device);
 };
 
-struct Render_Targes {
-	Render_Target back_buffer;
-	Depth_Stencil_Buffer back_buffer_depth;
-};
-
 struct Render_System {
 	static u32 screen_width;
 	static u32 screen_height;
@@ -184,12 +179,14 @@ struct Render_System {
 	//@Note: Why I need to have this var here ?
 	Render_2D render_2d;
 
+	Texture2D back_buffer;
+	Texture2D depth_back_buffer;
+
 	Swap_Chain swap_chain;
 	Gpu_Device gpu_device;
 	Render_Pipeline render_pipeline;
 	Render_Pipeline_States render_pipeline_states;
-	Render_Targes render_targes;
-
+	
 	Hash_Table<String, Shader *> shader_table;
 
 	void init(Engine *engine);
