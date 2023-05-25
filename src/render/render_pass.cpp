@@ -19,7 +19,7 @@ bool Render_Pass::validate_render_pipeline(const char *render_pass_name, Render_
 		print("{}::validate_render_pipeline: Validation failed. Shader '{}' was not found.", render_pass_name, render_pipeline_state.shader_name);
 		return false;
 	}
-	if (!render_pipeline_state.render_target && !render_pipeline_state.depth_stencil_buffer) {
+	if (!render_pipeline_state.render_target_view && !render_pipeline_state.depth_stencil_view) {
 		print("{}::validate_render_pipeline: Validation failed. Render target buffer and depth stencil buffer was not set.", render_pass_name);
 	}
 	render_pipeline_state.shader = render_system->shader_table[render_pipeline_state.shader_name];
@@ -34,8 +34,8 @@ bool Forwar_Light_Pass::setup_pipeline_state(Render_System *render_system)
 {
 	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
 	render_pipeline_state.shader_name = "forward_light.hlsl";
-	render_pipeline_state.depth_stencil_buffer = &render_system->render_targes.back_buffer_depth;
-	render_pipeline_state.render_target = &render_system->render_targes.back_buffer;
+	render_pipeline_state.depth_stencil_view = render_system->depth_back_buffer.dsv;
+	render_pipeline_state.render_target_view = render_system->back_buffer.rtv;
 
 	return Render_Pass::validate_render_pipeline("Forwar_Light_Pass", render_system);
 }
@@ -52,8 +52,8 @@ void Forwar_Light_Pass::render(Render_Pipeline *render_pipeline)
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
-	render_pipeline->set_pixel_shader_resource(0, render_world->default_texture.view);
-	render_pipeline->set_pixel_shader_resource(1, render_world->shadow_atlas.view);
+	render_pipeline->set_pixel_shader_resource(0, render_world->default_texture.srv);
+	render_pipeline->set_pixel_shader_resource(1, render_world->shadow_atlas.srv);
 	render_pipeline->set_pixel_shader_resource(7, render_world->lights_struct_buffer);
 	render_pipeline->set_pixel_shader_resource(8, render_world->light_view_matrices_struct_buffer);
 	render_pipeline->set_pixel_shader_resource(6, render_world->shadow_maps_struct_buffer);
@@ -84,8 +84,8 @@ bool Draw_Lines_Pass::setup_pipeline_state(Render_System *render_system)
 {
 	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_LINES;
 	render_pipeline_state.shader_name = "draw_lines.hlsl";
-	render_pipeline_state.depth_stencil_buffer = &render_system->render_targes.back_buffer_depth;
-	render_pipeline_state.render_target = &render_system->render_targes.back_buffer;
+	render_pipeline_state.depth_stencil_view = render_system->depth_back_buffer.dsv;
+	render_pipeline_state.render_target_view = render_system->back_buffer.rtv;
 
 	return Render_Pass::validate_render_pipeline("Draw_Lines_Pass", render_system);
 }
@@ -137,8 +137,7 @@ bool Shadow_Pass::setup_pipeline_state(Render_System *render_system)
 	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
 	render_pipeline_state.shader_name = "depth_map.hlsl";
 	render_pipeline_state.view_port = view_port;
-	render_pipeline_state.depth_stencil_buffer = &render_world->temp_shadow_storage;
-	render_pipeline_state.render_target = NULL;
+	render_pipeline_state.depth_stencil_view = render_world->temp_shadow_storage.dsv;
 
 	return Render_Pass::validate_render_pipeline("Shadow_Pass", render_system);
 }
@@ -147,8 +146,7 @@ void Shadow_Pass::render(Render_Pipeline *render_pipeline)
 {
 	Render_World *render_world = (Render_World *)render_context;
 
-	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &render_world->temp_shadow_storage.texture);
-	render_world->render_sys->render_pipeline.dx11_context.Get()->ClearDepthStencilView(render_world->temp_shadow_storage.view.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	render_world->render_sys->render_pipeline.dx11_context.Get()->ClearDepthStencilView(render_world->temp_shadow_storage.dsv.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	render_pipeline->apply(&render_pipeline_state);
 
@@ -182,6 +180,6 @@ void Shadow_Pass::render(Render_Pipeline *render_pipeline)
 			render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 		}
 		//render_pipeline->copy_subresource(render_world->shadow_atlas, shadow_map->coordinates_in_atlas.x, shadow_map->coordinates_in_atlas.y, render_world->temp_shadow_storage.texture);
-		render_pipeline->copy_subresource(render_world->shadow_atlas, 0, 0, render_world->temp_shadow_storage.texture);
+		render_pipeline->copy_subresource(render_world->shadow_atlas, 0, 0, render_world->temp_shadow_storage);
 	}
 }

@@ -317,30 +317,30 @@ void Render_World_Window::update()
 
 	Texture2D temp_shadow_atlas;
 
-	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &temp_shadow_atlas, false);
-	Engine::get_render_system()->render_pipeline.copy_resource(temp_shadow_atlas, render_world->shadow_atlas);
+	//Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &temp_shadow_atlas, false);
+	//Engine::get_render_system()->render_pipeline.copy_resource(temp_shadow_atlas, render_world->shadow_atlas);
 
-	u32 *shadow_atlas_pixel = (u32 *)Engine::get_render_system()->render_pipeline.map(temp_shadow_atlas, MAP_TYPE_READ);
-	u32 *shadow_dispaly_pixel = (u32 *)Engine::get_render_system()->render_pipeline.map(shadow_display_texture);
-	
-	for (u32 row = 0; row < shadow_display_texture.height; row++) {
-		for (u32 column = 0; column < shadow_display_texture.width; column++) {
-			R24U8 depth = R24U8(shadow_atlas_pixel[column]);
-			u8 r = u8(depth.numerator >> 24);
-			u8 g = u8(depth.numerator >> 16);
-			u8 b = u8(depth.numerator >> 13);
-			//u8 b = u8(depth.numerator >> 16);
-			Color color = Color(b, b, b);
-			shadow_dispaly_pixel[column] = color.get_packed_rgba();
-		}
-		shadow_atlas_pixel += shadow_display_texture.width;
-		shadow_dispaly_pixel += shadow_display_texture.width;
-	}
+	//u32 *shadow_atlas_pixel = (u32 *)Engine::get_render_system()->render_pipeline.map(temp_shadow_atlas, MAP_TYPE_READ);
+	//u32 *shadow_dispaly_pixel = (u32 *)Engine::get_render_system()->render_pipeline.map(shadow_display_texture);
+	//
+	//for (u32 row = 0; row < shadow_display_texture.height; row++) {
+	//	for (u32 column = 0; column < shadow_display_texture.width; column++) {
+	//		R24U8 depth = R24U8(shadow_atlas_pixel[column]);
+	//		u8 r = u8(depth.numerator >> 24);
+	//		u8 g = u8(depth.numerator >> 16);
+	//		u8 b = u8(depth.numerator >> 8);
+	//		//u8 b = u8(depth.numerator >> 16);
+	//		Color color = Color(g, g, g);
+	//		shadow_dispaly_pixel[column] = color.get_packed_rgba();
+	//	}
+	//	shadow_atlas_pixel += shadow_display_texture.width;
+	//	shadow_dispaly_pixel += shadow_display_texture.width;
+	//}
 
-	Engine::get_render_system()->render_pipeline.unmap(temp_shadow_atlas);
-	Engine::get_render_system()->render_pipeline.unmap(shadow_display_texture);
+	//Engine::get_render_system()->render_pipeline.unmap(temp_shadow_atlas);
+	//Engine::get_render_system()->render_pipeline.unmap(shadow_display_texture);
 
-	temp_shadow_atlas.release();
+	//temp_shadow_atlas.release();
 }
 
 void Render_World_Window::draw()

@@ -20,6 +20,7 @@ typedef ComPtr<ID3D11Debug> Dx11_Debug;
 typedef ComPtr<ID3D11RenderTargetView> Render_Target_View;
 typedef ComPtr<ID3D11DepthStencilView> Depth_Stencil_View;
 typedef ComPtr<ID3D11ShaderResourceView> Shader_Resource_View;
+typedef ComPtr<ID3D11UnorderedAccessView> Unordered_Access_View;
 
 typedef ComPtr<ID3D11InputLayout> Input_Layout;
 typedef ComPtr<ID3D11RasterizerState> Rasterizer_State;
@@ -125,13 +126,13 @@ struct Gpu_Buffer : Gpu_Resource<ID3D11Buffer> {
 	u32 data_size = 0;
 	u32 data_count = 0;
 
+	Shader_Resource_View srv;
+	Unordered_Access_View uav;
+
 	void free();
 	bool is_empty() { return data_count == 0; }
 	u32 get_data_width();
 };
-
-Gpu_Buffer_Desc make_vertex_buffer_desc(u32 data_count, u32 data_size, void *data, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, u32 cpu_access = 0);
-Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void *data, Resource_Usage usage = RESOURCE_USAGE_DEFAULT, u32 cpu_access = 0);
 
 struct View_Port {
 	u32 x = 0;
@@ -216,9 +217,6 @@ enum Comparison_Func {
 };
 
 struct Depth_Stencil_State_Desc {
-	Depth_Stencil_State_Desc() {};
-	Depth_Stencil_State_Desc(Stencil_Operation _stencil_failed, Stencil_Operation _depth_failed, Stencil_Operation _pass, Comparison_Func _compare_func, u32 _write_mask = 0xff, u32 _read_mask = 0xff, bool _enable_depth_test = true);
-
 	bool enable_depth_test = true;
 	bool enalbe_stencil_test = false;
 	u32 stencil_read_mask = 0xff;
@@ -255,71 +253,6 @@ struct Shader {
 	String name;
 };
 
-enum Shader_Resource_Type {
-	SHADER_RESOURCE_TYPE_UNKNOWN,
-	SHADER_RESOURCE_TYPE_BUFFER ,
-	SHADER_RESOURCE_TYPE_TEXTURE_1D,
-	SHADER_RESOURCE_TYPE_TEXTURE_1D_ARRAY,
-	SHADER_RESOURCE_TYPE_TEXTURE_2D,
-	SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY,
-	SHADER_RESOURCE_TYPE_TEXTURE_2D_MS,
-	SHADER_RESOURCE_TYPE_TEXTURE_2D_MS_ARRAY,
-	SHADER_RESOURCE_TYPE_TEXTURE_3D,
-	SHADER_RESOURCE_TYPE_TEXTURE_CUBE,
-	SHADER_RESOURCE_TYPE_TEXTURE_CUBE_ARRAY,
-	SHADER_RESOURCE_TYPE_BUFFEREX
-};
-
-struct Shader_Resource_Desc {
-	Shader_Resource_Desc();
-
-	DXGI_FORMAT format;
-	Shader_Resource_Type resource_type;
-	union {
-		struct Buffer {
-			u32 first_element;
-			u32 element_count;
-		} buffer;
-		struct Dx11_Texture_2D {
-			u32 most_detailed_mip;
-			u32 mip_levels;
-		} texture_2d;
-		struct Texture_2D_Array {
-			u32 count;
-			u32 most_detailed_mip;
-			u32 mip_levels;
-		} texture_2d_array;
-	} resource;
-};
-
-enum Depth_Stencil_View_Type {
-	DEPTH_STENCIL_VIEW_TYPE_UNKNOWN,
-	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_1D,
-	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_1D_ARRAY,
-	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D,
-	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY,
-	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS,
-	DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS_ARRAY
-};
-
-struct Depth_Stencil_View_Desc {
-	DXGI_FORMAT format;
-	Depth_Stencil_View_Type type;
-	union {
-		struct Texture_2D {
-			u32 mip_slice;
-		} texture_2d;
-		struct Texture_2D_Ms {
-
-		} texture_2d_ms;
-		struct Texture_2D_Array {
-			u32 mip_slice;
-			u32 first_array_slice;
-			u32 array_count;
-		} texture_2d_array;
-	} view;
-};
-
 struct Multisample_Info {
 	u32 count = 1;
 	u32 quality = 0;
@@ -338,41 +271,27 @@ struct Texture_Desc {
 	Multisample_Info multisampling;
 };
 
-inline bool is_multisampling_texture(Texture_Desc *texture_desc)
-{
-	return (texture_desc->multisampling.count > 1);
-}
-
 struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
 	Texture2D() {}
 
+	u32 mip_levels = 0;
 	u32 width = 0;
 	u32 height = 0;
 	u32 format_size = 0;
 	Resource_Usage usage;
 	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
-	
+	Multisample_Info multisampling;
+
 	String name;
 	
-	Shader_Resource_View view;
+	Shader_Resource_View srv;
+	Depth_Stencil_View dsv;
+	Render_Target_View rtv;
+	Unordered_Access_View uav;
 
+	bool is_multisampled();
 	u32 get_pitch();
 	u32 get_size();
-
-	void release();
-};
-
-struct Depth_Stencil_Buffer {
-	Texture2D texture;
-	Depth_Stencil_View view;
-
-	void release();
-};
-
-struct Render_Target {
-	Texture2D texture;
-	Render_Target_View view;
-
 	void release();
 };
 
@@ -391,21 +310,18 @@ struct Gpu_Device {
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
 
 	void create_sampler(Sampler_State *sampler_state);
-	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture, bool create_shader_resource = true);
-	void create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture);
-
-	void create_shader_resource_view(Texture2D *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
-	void create_shader_resource_view(Gpu_Buffer *gpu_buffer, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
-	void create_shader_resource_view(const Dx11_Resource &resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource);
+	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture);
 
 	void create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state);
 	void create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state);
 	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
 
-	void create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view);
-	void create_depth_stencil_buffer(Texture_Desc *depth_stencil_texture_desc, Depth_Stencil_Buffer *depth_stencil_buffer);
-	void create_render_target(Texture2D *texture, Render_Target *render_target);
-	void create_render_target(Texture_Desc *target_texture_desc, Render_Target *render_target);
+	void create_shader_resource_view(Gpu_Buffer *gpu_buffer);
+	
+	void create_shader_resource_view(Texture2D *texture);
+	void create_depth_stencil_view(Texture2D *texture);
+	void create_render_target_view(Texture2D *texture);
+	void create_unordered_access_view(Texture2D *texture);
 };
 
 enum Render_Primitive_Type {
@@ -430,19 +346,19 @@ struct Render_Pipeline_State {
 	Rasterizer_State rasterizer_state;
 	Sampler_State sampler_state;
 	View_Port view_port;
-	Depth_Stencil_Buffer *depth_stencil_buffer = NULL;
-	Render_Target *render_target = NULL;
+	Depth_Stencil_View depth_stencil_view;
+	Render_Target_View render_target_view;
 
 	void setup_default_state(Render_System *render_sys);
 };
 
 struct Swap_Chain {
 	Multisample_Info multisampling;
-	Texture2D back_buffer;
 	DXGI_Swap_Chain dxgi_swap_chain;
 
 	void init(Gpu_Device *gpu_device, Win32_Info *win32_info);
 	void resize(u32 window_width, u32 window_height);
+	void get_back_buffer_as_texture(Texture2D *texture);
 };
 
 struct Render_Pipeline {
@@ -476,7 +392,7 @@ struct Render_Pipeline {
 
 	void set_vertex_shader(Shader *shader);
 	void set_geometry_shader(Shader *shader);
-	void set_computer_shader(Shader *shader);
+	void set_compute_shader(Shader *shader);
 	void set_hull_shader(Shader *shader);
 	void set_domain_shader(Shader *shader);
 	void set_pixel_shader(Shader *shader);
@@ -486,9 +402,9 @@ struct Render_Pipeline {
 	void set_vertex_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer);
 	
 	void set_pixel_shader_sampler(const Sampler_State &sampler_state);
-	void set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer);
-	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
+	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
+	void set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer);
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
@@ -496,13 +412,12 @@ struct Render_Pipeline {
 	void reset_rasterizer();
 
 	void set_blend_state(const Blend_State &blend_state);
-	void reset_blending_test();
+	void reset_blending_state();
 
 	void set_depth_stencil_state(const Depth_Stencil_State &depth_stencil_state, u32 stencil_ref = 0);
-	void reset_depth_stencil_test();
+	void reset_depth_stencil_state();
 
-	void set_only_depth_stencil_buffer(const Depth_Stencil_Buffer &depth_stencil_buffer);
-	void set_render_target(const Render_Target &render_target, const Depth_Stencil_Buffer &depth_stencil_buffer);
+	void set_render_target(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view);
 
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);

@@ -25,11 +25,7 @@ const u32 DIRECTION_SHADOW_MAP_HEIGHT = 2000;
 const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
 struct Struct_Buffer {
-	u32 count = 0;
-	u32 size = 0;
-	
 	Gpu_Buffer gpu_buffer;
-	Shader_Resource_View shader_resource;
 
 	template <typename T>
 	void allocate(u32 elements_count);
@@ -107,7 +103,7 @@ struct Render_World {
 	
 	Texture2D default_texture;
 	Texture2D shadow_atlas;
-	Depth_Stencil_Buffer temp_shadow_storage;
+	Texture2D temp_shadow_storage;
 	
 	Gpu_Buffer frame_info_cbuffer;
 	Gpu_Buffer light_projections_cbuffer;

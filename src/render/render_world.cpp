@@ -1,11 +1,10 @@
 #include <stdint.h>
 
-#include "render_world.h"
 #include "render_pass.h"
-#include "../collision/collision.h"
-
+#include "render_world.h"
 #include "../gui/gui.h"
 #include "../sys/engine.h"
+#include "../collision/collision.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
@@ -90,6 +89,7 @@ void Render_World::init()
 	texture_desc.mip_levels = 1;
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
+	render_sys->gpu_device.create_shader_resource_view(&default_texture);
 	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
 
 	game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
@@ -120,11 +120,8 @@ void Render_World::init_shadow_rendering()
 	texture_desc.mip_levels = 1;
 	texture_desc.multisampling = { 1, 0 };
 
-	Shader_Resource_Desc shader_resource_desc;
-	shader_resource_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_MS;
-	
-	render_sys->gpu_device.create_texture_2d(&texture_desc, &shader_resource_desc, &shadow_atlas);
+	render_sys->gpu_device.create_texture_2d(&texture_desc, &shadow_atlas);
+	render_sys->gpu_device.create_shader_resource_view(&shadow_atlas);
 
 	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
 	
@@ -136,9 +133,11 @@ void Render_World::init_shadow_rendering()
 	depth_stencil_desc.bind = BIND_DEPTH_STENCIL;
 	depth_stencil_desc.multisampling = { 1, 0 };
 
-	render_sys->gpu_device.create_depth_stencil_buffer(&depth_stencil_desc, &temp_shadow_storage);
+	render_sys->gpu_device.create_texture_2d(&depth_stencil_desc, &temp_shadow_storage);
+	render_sys->gpu_device.create_depth_stencil_view(&temp_shadow_storage);
 
-	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &temp_shadow_storage.texture);
+
+	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &temp_shadow_storage);
 
 	light_projections.init();
 	render_sys->gpu_device.create_constant_buffer(sizeof(Render_World::Light_Projections), &light_projections_cbuffer);
@@ -212,10 +211,6 @@ void Render_World::update_lights()
 		shader_lights.push(hlsl_light);
 	}
 	lights_struct_buffer.update(&shader_lights);
-	//light_view_matrices.clear();
-	//Matrix4 m;
-	//m.matrix[0] = Color::Red;
-	//light_view_matrices.push(m);
 	light_view_matrices_struct_buffer.update(&light_view_matrices);
 	shadow_maps_struct_buffer.update(&shadow_maps);
 }
@@ -335,14 +330,7 @@ void Struct_Buffer::allocate(u32 elements_count)
 
 	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
 	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
-
-	Shader_Resource_Desc shader_resource_desc;
-	shader_resource_desc.format = DXGI_FORMAT_UNKNOWN;
-	shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_BUFFER;
-	shader_resource_desc.resource.buffer.element_count = elements_count;
-	gpu_device->create_shader_resource_view(&gpu_buffer, &shader_resource_desc, &shader_resource);
-
-	size = elements_count;
+	gpu_device->create_shader_resource_view(&gpu_buffer);
 }
 
 template<typename T>
@@ -354,15 +342,14 @@ void Struct_Buffer::update(Array<T> *array)
 
 	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
 	
-	if (array->count > size) {
+	if (array->count > gpu_buffer.data_count) {
 		free();
 		allocate<T>(array->count);
 	}
 
 	T *buffer = (T *)render_pipeline->map(gpu_buffer);
-	memcpy((void *)buffer, (void *)&array->items[0], sizeof(T) * array->count);
+	memcpy((void *)buffer, (void *)array->items, sizeof(T) * array->count);
 	render_pipeline->unmap(gpu_buffer);
-	count += array->count;
 }
 
 void Struct_Buffer::free()
