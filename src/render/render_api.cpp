@@ -9,70 +9,6 @@
 
 static Multisample_Info default_render_api_multisample;
 
-inline D3D11_DSV_DIMENSION to_dx11_dsv_dimension(Depth_Stencil_View_Type type)
-{
-	switch (type) {
-		case DEPTH_STENCIL_VIEW_TYPE_UNKNOWN:
-			return D3D11_DSV_DIMENSION_UNKNOWN;
-		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_1D:
-			return D3D11_DSV_DIMENSION_TEXTURE1D;
-		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_1D_ARRAY:
-			return D3D11_DSV_DIMENSION_TEXTURE1DARRAY;
-		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D:
-			return D3D11_DSV_DIMENSION_TEXTURE2D;
-		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY:
-			return D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS:
-			return D3D11_DSV_DIMENSION_TEXTURE2DMS;
-		case DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS_ARRAY:
-			return D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
-	}
-	assert(false);
-	return D3D11_DSV_DIMENSION_UNKNOWN;
-}
-
-inline D3D11_SRV_DIMENSION to_dx11_src_dimension(Shader_Resource_Type type)
-{
-	switch (type) {
-		case SHADER_RESOURCE_TYPE_UNKNOWN:
-			return D3D11_SRV_DIMENSION_UNKNOWN;
-		
-		case SHADER_RESOURCE_TYPE_BUFFER:
-			return D3D11_SRV_DIMENSION_BUFFER;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_1D:
-			return D3D11_SRV_DIMENSION_TEXTURE1D;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_1D_ARRAY:
-			return D3D11_SRV_DIMENSION_TEXTURE1DARRAY;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_2D:
-			return D3D11_SRV_DIMENSION_TEXTURE2D;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY:
-			return D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_2D_MS:
-			return D3D11_SRV_DIMENSION_TEXTURE2DMS;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_2D_MS_ARRAY:
-			return D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_3D:
-			return D3D11_SRV_DIMENSION_TEXTURE3D;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_CUBE:
-			return D3D11_SRV_DIMENSION_TEXTURECUBE;
-		
-		case SHADER_RESOURCE_TYPE_TEXTURE_CUBE_ARRAY:
-			return D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
-		
-		case SHADER_RESOURCE_TYPE_BUFFEREX:
-			return D3D11_SRV_DIMENSION_BUFFEREX;
-	}
-	assert(false);
-	return D3D_SRV_DIMENSION_UNKNOWN;
-}
 
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
 {
@@ -408,7 +344,7 @@ void Gpu_Device::create_sampler(Sampler_State *sampler)
 	HR(dx11_device->CreateSamplerState(&sampler_desc, sampler->ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture, bool create_shader_resource)
+void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture)
 {
 	assert(texture);
 	assert(texture_desc);
@@ -418,6 +354,8 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *textur
 	texture->format = texture_desc->format;
 	texture->format_size = dxgi_format_size(texture_desc->format);
 	texture->usage = texture_desc->usage;
+	texture->multisampling = texture_desc->multisampling;
+	texture->mip_levels = texture_desc->mip_levels;
 
 	D3D11_TEXTURE2D_DESC texture_2d_desc;
 	ZeroMemory(&texture_2d_desc, sizeof(D3D11_TEXTURE2D_DESC));
@@ -449,133 +387,6 @@ void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Texture2D *textur
 	} else {
 		HR(dx11_device->CreateTexture2D(&texture_2d_desc, NULL, texture->resource.ReleaseAndGetAddressOf()));
 	}
-
-	if (create_shader_resource) {
-		Shader_Resource_Desc shader_resource_desc;
-		shader_resource_desc.format = texture_desc->format;
-		if (!is_multisampling_texture(texture_desc)) {
-			shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D;
-			shader_resource_desc.resource.texture_2d.most_detailed_mip = 0;
-			shader_resource_desc.resource.texture_2d.mip_levels = texture_desc->mip_levels == 1 ? 1 : (texture_desc->mip_levels == 0 ? -1 : texture_desc->mip_levels);
-		} else {
-            shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_MS;
-		}
-		create_shader_resource_view(texture, &shader_resource_desc, &texture->view);
-	}
-}
-
-void Gpu_Device::create_texture_2d(Texture_Desc *texture_desc, Shader_Resource_Desc *shader_resource_desc, Texture2D *texture)
-{
-	assert(texture_desc);
-	assert(shader_resource_desc);
-	assert(texture);
-
-	texture->width = texture_desc->width;
-	texture->height = texture_desc->height;
-	texture->format = texture_desc->format;
-	texture->format_size = dxgi_format_size(texture_desc->format);
-	texture->usage = texture_desc->usage;
-
-	D3D11_TEXTURE2D_DESC texture_2d_desc;
-	ZeroMemory(&texture_2d_desc, sizeof(D3D11_TEXTURE2D_DESC));
-	texture_2d_desc.Width = texture_desc->width;
-	texture_2d_desc.Height = texture_desc->height;
-	texture_2d_desc.MipLevels = texture_desc->mip_levels;
-	texture_2d_desc.ArraySize = texture_desc->array_count;
-	texture_2d_desc.Format = texture_desc->format;
-	texture_2d_desc.SampleDesc.Count = texture_desc->multisampling.count;
-	texture_2d_desc.SampleDesc.Quality = texture_desc->multisampling.quality;
-	texture_2d_desc.Usage = to_dx11_resource_usage(texture_desc->usage);
-	texture_2d_desc.BindFlags = texture_desc->bind;
-	texture_2d_desc.CPUAccessFlags = texture_desc->cpu_access;
-
-	u32 is_support_mips;
-	HR(dx11_device->CheckFormatSupport(texture_desc->format, &is_support_mips));
-	if ((texture_desc->mip_levels != 1) && (is_support_mips & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN)) {
-		texture_2d_desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-		texture_2d_desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-	}
-
-	if (texture_desc->data && (texture_desc->mip_levels == 1)) {
-		D3D11_SUBRESOURCE_DATA subresource_desc;
-		ZeroMemory(&subresource_desc, sizeof(D3D11_SUBRESOURCE_DATA));
-		subresource_desc.pSysMem = texture_desc->data;
-		subresource_desc.SysMemPitch = texture_desc->width * texture->format_size;
-
-		HR(dx11_device->CreateTexture2D(&texture_2d_desc, &subresource_desc, texture->resource.ReleaseAndGetAddressOf()));
-	} else {
-		HR(dx11_device->CreateTexture2D(&texture_2d_desc, NULL, texture->resource.ReleaseAndGetAddressOf()));
-	}
-	create_shader_resource_view(texture, shader_resource_desc, &texture->view);
-}
-
-void Gpu_Device::create_depth_stencil_view(Texture2D *texture, Depth_Stencil_View_Desc *depth_stencil_view_desc, Depth_Stencil_View *depth_stencil_view)
-{
-	assert(texture);
-	assert(depth_stencil_view_desc);
-	assert(depth_stencil_view);
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC d3d11_depth_stencil_view_desc;
-	ZeroMemory(&d3d11_depth_stencil_view_desc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
-	d3d11_depth_stencil_view_desc.Flags = 0;
-	d3d11_depth_stencil_view_desc.Format = depth_stencil_view_desc->format;
-	d3d11_depth_stencil_view_desc.ViewDimension = to_dx11_dsv_dimension(depth_stencil_view_desc->type);
-	
-	if (depth_stencil_view_desc->type == DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D) {
-		d3d11_depth_stencil_view_desc.Texture2D.MipSlice = depth_stencil_view_desc->view.texture_2d.mip_slice;
-	} else if (depth_stencil_view_desc->type == DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_ARRAY) {
-		d3d11_depth_stencil_view_desc.Texture2DArray.MipSlice = depth_stencil_view_desc->view.texture_2d_array.mip_slice;
-		d3d11_depth_stencil_view_desc.Texture2DArray.ArraySize = depth_stencil_view_desc->view.texture_2d_array.array_count;
-		d3d11_depth_stencil_view_desc.Texture2DArray.FirstArraySlice = depth_stencil_view_desc->view.texture_2d_array.first_array_slice;
-	} else if (depth_stencil_view_desc->type == DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS) {
-		//@Note: May be better to use switch operator ?
-	} else {
-		assert(false);
-	}
-	HR(dx11_device->CreateDepthStencilView(texture->resource.Get(), &d3d11_depth_stencil_view_desc, depth_stencil_view->ReleaseAndGetAddressOf()));
-}
-
-void Gpu_Device::create_shader_resource_view(Gpu_Buffer *gpu_buffer, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
-{
-	Dx11_Resource resource;
-	gpu_buffer->resource.As(&resource);
-	create_shader_resource_view(resource, shader_resource_desc, shader_resource);
-}
-
-void Gpu_Device::create_shader_resource_view(Texture2D *texture, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
-{
-	Dx11_Resource resource;
-	texture->resource.As(&resource);
-	create_shader_resource_view(resource, shader_resource_desc, shader_resource);
-}
-
-void Gpu_Device::create_shader_resource_view(const Dx11_Resource &resource, Shader_Resource_Desc *shader_resource_desc, Shader_Resource_View *shader_resource)
-{
-	assert(shader_resource_desc);
-	assert(shader_resource);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
-	ZeroMemory(&shader_resource_view_desc, sizeof(shader_resource_view_desc));
-	shader_resource_view_desc.Format = shader_resource_desc->format;
-	shader_resource_view_desc.ViewDimension = to_dx11_src_dimension(shader_resource_desc->resource_type);
-	if (shader_resource_desc->resource_type == SHADER_RESOURCE_TYPE_BUFFER) {
-		shader_resource_view_desc.Buffer.FirstElement = shader_resource_desc->resource.buffer.first_element;
-		shader_resource_view_desc.Buffer.NumElements = shader_resource_desc->resource.buffer.element_count;
-	} else if (shader_resource_desc->resource_type == SHADER_RESOURCE_TYPE_TEXTURE_2D) {
-		shader_resource_view_desc.Texture2D.MostDetailedMip = shader_resource_desc->resource.texture_2d.most_detailed_mip;
-		shader_resource_view_desc.Texture2D.MipLevels = shader_resource_desc->resource.texture_2d.mip_levels;
-	}
-	else if (shader_resource_desc->resource_type == SHADER_RESOURCE_TYPE_TEXTURE_2D_ARRAY) {
-		shader_resource_view_desc.Texture2DArray.FirstArraySlice = 0;
-		shader_resource_view_desc.Texture2DArray.ArraySize = shader_resource_desc->resource.texture_2d_array.count;
-		shader_resource_view_desc.Texture2DArray.MipLevels = shader_resource_desc->resource.texture_2d_array.mip_levels;
-		shader_resource_view_desc.Texture2DArray.MostDetailedMip = shader_resource_desc->resource.texture_2d_array.most_detailed_mip;
-	} else if (shader_resource_desc->resource_type == SHADER_RESOURCE_TYPE_TEXTURE_2D_MS) {
-		//@Note: May be better to use switch operator ?
-	} else {
-		assert(false);
-	}
-	HR(dx11_device->CreateShaderResourceView(resource.Get(), &shader_resource_view_desc, shader_resource->ReleaseAndGetAddressOf()));
 }
 
 void Gpu_Device::create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state)
@@ -638,17 +449,6 @@ void Gpu_Device::create_depth_stencil_state(Depth_Stencil_State_Desc *depth_sten
 	HR(dx11_device->CreateDepthStencilState(&desc, depth_stencil_state->ReleaseAndGetAddressOf()));
 }
 
-inline DXGI_FORMAT to_depth_stencil_format(DXGI_FORMAT format)
-{
-	switch (format) {
-		case DXGI_FORMAT_R24G8_TYPELESS:
-		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
-			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	}
-	assert(false);
-	return DXGI_FORMAT_UNKNOWN;
-}
-
 inline DXGI_FORMAT to_depth_stencil_view_format(DXGI_FORMAT format)
 {
 	switch (format) {
@@ -661,45 +461,65 @@ inline DXGI_FORMAT to_depth_stencil_view_format(DXGI_FORMAT format)
 	return DXGI_FORMAT_UNKNOWN;
 }
 
-void Gpu_Device::create_depth_stencil_buffer(Texture_Desc *depth_stencil_texture_desc, Depth_Stencil_Buffer *depth_stencil_buffer)
+void Gpu_Device::create_shader_resource_view(Gpu_Buffer *gpu_buffer)
 {
-	if (depth_stencil_texture_desc->bind & BIND_SHADER_RESOURCE) {
-		Shader_Resource_Desc shader_resource_desc;
-		shader_resource_desc.format = to_depth_stencil_format(depth_stencil_texture_desc->format);
+	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
+	ZeroMemory(&shader_resource_view_desc, sizeof(shader_resource_view_desc));
+	shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+	shader_resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	shader_resource_view_desc.Buffer.NumElements = gpu_buffer->data_count;
 
-		if (!is_multisampling_texture(depth_stencil_texture_desc)) {
-			shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D;
-			shader_resource_desc.resource.texture_2d.mip_levels = 1;
-			shader_resource_desc.resource.texture_2d.most_detailed_mip = 0;
-		} else {
-			shader_resource_desc.resource_type = SHADER_RESOURCE_TYPE_TEXTURE_2D_MS;
-		}
-		create_texture_2d(depth_stencil_texture_desc, &shader_resource_desc, &depth_stencil_buffer->texture);
-	} else {
-		create_texture_2d(depth_stencil_texture_desc, &depth_stencil_buffer->texture, false);
-	}
-
-	Depth_Stencil_View_Desc depth_stencil_view_desc;
-	depth_stencil_view_desc.format = to_depth_stencil_view_format(depth_stencil_texture_desc->format);
-	if (!is_multisampling_texture(depth_stencil_texture_desc)) {
-		depth_stencil_view_desc.type = DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D;
-		depth_stencil_view_desc.view.texture_2d.mip_slice = 0;
-	} else {
-		depth_stencil_view_desc.type = DEPTH_STENCIL_VIEW_TYPE_TEXTURE_2D_MS;
-	}
-	create_depth_stencil_view(&depth_stencil_buffer->texture, &depth_stencil_view_desc, &depth_stencil_buffer->view);
+	HR(dx11_device->CreateShaderResourceView(gpu_buffer->resource.Get(), &shader_resource_view_desc, gpu_buffer->srv.ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_render_target(Texture2D *texture, Render_Target *render_target)
+inline DXGI_FORMAT to_shader_resource_view_format(DXGI_FORMAT format)
 {
-	HR(dx11_device->CreateRenderTargetView(texture->resource.Get(), NULL, render_target->view.ReleaseAndGetAddressOf()));
+	switch (format) {
+		case DXGI_FORMAT_R24G8_TYPELESS:
+			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	}
+	return format;
 }
 
-void Gpu_Device::create_render_target(Texture_Desc *target_texture_desc, Render_Target *render_target)
-{	
-	create_texture_2d(target_texture_desc, &render_target->texture);
+void Gpu_Device::create_shader_resource_view(Texture2D *texture)
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
+	ZeroMemory(&shader_resource_view_desc, sizeof(shader_resource_view_desc));
+	shader_resource_view_desc.Format = to_shader_resource_view_format(texture->format);
+	if (texture->is_multisampled()) {
+		shader_resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+	} else {
+		shader_resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		shader_resource_view_desc.Texture2D.MipLevels = texture->mip_levels;
+	}
+	
+	HR(dx11_device->CreateShaderResourceView(texture->resource.Get(), &shader_resource_view_desc, texture->srv.ReleaseAndGetAddressOf()));
+}
 
-	HR(dx11_device->CreateRenderTargetView(render_target->texture.resource.Get(), NULL, render_target->view.ReleaseAndGetAddressOf()));
+void Gpu_Device::create_depth_stencil_view(Texture2D *texture)
+{
+	D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
+	ZeroMemory(&depth_stencil_view_desc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
+	depth_stencil_view_desc.Format = to_depth_stencil_view_format(texture->format);
+	depth_stencil_view_desc.ViewDimension = texture->is_multisampled() ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D;
+	HR(dx11_device->CreateDepthStencilView(texture->resource.Get(), &depth_stencil_view_desc, texture->dsv.ReleaseAndGetAddressOf()));
+}
+
+void Gpu_Device::create_render_target_view(Texture2D *texture)
+{
+	HR(dx11_device->CreateRenderTargetView(texture->resource.Get(), NULL, texture->rtv.ReleaseAndGetAddressOf()));
+}
+
+void Gpu_Device::create_unordered_access_view(Texture2D *texture)
+{
+	assert(texture->is_multisampled());
+	
+	D3D11_UNORDERED_ACCESS_VIEW_DESC unordered_access_view_desc;
+	ZeroMemory(&unordered_access_view_desc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
+	unordered_access_view_desc.Format = texture->format;
+	unordered_access_view_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+
+	HR(dx11_device->CreateUnorderedAccessView(texture->resource.Get(), &unordered_access_view_desc, texture->uav.ReleaseAndGetAddressOf()));
 }
 
 void Gpu_Device::create_input_layouts(Hash_Table<String, Shader *> &shader_table)
@@ -786,11 +606,7 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 	set_pixel_shader_sampler(render_pipeline_state->sampler_state);
 	set_pixel_shader(render_pipeline_state->shader);
 
-	if (render_pipeline_state->render_target) {
-		set_render_target(*render_pipeline_state->render_target, *render_pipeline_state->depth_stencil_buffer);
-	} else {
-		set_only_depth_stencil_buffer(*render_pipeline_state->depth_stencil_buffer);
-	}
+	set_render_target(render_pipeline_state->render_target_view, render_pipeline_state->depth_stencil_view);
 }
 
 void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
@@ -869,7 +685,7 @@ void Render_Pipeline::set_geometry_shader(Shader *shader)
 	dx11_context->GSSetShader(shader->geometry_shader.Get(), 0, 0);
 }
 
-void Render_Pipeline::set_computer_shader(Shader *shader)
+void Render_Pipeline::set_compute_shader(Shader *shader)
 {
 	assert(shader);
 	dx11_context->CSSetShader(shader->compute_shader.Get(), 0, 0);
@@ -905,7 +721,7 @@ void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, const Shader_
 
 void Render_Pipeline::set_vertex_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)
 {
-	dx11_context->VSSetShaderResources(shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
+	dx11_context->VSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
 
 void Render_Pipeline::set_pixel_shader_sampler(const Sampler_State &sampler_state)
@@ -925,7 +741,7 @@ void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, co
 
 void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)
 {
-	dx11_context->PSSetShaderResources(shader_resource_register, 1, struct_buffer.shader_resource.GetAddressOf());
+	dx11_context->PSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
 
 void Render_Pipeline::set_rasterizer_state(const Rasterizer_State &rasterizer_state)
@@ -968,7 +784,7 @@ void Render_Pipeline::set_blend_state(const Blend_State &blend_state)
 	dx11_context->OMSetBlendState(blend_state.Get(), b, 0xffffffff);
 }
 
-void Render_Pipeline::reset_blending_test()
+void Render_Pipeline::reset_blending_state()
 {
 	float b[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	dx11_context->OMSetBlendState(0, b, 0xffffffff);
@@ -979,19 +795,18 @@ void Render_Pipeline::set_depth_stencil_state(const Depth_Stencil_State &depth_s
 	dx11_context->OMSetDepthStencilState(depth_stencil_state.Get(), stencil_ref);
 }
 
-void Render_Pipeline::reset_depth_stencil_test()
+void Render_Pipeline::reset_depth_stencil_state()
 {
 	dx11_context->OMSetDepthStencilState(NULL, 0);
 }
 
-void Render_Pipeline::set_only_depth_stencil_buffer(const Depth_Stencil_Buffer &depth_stencil_buffer)
+void Render_Pipeline::set_render_target(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view)
 {
-	dx11_context->OMSetRenderTargets(0, NULL, depth_stencil_buffer.view.Get());
-}
-
-void Render_Pipeline::set_render_target(const Render_Target &render_target, const Depth_Stencil_Buffer &depth_stencil_buffer)
-{
-	dx11_context->OMSetRenderTargets(1, render_target.view.GetAddressOf(), depth_stencil_buffer.view.Get());
+	u32 render_target_count = 0;
+	if (render_target_view) {
+		render_target_count = 1;
+	}
+	dx11_context->OMSetRenderTargets(render_target_count, render_target_view.GetAddressOf(), depth_stencil_view.Get());
 }
 
 void Render_Pipeline::reset_vertex_buffer()
@@ -1014,18 +829,6 @@ void Render_Pipeline::draw(u32 vertex_count)
 void Render_Pipeline::draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset)
 {
 	dx11_context->DrawIndexed(index_count, index_offset, vertex_offset);
-}
-
-Gpu_Buffer_Desc make_vertex_buffer_desc(u32 data_count, u32 data_size, void *data, Resource_Usage usage, u32 cpu_access)
-{
-	Gpu_Buffer_Desc gpu_buffer_desc;
-	gpu_buffer_desc.data_count = data_count;
-	gpu_buffer_desc.data_size = data_size;
-	gpu_buffer_desc.data = data;
-	gpu_buffer_desc.usage = usage;
-	gpu_buffer_desc.cpu_access = cpu_access;
-	gpu_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
-	return gpu_buffer_desc;
 }
 
 Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void *data, Resource_Usage usage, u32 cpu_access)
@@ -1076,16 +879,9 @@ Blend_State_Desc::Blend_State_Desc()
 	write_mask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
 
-Depth_Stencil_State_Desc::Depth_Stencil_State_Desc(Stencil_Operation _stencil_failed, Stencil_Operation _depth_failed, Stencil_Operation _pass, Comparison_Func _compare_func, u32 _write_mask, u32 _read_mask, bool _enable_depth_test)
+bool Texture2D::is_multisampled()
 {
-	enable_depth_test = _enable_depth_test;
-	enalbe_stencil_test = true;
-	stencil_read_mask = _read_mask;
-	stencil_write_mack = _write_mask;
-	stencil_failed = _stencil_failed;
-	depth_failed = _depth_failed;
-	pass = _pass;
-	compare_func = _compare_func;
+	return multisampling.count > 1;
 }
 
 u32 Texture2D::get_pitch()
@@ -1101,7 +897,7 @@ u32 Texture2D::get_size()
 void Texture2D::release()
 {
 	Gpu_Resource::release();
-	view.Reset();
+	srv.Reset();
 }
 
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
@@ -1170,23 +966,6 @@ void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_i
 	}
 }
 
-Shader_Resource_Desc::Shader_Resource_Desc()
-{
-	ZeroMemory(this, sizeof(Shader_Resource_Desc));
-}
-
-void Depth_Stencil_Buffer::release()
-{
-	texture.release();
-	view.Reset();
-}
-
-void Render_Target::release()
-{
-	texture.release();
-	view.Reset();
-}
-
 void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
 {
 	multisampling = default_render_api_multisample;
@@ -1217,12 +996,14 @@ void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
 	HR(dxgi_adapter->GetParent(__uuidof(IDXGIFactory), (void**)dxgi_factory.ReleaseAndGetAddressOf()));
 
 	HR(dxgi_factory->CreateSwapChain(gpu_device->dx11_device.Get(), &swap_chain_desc, dxgi_swap_chain.ReleaseAndGetAddressOf()));
-	
-	HR(dxgi_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(back_buffer.resource.GetAddressOf())));
 }
 
 void Swap_Chain::resize(u32 window_width, u32 window_height)
 {
 	HR(dxgi_swap_chain->ResizeBuffers(1, window_width, window_height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
-	HR(dxgi_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(back_buffer.resource.GetAddressOf())));
+}
+
+void Swap_Chain::get_back_buffer_as_texture(Texture2D *texture)
+{
+	HR(dxgi_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(texture->resource.GetAddressOf())));
 }
