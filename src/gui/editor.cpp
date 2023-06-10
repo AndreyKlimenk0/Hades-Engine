@@ -288,34 +288,34 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 
 void Render_World_Window::init(Engine *engine)
 {
-	Editor_Window::init(engine);
+ // Editor_Window::init(engine);
 
-	Texture_Desc shadows_texture_desc;
-	shadows_texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
-	shadows_texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
-	shadows_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	shadows_texture_desc.mip_levels = 1;
-	shadows_texture_desc.usage = RESOURCE_USAGE_DYNAMIC;
-	shadows_texture_desc.bind = BIND_SHADER_RESOURCE;
-	shadows_texture_desc.cpu_access = CPU_ACCESS_WRITE;
+ // Texture_Desc shadows_texture_desc;
+ // shadows_texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
+ // shadows_texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
+ // shadows_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+ // shadows_texture_desc.mip_levels = 1;
+ // shadows_texture_desc.usage = RESOURCE_USAGE_DYNAMIC;
+ // shadows_texture_desc.bind = BIND_SHADER_RESOURCE;
+ // shadows_texture_desc.cpu_access = CPU_ACCESS_WRITE;
 
-	Engine::get_render_system()->gpu_device.create_texture_2d(&shadows_texture_desc, &shadow_display_texture);
+ // Engine::get_render_system()->gpu_device.create_texture_2d(&shadows_texture_desc, &shadow_display_texture);
 
-	fill_texture_with_value((void *)&Color::Red, &shadow_display_texture);
+ // fill_texture_with_value((void *)&Color::Red, &shadow_display_texture);
 }
 
 void Render_World_Window::update()
 {
-	Texture_Desc texture_desc;
-	texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
-	texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
-	texture_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	texture_desc.mip_levels = 1;
-	texture_desc.usage = RESOURCE_USAGE_STAGING;
-	texture_desc.bind = 0;
-	texture_desc.cpu_access = CPU_ACCESS_READ | CPU_ACCESS_WRITE;
+ // Texture_Desc texture_desc;
+ // texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
+ // texture_desc.height = DIRECTION_SHADOW_MAP_HEIGHT;
+ // texture_desc.format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+ // texture_desc.mip_levels = 1;
+ // texture_desc.usage = RESOURCE_USAGE_STAGING;
+ // texture_desc.bind = 0;
+ // texture_desc.cpu_access = CPU_ACCESS_READ | CPU_ACCESS_WRITE;
 
-	Texture2D temp_shadow_atlas;
+ // Texture2D temp_shadow_atlas;
 
 	//Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &temp_shadow_atlas, false);
 	//Engine::get_render_system()->render_pipeline.copy_resource(temp_shadow_atlas, render_world->shadow_atlas);
@@ -345,18 +345,29 @@ void Render_World_Window::update()
 
 void Render_World_Window::draw()
 {
-	update();
-
-	static bool state = false;
-
-	gui::button("Shadow atls", &state);
-
-	if (state) {
-		gui::set_next_window_size(1000, 800);
-		if (gui::begin_window("Shadow atls")) {
-			Render_World *render_world = Engine::get_render_world();
-			gui::image(&shadow_display_texture, 700, 700);
-			gui::end_window();
+	Cascaded_Shadow_Map *cascade_shadow_map = NULL;
+	For(Engine::get_render_world()->cascaded_shadow_maps, cascade_shadow_map) {
+		Shadow_Cascade *shadow_cascade = NULL;
+		For(cascade_shadow_map->shadow_cascades, shadow_cascade) {
+			Matrix4 m = shadow_cascade->get_cascade_view_matrix();
+			Vector3 position = m[3];
+			char *text = format("Position", &position);
+			gui::text(text);
+			free_string(text);
 		}
 	}
+ // update();
+
+ // static bool state = false;
+
+ // gui::button("Shadow atls", &state);
+
+ // if (state) {
+ // 	gui::set_next_window_size(1000, 800);
+ // 	if (gui::begin_window("Shadow atls")) {
+ // 		Render_World *render_world = Engine::get_render_world();
+ // 		gui::image(&shadow_display_texture, 700, 700);
+ // 		gui::end_window();
+ // 	}
+ // }
 }

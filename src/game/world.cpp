@@ -61,6 +61,7 @@ Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vecto
 	Light light;
 	init_entity(&light, ENTITY_TYPE_LIGHT, Vector3(0.0f, 100.0f, 0.0f));
 	light.direction = direction;
+	light.direction.normalize();
 	light.color = color;
 	light.light_type = DIRECTIONAL_LIGHT_TYPE;;
 	light.idx = lights.count;

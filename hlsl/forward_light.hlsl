@@ -248,9 +248,10 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
 	for (uint i = 0; i < light_count; i++) {
 
 		Light light = lights[i];
-		Shadow_Map shadow_map = shadow_maps[light.shadow_map_idx];
+		//Shadow_Map shadow_map = shadow_maps[light.shadow_map_idx];
 
-		float shadow_factor = calculate_shadow(light, vertex_out.normal, vertex_out.world_position, shadow_map.light_view_matrix_idx);
+		//float shadow_factor = calculate_shadow(light, vertex_out.normal, vertex_out.world_position, shadow_map.light_view_matrix_idx);
+		float shadow_factor = 1.0f;
 		if (shadow_factor > 0.0f) {
 			switch (light.light_type) {
 				case SPOT_LIGHT_TYPE:

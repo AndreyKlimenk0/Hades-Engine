@@ -601,7 +601,7 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 	set_depth_stencil_state(render_pipeline_state->depth_stencil_state);
 
 	set_rasterizer_state(render_pipeline_state->rasterizer_state);
-	set_view_port(&render_pipeline_state->view_port);
+	set_viewport(&render_pipeline_state->view_port);
 
 	set_pixel_shader_sampler(render_pipeline_state->sampler_state);
 	set_pixel_shader(render_pipeline_state->shader);
@@ -760,7 +760,7 @@ void Render_Pipeline::set_scissor(Rect_s32 *rect)
 	dx11_context->RSSetScissorRects(1, rects);
 }
 
-void Render_Pipeline::set_view_port(View_Port *view_port)
+void Render_Pipeline::set_viewport(Viewport *view_port)
 {
 	D3D11_VIEWPORT dx11_view_port;
 	dx11_view_port.TopLeftX = (float)view_port->x;

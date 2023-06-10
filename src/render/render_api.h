@@ -134,7 +134,7 @@ struct Gpu_Buffer : Gpu_Resource<ID3D11Buffer> {
 	u32 get_data_width();
 };
 
-struct View_Port {
+struct Viewport {
 	u32 x = 0;
 	u32 y = 0;
 	u32 width = 0;
@@ -345,7 +345,7 @@ struct Render_Pipeline_State {
 	Depth_Stencil_State depth_stencil_state;
 	Rasterizer_State rasterizer_state;
 	Sampler_State sampler_state;
-	View_Port view_port;
+	Viewport view_port;
 	Depth_Stencil_View depth_stencil_view;
 	Render_Target_View render_target_view;
 
@@ -408,7 +408,7 @@ struct Render_Pipeline {
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
-	void set_view_port(View_Port *view_port);
+	void set_viewport(Viewport *view_port);
 	void reset_rasterizer();
 
 	void set_blend_state(const Blend_State &blend_state);
