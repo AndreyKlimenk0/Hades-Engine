@@ -42,12 +42,12 @@ struct Draw_Lines_Pass : Render_Pass {
 struct Shadow_Pass : Render_Pass {
 	Shadow_Pass(void *render_context);
 
-	struct Pass_Data {
-		u32 mesh_idx;
-		u32 world_matrix_idx;
-		u32 light_view_matrix_idx;
-		u32 pad;
+	struct Shadow_Cascade_Info {
+		Matrix4 cascade_view_matrix;
+		Matrix4 cascade_projection_matrix;
 	};
+
+	Gpu_Buffer shadow_cascade_cbuffer;
 
 	void init(Render_System *render_sys);
 	bool setup_pipeline_state(Render_System *render_system);

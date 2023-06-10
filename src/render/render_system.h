@@ -132,9 +132,9 @@ struct Render_2D {
 	void render_frame(); // @Clean up change name 
 };
 
-struct View_Info {
+struct View {
 	float ratio;
-	float fov_y_ratio;
+	float fov;
 	float near_plane;
 	float far_plane;
 
@@ -175,7 +175,7 @@ struct Render_System {
 	static u32 screen_height;
 
 	//@Note: Why I need to have this var here ?
-	View_Info view_info;
+	View view;
 	//@Note: Why I need to have this var here ?
 	Render_2D render_2d;
 

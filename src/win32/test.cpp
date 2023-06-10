@@ -399,5 +399,4 @@ void Map_Parser::report_error(Token_Type expecting_token, Token_Type actual_toke
 
 void test()
 {
-
 }
