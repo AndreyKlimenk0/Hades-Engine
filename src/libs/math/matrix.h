@@ -230,6 +230,7 @@ struct Matrix4 {
 	const Vector4 &operator[](int index) const;
 
 	Matrix4 operator*(float scalar);
+	Vector3 operator*(const Vector3 &vec);
 	Vector4 operator*(const Vector4 &vec);
 	Matrix4 operator*(const Matrix4 &other);
 	Matrix4 operator+(const Matrix4 &other);
@@ -298,6 +299,14 @@ inline Matrix4 Matrix4::operator*(float scalar)
 		Vector4(matrix[1].x * scalar, matrix[1].y * scalar, matrix[1].z * scalar, matrix[1].w * scalar),
 		Vector4(matrix[2].x * scalar, matrix[2].y * scalar, matrix[2].z * scalar, matrix[2].w * scalar),
 		Vector4(matrix[3].x * scalar, matrix[3].y * scalar, matrix[3].z * scalar, matrix[3].w * scalar));
+}
+
+inline Vector3 Matrix4::operator*(const Vector3 &vec)
+{
+	return Vector3(
+		vec.x * matrix[0].x + vec.y * matrix[1].x + vec.z * matrix[2].x,
+		vec.x * matrix[0].y + vec.y * matrix[1].y + vec.z * matrix[2].y,
+		vec.x * matrix[0].z + vec.y * matrix[1].z + vec.z * matrix[2].z);
 }
 
 inline Vector4 Matrix4::operator*(const Vector4 &vec)

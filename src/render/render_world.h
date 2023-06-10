@@ -14,13 +14,9 @@ struct Render_Pass;
 typedef u32 Render_Model_Idx;
 typedef u32 Mesh_Idx;
 
+const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_WIDTH = 8192;
 const u32 SHADOW_ATLAS_HEIGHT = 8192;
-//const u32 DIRECTION_SHADOW_MAP_WIDTH = 2048;
-//const u32 DIRECTION_SHADOW_MAP_HEIGHT = 2048;
-
-const u32 DIRECTION_SHADOW_MAP_WIDTH = 2000;
-const u32 DIRECTION_SHADOW_MAP_HEIGHT = 2000;
 
 const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
@@ -64,9 +60,60 @@ struct Unified_Mesh_Storate {
 	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx);
 };
 
-struct Shadow_Map {
-	u32 light_view_matrix_idx;
+struct Frustum_Box {
+	struct Plane {
+		Vector3 origin_top_left;
+		Vector3 origin_top_right;
+		Vector3 origin_bottom_left;
+		Vector3 origin_bottom_right;
+
+		Vector3 top_left;
+		Vector3 top_right;
+		Vector3 bottom_left;
+		Vector3 bottom_right;
+
+		void setup(float plane_width, float plane_height, float z_position);
+		void transform_plane(Matrix4 *transform_matrix);
+		void get_vertices(Array<Vector3> *vertices);
+	};
+	u32 length = 0;
+	float max_x;
+	float max_y;
+	float max_z;
+	float min_x;
+	float min_y;
+	float min_z;
+
+	Plane first_plane;
+	Plane second_plane;
+
+	void calculate_length();
+	void update_min_max_values();
+	Vector3 get_view_position();
 };
+
+struct Shadow_Cascade_Range {
+	u32 start = 0;
+	u32 end = 0;
+};
+
+struct Shadow_Cascade {
+	Shadow_Cascade_Range range;
+	Vector3 light_direction;
+	Matrix4 light_matrix;
+	Viewport viewport;
+	Frustum_Box frustum_box;
+
+	void init(float fov, Shadow_Cascade_Range *shadow_cascade_range);
+	void transform(Matrix4 *transform_matrix);
+	Matrix4 get_cascade_view_matrix();
+	Matrix4 get_cascade_projection_matrix();
+};
+
+struct Cascaded_Shadow_Map {
+	Array<Shadow_Cascade> shadow_cascades;
+};
+
 
 struct Render_World {
 	u32 light_hash;
@@ -84,34 +131,27 @@ struct Render_World {
 	
 	Array<Matrix4> world_matrices;
 	Array<Matrix4> light_view_matrices;
+	Array<Matrix4> projection_light_matrices;
+	
 	Array<Render_Entity> render_entities;
 	Array<Render_Entity> bounding_box_entities;
 	Array<Render_Entity> mesh_outline_entities;
-	Array<Shadow_Map> shadow_maps;
+
+	Array<Cascaded_Shadow_Map> cascaded_shadow_maps;
+	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
+	
 	Array<Render_Pass *> render_passes;
 
 	Unified_Mesh_Storate<Vertex_XNUV> triangle_meshes;
 	Unified_Mesh_Storate<Vector3> line_meshes;
-
-	struct Light_Projections {
-		Matrix4 direction_matrix;
-		Matrix4 point_matrix;
-		Matrix4 spot_matrix;
-
-		void init();
-	} light_projections;
 	
 	Texture2D default_texture;
 	Texture2D shadow_atlas;
-	Texture2D temp_shadow_storage;
 	
 	Gpu_Buffer frame_info_cbuffer;
-	Gpu_Buffer light_projections_cbuffer;
 
 	Struct_Buffer world_matrix_struct_buffer;
-	Struct_Buffer light_view_matrices_struct_buffer;
 	Struct_Buffer lights_struct_buffer;
-	Struct_Buffer shadow_maps_struct_buffer;
 
 	void init();
 	void init_shadow_rendering();
@@ -119,11 +159,11 @@ struct Render_World {
 
 	void update();
 	void update_lights();
-	void update_shadow_atlas();
+	void update_shadows();
 	void update_world_matrices();
 	
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
-	u32 make_shadow(Light *light);
+	bool make_shadow(Light *light);
 
 	void render();
 	
@@ -132,5 +172,7 @@ struct Render_World {
 	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx);
 
 	Vector3 get_light_position(Vector3 light_direction);
+
+	bool get_shadow_atls_viewport(Viewport *viewport);
 };
 #endif

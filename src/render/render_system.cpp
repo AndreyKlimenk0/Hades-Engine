@@ -656,7 +656,7 @@ void Render_2D::render_frame()
 
 			render_pipeline->set_scissor(&render_primitive->clip_rect);
 
-			cb_render_info.position_orthographic_matrix = render_primitive->transform_matrix * render_system->view_info.orthogonal_matrix;
+			cb_render_info.position_orthographic_matrix = render_primitive->transform_matrix * render_system->view.orthogonal_matrix;
 			
 			cb_render_info.color = render_primitive->color.value;
 			
@@ -676,13 +676,13 @@ void Render_2D::render_frame()
 	render_pipeline->reset_depth_stencil_state();
 }
 
-void View_Info::update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane)
+void View::update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane)
 {
 	ratio = (float)width / (float)height;
-	fov_y_ratio = XMConvertToRadians(45);
+	fov = XMConvertToRadians(45);
 	near_plane = _near_plane;
 	far_plane = _far_plane;
-	perspective_matrix = XMMatrixPerspectiveFovLH(fov_y_ratio, ratio, near_plane, far_plane);
+	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
 	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 }
 
@@ -697,7 +697,7 @@ void Render_System::init(Engine *engine)
 	multisample_info.count = 4;
 	multisample_info.quality = 0;
 
-	view_info.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
+	view.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 1001.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
 
@@ -739,7 +739,7 @@ void Render_System::resize(u32 window_width, u32 window_height)
 	Render_System::screen_height = window_height;
 
 	if (Engine::initialized()) {
-		view_info.update_projection_matries(window_width, window_height, 1.0f, 10000.0f);
+		view.update_projection_matries(window_width, window_height, 1.0f, 10000.0f);
 		assert(false);
 		//swap_chain.resize(window_width, window_height);
 	}

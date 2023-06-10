@@ -55,10 +55,7 @@ void Forwar_Light_Pass::render(Render_Pipeline *render_pipeline)
 	render_pipeline->set_pixel_shader_resource(0, render_world->default_texture.srv);
 	render_pipeline->set_pixel_shader_resource(1, render_world->shadow_atlas.srv);
 	render_pipeline->set_pixel_shader_resource(7, render_world->lights_struct_buffer);
-	render_pipeline->set_pixel_shader_resource(8, render_world->light_view_matrices_struct_buffer);
-	render_pipeline->set_pixel_shader_resource(6, render_world->shadow_maps_struct_buffer);
 
-	render_pipeline->set_pixel_shader_resource(2, render_world->light_projections_cbuffer);
 
 	Render_Entity *render_entity = NULL;
 	Forwar_Light_Pass::Pass_Data pass_data;
@@ -123,21 +120,17 @@ Shadow_Pass::Shadow_Pass(void *render_context) : Render_Pass(render_context)
 
 void Shadow_Pass::init(Render_System *render_sys)
 {
-	render_sys->gpu_device.create_constant_buffer(sizeof(Shadow_Pass::Pass_Data), &pass_data_cbuffer);
+	render_sys->gpu_device.create_constant_buffer(sizeof(Render_Pass::Pass_Data), &pass_data_cbuffer);
+	render_sys->gpu_device.create_constant_buffer(sizeof(Shadow_Pass::Shadow_Cascade_Info), &shadow_cascade_cbuffer);
 }
 
 bool Shadow_Pass::setup_pipeline_state(Render_System *render_system)
 {
 	Render_World *render_world = (Render_World *)render_context;
 
-	static View_Port view_port;
-	view_port.width = DIRECTION_SHADOW_MAP_WIDTH;
-	view_port.height = DIRECTION_SHADOW_MAP_HEIGHT;
-
 	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
 	render_pipeline_state.shader_name = "depth_map.hlsl";
-	render_pipeline_state.view_port = view_port;
-	render_pipeline_state.depth_stencil_view = render_world->temp_shadow_storage.dsv;
+	render_pipeline_state.depth_stencil_view = render_world->shadow_atlas.dsv;
 
 	return Render_Pass::validate_render_pipeline("Shadow_Pass", render_system);
 }
@@ -146,40 +139,43 @@ void Shadow_Pass::render(Render_Pipeline *render_pipeline)
 {
 	Render_World *render_world = (Render_World *)render_context;
 
-	render_world->render_sys->render_pipeline.dx11_context.Get()->ClearDepthStencilView(render_world->temp_shadow_storage.dsv.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	render_world->render_sys->render_pipeline.dx11_context.Get()->ClearDepthStencilView(render_world->shadow_atlas.dsv.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	render_pipeline->apply(&render_pipeline_state);
 
-	render_pipeline->set_vertex_shader_resource(2, render_world->light_projections_cbuffer);
-
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrix_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(6, render_world->light_view_matrices_struct_buffer);
 
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
-	Render_Entity *render_entity = NULL;
-	Shadow_Pass::Pass_Data pass_data;
+	Render_Pass::Pass_Data pass_data;
+	Shadow_Pass::Shadow_Cascade_Info shadow_cascade_info;
 
-	Shadow_Map *shadow_map = NULL;
-	For(render_world->shadow_maps, shadow_map) {
-		
-		pass_data.light_view_matrix_idx = shadow_map->light_view_matrix_idx;
-		
-		For(render_world->render_entities, render_entity) {
+	Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
+	For(render_world->cascaded_shadow_maps, cascaded_shadow_map) {
+		Shadow_Cascade *shadow_cascade = NULL;
+		For(cascaded_shadow_map->shadow_cascades, shadow_cascade) {
+			render_pipeline->set_viewport(&shadow_cascade->viewport);
 
-			pass_data.mesh_idx = render_entity->mesh_idx;
-			pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+			shadow_cascade_info.cascade_view_matrix = shadow_cascade->get_cascade_view_matrix();
+			shadow_cascade_info.cascade_projection_matrix = shadow_cascade->get_cascade_projection_matrix();
 
-			render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
+			render_pipeline->update_constant_buffer(&shadow_cascade_cbuffer, (void *)&shadow_cascade_info);
+			render_pipeline->set_vertex_shader_resource(4, shadow_cascade_cbuffer);
 
-			//@Note: Must I set constant buffer after updating ?
-			render_pipeline->set_vertex_shader_resource(3, pass_data_cbuffer);
+			Render_Entity *render_entity = NULL;
+			For(render_world->render_entities, render_entity) {
+				pass_data.mesh_idx = render_entity->mesh_idx;
+				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
-			render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
+				render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
+
+				//@Note: Must I set constant buffer after updating ?
+				render_pipeline->set_vertex_shader_resource(3, pass_data_cbuffer);
+
+				render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
+			}
 		}
-		//render_pipeline->copy_subresource(render_world->shadow_atlas, shadow_map->coordinates_in_atlas.x, shadow_map->coordinates_in_atlas.y, render_world->temp_shadow_storage.texture);
-		render_pipeline->copy_subresource(render_world->shadow_atlas, 0, 0, render_world->temp_shadow_storage);
 	}
 }

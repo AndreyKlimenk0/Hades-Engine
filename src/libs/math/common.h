@@ -67,6 +67,11 @@ namespace math {
 		return (float)::sin((double)value);
 	}
 
+	inline float tan(float value)
+	{
+		return (float)::tan((double)value);
+	}
+
 	template< typename T>
 	inline T pow2(T value)
 	{
