@@ -1,13 +1,9 @@
 #ifndef __OUTLINING__
 #define __OUTLINING__
 
+#include "utils.hlsl"
 #include "vertex.hlsl"
-#include "cbuffer.hlsl"
-
-float4 normalize_rgb(int r, int g, int b)
-{
-	return float4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
-}
+#include "globals.hlsl"
 
 Vertex_XNUV_Out vs_main(Vertex_XNUV_In vertex)
 {

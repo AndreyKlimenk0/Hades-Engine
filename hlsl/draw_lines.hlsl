@@ -1,7 +1,7 @@
 #ifndef __DRAW_LINES__
 #define __DRAW_LINES__
 
-#include "cbuffer.hlsl"
+#include "globals.hlsl"
 
 StructuredBuffer<float3> unified_vertices : register(t0);
 StructuredBuffer<uint> unified_indices : register(t1);

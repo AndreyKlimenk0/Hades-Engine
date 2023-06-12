@@ -1,6 +1,5 @@
 #include <stdint.h>
 
-#include "render_pass.h"
 #include "render_world.h"
 #include "../gui/gui.h"
 #include "../sys/engine.h"
@@ -79,7 +78,8 @@ void Render_World::init()
 	render_sys->gpu_device.create_constant_buffer(sizeof(Frame_Info), &frame_info_cbuffer);
 
 	lights_struct_buffer.allocate<Shader_Light>(100);
-	world_matrix_struct_buffer.allocate<Matrix4>(1000);
+	world_matrices_struct_buffer.allocate<Matrix4>(100);
+	cascaded_view_projection_matrices_sb.allocate<Matrix4>(100);
 	
 	Texture_Desc texture_desc;
 	texture_desc.width = 200;
@@ -113,13 +113,14 @@ void Render_World::init_shadow_rendering()
 	Texture_Desc depth_stencil_desc;
 	depth_stencil_desc.width = SHADOW_ATLAS_WIDTH;
 	depth_stencil_desc.height = SHADOW_ATLAS_HEIGHT;
-	depth_stencil_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depth_stencil_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
 	depth_stencil_desc.mip_levels = 1;
-	depth_stencil_desc.bind = BIND_DEPTH_STENCIL;
+	depth_stencil_desc.bind |= BIND_DEPTH_STENCIL;
 	depth_stencil_desc.multisampling = { 1, 0 };
 
 	render_sys->gpu_device.create_texture_2d(&depth_stencil_desc, &shadow_atlas);
 	render_sys->gpu_device.create_depth_stencil_view(&shadow_atlas);
+	render_sys->gpu_device.create_shader_resource_view(&shadow_atlas);
 
 	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
 
@@ -146,25 +147,18 @@ void Render_World::init_shadow_rendering()
 
 void Render_World::init_render_passes()
 {
-	Shadow_Pass *shadow_pass = new Shadow_Pass((void *)this);
-	Draw_Lines_Pass *draw_lines_pass = new Draw_Lines_Pass((void *)this);
-	Forwar_Light_Pass *forward_light_pass = new Forwar_Light_Pass((void *)this);
-
-	render_passes.push(shadow_pass);
-	render_passes.push(draw_lines_pass);
-	render_passes.push(forward_light_pass);
-
-	Array<u32> failed_pipelines;
-	for (u32 i = 0; i < render_passes.count; i++) {
-		render_passes[i]->init(render_sys);
-		if (!render_passes[i]->setup_pipeline_state(render_sys)) {
-			failed_pipelines.push(i);
-		}
+	if (!render_passes.debug_cascade_shadows.init((void *)this, render_sys)) {
+		print("Render_World::init_render_passes: Failed to initialize render pass {}.", render_passes.debug_cascade_shadows.name);
 	}
 
-	for (u32 i = 0; i < failed_pipelines.count; i++) {
-		DELETE_PTR(render_passes[failed_pipelines[i]]);
-		render_passes.remove(failed_pipelines[i]);
+	render_passes_array.push(&render_passes.shadows);
+	render_passes_array.push(&render_passes.draw_lines);
+	render_passes_array.push(&render_passes.forward_light);
+
+	for (u32 i = 0; i < render_passes_array.count; i++) {
+		if (!render_passes_array[i]->init((void *)this, render_sys)) {
+			print("Render_World::init_render_passes: Failed to initialize render pass {}.", render_passes_array[i]->name);
+		}
 	}
 }
 
@@ -207,7 +201,9 @@ void Render_World::update_lights()
 	For(game_world->lights, light) {
 		Shader_Light hlsl_light;
 		hlsl_light.position = light->position;
-		hlsl_light.direction = light->direction;
+		auto temp = light->direction;
+		temp.normalize();
+		hlsl_light.direction = temp;
 		hlsl_light.color = light->color;
 		hlsl_light.radius = light->radius;
 		hlsl_light.range = light->range;
@@ -242,7 +238,7 @@ void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx)
 	matrix.translate(&entity->position);
 	render_entity.world_matrix_idx = world_matrices.push(matrix);
 
-	world_matrix_struct_buffer.update(&world_matrices);
+	world_matrices_struct_buffer.update(&world_matrices);
 	
 	render_entities.push(render_entity);
 }
@@ -335,7 +331,7 @@ Vector3 Frustum_Box::get_view_position()
 	return Vector3((max_x + min_x) / (2.0f), (max_y + min_y) / (2.0f), min_z);
 }
 
-void Shadow_Cascade::init(float fov, Shadow_Cascade_Range *shadow_cascade_range)
+void Cascaded_Shadow::init(float fov, Shadow_Cascade_Range *shadow_cascade_range)
 {
 	range = *shadow_cascade_range;
 	frustum_box.first_plane.setup((float)range.start * fov, (float)range.start * fov, (float)range.start);
@@ -343,7 +339,7 @@ void Shadow_Cascade::init(float fov, Shadow_Cascade_Range *shadow_cascade_range)
 	frustum_box.calculate_length();
 }
 
-void Shadow_Cascade::transform(Matrix4 *transform_matrix)
+void Cascaded_Shadow::transform(Matrix4 *transform_matrix)
 {
 	frustum_box.first_plane.transform_plane(transform_matrix);
 	frustum_box.second_plane.transform_plane(transform_matrix);
@@ -374,7 +370,7 @@ Matrix4 make_rotation_matrix(Vector3 *direction, Vector3 *up_direction = NULL)
 	return rotation_matrix;
 }
 
-Matrix4 Shadow_Cascade::get_cascade_view_matrix()
+Matrix4 Cascaded_Shadow::get_cascade_view_matrix()
 {
 	//Matrix4 cascade_space_matrix = light_matrix;
 	//cascade_space_matrix[3] = Vector4(frustum_box.get_view_position(), 1.0f);
@@ -398,7 +394,7 @@ Matrix4 Shadow_Cascade::get_cascade_view_matrix()
 	return result;
 }
 
-Matrix4 Shadow_Cascade::get_cascade_projection_matrix()
+Matrix4 Cascaded_Shadow::get_cascade_projection_matrix()
 {
 	Matrix4 projection_matrix;
 	projection_matrix.indentity();
@@ -445,14 +441,16 @@ bool Render_World::make_shadow(Light *light)
 	Matrix4 light_matrix = make_rotation_matrix(&d);
 
 	for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
-		Shadow_Cascade shadow_cascade;
-		shadow_cascade.light_direction = light->direction;
-		shadow_cascade.light_matrix = light_matrix;
-		shadow_cascade.init(fov, &shadow_cascade_ranges[i]);
-		if (!get_shadow_atls_viewport(&shadow_cascade.viewport)) {
+		Cascaded_Shadow cascaded_shadow;
+		cascaded_shadow.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
+		cascaded_shadow.light_direction = light->direction;
+		cascaded_shadow.light_matrix = light_matrix;
+		cascaded_shadow.init(fov, &shadow_cascade_ranges[i]);
+		if (!get_shadow_atls_viewport(&cascaded_shadow.viewport)) {
 			return false;
 		}
-		cascaded_shadow_map.shadow_cascades.push(shadow_cascade);
+		cascaded_shadow_map.cascaded_shadows.push(cascaded_shadow);
+		cascaded_shadow_count++;
 	}
 	cascaded_shadow_maps.push(cascaded_shadow_map);
 	return true;
@@ -461,18 +459,23 @@ bool Render_World::make_shadow(Light *light)
 void Render_World::update_shadows()
 {
 	for (u32 i = 0; i < cascaded_shadow_maps.count; i++) {
-		for (u32 j = 0; j < cascaded_shadow_maps[i].shadow_cascades.count; j++) {
+		for (u32 j = 0; j < cascaded_shadow_maps[i].cascaded_shadows.count; j++) {
+			Cascaded_Shadow *cascaded_shadow = &cascaded_shadow_maps[i].cascaded_shadows[j];
 			Matrix4 view_matrix = camera.get_view_matrix();
-			Matrix4 light_matrix = cascaded_shadow_maps[i].shadow_cascades[j].light_matrix;
+			Matrix4 light_matrix = cascaded_shadow_maps[i].cascaded_shadows[j].light_matrix;
 			//Matrix4 light_view_matrix = light_matrix * XMMatrixInverse(NULL, camera.get_view_matrix());
 			Matrix4 light_view_matrix = light_matrix * XMMatrixInverse(NULL, camera.get_view_matrix());
 			//Matrix4 light_view_matrix = XMMatrixInverse(NULL, camera.get_view_matrix());
-			cascaded_shadow_maps[i].shadow_cascades[j].transform(&light_view_matrix);
-			Vector3 v = cascaded_shadow_maps[i].shadow_cascades[j].frustum_box.get_view_position();
+			cascaded_shadow_maps[i].cascaded_shadows[j].transform(&light_view_matrix);
+			Vector3 v = cascaded_shadow_maps[i].cascaded_shadows[j].frustum_box.get_view_position();
 			Matrix4 m = XMMatrixInverse(NULL, camera.get_view_matrix());
 			int i = 0;
+
+			cascaded_view_projection_matrices[cascaded_shadow->view_projection_matrix_index] = cascaded_shadow->get_cascade_view_matrix() * cascaded_shadow->get_cascade_projection_matrix();
 		}
 	}
+
+	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
 }
 
 bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx)
@@ -491,8 +494,6 @@ bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx
 
 bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
 {
-	static const u32 CASCADE_WIDTH = 1024;
-	static const u32 CASCADE_HEIGHT = 1024;
 	static u32 x = 0;
 	static u32 y = 0;
 	
@@ -528,7 +529,7 @@ void Render_World::render()
 	render_sys->render_pipeline.set_pixel_shader_resource(1, frame_info_cbuffer);
 	
 	Render_Pass *render_pass = NULL;
-	For(render_passes, render_pass) {
+	For(render_passes_array, render_pass) {
 		render_pass->render(&render_sys->render_pipeline);
 	}
 }
@@ -547,7 +548,7 @@ void Render_World::update_world_matrices()
 }
 
 template<typename T>
-void Struct_Buffer::allocate(u32 elements_count)
+void Gpu_Struct_Buffer::allocate(u32 elements_count)
 {	
 	Gpu_Buffer_Desc desc;
 	desc.usage = RESOURCE_USAGE_DYNAMIC;
@@ -565,7 +566,7 @@ void Struct_Buffer::allocate(u32 elements_count)
 }
 
 template<typename T>
-void Struct_Buffer::update(Array<T> *array)
+void Gpu_Struct_Buffer::update(Array<T> *array)
 {
 	if (array->count == 0) {
 		return;
@@ -583,7 +584,7 @@ void Struct_Buffer::update(Array<T> *array)
 	render_pipeline->unmap(gpu_buffer);
 }
 
-void Struct_Buffer::free()
+void Gpu_Struct_Buffer::free()
 {
 	if (!gpu_buffer.is_empty()) {
 		gpu_buffer.free();

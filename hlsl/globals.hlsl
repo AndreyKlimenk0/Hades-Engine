@@ -1,5 +1,5 @@
-#ifndef __CBUFFER__
-#define __CBUFFER__
+#ifndef __GLOBAL__
+#define __GLOBAL__
 
 
 cbuffer Render_2D_Info : register(b0) {

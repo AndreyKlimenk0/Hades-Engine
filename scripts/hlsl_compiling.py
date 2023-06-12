@@ -65,16 +65,15 @@ class Shader_File:
 
 
 shader_files = [
-    Shader_File("cbuffer.hlsl", Shader_Type.HEADER_FILE),
+    Shader_File("globals.hlsl", Shader_Type.HEADER_FILE),
     Shader_File("vertex.hlsl", Shader_Type.HEADER_FILE),
-    Shader_File("demo.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("utils.hlsl", Shader_Type.HEADER_FILE),
     Shader_File("render_2d.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("outlining.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_text.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_texture.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("draw_lines.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER)
+    Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
+    Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
 ]
 
 

@@ -1,7 +1,7 @@
 #ifndef __RENDER_2D__
 #define __RENDER_2D__
 
-#include "cbuffer.hlsl"
+#include "globals.hlsl"
 #include "vertex.hlsl"
 
 
