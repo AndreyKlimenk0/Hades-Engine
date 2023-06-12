@@ -288,7 +288,7 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 
 void Render_World_Window::init(Engine *engine)
 {
- // Editor_Window::init(engine);
+	Editor_Window::init(engine);
 
  // Texture_Desc shadows_texture_desc;
  // shadows_texture_desc.width = DIRECTION_SHADOW_MAP_WIDTH;
@@ -343,31 +343,53 @@ void Render_World_Window::update()
 	//temp_shadow_atlas.release();
 }
 
-void Render_World_Window::draw()
+inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render_passes, u32 *index)
 {
-	Cascaded_Shadow_Map *cascade_shadow_map = NULL;
-	For(Engine::get_render_world()->cascaded_shadow_maps, cascade_shadow_map) {
-		Shadow_Cascade *shadow_cascade = NULL;
-		For(cascade_shadow_map->shadow_cascades, shadow_cascade) {
-			Matrix4 m = shadow_cascade->get_cascade_view_matrix();
-			Vector3 position = m[3];
-			char *text = format("Position", &position);
-			gui::text(text);
-			free_string(text);
+	assert(name);
+	assert(index);
+
+	for (u32 i = 0; i < render_passes.count; i++) {
+		if (render_passes[i]->name == name) {
+			*index = i;
+			return true;
 		}
 	}
- // update();
+	return false;
+}
 
- // static bool state = false;
-
- // gui::button("Shadow atls", &state);
-
- // if (state) {
- // 	gui::set_next_window_size(1000, 800);
- // 	if (gui::begin_window("Shadow atls")) {
- // 		Render_World *render_world = Engine::get_render_world();
- // 		gui::image(&shadow_display_texture, 700, 700);
- // 		gui::end_window();
- // 	}
- // }
+void Render_World_Window::draw()
+{
+	//Cascaded_Shadow_Map *cascade_shadow_map = NULL;
+	//For(Engine::get_render_world()->cascaded_shadow_maps, cascade_shadow_map) {
+	//	Cascaded_Shadow *shadow_cascade = NULL;
+	//	For(cascade_shadow_map->cascaded_shadows, shadow_cascade) {
+	//		Matrix4 m = shadow_cascade->get_cascade_view_matrix();
+	//		Vector3 position = m[3];
+	//		char *text = format("Position", &position);
+	//		gui::text(text);
+	//		free_string(text);
+	//	}
+	//}
+	static bool debug_cascaded_shadows = false;
+	if (gui::radio_button("Debug cascaded shadows", &debug_cascaded_shadows)) {
+		if (render_world->render_passes.forward_light.initialized && render_world->render_passes.debug_cascade_shadows.initialized) {
+			if (debug_cascaded_shadows) {
+				u32 forward_light_index = 0;
+				if (get_render_pass_index("Forward_Light", render_world->render_passes_array, &forward_light_index)) {
+					render_world->render_passes_array[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
+				} else {
+					print("Render_World_Window::draw: Failed turn on cascaded shadows debuging. Forward light pass was not found.");
+				}
+			} else {
+				u32 debug_cascaded_shadows = 0;
+				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->render_passes_array, &debug_cascaded_shadows)) {
+					render_world->render_passes_array[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
+				} else {
+					print("Render_World_Window::draw: Failed turn off cascaded shadows debuging. Debug cascaded shadows pass was not found.");
+				}
+			}
+		} else {
+			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes was not initialized.");
+		}
+	}
 }

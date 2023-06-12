@@ -719,7 +719,7 @@ void Render_Pipeline::set_vertex_shader_resource(u32 gpu_register, const Shader_
 	dx11_context->VSSetShaderResources(gpu_register, 1, shader_resource.GetAddressOf());
 }
 
-void Render_Pipeline::set_vertex_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)
+void Render_Pipeline::set_vertex_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer)
 {
 	dx11_context->VSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
@@ -739,7 +739,7 @@ void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, co
 	dx11_context->PSSetShaderResources(shader_resource_register, 1, shader_resource_view.GetAddressOf());
 }
 
-void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, const Struct_Buffer &struct_buffer)
+void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer)
 {
 	dx11_context->PSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
