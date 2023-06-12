@@ -3,6 +3,7 @@
 
 #include "hlsl.h"
 #include "model.h"
+#include "render_pass.h"
 #include "render_system.h"
 #include "render_helpers.h"
 #include "../libs/ds/array.h"
@@ -17,10 +18,12 @@ typedef u32 Mesh_Idx;
 const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_WIDTH = 8192;
 const u32 SHADOW_ATLAS_HEIGHT = 8192;
+const u32 CASCADE_WIDTH = 1024;
+const u32 CASCADE_HEIGHT = 1024;
 
 const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
-struct Struct_Buffer {
+struct Gpu_Struct_Buffer {
 	Gpu_Buffer gpu_buffer;
 
 	template <typename T>
@@ -52,9 +55,9 @@ struct Unified_Mesh_Storate {
 	Array<Mesh_Instance> mesh_instances;
 	Hash_Table<String_Id, Mesh_Idx> mesh_table;
 
-	Struct_Buffer vertex_struct_buffer;
-	Struct_Buffer index_struct_buffer;
-	Struct_Buffer mesh_struct_buffer;
+	Gpu_Struct_Buffer vertex_struct_buffer;
+	Gpu_Struct_Buffer index_struct_buffer;
+	Gpu_Struct_Buffer mesh_struct_buffer;
 
 	void allocate_gpu_memory();
 	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx);
@@ -97,7 +100,8 @@ struct Shadow_Cascade_Range {
 	u32 end = 0;
 };
 
-struct Shadow_Cascade {
+struct Cascaded_Shadow {
+	u32 view_projection_matrix_index;
 	Shadow_Cascade_Range range;
 	Vector3 light_direction;
 	Matrix4 light_matrix;
@@ -111,12 +115,17 @@ struct Shadow_Cascade {
 };
 
 struct Cascaded_Shadow_Map {
-	Array<Shadow_Cascade> shadow_cascades;
+	Array<Cascaded_Shadow> cascaded_shadows;
 };
 
+struct Shadow_Cascade_Info {
+	Matrix4 shadow_cascade_view_matrix;
+	Matrix4 shadow_cascade_projection_matrix;
+};
 
 struct Render_World {
 	u32 light_hash;
+	u32 cascaded_shadow_count = 0;
 
 	Frame_Info frame_info;
 	Camera camera;
@@ -126,12 +135,12 @@ struct Render_World {
 
 	Bounding_Sphere world_bounding_sphere;
 	
-	//temp code
-	Array<Entity_Id> entity_ids;
+	Array<Entity_Id> entity_ids; 	//temp code
 	
 	Array<Matrix4> world_matrices;
-	Array<Matrix4> light_view_matrices;
-	Array<Matrix4> projection_light_matrices;
+	Array<Matrix4> light_view_matrices; // is the code necessary
+	Array<Matrix4> projection_light_matrices; // is the code necessary
+	Array<Matrix4> cascaded_view_projection_matrices;
 	
 	Array<Render_Entity> render_entities;
 	Array<Render_Entity> bounding_box_entities;
@@ -140,7 +149,7 @@ struct Render_World {
 	Array<Cascaded_Shadow_Map> cascaded_shadow_maps;
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
 	
-	Array<Render_Pass *> render_passes;
+	Array<Render_Pass *> render_passes_array;
 
 	Unified_Mesh_Storate<Vertex_XNUV> triangle_meshes;
 	Unified_Mesh_Storate<Vector3> line_meshes;
@@ -150,8 +159,16 @@ struct Render_World {
 	
 	Gpu_Buffer frame_info_cbuffer;
 
-	Struct_Buffer world_matrix_struct_buffer;
-	Struct_Buffer lights_struct_buffer;
+	Gpu_Struct_Buffer lights_struct_buffer;
+	Gpu_Struct_Buffer world_matrices_struct_buffer;
+	Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
+
+	struct Render_Passes {
+		Shadows_Pass shadows;
+		Draw_Lines_Pass draw_lines;
+		Forwar_Light_Pass forward_light;
+		Debug_Cascade_Shadows_Pass debug_cascade_shadows;
+	} render_passes;
 
 	void init();
 	void init_shadow_rendering();

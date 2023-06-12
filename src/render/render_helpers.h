@@ -3,7 +3,12 @@
 
 #include "render_api.h"
 #include "../libs/str.h"
+#include "../libs/math/vector.h"
 #include "../win32/win_types.h"
+
+typedef Vector2 Pad2;
+typedef Vector3 Pad3;
+typedef Vector4 Pad4;
 
 bool is_valid_texture(Texture2D *texture2d, String *error_message = NULL);
 void fill_texture_with_value(void *value, Texture2D *texture2d);
