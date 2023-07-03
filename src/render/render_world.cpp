@@ -93,19 +93,20 @@ void Render_World::init()
 	//game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
 	game_world->make_direction_light(Vector3(1.0f, -1.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f));
 
-	//Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
-	//mesh_loader->load("Scene_Demo1.fbx");
+	Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
+	mesh_loader->load("mutant.fbx");
 
-	//Mesh_Loader::Mesh_Instance *mesh_instance = NULL;
-	//For(mesh_loader->mesh_instances, mesh_instance) {
-	//	Mesh_Idx mesh_idx;
-	//	if (add_mesh(mesh_instance->name, &mesh_instance->mesh, &mesh_idx)) {
-	//		for (u32 j = 0; j < mesh_instance->positions.count; j++) {
-	//			Entity_Id entity_id = game_world->make_entity(mesh_instance->positions[j]);
-	//			make_render_entity(entity_id, mesh_idx);
-	//		}
-	//	}
-	//}
+	Mesh_Loader::Mesh_Instance *mesh_instance = NULL;
+	For(mesh_loader->mesh_instances, mesh_instance) {
+		Mesh_Idx mesh_idx;
+		if (add_mesh(mesh_instance->name, &mesh_instance->mesh, &mesh_idx)) {
+			for (u32 j = 0; j < mesh_instance->positions.count; j++) {
+				Entity_Id entity_id = game_world->make_entity(mesh_instance->positions[j]);
+				auto m = rotate_about_y(XMConvertToRadians(90.0f));
+				make_render_entity(entity_id, mesh_idx, &m);
+			}
+		}
+	}
 }
 
 void Render_World::init_shadow_rendering()
@@ -201,9 +202,7 @@ void Render_World::update_lights()
 	For(game_world->lights, light) {
 		Shader_Light hlsl_light;
 		hlsl_light.position = light->position;
-		auto temp = light->direction;
-		temp.normalize();
-		hlsl_light.direction = temp;
+		hlsl_light.direction = normalize(&light->direction);
 		hlsl_light.color = light->color;
 		hlsl_light.radius = light->radius;
 		hlsl_light.range = light->range;
@@ -234,34 +233,49 @@ void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx)
 
 	Entity *entity = game_world->get_entity(entity_id);
 
-	Matrix4 matrix;
-	matrix.translate(&entity->position);
-	render_entity.world_matrix_idx = world_matrices.push(matrix);
+	render_entity.world_matrix_idx = world_matrices.push(make_translation_matrix(&entity->position));
 
 	world_matrices_struct_buffer.update(&world_matrices);
 	
 	render_entities.push(render_entity);
 }
 
+void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Matrix4 *matrix)
+{
+	Render_Entity render_entity;
+	render_entity.entity_id = entity_id;
+	render_entity.mesh_idx = mesh_idx;
+
+	Entity *entity = game_world->get_entity(entity_id);
+
+	render_entity.world_matrix_idx = world_matrices.push(*matrix * make_translation_matrix(&entity->position));
+
+	world_matrices_struct_buffer.update(&world_matrices);
+
+	render_entities.push(render_entity);
+}
+
 void Frustum_Box::Plane::setup(float plane_width, float plane_height, float z_position)
 {
+	plane_width *= 0.5f;
+	plane_height *= 0.5f;
 	origin_top_left = Vector3(-plane_width, plane_height, z_position);
 	origin_top_right = Vector3(plane_width, plane_height, z_position);
 	origin_bottom_left = Vector3(-plane_width, -plane_height, z_position);
 	origin_bottom_right = Vector3(plane_width, -plane_height, z_position);
+	
+	top_left = origin_top_left;
+	top_right = origin_top_right;
+	bottom_left = origin_bottom_left;
+	bottom_right = origin_bottom_right;
 }
 
 void Frustum_Box::Plane::transform_plane(Matrix4 *transform_matrix)
 {
-	//top_left = *transform_matrix * Vector4(origin_top_left, 1.0f);
-	//top_right = *transform_matrix * Vector4(origin_top_right, 1.0f);
-	//bottom_left = *transform_matrix * Vector4(origin_bottom_left, 1.0f);
-	//bottom_right = *transform_matrix * Vector4(origin_bottom_right, 1.0f);
-
-	top_left = XMVector4Transform(Vector4(origin_top_left, 1.0f), *transform_matrix);
-	top_right = XMVector4Transform(Vector4(origin_top_right, 1.0f), *transform_matrix);
-	bottom_left = XMVector4Transform(Vector4(origin_bottom_left, 1.0f), *transform_matrix);
-	bottom_right = XMVector4Transform(Vector4(origin_bottom_right, 1.0f), *transform_matrix);
+	top_left = transform(&origin_top_left, transform_matrix);
+	top_right = transform(&origin_top_right, transform_matrix);
+	bottom_left = transform(&origin_bottom_left, transform_matrix);
+	bottom_right = transform(&origin_bottom_right, transform_matrix);
 }
 
 void Frustum_Box::Plane::get_vertices(Array<Vector3> *vertices)
@@ -275,11 +289,13 @@ void Frustum_Box::Plane::get_vertices(Array<Vector3> *vertices)
 
 void Frustum_Box::calculate_length()
 {
-	auto r1 = (first_plane.origin_bottom_right - second_plane.origin_top_left);
-	auto r2 = (first_plane.origin_bottom_right - second_plane.origin_top_left).length();
-	auto s1 = (second_plane.origin_bottom_right - second_plane.origin_top_left);
-	auto s2 = (second_plane.origin_bottom_right - second_plane.origin_top_left).length();
-	length = (u32)math::max((first_plane.origin_bottom_right - second_plane.origin_top_left).length(), (second_plane.origin_bottom_right - second_plane.origin_top_left).length());
+	//auto r1 = (first_plane.origin_bottom_right - second_plane.origin_top_left);
+	//auto r2 = length(first_plane.origin_bottom_right - second_plane.origin_top_left).length();
+	//auto s1 = (second_plane.origin_bottom_right - second_plane.origin_top_left);
+	//auto s2 = (second_plane.origin_bottom_right - second_plane.origin_top_left).length();
+	auto x = near_plane.origin_bottom_right - far_plane.origin_top_left;
+	auto y = far_plane.origin_bottom_right - far_plane.origin_top_left;
+	len = (u32)math::max(get_length(&x), get_length(&y));
 }
 
 #include <limits.h>
@@ -289,8 +305,8 @@ void Frustum_Box::update_min_max_values()
 	Array<Vector3> vertices;
 	Array<Vector3> second_plane_vertices;
 
-	first_plane.get_vertices(&vertices);
-	second_plane.get_vertices(&second_plane_vertices);
+	near_plane.get_vertices(&vertices);
+	far_plane.get_vertices(&second_plane_vertices);
 
 	max_x = std::numeric_limits<float>::lowest();
 	max_y = std::numeric_limits<float>::lowest();
@@ -318,15 +334,15 @@ const u32 CASCADE_SHADOW_MAP_SIZE = 1024;
 Vector3 Frustum_Box::get_view_position()
 {
 	//return Vector3((max_x + min_x) / (length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f, (max_y + min_y) / (length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f, min_z);
-	float x_result = (max_x + min_x);
-	float y_result = (max_y + min_y);
-	float x = (length / (float)CASCADE_SHADOW_MAP_SIZE);
-	float xx = (length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f;
-	float y = (length / (float)CASCADE_SHADOW_MAP_SIZE);
-	float yy = (length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f;
-	float xxx = x_result / xx;
-	float yyy = y_result / yy;
-	auto temp = Vector3((max_x + min_x) / ((length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f), (max_y + min_y) / ((length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f), min_z);
+	//float x_result = (max_x + min_x);
+	//float y_result = (max_y + min_y);
+	//float x = (length / (float)CASCADE_SHADOW_MAP_SIZE);
+	//float xx = (length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f;
+	//float y = (length / (float)CASCADE_SHADOW_MAP_SIZE);
+	//float yy = (length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f;
+	//float xxx = x_result / xx;
+	//float yyy = y_result / yy;
+	//auto temp = Vector3((max_x + min_x) / ((length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f), (max_y + min_y) / ((length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f), min_z);
 	//return Vector3((max_x + min_x) / ((length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f), (max_y + min_y) / ((length / (float)CASCADE_SHADOW_MAP_SIZE) * 2.0f), min_z);
 	return Vector3((max_x + min_x) / (2.0f), (max_y + min_y) / (2.0f), min_z);
 }
@@ -334,15 +350,16 @@ Vector3 Frustum_Box::get_view_position()
 void Cascaded_Shadow::init(float fov, Shadow_Cascade_Range *shadow_cascade_range)
 {
 	range = *shadow_cascade_range;
-	frustum_box.first_plane.setup((float)range.start * fov, (float)range.start * fov, (float)range.start);
-	frustum_box.second_plane.setup((float)range.end * fov, (float)range.end * fov, (float)range.end);
+	frustum_box.near_plane.setup((float)range.start * fov, (float)range.start * fov, (float)range.start);
+	frustum_box.far_plane.setup((float)range.end * fov, (float)range.end * fov, (float)range.end);
 	frustum_box.calculate_length();
+	frustum_box.update_min_max_values();
 }
 
 void Cascaded_Shadow::transform(Matrix4 *transform_matrix)
 {
-	frustum_box.first_plane.transform_plane(transform_matrix);
-	frustum_box.second_plane.transform_plane(transform_matrix);
+	frustum_box.near_plane.transform_plane(transform_matrix);
+	frustum_box.far_plane.transform_plane(transform_matrix);
 	frustum_box.update_min_max_values();
 }
 
@@ -350,23 +367,18 @@ Matrix4 make_rotation_matrix(Vector3 *direction, Vector3 *up_direction = NULL)
 {
 	assert(direction);
 
-	Vector3 z = *direction;
-	z.normalize();
-
+	Vector3 z_axis = normalize(direction);
 	Vector3 up = { 0.0f, 1.0f, 0.0f };
 	if (up_direction) {
 		up = *up_direction;
 	}
-	Vector3 x_axis = up.cross(z);
-	x_axis.normalize();
-	Vector3 y_axis = z.cross(x_axis);
-	y_axis.normalize();
+	Vector3 x_axis = normalize(&cross(&up, &z_axis));
+	Vector3 y_axis = normalize(&cross(&z_axis, &x_axis));
 
-	Matrix4 rotation_matrix;
-	rotation_matrix.indentity();
-	rotation_matrix[0] = Vector4(x_axis, 0.0f);
-	rotation_matrix[1] = Vector4(y_axis, 0.0f);
-	rotation_matrix[2] = Vector4(z, 0.0f); // up is Z axis
+	Matrix4 rotation_matrix = make_identity_matrix();
+	rotation_matrix.set_row_0(Vector4(x_axis, 0.0f));
+	rotation_matrix.set_row_1(Vector4(y_axis, 0.0f));
+	rotation_matrix.set_row_2(Vector4(z_axis, 0.0f));
 	return rotation_matrix;
 }
 
@@ -387,28 +399,22 @@ Matrix4 Cascaded_Shadow::get_cascade_view_matrix()
 	//cascade_space_matrix.indentity();
 	//cascade_space_matrix.translate(&frustum_box.get_view_position());
 	//Matrix4 x = Engine::get_render_world()->camera.get_view_matrix();
-
-	Matrix4 x = make_rotation_matrix(&light_direction);
-	x[3] = Vector4(frustum_box.get_view_position(), 1.0f);
-	Matrix4 result = x.inverse();
-	return result;
+	Vector3 p = frustum_box.get_view_position();
+	//Matrix4 x = light_matrix * make_translation_matrix(&frustum_box.get_view_position());
+	Matrix4 x = light_matrix;
+	Matrix4 result = light_matrix;
+	return inverse(&result);
 }
 
 Matrix4 Cascaded_Shadow::get_cascade_projection_matrix()
 {
-	Matrix4 projection_matrix;
-	projection_matrix.indentity();
-	projection_matrix[0][0] = 2.0f / frustum_box.length;
-	projection_matrix[1][1] = 2.0f / frustum_box.length;
-	projection_matrix[2][2] = 1.0f / (frustum_box.max_z - frustum_box.min_z);
+	Matrix4 projection_matrix = make_identity_matrix();
+	projection_matrix.m[0][0] = 2.0f / frustum_box.len;
+	projection_matrix.m[1][1] = 2.0f / frustum_box.len;
+	projection_matrix.m[2][2] = 1.0f / (frustum_box.max_z - frustum_box.min_z);
 	return projection_matrix;
-	return XMMatrixOrthographicLH(1024.0f, 1024.0f, 1.0f, 1000.0f);
+	//return XMMatrixOrthographicLH(1024.0f, 1024.0f, 1.0f, 1000.0f);
 	//return Engine::get_render_system()->view.perspective_matrix;
-}
-
-inline float get_angle_between_vectors(Vector3 *first_vector, Vector3 *second_vector)
-{
-	return math::arccos(first_vector->dot(*second_vector) / (first_vector->length() * second_vector->length()));
 }
 
 //inline bool is_closed_interval_value(float value, float interval_start = 0.0f, float interval_end = 1.0f)
@@ -433,49 +439,102 @@ bool Render_World::make_shadow(Light *light)
 {
 	Cascaded_Shadow_Map cascaded_shadow_map;
 
-	light->direction = { 1.0f, -1.0f, 0.0f };
+	light->direction = Vector3( 1.0f, -1.0f, 0.0f );
+	auto temp = make_rotation_matrix(&light->direction);
 	
 	float fov = render_sys->view.fov;
-	auto d = light->direction;
-	d.negete();
-	Matrix4 light_matrix = make_rotation_matrix(&d);
+	//Matrix4 light_matrix = make_rotation_matrix(&light->direction);
+	//Matrix4 light_matrix = rotate_about_y(XMConvertToRadians(45.0f));
+	Matrix4 light_matrix = rotate_about_y(XMConvertToRadians(00.0f));
+	
 
+	String s = "tasdfasdg";
 	for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
+
 		Cascaded_Shadow cascaded_shadow;
 		cascaded_shadow.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
 		cascaded_shadow.light_direction = light->direction;
 		cascaded_shadow.light_matrix = light_matrix;
 		cascaded_shadow.init(fov, &shadow_cascade_ranges[i]);
+
+		cascaded_shadow.transform(&light_matrix);
+		Vector3 min = Vector3(cascaded_shadow.frustum_box.min_x, cascaded_shadow.frustum_box.min_y, cascaded_shadow.frustum_box.min_z);
+		Vector3 max = Vector3(cascaded_shadow.frustum_box.max_x, cascaded_shadow.frustum_box.max_y, cascaded_shadow.frustum_box.max_z);
+
+		Line_Mesh line_mesh;
+		make_AABB_mesh(&min, &max, &line_mesh);
+		Mesh_Idx mesh_idx;
+		add_mesh(s, &line_mesh, &mesh_idx);
+		Entity_Id id = game_world->make_entity(cascaded_shadow.frustum_box.get_view_position());
+		
+		Render_Entity new_render_entity;
+		new_render_entity.entity_id = id;
+
+		new_render_entity.world_matrix_idx = world_matrices.push(light_matrix);
+		new_render_entity.mesh_idx = mesh_idx;
+		cascaded_shadow.matrix_index = new_render_entity.world_matrix_idx;
+
+		bounding_box_entities.push(new_render_entity);
+
+		s.append("A");
+		
 		if (!get_shadow_atls_viewport(&cascaded_shadow.viewport)) {
 			return false;
 		}
 		cascaded_shadow_map.cascaded_shadows.push(cascaded_shadow);
 		cascaded_shadow_count++;
 	}
+	world_matrices_struct_buffer.update(&world_matrices);
 	cascaded_shadow_maps.push(cascaded_shadow_map);
 	return true;
 }
 
+#include "../win32/win_time.h"
+
 void Render_World::update_shadows()
 {
+	static s64 i = 0;
+	static s64 x = 0;
+	static s64 start = 0;
+	static s64 end = 0;
+	static s64 ac = 0;
+
+	start = milliseconds_counter();
+	ac += start - end;
+	if (ac > 250) {
+		ac = 0;
+		if (i > 360) {
+			i = 0;
+		}		
+		x = i++;
+		print("X = ", x);
+	}
 	for (u32 i = 0; i < cascaded_shadow_maps.count; i++) {
 		for (u32 j = 0; j < cascaded_shadow_maps[i].cascaded_shadows.count; j++) {
 			Cascaded_Shadow *cascaded_shadow = &cascaded_shadow_maps[i].cascaded_shadows[j];
-			Matrix4 view_matrix = camera.get_view_matrix();
+			//Matrix4 view_matrix = camera.get_view_matrix();
 			Matrix4 light_matrix = cascaded_shadow_maps[i].cascaded_shadows[j].light_matrix;
 			//Matrix4 light_view_matrix = light_matrix * XMMatrixInverse(NULL, camera.get_view_matrix());
-			Matrix4 light_view_matrix = light_matrix * XMMatrixInverse(NULL, camera.get_view_matrix());
+			//Matrix4 light_view_matrix = inverse(&light_matrix) * camera.get_view_matrix();
+			//Matrix4 light_view_matrix = inverse(&camera.get_view_matrix());
+			//Matrix4 light_view_matrix = make_translation_matrix(&camera.position) * camera.rotation_matrix
+			//Matrix4 light_view_matrix = light_matrix;
+			Matrix4 light_view_matrix = (rotate_about_x(degress_to_radians(45.0f)) * rotate_about_y(degress_to_radians(90.0f))) * inverse(&camera.get_view_matrix());
+			//Matrix4 light_view_matrix = make_identity_matrix();
 			//Matrix4 light_view_matrix = XMMatrixInverse(NULL, camera.get_view_matrix());
 			cascaded_shadow_maps[i].cascaded_shadows[j].transform(&light_view_matrix);
-			Vector3 v = cascaded_shadow_maps[i].cascaded_shadows[j].frustum_box.get_view_position();
-			Matrix4 m = XMMatrixInverse(NULL, camera.get_view_matrix());
-			int i = 0;
+			world_matrices[cascaded_shadow->matrix_index] = light_view_matrix;
+
 
 			cascaded_view_projection_matrices[cascaded_shadow->view_projection_matrix_index] = cascaded_shadow->get_cascade_view_matrix() * cascaded_shadow->get_cascade_projection_matrix();
 		}
 	}
 
+	world_matrices_struct_buffer.update(&world_matrices);
+
 	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
+
+	end = milliseconds_counter();
 }
 
 bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx)
@@ -540,11 +599,9 @@ void Render_World::update_world_matrices()
 	
 	for (u32 index = 0; index < render_entities.count; index++) {
 		Entity *entity = game_world->get_entity(render_entities[index].entity_id);
-		
-		Matrix4 matrix;
-		matrix.translate(&entity->position);
-		world_matrices.push(matrix);
+		world_matrices.push(make_translation_matrix(&entity->position));
 	}
+	world_matrices_struct_buffer.update(&world_matrices);
 }
 
 template<typename T>

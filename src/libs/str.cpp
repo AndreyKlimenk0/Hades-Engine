@@ -6,6 +6,7 @@
 
 #include "str.h"
 #include "../sys/sys_local.h"
+#include "math/vector.h"
 
 
 #define MAX_DIGITS_IN_INT 12
