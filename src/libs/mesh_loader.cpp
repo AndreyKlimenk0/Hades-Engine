@@ -48,7 +48,7 @@ bool Mesh_Loader::load(const char *file_name, bool print_info)
 	}
 
 	scene = (aiScene *)importer.ReadFile(path, aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
-										 aiProcess_SortByPType | aiProcess_MakeLeftHanded | aiProcess_FlipUVs);
+										 aiProcess_SortByPType | aiProcess_FlipUVs);
 	if (!scene) {
 		print("Mesh_Loader::load: Failed to load a scene from {}.", file_name);
 		return false;

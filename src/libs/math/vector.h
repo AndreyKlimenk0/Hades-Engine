@@ -7,159 +7,224 @@
 
 using namespace DirectX;
 
-struct Vector2;
-struct Vector3;
-struct Vector4;
+struct Vector2 : XMFLOAT2 {
+	Vector2() {}
+	Vector2(XMVECTOR vector);
+	Vector2(const Vector2 &other);
+	Vector2(float x, float y) : XMFLOAT2(x, y) {}
 
-struct Vector2 {
-	float x;
-	float y;
-	
-	Vector2() {};
-	Vector2(float _x, float _y) : x(_x), y(_y) {}
+	static Vector2 base_x;
+	static Vector2 base_y;
 
-	float  &operator[](int i);
-	const float  &operator[](int i) const;
-	Vector2 operator+(float scalar);
-	Vector2 operator+(const Vector2 &other);
-	Vector2 operator-(float scalar);
-	Vector2 operator-(const Vector2 &other);
-	Vector2 operator*(float scalar);
-	Vector2 operator*(const Vector2 &other);
-	Vector2 operator/(float scalar);
-	Vector2 operator/(const Vector2 &other);
+	Vector2 &operator=(XMVECTOR vector);
+	Vector2 &operator=(const Vector2 &other);
 
-	Vector2 &operator+=(float);
+	Vector2 &operator+=(float value);
+	Vector2 &operator-=(float value);
+	Vector2 &operator*=(float value);
+	Vector2 &operator/=(float value);
+
 	Vector2 &operator+=(const Vector2 &other);
-	Vector2 &operator-=(float);
 	Vector2 &operator-=(const Vector2 &other);
-	Vector2 &operator*=(float);
 	Vector2 &operator*=(const Vector2 &other);
-	Vector2 &operator/=(float);
 	Vector2 &operator/=(const Vector2 &other);
-	
-	operator XMVECTOR();
 
-	void normalize();
-	float length();
-	float dot(const Vector2 & other);
-	
+	operator float *();
+	operator XMVECTOR();
 };
 
-inline float &Vector2::operator[](int i)
+inline float get_length(Vector2 *vector2);
+inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2);
+inline float get_distance(Vector2 *first_vector2, Vector2 *second_vector2);
+inline Vector2 negate(Vector2 *vector);
+inline Vector2 normalize(Vector2 *vector);
+inline Vector2 dot(Vector2 *first_vector2, Vector2 *second_vector2);
+inline Vector2 cross(Vector2 *first_vector2, Vector2 *second_vector2);
+
+inline Vector2 operator+(const Vector2 &first_vector, const Vector2 &second_vector);
+inline Vector2 operator-(const Vector2 &first_vector, const Vector2 &second_vector);
+inline Vector2 operator*(const Vector2 &first_vector, const Vector2 &second_vector);
+inline Vector2 operator/(const Vector2 &first_vector, const Vector2 &second_vector);
+
+struct Vector3 : XMFLOAT3 {
+	Vector3() {}
+	Vector3(XMVECTOR vector);
+	Vector3(const Vector3 &other);
+	Vector3(float x, float y, float z) : XMFLOAT3(x, y, z) {}
+
+	static Vector3 base_x;
+	static Vector3 base_y;
+	static Vector3 base_z;
+
+	Vector3 &operator=(XMVECTOR vector);
+	Vector3 &operator=(const Vector3 &other);
+
+	Vector3 &operator+=(float value);
+	Vector3 &operator-=(float value);
+	Vector3 &operator*=(float value);
+	Vector3 &operator/=(float value);
+
+	Vector3 &operator+=(const Vector3 &other);
+	Vector3 &operator-=(const Vector3 &other);
+	Vector3 &operator*=(const Vector3 &other);
+	Vector3 &operator/=(const Vector3 &other);
+
+	operator float *();
+	operator XMVECTOR();
+};
+
+inline float get_length(Vector3 *vector3);
+inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3);
+inline float get_distance(Vector3 *first_vector3, Vector3 *second_vector3);
+inline Vector3 negate(Vector3 *vector);
+inline Vector3 normalize(Vector3 *vector);
+inline Vector3 dot(Vector3 *first_vector3, Vector3 *second_vector3);
+inline Vector3 cross(Vector3 *first_vector3, Vector3 *second_vector3);
+
+inline Vector3 operator+(const Vector3 &first_vector, const Vector3 &second_vector);
+inline Vector3 operator-(const Vector3 &first_vector, const Vector3 &second_vector);
+inline Vector3 operator*(const Vector3 &first_vector, const Vector3 &second_vector);
+inline Vector3 operator/(const Vector3 &first_vector, const Vector3 &second_vector);
+
+struct Vector4 : XMFLOAT4 {
+	Vector4() {}
+	Vector4(XMVECTOR vector);
+	Vector4(const Vector4 &other);
+	Vector4(float x, float y, float z, float w) : XMFLOAT4(x, y, z, w) {}
+	Vector4(const Vector3 &vector, float w) : XMFLOAT4(vector.x, vector.y, vector.z, w) {}
+
+	Vector4 &operator=(XMVECTOR vector);
+	Vector4 &operator=(const Vector3 &vector);
+	Vector4 &operator=(const Vector4 &other);
+
+	Vector4 &operator+=(float value);
+	Vector4 &operator-=(float value);
+	Vector4 &operator*=(float value);
+	Vector4 &operator/=(float value);
+
+	Vector4 &operator+=(const Vector4 &other);
+	Vector4 &operator-=(const Vector4 &other);
+	Vector4 &operator*=(const Vector4 &other);
+	Vector4 &operator/=(const Vector4 &other);
+
+	operator float *();
+	operator XMVECTOR();
+};
+
+inline float get_length(Vector4 *vector4);
+inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4);
+inline float get_distance(Vector4 *first_vector4, Vector4 *second_vector4);
+inline Vector4 negate(Vector4 *vector);
+inline Vector4 normalize(Vector4 *vector);
+inline Vector4 dot(Vector4 *first_vector4, Vector4 *second_vector4);
+inline Vector4 cross(Vector4 *first_vector4, Vector4 *second_vector4, Vector4 *third_vector4);
+
+inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector);
+inline Vector4 operator-(const Vector4 &first_vector, const Vector4 &second_vector);
+inline Vector4 operator*(const Vector4 &first_vector, const Vector4 &second_vector);
+inline Vector4 operator/(const Vector4 &first_vector, const Vector4 &second_vector);
+
+///////////////////////////////
+//          Vector2          //
+///////////////////////////////
+
+inline Vector2::Vector2(XMVECTOR vector)
 {
-	assert(i < 2);
-	return (&x)[i];
+	XMStoreFloat2(this, vector);
 }
 
-inline const float &Vector2::operator[](int i) const
+inline Vector2::Vector2(const Vector2 &other)
 {
-	assert(i < 2);
-	return (&x)[i];
+	x = other.x;
+	y = other.y;
 }
 
-inline Vector2 Vector2::operator+(float scalar) 
+inline Vector2 &Vector2::operator=(XMVECTOR vector)
 {
-	return Vector2(x + scalar, y + scalar);
+	XMStoreFloat2(this, vector);
+	return *this;
 }
 
-inline Vector2 Vector2::operator+(const Vector2 &other) 
+inline Vector2 &Vector2::operator=(const Vector2 &other)
 {
-	return Vector2(x + other.x, y + other.y);
+	if (this != &other) {
+		x = other.x;
+		y = other.y;
+	}
+	return *this;
 }
 
-inline Vector2 Vector2::operator-(float scalar) 
+inline Vector2 &Vector2::operator+=(float value)
 {
-	return Vector2(x - scalar, y - scalar);
+	Vector2 temp = Vector2(value, value);
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&temp);
+	*this = XMVectorAdd(first, second);
+	return *this;
 }
 
-inline Vector2 Vector2::operator-(const Vector2 &other) 
+inline Vector2 &Vector2::operator-=(float value)
 {
-	return Vector2(x - other.x, y - other.y);
+	Vector2 temp = Vector2(value, value);
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&temp);
+	*this = XMVectorSubtract(first, second);
+	return *this;
 }
 
-inline Vector2 Vector2::operator*(float scalar) 
+inline Vector2 &Vector2::operator*=(float value)
 {
-	return Vector2(x * scalar, y * scalar);
+	Vector2 temp = Vector2(value, value);
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&temp);
+	*this = XMVectorMultiply(first, second);
+	return *this;
 }
 
-inline Vector2 operator*(float scalar, Vector2 vec2) 
+inline Vector2 &Vector2::operator/=(float value)
 {
-	return Vector2(vec2.x * scalar, vec2.y * scalar);
-}
-inline Vector2 Vector2::operator*(const Vector2 &other) 
-{
-	return Vector2(x * other.x, y * other.y);
-}
-
-inline Vector2 Vector2::operator/(float scalar) 
-{
-	float inver = 1.0f / scalar;
-	return Vector2(x * inver, y * inver);
-}
-
-inline Vector2 Vector2::operator/(const Vector2 &other) 
-{
-	float inver_x = 1.0f / other.x;
-	float inver_y = 1.0f / other.y;
-	return Vector2(x * inver_x, y * inver_y);
-}
-
-inline Vector2 &Vector2::operator+=(float scalar)
-{
-	x += scalar;
-	y += scalar;
+	Vector2 temp = Vector2(value, value);
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&temp);
+	*this = XMVectorDivide(first, second);
 	return *this;
 }
 
 inline Vector2 &Vector2::operator+=(const Vector2 &other)
 {
-	x += other.x;
-	y += other.y;
-	return *this;
-}
-
-inline Vector2 &Vector2::operator-=(float scalar)
-{
-	x -= scalar;
-	y -= scalar;
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&other);
+	*this = XMVectorAdd(first, second);
 	return *this;
 }
 
 inline Vector2 &Vector2::operator-=(const Vector2 &other)
 {
-	x -= other.x;
-	y -= other.y;
-	return *this;
-}
-
-inline Vector2 &Vector2::operator*=(float scalar)
-{
-	x *= scalar;
-	y *= scalar;
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&other);
+	*this = XMVectorSubtract(first, second);
 	return *this;
 }
 
 inline Vector2 &Vector2::operator*=(const Vector2 &other)
 {
-	x *= other.x;
-	y *= other.y;
-	return *this;
-}
-
-inline Vector2 &Vector2::operator/=(float scalar)
-{
-	float inver = 1.0f / scalar;
-	x *= inver;
-	y *= inver;
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&other);
+	*this = XMVectorMultiply(first, second);
 	return *this;
 }
 
 inline Vector2 &Vector2::operator/=(const Vector2 &other)
 {
-	x *= 1.0f / other.x;
-	y *= 1.0f / other.y;
+	XMVECTOR first = XMLoadFloat2(this);
+	XMVECTOR second = XMLoadFloat2(&other);
+	*this = XMVectorDivide(first, second);
 	return *this;
+}
+
+inline Vector2::operator float*()
+{
+	return &x;
 }
 
 inline Vector2::operator XMVECTOR()
@@ -167,209 +232,182 @@ inline Vector2::operator XMVECTOR()
 	return XMVectorSet(x, y, 0.0f, 0.0f);
 }
 
-inline float Vector2::length()
+inline float get_length(Vector2 *vector2)
 {
-	return math::sqrt(math::pow2(x) + math::pow2(y));
+	XMVECTOR vector = XMLoadFloat2(vector2);
+	return XMVectorGetX(XMVector2Length(vector));
 }
 
-inline void Vector2::normalize()
+inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2)
 {
-	float len = length();
-	x /= len; 
-	y /= len;
+	XMVECTOR first = XMLoadFloat2(first_vector2);
+	XMVECTOR second = XMLoadFloat2(second_vector2);
+	return XMVectorGetX(XMVector2AngleBetweenVectors(first, second));
+}
+inline float get_distance(Vector2 *first_vector2, Vector2 *second_vector2)
+{
+	XMVECTOR first = XMLoadFloat2(first_vector2);
+	XMVECTOR second = XMLoadFloat2(second_vector2);
+	XMVECTOR temp = XMVectorSubtract(first, second);
+	return XMVectorGetX(XMVector2Length(temp));
 }
 
-inline float Vector2::dot(const Vector2 &other)
+inline Vector2 negate(Vector2 *vector2)
 {
-	return x * other.x + y * other.y;
+	XMVECTOR vector = XMLoadFloat2(vector2);
+	return XMVectorNegate(vector);
 }
 
-struct Vector3 {
-	float x;
-	float y;
-	float z;
-
-	Vector3() {};
-	Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
-	Vector3(const XMVECTOR &xm_vec);
-	Vector3(const Vector4 &vec);
-	
-	Vector3 &operator=(const XMFLOAT3 &vector);
-	Vector3 &operator=(const Vector4 &vec4);
-
-	float  &operator[](int i);
-	const float  &operator[](int i) const;
-	
-	Vector3 operator+(float scalar);
-	Vector3 operator+(const Vector3 &other);
-	Vector3 operator-(float scalar);
-	Vector3 operator-(const Vector3 &other);
-	Vector3 operator*(float scalar);
-	Vector3 operator*(const Vector3 &other);
-	Vector3 operator/(float scalar);
-	Vector3 operator/(const Vector3 &other);
-
-	Vector3 &operator+=(float);
-	Vector3 &operator+=(const Vector3 &other);
-	Vector3 &operator-=(float);
-	Vector3 &operator-=(const Vector3 &other);
-	Vector3 &operator*=(float);
-	Vector3 &operator*=(const Vector3 &other);
-	Vector3 &operator/=(float);
-	Vector3 &operator/=(const Vector3 &other);
-
-	operator XMVECTOR();
-	operator Vector2();
-	operator float *();
-
-	void normalize();
-	void negete();
-
-	float length();
-	float dot(const Vector3 & other);
-	
-	Vector3 cross(const Vector3 &other);
-};
-
-inline Vector3::Vector3(const XMVECTOR &xm_vec)
+inline Vector2 normalize(Vector2 *vector2)
 {
-	x = XMVectorGetX(xm_vec);
-	y = XMVectorGetY(xm_vec);
-	z = XMVectorGetZ(xm_vec);
+	XMVECTOR vector = XMLoadFloat2(vector2);
+	return XMVector2Normalize(vector);
 }
 
-inline Vector3 &Vector3::operator=(const XMFLOAT3 &vector)
+inline Vector2 dot(Vector2 *first_vector2, Vector2 *second_vector2)
 {
-	x = vector.x;
-	y = vector.y;
-	z = vector.z;
+	XMVECTOR first = XMLoadFloat2(first_vector2);
+	XMVECTOR second = XMLoadFloat2(second_vector2);
+	return XMVector2Dot(first, second);
+}
+inline Vector2 cross(Vector2 *first_vector2, Vector2 *second_vector2)
+{
+	XMVECTOR first = XMLoadFloat2(first_vector2);
+	XMVECTOR second = XMLoadFloat2(second_vector2);
+	return XMVector2Cross(first, second);
+}
+
+inline Vector2 operator+(const Vector2 &first_vector, const Vector2 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat2(&first_vector);
+	XMVECTOR second = XMLoadFloat2(&second_vector);
+	return XMVectorAdd(first, second);
+}
+
+inline Vector2 operator-(const Vector2 &first_vector, const Vector2 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat2(&first_vector);
+	XMVECTOR second = XMLoadFloat2(&second_vector);
+	return XMVectorSubtract(first, second);
+}
+
+inline Vector2 operator*(const Vector2 &first_vector, const Vector2 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat2(&first_vector);
+	XMVECTOR second = XMLoadFloat2(&second_vector);
+	return XMVectorMultiply(first, second);
+}
+
+inline Vector2 operator/(const Vector2 &first_vector, const Vector2 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat2(&first_vector);
+	XMVECTOR second = XMLoadFloat2(&second_vector);
+	return XMVectorDivide(first, second);
+}
+
+///////////////////////////////
+//          Vector3          //
+///////////////////////////////
+
+inline Vector3::Vector3(XMVECTOR vector)
+{
+	XMStoreFloat3(this, vector);
+}
+
+inline Vector3::Vector3(const Vector3 &other)
+{
+	x = other.x;
+	y = other.y;
+	z = other.z;
+}
+
+inline Vector3 &Vector3::operator=(XMVECTOR vector)
+{
+	XMStoreFloat3(this, vector);
 	return *this;
 }
 
-inline float &Vector3::operator[](int i)
+inline Vector3 &Vector3::operator=(const Vector3 &other)
 {
-	assert(i < 3);
-	return (&x)[i];
+	if (this != &other) {
+		x = other.x;
+		y = other.y;
+		z = other.z;
+	}
+	return *this;
 }
 
-inline const float &Vector3::operator[](int i) const
+inline Vector3 &Vector3::operator+=(float value)
 {
-	assert(i < 3);
-	return (&x)[i];
+	Vector3 temp = Vector3(value, value, value);
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&temp);
+	*this = XMVectorAdd(first, second);
+	return *this;
 }
 
-inline Vector3 Vector3::operator+(float scalar)
+inline Vector3 &Vector3::operator-=(float value)
 {
-	return Vector3(x + scalar, y + scalar, z + scalar);
+	Vector3 temp = Vector3(value, value, value);
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&temp);
+	*this = XMVectorSubtract(first, second);
+	return *this;
 }
 
-inline Vector3 Vector3::operator+(const Vector3 &other)
+inline Vector3 &Vector3::operator*=(float value)
 {
-	return Vector3(x + other.x, y + other.y, z + other.z);
+	Vector3 temp = Vector3(value, value, value);
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&temp);
+	*this = XMVectorMultiply(first, second);
+	return *this;
 }
 
-inline Vector3 Vector3::operator-(float scalar)
+inline Vector3 &Vector3::operator/=(float value)
 {
-	return Vector3(x - scalar, y - scalar, z - scalar);
-}
-
-inline Vector3 Vector3::operator-(const Vector3 &other)
-{
-	return Vector3(x - other.x, y - other.y, z - other.z);
-}
-
-inline Vector3 Vector3::operator*(float scalar)
-{
-	return Vector3(x * scalar, y * scalar, z * scalar);
-}
-
-inline Vector3 operator*(float scalar, Vector3 &vec)
-{
-	return Vector3(vec.x * scalar, vec.y * scalar, vec.z * scalar);
-}
-
-inline Vector3 Vector3::operator*(const Vector3 &other)
-{
-	return Vector3(x * other.x, y * other.y, z * other.z);
-}
-
-inline Vector3 Vector3::operator/(float scalar)
-{
-	float inver = 1.0f / scalar;
-	return Vector3(x * inver, y * inver, z * inver);
-}
-
-inline Vector3 Vector3::operator/(const Vector3 &other)
-{
-	float inver_x = 1.0f / other.x;
-	float inver_y = 1.0f / other.y;
-	float inver_z = 1.0f / other.z;
-	return Vector3(x * inver_x, y * inver_y, z * inver_z);
-}
-
-inline Vector3 &Vector3::operator+=(float scalar)
-{
-	x += scalar;
-	y += scalar;
-	z += scalar;
+	Vector3 temp = Vector3(value, value, value);
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&temp);
+	*this = XMVectorDivide(first, second);
 	return *this;
 }
 
 inline Vector3 &Vector3::operator+=(const Vector3 &other)
 {
-	x += other.x;
-	y += other.y;
-	z += other.z;
-	return *this;
-}
-
-inline Vector3 &Vector3::operator-=(float scalar)
-{
-	x -= scalar;
-	y -= scalar;
-	z -= scalar;
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&other);
+	*this = XMVectorAdd(first, second);
 	return *this;
 }
 
 inline Vector3 &Vector3::operator-=(const Vector3 &other)
 {
-	x -= other.x;
-	y -= other.y;
-	z -= other.z;
-	return *this;
-}
-
-inline Vector3 &Vector3::operator*=(float scalar)
-{
-	x *= scalar;
-	y *= scalar;
-	z *= scalar;
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&other);
+	*this = XMVectorSubtract(first, second);
 	return *this;
 }
 
 inline Vector3 &Vector3::operator*=(const Vector3 &other)
 {
-	x *= other.x;
-	y *= other.y;
-	z *= other.z;
-	return *this;
-}
-
-inline Vector3 &Vector3::operator/=(float scalar)
-{
-	float inver = 1.0f / scalar;
-	x *= inver;
-	y *= inver;
-	z *= inver;
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&other);
+	*this = XMVectorMultiply(first, second);
 	return *this;
 }
 
 inline Vector3 &Vector3::operator/=(const Vector3 &other)
 {
-	x *= 1.0f / other.x;
-	y *= 1.0f / other.y;
-	z *= 1.0f / other.z;
+	XMVECTOR first = XMLoadFloat3(this);
+	XMVECTOR second = XMLoadFloat3(&other);
+	*this = XMVectorDivide(first, second);
 	return *this;
+}
+
+inline Vector3::operator float*()
+{
+	return &x;
 }
 
 inline Vector3::operator XMVECTOR()
@@ -377,231 +415,193 @@ inline Vector3::operator XMVECTOR()
 	return XMVectorSet(x, y, z, 0.0f);
 }
 
-inline Vector3::operator Vector2()
+inline float get_length(Vector3 *vector3)
 {
-	return Vector2(x, y);
+	XMVECTOR vector = XMLoadFloat3(vector3);
+	return XMVectorGetX(XMVector3Length(vector));
 }
 
-inline Vector3::operator float *()
+inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3)
 {
-	return &x;
+	XMVECTOR first = XMLoadFloat3(first_vector3);
+	XMVECTOR second = XMLoadFloat3(second_vector3);
+	return XMVectorGetX(XMVector3AngleBetweenVectors(first, second));
+}
+inline float get_distance(Vector3 *first_vector3, Vector3 *second_vector3)
+{
+	XMVECTOR first = XMLoadFloat3(first_vector3);
+	XMVECTOR second = XMLoadFloat3(second_vector3);
+	XMVECTOR temp = XMVectorSubtract(first, second);
+	return XMVectorGetX(XMVector3Length(temp));
 }
 
-inline float Vector3::length()
+inline Vector3 negate(Vector3 *vector3)
 {
-	return (float)sqrt(x * x + y * y + z * z);
+	XMVECTOR vector = XMLoadFloat3(vector3);
+	return XMVectorNegate(vector);
 }
 
-inline void Vector3::normalize()
+inline Vector3 normalize(Vector3 *vector3)
 {
-	float len = length();
-	x /= len; 
-	y /= len; 
-	z /= len;
+	XMVECTOR vector = XMLoadFloat3(vector3);
+	return XMVector3Normalize(vector);
 }
 
-inline void Vector3::negete()
+inline Vector3 dot(Vector3 *first_vector3, Vector3 *second_vector3)
 {
-	x = -x;
-	y = -y;
-	z = -z;
+	XMVECTOR first = XMLoadFloat3(first_vector3);
+	XMVECTOR second = XMLoadFloat3(second_vector3);
+	return XMVector3Dot(first, second);
+}
+inline Vector3 cross(Vector3 *first_vector3, Vector3 *second_vector3)
+{
+	XMVECTOR first = XMLoadFloat3(first_vector3);
+	XMVECTOR second = XMLoadFloat3(second_vector3);
+	return XMVector3Cross(first, second);
 }
 
-inline float Vector3::dot(const Vector3 &other)
+inline Vector3 operator+(const Vector3 &first_vector, const Vector3 &second_vector)
 {
-	return x * other.x + y * other.y + z * other.z;
+	XMVECTOR first = XMLoadFloat3(&first_vector);
+	XMVECTOR second = XMLoadFloat3(&second_vector);
+	return XMVectorAdd(first, second);
 }
 
-inline Vector3 Vector3::cross(const  Vector3 &other)
+inline Vector3 operator-(const Vector3 &first_vector, const Vector3 &second_vector)
 {
-	return Vector3(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
+	XMVECTOR first = XMLoadFloat3(&first_vector);
+	XMVECTOR second = XMLoadFloat3(&second_vector);
+	return XMVectorSubtract(first, second);
 }
 
-struct Vector4 {
-	float x;
-	float y;
-	float z;
-	float w;
-
-	Vector4() {};
-	Vector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
-	Vector4(Vector3 vec3, float _w) : x(vec3.x), y(vec3.y), z(vec3.z), w(_w) {}
-	
-	Vector4 &operator=(const Vector3 &vector3);
-	Vector4 &operator=(const Vector4 &vector4);
-
-	float  &operator[](int i);
-	const float  &operator[](int i) const;
-
-	Vector4 operator+(float scalar);
-	Vector4 operator+(const Vector4 &other);
-	Vector4 operator-(float scalar);
-	Vector4 operator-(const Vector4 &other);
-	Vector4 operator*(float scalar);
-	Vector4 operator*(const Vector4 &other);
-	Vector4 operator/(float scalar);
-	Vector4 operator/(const Vector4 &other);
-
-	Vector4 &operator+=(float);
-	Vector4 &operator+=(const Vector4 &other);
-	Vector4 &operator-=(float);
-	Vector4 &operator-=(const Vector4 &other);
-	Vector4 &operator*=(float);
-	Vector4 &operator*=(const Vector4 &other);
-	Vector4 &operator/=(float);
-	Vector4 &operator/=(const Vector4 &other);
-
-	operator XMVECTOR();
-	operator float *();
-
-	void normalize();
-	float   length();
-	float dot(const Vector4 & other);
-};
-
-inline Vector4 &Vector4::operator=(const Vector3 &vector3)
+inline Vector3 operator*(const Vector3 &first_vector, const Vector3 &second_vector)
 {
-	x = vector3.x;
-	y = vector3.y;
-	z = vector3.z;
-	w = 1.0f;
+	XMVECTOR first = XMLoadFloat3(&first_vector);
+	XMVECTOR second = XMLoadFloat3(&second_vector);
+	return XMVectorMultiply(first, second);
+}
+
+inline Vector3 operator/(const Vector3 &first_vector, const Vector3 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat3(&first_vector);
+	XMVECTOR second = XMLoadFloat3(&second_vector);
+	return XMVectorDivide(first, second);
+}
+
+///////////////////////////////
+//          Vector4          //
+///////////////////////////////
+
+inline Vector4::Vector4(XMVECTOR vector)
+{
+	XMStoreFloat4(this, vector);
+}
+
+inline Vector4::Vector4(const Vector4 &other)
+{
+	x = other.x;
+	y = other.y;
+	z = other.z;
+	w = other.w;
+}
+
+inline Vector4 &Vector4::operator=(XMVECTOR vector)
+{
+	XMStoreFloat4(this, vector);
 	return *this;
 }
-#include <string.h>
-inline Vector4 &Vector4::operator=(const Vector4 &vector4)
+
+inline Vector4 &Vector4::operator=(const Vector3 &vector)
 {
-	memcpy((void *)this, (void *)&vector4, sizeof(float) * 4);
+	x = vector.x;
+	y = vector.y;
+	z = vector.z;
+	w = 0.0f;
 	return *this;
 }
 
-inline float &Vector4::operator[](int i)
+inline Vector4 &Vector4::operator=(const Vector4 &other)
 {
-	assert(i < 4);
-	return (&x)[i];
+	if (this != &other) {
+		x = other.x;
+		y = other.y;
+		z = other.z;
+		w = other.w;
+	}
+	return *this;
 }
 
-inline const float &Vector4::operator[](int i) const
+inline Vector4 &Vector4::operator+=(float value)
 {
-	assert(i < 4);
-	return (&x)[i];
+	Vector4 temp = Vector4(value, value, value, value);
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&temp);
+	*this = XMVectorAdd(first, second);
+	return *this;
 }
 
-inline Vector4 Vector4::operator+(float scalar)
+inline Vector4 &Vector4::operator-=(float value)
 {
-	return Vector4(x + scalar, y + scalar, z + scalar, w + scalar);
+	Vector4 temp = Vector4(value, value, value, value);
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&temp);
+	*this = XMVectorSubtract(first, second);
+	return *this;
 }
 
-inline Vector4 Vector4::operator+(const Vector4 &other)
+inline Vector4 &Vector4::operator*=(float value)
 {
-	return Vector4(x + other.x, y + other.y, z + other.z, w + other.w);
+	Vector4 temp = Vector4(value, value, value, value);
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&temp);
+	*this = XMVectorMultiply(first, second);
+	return *this;
 }
 
-inline Vector4 Vector4::operator-(float scalar)
+inline Vector4 &Vector4::operator/=(float value)
 {
-	return Vector4(x - scalar, y - scalar, z - scalar, w - scalar);
-}
-
-inline Vector4 Vector4::operator-(const Vector4 &other)
-{
-	return Vector4(x - other.x, y - other.y, z - other.z, w - other.w);
-}
-
-inline Vector4 Vector4::operator*(float scalar)
-{
-	return Vector4(x * scalar, y * scalar, z * scalar, w * scalar);
-}
-
-inline Vector4 Vector4::operator*(const Vector4 &other)
-{
-	return Vector4(x * other.x, y * other.y, z * other.z, w * other.w);
-}
-
-inline Vector4 Vector4::operator/(float scalar)
-{
-	float inver = 1.0f / scalar;
-	return Vector4(x * inver, y * inver, z * inver, w * inver);
-}
-
-inline Vector4 Vector4::operator/(const Vector4 &other)
-{
-	float inver_x = 1.0f / other.x;
-	float inver_y = 1.0f / other.y;
-	float inver_z = 1.0f / other.z;
-	float inver_w = 1.0f / other.w;
-	return Vector4(x * inver_x, y * inver_y, z * inver_z, w * inver_w);
-}
-
-inline Vector4 &Vector4::operator+=(float scalar)
-{
-	x += scalar;
-	y += scalar;
-	z += scalar;
-	w += scalar;
+	Vector4 temp = Vector4(value, value, value, value);
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&temp);
+	*this = XMVectorDivide(first, second);
 	return *this;
 }
 
 inline Vector4 &Vector4::operator+=(const Vector4 &other)
 {
-	x += other.x;
-	y += other.y;
-	z += other.z;
-	w += other.w;
-	return *this;
-}
-
-inline Vector4 &Vector4::operator-=(float scalar)
-{
-	x -= scalar;
-	y -= scalar;
-	z -= scalar;
-	w -= scalar;
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&other);
+	*this = XMVectorAdd(first, second);
 	return *this;
 }
 
 inline Vector4 &Vector4::operator-=(const Vector4 &other)
 {
-	x -= other.x;
-	y -= other.y;
-	z -= other.z;
-	w -= other.w;
-	return *this;
-}
-
-inline Vector4 &Vector4::operator*=(float scalar)
-{
-	x *= scalar;
-	y *= scalar;
-	z *= scalar;
-	w *= scalar;
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&other);
+	*this = XMVectorSubtract(first, second);
 	return *this;
 }
 
 inline Vector4 &Vector4::operator*=(const Vector4 &other)
 {
-	x *= other.x;
-	y *= other.y;
-	z *= other.z;
-	w *= other.w;
-	return *this;
-}
-
-inline Vector4 &Vector4::operator/=(float scalar)
-{
-	float inver = 1.0f / scalar;
-	x *= inver;
-	y *= inver;
-	z *= inver;
-	w *= inver;
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&other);
+	*this = XMVectorMultiply(first, second);
 	return *this;
 }
 
 inline Vector4 &Vector4::operator/=(const Vector4 &other)
 {
-	x *= 1.0f / other.x;
-	y *= 1.0f / other.y;
-	z *= 1.0f / other.z;
-	w *= 1.0f / other.w;
+	XMVECTOR first = XMLoadFloat4(this);
+	XMVECTOR second = XMLoadFloat4(&other);
+	*this = XMVectorDivide(first, second);
 	return *this;
+}
+
+inline Vector4::operator float*()
+{
+	return &x;
 }
 
 inline Vector4::operator XMVECTOR()
@@ -609,34 +609,77 @@ inline Vector4::operator XMVECTOR()
 	return XMVectorSet(x, y, z, w);
 }
 
-inline Vector4::operator float *()
+inline float get_length(Vector4 *vector4)
 {
-	return &x;
+	XMVECTOR vector = XMLoadFloat4(vector4);
+	return XMVectorGetX(XMVector4Length(vector));
 }
 
-inline float Vector4::length()
+inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4)
 {
-	return (float)sqrt(x * x + y * y + z * z + w * w);
+	XMVECTOR first = XMLoadFloat4(first_vector4);
+	XMVECTOR second = XMLoadFloat4(second_vector4);
+	return XMVectorGetX(XMVector4AngleBetweenVectors(first, second));
+}
+inline float get_distance(Vector4 *first_vector4, Vector4 *second_vector4)
+{
+	XMVECTOR first = XMLoadFloat4(first_vector4);
+	XMVECTOR second = XMLoadFloat4(second_vector4);
+	XMVECTOR temp = XMVectorSubtract(first, second);
+	return XMVectorGetX(XMVector4Length(temp));
 }
 
-inline void Vector4::normalize()
+inline Vector4 negate(Vector4 *vector4)
 {
-	float len = length();
-	x /= len;
-	y /= len;
-	z /= len;
-	w /= len;
+	XMVECTOR vector = XMLoadFloat4(vector4);
+	return XMVectorNegate(vector);
 }
 
-inline float Vector4::dot(const Vector4 &other)
+inline Vector4 normalize(Vector4 *vector4)
 {
-	return x * other.x + y * other.y + z * other.z * w + other.w;
+	XMVECTOR vector = XMLoadFloat4(vector4);
+	return XMVector4Normalize(vector);
 }
 
-extern Vector3 base_x_vec;
-extern Vector3 base_y_vec;
-extern Vector3 base_z_vec;
+inline Vector4 dot(Vector4 *first_vector4, Vector4 *second_vector4)
+{
+	XMVECTOR first = XMLoadFloat4(first_vector4);
+	XMVECTOR second = XMLoadFloat4(second_vector4);
+	return XMVector4Dot(first, second);
+}
+inline Vector4 cross(Vector4 *first_vector4, Vector4 *second_vector4, Vector4 *third_vector4)
+{
+	XMVECTOR first = XMLoadFloat4(first_vector4);
+	XMVECTOR second = XMLoadFloat4(second_vector4);
+	XMVECTOR third = XMLoadFloat4(third_vector4);
+	return XMVector4Cross(first, second, third);
+}
 
-extern Vector2 base_x_vec2;
-extern Vector2 base_y_vec2;
+inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat4(&first_vector);
+	XMVECTOR second = XMLoadFloat4(&second_vector);
+	return XMVectorAdd(first, second);
+}
+
+inline Vector4 operator-(const Vector4 &first_vector, const Vector4 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat4(&first_vector);
+	XMVECTOR second = XMLoadFloat4(&second_vector);
+	return XMVectorSubtract(first, second);
+}
+
+inline Vector4 operator*(const Vector4 &first_vector, const Vector4 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat4(&first_vector);
+	XMVECTOR second = XMLoadFloat4(&second_vector);
+	return XMVectorMultiply(first, second);
+}
+
+inline Vector4 operator/(const Vector4 &first_vector, const Vector4 &second_vector)
+{
+	XMVECTOR first = XMLoadFloat4(&first_vector);
+	XMVECTOR second = XMLoadFloat4(&second_vector);
+	return XMVectorDivide(first, second);
+}
 #endif

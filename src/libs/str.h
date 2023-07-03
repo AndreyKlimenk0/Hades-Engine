@@ -3,11 +3,11 @@
 
 #include "ds/array.h"
 #include "../libs/math/common.h"
-#include "math/vector.h"
 #include "../win32/win_local.h"
 #include "../win32/win_types.h"
 
-
+struct Vector2;
+struct Vector3;
 struct String;
 typedef u32 String_Id;
 

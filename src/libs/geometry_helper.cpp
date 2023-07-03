@@ -132,8 +132,7 @@ void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 			v.position.z = sphere->radius * sinf(phi) * sinf(theta);
 
 			Vector3 n = v.position;
-			n.normalize();
-			v.normal = n;
+			v.normal = normalize(&n);
 
 			v.uv.x = theta / XM_2PI;
 			v.uv.y = phi / XM_PI;

@@ -3,6 +3,7 @@
 #include "camera.h"
 #include "input.h"
 #include "../math/vector.h"
+#include "../math/matrix.h"
 #include "../../sys/sys_local.h"
 #include "../../win32/win_local.h"
 
@@ -11,8 +12,8 @@ using namespace DirectX;
 
 Camera::Camera()
 {
-	position = Vector3(0.0f, 20.0f, 250.0f);
-	target = Vector3(0.0f, 10.0f, 1.0f);
+	position = Vector3(0.0f, 20.0f, -250.0f);
+	target = Vector3(0.0f, 0.0f, -1.0f);
 	up = Vector3(0.0f, 1.0f, 0.0f);
 	forward = Vector3(0.0f, 0.0f, 1.0f);
 }
@@ -38,17 +39,16 @@ void Camera::handle_event(Event *event)
 	}
 	if (Key_Input::is_key_down(Key_W)) {
 		Vector3 normalized_target = (target - position);
-		normalized_target.normalize();
-		normalized_target *= 2;
+		normalized_target = normalize(&normalized_target) * 2.0f;
 		position += normalized_target;
 		target += normalized_target;
 	}
 
 	if (Key_Input::is_key_down(Key_S)) {
 		Vector3 normalized_target = (target - position);
-		normalized_target.normalize();
-		normalized_target *= 2;
+		normalized_target = normalize(&normalized_target) * 2.0f;
 		position -= normalized_target;
+		target -= normalized_target;
 	}
 	
 	if ((event->type == EVENT_TYPE_MOUSE) && captured) {
@@ -58,16 +58,12 @@ void Camera::handle_event(Event *event)
 		float x_angle = degress_to_radians(mouse_x_delta);
 		float y_angle = -degress_to_radians(mouse_y_delta);
 
-		Matrix4 rotate_about_y = XMMatrixRotationY(0.5f * x_angle);
-		Matrix4 rotate_about_x = XMMatrixRotationX(0.5f * y_angle);
-
 		Vector3 normalized_target = (target - position);
-		normalized_target.normalize();
+		normalized_target = normalize(&normalized_target);
 		
-		Vector4 result = rotate_about_x * rotate_about_y * Vector4(normalized_target, 1.0f);
-		
-		result += Vector4(position, 1.0f);
-		target = result;
+		rotation_matrix = rotate_about_x(0.5f * y_angle) * rotate_about_y(0.5f * x_angle);
+		target = normalized_target * rotation_matrix;
+		target += position;
 
 		last_mouse_x = event->mouse_info.x;
 		last_mouse_y = event->mouse_info.y;
@@ -76,6 +72,5 @@ void Camera::handle_event(Event *event)
 
 Matrix4 Camera::get_view_matrix()
 {
-	XMMATRIX view = XMMatrixLookAtLH(position, target, up);
-	return Matrix4(view);
+	return make_view_matrix(&position, &target, &up);
 }

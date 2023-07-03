@@ -17,6 +17,8 @@ struct Camera {
 	Vector3 up;
 	Vector3 forward;
 
+	Matrix4 rotation_matrix;
+
 	void handle_event(Event *event);
 
 	Matrix4 get_view_matrix();

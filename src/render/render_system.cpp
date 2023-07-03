@@ -39,11 +39,6 @@ inline Vector2 make_vector2(Point_V2<T> *first_point, Point_V2<T> *second_point)
 	return Vector2((float)result.x, (float)result.y);
 }
 
-inline float get_angle_between_vectors(Vector2 &first_vector, Vector2 &second_vector)
-{
-	return math::arccos(first_vector.dot(second_vector) / (first_vector.length() * second_vector.length()));
-}
-
 inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 {
 	return (float)pow((1.0f - t), 2.0f) * p0 + 2.0f * (1.0f - t) * t * p1 + (float)pow(t, 2.0f) * p2;
@@ -281,8 +276,7 @@ void Render_Primitive_List::add_outlines(int x, int y, int width, int height, co
 	String hash = String((int)width) + String((int)height) + String((int)outline_width) + String("outline");
 
 	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix;
-	transform_matrix.translate(&position);
+	Matrix4 transform_matrix = make_translation_matrix(&position);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
 	if (!primitive) {
@@ -330,7 +324,7 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 		
 		Render_Primitive_2D info;
 		info.texture = &render_font->font_atlas;
-		info.transform_matrix.translate(&position);
+		info.transform_matrix = make_translation_matrix(&position);
 		info.color = Color::White;
 		info.primitive = render_font->lookup_table[c];
 		get_clip_rect(&info.clip_rect);
@@ -370,8 +364,7 @@ void Render_Primitive_List::add_rect(float x, float y, float width, float height
 
 
 	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix;
-	transform_matrix.translate(&position);
+	Matrix4 transform_matrix = make_translation_matrix(&position);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
 	if (!primitive) {
@@ -400,8 +393,7 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 	String hash = String(width + height);
 
 	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix;
-	transform_matrix.translate(&position);
+	Matrix4 transform_matrix = make_translation_matrix(&position);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, resource, Color::White, hash);
 	if (!primitive) {
@@ -422,32 +414,26 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 	u32 window_width = Render_System::screen_width;
 	u32 window_height = Render_System::screen_height;
 
-	Vector2 position = { (float)first_point->x, (float)first_point->y };
-	Matrix4 position_matrix;
-	position_matrix.translate(&position);
-
 	Point_s32 converted_point1;
 	from_win32_screen_space(window_width, window_height, first_point, &converted_point1);
 
 	Point_s32 converted_point2;
 	from_win32_screen_space(window_width, window_height, second_point, &converted_point2);
 
-	Vector2 line_direction = make_vector2(&converted_point2, &converted_point1);
-	line_direction.normalize();
+	Vector2 line_direction = normalize(&make_vector2(&converted_point2, &converted_point1));
 
-	float angle = get_angle_between_vectors(line_direction, base_x_vec2);
+	float angle = get_angle(&line_direction, &Vector2::base_x);
 
 	Matrix4 rotation_matrix;
 	if (line_direction.y < 0.0f) {
 		angle = math::abs(RADIANS_360 - angle);
 	}
-	
-	rotation_matrix.rotate_about_z(angle);
 
+	Vector2 position = { (float)first_point->x, (float)first_point->y };
 	Matrix4 transform_matrix;
-	transform_matrix = rotation_matrix * position_matrix;
+	transform_matrix = rotate_about_z(angle) * make_translation_matrix(&position);
 
-	float line_width = (float)distance(first_point, second_point);
+	float line_width = (float)get_distance(first_point, second_point);
 	String hash = String(line_width + thickness);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
@@ -697,7 +683,7 @@ void Render_System::init(Engine *engine)
 	multisample_info.count = 4;
 	multisample_info.quality = 0;
 
-	view.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 1001.0f);
+	view.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
 

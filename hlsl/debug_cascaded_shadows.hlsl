@@ -64,6 +64,9 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 
 float4 ps_main(Vertex_Out vertex_out) : SV_TARGET
 {
+    const uint shadow_cascade_rows = shadow_atlas_width / shadow_cascade_width;
+    const uint shadow_cascade_cols = shadow_atlas_height / shadow_cascade_height;
+    
     float shadow_factor = 0.0f;
     uint shadow_cascade_index = 0;
     [unroll(10)] //@Note: Hard code
@@ -72,21 +75,27 @@ float4 ps_main(Vertex_Out vertex_out) : SV_TARGET
         float4 position_from_cascade_perspective = mul(float4(vertex_out.world_position, 1.0f), shadow_cascade_view_projection_matrix);
         float2 cascaded_ndc_coordinates = calculate_ndc_coordinates(position_from_cascade_perspective);
         
+        uint shadow_cascade_row_index = shadow_cascade_index % shadow_cascade_rows;
+        uint shadow_cascade_col_index = shadow_cascade_index / shadow_cascade_cols;
         float2 shadow_atlas_ndc_coordinates;
-        shadow_atlas_ndc_coordinates.x = ((cascaded_ndc_coordinates.x * shadow_cascade_width) + (shadow_cascade_width * shadow_cascade_index)) / shadow_atlas_width;
-        shadow_atlas_ndc_coordinates.y = ((cascaded_ndc_coordinates.y * shadow_cascade_height) + (shadow_cascade_height * shadow_cascade_index)) / shadow_atlas_height;
+        shadow_atlas_ndc_coordinates.x = ((cascaded_ndc_coordinates.x * shadow_cascade_width) + (shadow_cascade_width * shadow_cascade_row_index)) / shadow_atlas_width;
+        shadow_atlas_ndc_coordinates.y = ((cascaded_ndc_coordinates.y * shadow_cascade_height) + (shadow_cascade_height * shadow_cascade_col_index)) / shadow_atlas_height;
         
         float current_depth = position_from_cascade_perspective.z / position_from_cascade_perspective.w;
         float shadow_map_depth = shadow_atlas.Sample(sampler_anisotropic, shadow_atlas_ndc_coordinates.xy);
     
-        float bias = 0.005f;
-        if ((current_depth >= (shadow_map_depth - bias)) && (current_depth <= (shadow_map_depth + bias))) {
-            shadow_factor = 0.4f;
+        float3 light = { 1.0f, -1.0f, 0.0f };
+        light = normalize(light);
+  	    float bias = max(0.5f * (1.0f - dot(-light, vertex_out.normal)), 0.0005f);
+  	    float max_depth = min(shadow_map_depth + bias, 1.0f);
+  	    float min_depth = max(shadow_map_depth - bias, 0.0f);
+        if (((min_depth <= current_depth) && (current_depth <= max_depth)) && (max_depth != 1.0f)) {
+            shadow_factor = 1.0f;
             break;
         }
     }
     float4 light_factor = calculate_light(vertex_out.world_position, vertex_out.normal, get_material(), lights, light_count);
-    float4 cascade_color = cascades_colors[CASCADES_COLOR_COUNT % shadow_cascade_index];
+    float4 cascade_color = cascades_colors[shadow_cascade_index % CASCADES_COLOR_COUNT];
     return cascade_color * light_factor * shadow_factor;
 }
 

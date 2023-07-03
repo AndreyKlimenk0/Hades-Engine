@@ -79,7 +79,7 @@ struct Frustum_Box {
 		void transform_plane(Matrix4 *transform_matrix);
 		void get_vertices(Array<Vector3> *vertices);
 	};
-	u32 length = 0;
+	u32 len = 0;
 	float max_x;
 	float max_y;
 	float max_z;
@@ -87,8 +87,8 @@ struct Frustum_Box {
 	float min_y;
 	float min_z;
 
-	Plane first_plane;
-	Plane second_plane;
+	Plane near_plane;
+	Plane far_plane;
 
 	void calculate_length();
 	void update_min_max_values();
@@ -101,6 +101,7 @@ struct Shadow_Cascade_Range {
 };
 
 struct Cascaded_Shadow {
+	u32 matrix_index;
 	u32 view_projection_matrix_index;
 	Shadow_Cascade_Range range;
 	Vector3 light_direction;
@@ -180,6 +181,7 @@ struct Render_World {
 	void update_world_matrices();
 	
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
+	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Matrix4 *matrix);
 	bool make_shadow(Light *light);
 
 	void render();
