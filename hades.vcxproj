@@ -168,6 +168,7 @@
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\ds\dict.cpp" />
     <ClCompile Include="src\libs\math\common.cpp" />
+    <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\libs\mesh_loader.cpp" />
     <ClCompile Include="src\libs\os\camera.cpp" />
     <ClCompile Include="src\libs\os\event.cpp" />
@@ -178,8 +179,6 @@
     <ClCompile Include="src\libs\spng.c" />
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\geometry_helper.cpp" />
-    <ClCompile Include="src\libs\math\matrix.cpp" />
-    <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\render\font.cpp" />
     <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_api.cpp" />
@@ -236,9 +235,6 @@
     <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_local.h" />
     <ClInclude Include="src\win32\win_types.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="tasks.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="scripts\tool.py" />

@@ -46,9 +46,9 @@ void Make_Entity_Window::reset_state()
 	entity_index = 0;
 	geometry_index = 0;
 	box;
-	position = { 0.0f, 0.0f, 0.0f };
-	direction = { 0.2f, -1.0f, 0.2f };
-	color = { 255.0, 255.0, 255.0 };
+	position = Vector3(0.0f, 0.0f, 0.0f);
+	direction = Vector3(0.2f, -1.0f, 0.2f);
+	color = Vector3(255.0, 255.0, 255.0);
 }
 
 void Make_Entity_Window::draw()
@@ -252,7 +252,7 @@ void Game_World_Window::draw()
 					if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
 						Line_Mesh AABB_mesh;
 						make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
-						render_world->line_meshes.add_mesh(name, &AABB_mesh, &mesh_idx);
+						render_world->add_mesh(name, &AABB_mesh, &mesh_idx);
 					}
 					free_string(name);
 

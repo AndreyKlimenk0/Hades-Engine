@@ -152,7 +152,7 @@ float slope(const Point_V2<T> &point1, const Point_V2<T> &point2)
 }
 
 template <typename T>
-float distance(Point_V2<T> *point1, Point_V2<T> *point2)
+float get_distance(Point_V2<T> *point1, Point_V2<T> *point2)
 {
 	return math::sqrt((float)math::pow2(point1->x - point2->x) + (float)math::pow2(point1->y - point2->y));
 }
