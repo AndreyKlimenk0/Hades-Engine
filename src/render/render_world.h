@@ -124,12 +124,20 @@ struct Shadow_Cascade_Info {
 	Matrix4 shadow_cascade_projection_matrix;
 };
 
+struct Render_Camera {
+	Entity_Id camera_id;
+	Matrix4 view_matrix;
+
+	void update(Camera *camera);
+	bool is_entity_camera_set();
+};
+
 struct Render_World {
 	u32 light_hash;
 	u32 cascaded_shadow_count = 0;
 
 	Frame_Info frame_info;
-	Camera camera;
+	Render_Camera render_camera;
 
 	Game_World *game_world = NULL;
 	Render_System *render_sys = NULL;
@@ -139,8 +147,8 @@ struct Render_World {
 	Array<Entity_Id> entity_ids; 	//temp code
 	
 	Array<Matrix4> world_matrices;
-	Array<Matrix4> light_view_matrices; // is the code necessary
-	Array<Matrix4> projection_light_matrices; // is the code necessary
+	Array<Matrix4> light_view_matrices; // is the code necessary ? 
+	Array<Matrix4> projection_light_matrices; // is the code necessary ?
 	Array<Matrix4> cascaded_view_projection_matrices;
 	
 	Array<Render_Entity> render_entities;
@@ -178,20 +186,22 @@ struct Render_World {
 	void update();
 	void update_lights();
 	void update_shadows();
-	void update_world_matrices();
+	void update_render_entities();
 	
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
+	void make_line_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Matrix4 *matrix);
 	bool make_shadow(Light *light);
 
 	void render();
+
+	void set_camera_for_rendering(Entity_Id camera_id);
 	
-	Render_Entity *find_render_entity(Entity_Id entity_id);
+	bool get_shadow_atls_viewport(Viewport *viewport);
 	bool add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx);
 	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx);
-
+	
+	Render_Entity *find_render_entity(Entity_Id entity_id);
 	Vector3 get_light_position(Vector3 light_direction);
-
-	bool get_shadow_atls_viewport(Viewport *viewport);
 };
 #endif

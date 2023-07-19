@@ -27,5 +27,6 @@ void make_grid_mesh(Grid *grid, Triangle_Mesh *mesh);
 void make_box_mesh(Box *box,  Triangle_Mesh *mesh);
 void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh);
 void make_AABB_mesh(Vector3 *min, Vector3 *max, Line_Mesh *mesh);
+void make_frustum_mesh(u32 width, u32 height, u32 depth, float fov, Line_Mesh *mesh);
 
 #endif

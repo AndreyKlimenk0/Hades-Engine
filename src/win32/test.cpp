@@ -8,6 +8,7 @@
 #include "../libs/os/path.h"
 #include "../libs/enum_helper.h"
 #include "../game/world.h"
+#include "../libs/os/input.h"
 
 
 static bool is_alpha(char c) {
@@ -399,4 +400,8 @@ void Map_Parser::report_error(Token_Type expecting_token, Token_Type actual_toke
 
 void test()
 {
+	const char *str1 = to_string(KEY_ENTER);
+	const char *str2 = to_string(KEY_A);
+	const char *str3 = to_string(KEY_Z);
+	int i = 0;
 }

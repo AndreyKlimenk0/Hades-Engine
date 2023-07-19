@@ -16,6 +16,15 @@ struct Matrix4 : XMFLOAT4X4 {
 		XMStoreFloat4x4(this, matrix);
 	}
 
+	Matrix4(float m00, float m01, float m02, float m03,
+			float m10, float m11, float m12, float m13,
+			float m20, float m21, float m22, float m23,
+			float m30, float m31, float m32, float m33) : 
+			XMFLOAT4X4(m00, m01, m02, m03, 
+					   m10, m11, m12, m13, 
+					   m20, m21, m22, m23,
+					   m30, m31, m32, m33) {}
+
 	void set_row_0(const Vector4 &vector);
 	void set_row_1(const Vector4 &vector);
 	void set_row_2(const Vector4 &vector);
@@ -134,9 +143,15 @@ Matrix4 make_translation_matrix(Vector3 *vector)
 	return XMMatrixTranslation(vector->x, vector->y, vector->z);
 }
 
-inline Matrix4 make_view_matrix(Vector3 *view_position, Vector3 *view_direction, Vector3 *up)
+inline Matrix4 make_view_matrix(Vector3 *view_position, Vector3 *view_direction, Vector3 *up = NULL)
 {
-	return XMMatrixLookAtLH(XMLoadFloat3(view_position), XMLoadFloat3(view_direction), XMLoadFloat3(up));
+	assert(view_position);
+	assert(view_direction);
+	if (up) {
+		return XMMatrixLookAtLH(XMLoadFloat3(view_position), XMLoadFloat3(view_direction), XMLoadFloat3(up));
+	} else {
+		return XMMatrixLookAtLH(XMLoadFloat3(view_position), XMLoadFloat3(view_direction), XMLoadFloat3(&Vector3::base_y));
+	}
 }
 
 inline Matrix4 make_perspective_matrix(float fov, float aspect_ratio, float near_plane, float far_plane)

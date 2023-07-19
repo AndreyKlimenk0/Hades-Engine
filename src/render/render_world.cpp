@@ -7,6 +7,15 @@
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
+inline Matrix4 get_world_matrix(Entity *entity) 
+{
+	if (entity->type == ENTITY_TYPE_CAMERA) {
+		Camera *camera = static_cast<Camera *>(entity);
+		return inverse(&make_view_matrix(&camera->position, &camera->target));
+	}
+	return make_translation_matrix(&entity->position);
+}
+
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index)
 {
 	for (u32 i = 0; i < render_entities->count; i++) {
@@ -68,6 +77,7 @@ bool Unified_Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mes
 
 void Render_World::init()
 {	
+	//@Note: Why don't pass just the engine pointer ?
 	game_world = Engine::get_game_world();
 	render_sys = Engine::get_render_system();
 
@@ -95,17 +105,26 @@ void Render_World::init()
 
 	Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
 	mesh_loader->load("mutant.fbx");
+	//mesh_loader->load("Scene_Demo2.fbx");
 
 	Mesh_Loader::Mesh_Instance *mesh_instance = NULL;
 	For(mesh_loader->mesh_instances, mesh_instance) {
 		Mesh_Idx mesh_idx;
 		if (add_mesh(mesh_instance->name, &mesh_instance->mesh, &mesh_idx)) {
-			for (u32 j = 0; j < mesh_instance->positions.count; j++) {
-				Entity_Id entity_id = game_world->make_entity(mesh_instance->positions[j]);
+			for (u32 j = 0; j < mesh_instance->transform_matrices.count; j++) {
+				Entity_Id entity_id = game_world->make_entity(Vector3(0.0f, 0.0f, 0.0f));
 				auto m = rotate_about_y(XMConvertToRadians(90.0f));
-				make_render_entity(entity_id, mesh_idx, &m);
+				make_render_entity(entity_id, mesh_idx, &mesh_instance->transform_matrices[j]);
 			}
 		}
+	}
+
+	//for (u32 i = 0; i < 10000; i++) {
+	//	Entity_Id entity_id = game_world->make_entity(Vector3(0.0f, 0.0f, 0.0f));
+	//}
+
+	if (!render_camera.is_entity_camera_set()) {
+		error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 }
 
@@ -164,33 +183,43 @@ void Render_World::init_render_passes()
 }
 
 void Render_World::update()
-{
-	if (!gui::were_events_handled()) {
-		Queue<Event> *events = get_event_queue();
-		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
-			Event *event = &node->item;
+{		
+	update_render_entities();
 
-			camera.handle_event(event);
-		}
-	}
-
-	frame_info.view_matrix = camera.get_view_matrix();
-	frame_info.perspective_matrix = render_sys->view.perspective_matrix;
-	frame_info.orthographic_matrix = render_sys->view.orthogonal_matrix;
-	frame_info.camera_position = camera.position;
-	frame_info.camera_direction = camera.target;
-	frame_info.near_plane = render_sys->view.near_plane;
-	frame_info.far_plane = render_sys->view.far_plane;
-
-	Game_World *game_world = Engine::get_game_world();
-	
 	if (light_hash != game_world->light_hash) {
 		light_hash = game_world->light_hash;
 		update_lights();
 	}
 
 	update_shadows();
+
+	Camera *camera = game_world->get_camera(render_camera.camera_id);
+	render_camera.update(camera);
+
+	frame_info.view_matrix = render_camera.view_matrix;
+	frame_info.perspective_matrix = render_sys->view.perspective_matrix;
+	frame_info.orthographic_matrix = render_sys->view.orthogonal_matrix;
+	frame_info.camera_position = camera->position;
+	frame_info.camera_direction = camera->target;
+	frame_info.near_plane = render_sys->view.near_plane;
+	frame_info.far_plane = render_sys->view.far_plane;
 }
+
+void Render_World::update_render_entities()
+{
+	Render_Entity *render_entity = NULL;
+	For (render_entities, render_entity) {
+		Entity *entity = game_world->get_entity(render_entity->entity_id);
+		world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
+	}
+
+	For (bounding_box_entities, render_entity) {
+		Entity *entity = game_world->get_entity(render_entity->entity_id);
+		world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
+	}
+	world_matrices_struct_buffer.update(&world_matrices);
+}
+
 
 void Render_World::update_lights()
 {
@@ -227,17 +256,28 @@ Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
 
 void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx)
 {
+	Matrix4 world_matrix = get_world_matrix(game_world->get_entity(entity_id));
+	
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
 	render_entity.mesh_idx = mesh_idx;
-
-	Entity *entity = game_world->get_entity(entity_id);
-
-	render_entity.world_matrix_idx = world_matrices.push(make_translation_matrix(&entity->position));
-
-	world_matrices_struct_buffer.update(&world_matrices);
-	
+	render_entity.world_matrix_idx = world_matrices.push(world_matrix);
 	render_entities.push(render_entity);
+	
+	world_matrices_struct_buffer.update(&world_matrices);
+}
+
+void Render_World::make_line_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx)
+{
+	Matrix4 world_matrix = get_world_matrix(game_world->get_entity(entity_id));
+
+	Render_Entity render_entity;
+	render_entity.entity_id = entity_id;
+	render_entity.mesh_idx = mesh_idx;
+	render_entity.world_matrix_idx = world_matrices.push(world_matrix);
+	bounding_box_entities.push(render_entity);
+	
+	world_matrices_struct_buffer.update(&world_matrices);
 }
 
 void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Matrix4 *matrix)
@@ -245,14 +285,10 @@ void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Ma
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
 	render_entity.mesh_idx = mesh_idx;
-
-	Entity *entity = game_world->get_entity(entity_id);
-
-	render_entity.world_matrix_idx = world_matrices.push(*matrix * make_translation_matrix(&entity->position));
+	render_entity.world_matrix_idx = world_matrices.push(*matrix);
+	render_entities.push(render_entity);
 
 	world_matrices_struct_buffer.update(&world_matrices);
-
-	render_entities.push(render_entity);
 }
 
 void Frustum_Box::Plane::setup(float plane_width, float plane_height, float z_position)
@@ -450,7 +486,6 @@ bool Render_World::make_shadow(Light *light)
 
 	String s = "tasdfasdg";
 	for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
-
 		Cascaded_Shadow cascaded_shadow;
 		cascaded_shadow.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
 		cascaded_shadow.light_direction = light->direction;
@@ -474,7 +509,7 @@ bool Render_World::make_shadow(Light *light)
 		new_render_entity.mesh_idx = mesh_idx;
 		cascaded_shadow.matrix_index = new_render_entity.world_matrix_idx;
 
-		bounding_box_entities.push(new_render_entity);
+		//bounding_box_entities.push(new_render_entity);
 
 		s.append("A");
 		
@@ -507,7 +542,7 @@ void Render_World::update_shadows()
 			i = 0;
 		}		
 		x = i++;
-		print("X = ", x);
+		//print("X = ", x);
 	}
 	for (u32 i = 0; i < cascaded_shadow_maps.count; i++) {
 		for (u32 j = 0; j < cascaded_shadow_maps[i].cascaded_shadows.count; j++) {
@@ -519,7 +554,7 @@ void Render_World::update_shadows()
 			//Matrix4 light_view_matrix = inverse(&camera.get_view_matrix());
 			//Matrix4 light_view_matrix = make_translation_matrix(&camera.position) * camera.rotation_matrix
 			//Matrix4 light_view_matrix = light_matrix;
-			Matrix4 light_view_matrix = (rotate_about_x(degress_to_radians(45.0f)) * rotate_about_y(degress_to_radians(90.0f))) * inverse(&camera.get_view_matrix());
+			Matrix4 light_view_matrix = (rotate_about_x(degress_to_radians(45)) * rotate_about_y(degress_to_radians(90))) * inverse(&render_camera.view_matrix);
 			//Matrix4 light_view_matrix = make_identity_matrix();
 			//Matrix4 light_view_matrix = XMMatrixInverse(NULL, camera.get_view_matrix());
 			cascaded_shadow_maps[i].cascaded_shadows[j].transform(&light_view_matrix);
@@ -549,6 +584,15 @@ bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh
 bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx)
 {
 	return line_meshes.add_mesh(mesh_name, mesh, mesh_idx);
+}
+
+void Render_World::set_camera_for_rendering(Entity_Id camera_id)
+{
+	if (camera_id.type != ENTITY_TYPE_CAMERA) {
+		print("Render_World::set_camera_for_rendering: Passed an camera id is not entity camera type.");
+		return;
+	}
+	render_camera.camera_id = camera_id;
 }
 
 bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
@@ -593,17 +637,6 @@ void Render_World::render()
 	}
 }
 
-void Render_World::update_world_matrices()
-{
-	world_matrices.count = 0;
-	
-	for (u32 index = 0; index < render_entities.count; index++) {
-		Entity *entity = game_world->get_entity(render_entities[index].entity_id);
-		world_matrices.push(make_translation_matrix(&entity->position));
-	}
-	world_matrices_struct_buffer.update(&world_matrices);
-}
-
 template<typename T>
 void Gpu_Struct_Buffer::allocate(u32 elements_count)
 {	
@@ -646,4 +679,17 @@ void Gpu_Struct_Buffer::free()
 	if (!gpu_buffer.is_empty()) {
 		gpu_buffer.free();
 	}
+}
+
+void Render_Camera::update(Camera *camera)
+{
+	view_matrix = make_view_matrix(&camera->position, &camera->target);
+}
+
+bool Render_Camera::is_entity_camera_set()
+{
+	if (camera_id.type == ENTITY_TYPE_CAMERA) {
+		return true;
+	}
+	return false;
 }

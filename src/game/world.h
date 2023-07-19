@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 
-#include "../libs/os/camera.h"
 #include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
@@ -15,13 +14,14 @@
 
 enum Entity_Type {
 	ENTITY_TYPE_UNKNOWN,
-	ENTITY_TYPE_COMMON,
+	ENTITY_TYPE_ENTITY,
 	ENTITY_TYPE_LIGHT,
 	ENTITY_TYPE_GEOMETRY,
+	ENTITY_TYPE_CAMERA
 };
 
 struct Entity_Id {
-	Entity_Id(); // @Note: may be better to delete this constructor
+	Entity_Id();
 	Entity_Id(Entity_Type type, u32 index);
 
 	Entity_Type type;
@@ -37,17 +37,20 @@ struct Entity_Id {
 };
 
 struct Entity {
-	Entity() { type = ENTITY_TYPE_COMMON; bounding_box_type = BOUNDING_BOX_TYPE_UNKNOWN; }
+	Entity() { type = ENTITY_TYPE_ENTITY; bounding_box_type = BOUNDING_BOX_TYPE_UNKNOWN; }
 	u32 idx;
 	Entity_Type type;
 	Vector3 position;
 	
+	//@Note: Why is this here ?
 	Boudning_Box_Type bounding_box_type;
 	AABB AABB_box;
 };
 
+
 inline Entity_Id get_entity_id(Entity *entity)
 {
+	//@Note: Should entity_id field be in the Entity struct ?
 	return Entity_Id(entity->type, entity->idx);
 }
 
@@ -85,10 +88,51 @@ struct Light : Entity {
 	Vector3 direction;
 };
 
+enum Entity_Command_Type {
+	ENTITY_COMMAND_NONE,
+	ENTITY_COMMAND_MOVE,
+	ENTITY_COMMAND_ROTATE,
+};
+
+struct Entity_Command {
+	Entity_Command() { type = ENTITY_COMMAND_NONE; }
+	Entity_Command_Type type;
+};
+
+enum Move_Direction {
+	MOVE_DIRECTION_FORWARD,
+	MOVE_DIRECTION_BACK,
+	MOVE_DIRECTION_LEFT,
+	MOVE_DIRECTION_RIGHT,
+	MOVE_DIRECTION_UP,
+	MOVE_DIRECTION_DOWN,
+};
+
+struct Entity_Command_Move : Entity_Command {
+	Entity_Command_Move() { type = ENTITY_COMMAND_MOVE;  }
+	Move_Direction move_direction;
+	float distance;
+};
+
+struct Entity_Command_Rotate : Entity_Command {
+	Entity_Command_Rotate() { type = ENTITY_COMMAND_ROTATE; }
+	float x_angle = 0.0f;
+	float y_angle = 0.0f;
+	float z_angle = 0.0f;
+};
+
+struct Camera : Entity {
+	Vector3 up;
+	Vector3 target;
+	
+	void handle_commands(Array<Entity_Command *> *entity_commands);
+};
+
 struct Game_World {
 	u32 light_hash = 0;
 
 	Array<Entity> entities;
+	Array<Camera> cameras;
 	Array<Light> lights;
 	Array<Geometry_Entity> geometry_entities;
 
@@ -100,8 +144,11 @@ struct Game_World {
 	void set_entity_AABB(Entity_Id entity_id, AABB *bounding_box);
 
 	Entity *get_entity(Entity_Id entity_id);
+	Camera *get_camera(Entity_Id entity_id);
 
 	Entity_Id make_entity(const Vector3 &position);
+
+	Entity_Id make_camera(const Vector3 &position, const Vector3 &target);
 
 	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
 	

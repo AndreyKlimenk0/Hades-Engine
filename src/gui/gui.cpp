@@ -963,7 +963,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 			if (was_click_by_left_mouse_button()) {
 				set_caret_position_on_mouse_click(rect, editing_value_rect);
 			}
-			if (event->is_key_down(VK_BACK)) {
+			if (event->is_key_down(KEY_BACKSPACE)) {
 				if (edit_field_state.caret_index_in_text > -1) {
 
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
@@ -976,7 +976,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					edit_field_state.caret_index_for_inserting -= 1;
 				}
 
-			} else if (event->is_key_down(VK_LEFT)) {
+			} else if (event->is_key_down(KEY_LEFT)) {
 				if (edit_field_state.caret_index_in_text > -1) {
 
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
@@ -989,7 +989,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					edit_field_state.caret_index_in_text -= 1;
 					edit_field_state.caret_index_for_inserting -= 1;
 				}
-			} else if (event->is_key_down(VK_RIGHT)) {
+			} else if (event->is_key_down(KEY_RIGHT)) {
 				if (edit_field_state.caret_index_in_text < (s32)edit_field_state.data.len) {
 
 					edit_field_state.caret_index_in_text += 1;
@@ -1002,19 +1002,19 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					}
 					edit_field_state.caret.x += (s32)char_width;
 				}
-			} else if (event->is_key_down(VK_HOME)) {
+			} else if (event->is_key_down(KEY_HOME)) {
 				Size_u32 size = font->get_text_size(edit_field_state.data);
 				edit_field_state.caret.x = editing_value_rect->x;
 				edit_field_state.caret_index_for_inserting = 0;
 				edit_field_state.caret_index_in_text = -1;
 
-			} else if (event->is_key_down(VK_END)) {
+			} else if (event->is_key_down(KEY_END)) {
 				Size_u32 size = font->get_text_size(edit_field_state.data);
 				edit_field_state.caret.x = editing_value_rect->x + size.width;
 				edit_field_state.caret_index_for_inserting = edit_field_state.data.len;
 				edit_field_state.caret_index_in_text = edit_field_state.data.len - 1;
 
-			} else if (event->is_key_down(VK_RETURN)) {
+			} else if (event->is_key_down(KEY_ENTER)) {
 				*update_editing_value = true;
 				*update_next_time_editing_value = true;
 			}
@@ -1921,7 +1921,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 		for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 			Event *event = &node->item;
 			if (event->type == EVENT_TYPE_MOUSE_WHEEL) {
-				mouse_delta = (event->first_value > 0) ? -window_theme.mouse_wheel_spped : window_theme.mouse_wheel_spped;
+				mouse_delta = (event->mouse_wheel_delta > 0) ? -window_theme.mouse_wheel_spped : window_theme.mouse_wheel_spped;
 				//@TODO: This is hard code ?
 				// close list box window.
 				active_list_box = 0;

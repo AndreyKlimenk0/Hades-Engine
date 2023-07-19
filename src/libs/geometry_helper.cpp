@@ -222,3 +222,64 @@ void make_AABB_mesh(Vector3 *min, Vector3 *max, Line_Mesh *mesh)
 	mesh->indices.push(3);
 	mesh->indices.push(3 + 4);
 }
+
+void make_frustum_mesh(u32 width, u32 height, u32 depth, float fov, Line_Mesh *mesh)
+{
+	float half_width = (float)width * 0.5f;
+	float half_height = (float)height * 0.5f;
+	
+	// Near plane
+	float w = 32.5f;
+	float h = 18.3f;
+	mesh->vertices.push(Vector3(w, h, 0.0f));
+	mesh->vertices.push(Vector3(w, -h, 0.0f));
+	mesh->vertices.push(Vector3(-w, -h, 0.0f));
+	mesh->vertices.push(Vector3(-w, h, 0.0f));
+
+	// Far plane
+	half_width *= fov;
+	half_height *= fov;
+	mesh->vertices.push(Vector3(half_width, half_height, (float)depth));
+	mesh->vertices.push(Vector3(half_width, -half_height, (float)depth));
+	mesh->vertices.push(Vector3(-half_width, -half_height, (float)depth));
+	mesh->vertices.push(Vector3(-half_width, half_height, (float)depth));
+
+	// Near plane
+	mesh->indices.push(0);
+	mesh->indices.push(1);
+	
+	mesh->indices.push(1);
+	mesh->indices.push(2);
+	
+	mesh->indices.push(2);
+	mesh->indices.push(3);
+
+	mesh->indices.push(3);
+	mesh->indices.push(0);
+
+	// Far plane
+	mesh->indices.push(0 + 4);
+	mesh->indices.push(1 + 4);
+	
+	mesh->indices.push(1 + 4);
+	mesh->indices.push(2 + 4);
+	
+	mesh->indices.push(2 + 4);
+	mesh->indices.push(3 + 4);
+
+	mesh->indices.push(3 + 4);
+	mesh->indices.push(0 + 4);
+
+	// Right, bottom, left, top sides
+	mesh->indices.push(0);
+	mesh->indices.push(0 + 4);
+
+	mesh->indices.push(1);
+	mesh->indices.push(1 + 4);
+
+	mesh->indices.push(2);
+	mesh->indices.push(2 + 4);
+
+	mesh->indices.push(3);
+	mesh->indices.push(3 + 4);
+}

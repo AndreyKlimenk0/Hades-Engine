@@ -170,7 +170,6 @@
     <ClCompile Include="src\libs\math\common.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\libs\mesh_loader.cpp" />
-    <ClCompile Include="src\libs\os\camera.cpp" />
     <ClCompile Include="src\libs\os\event.cpp" />
     <ClCompile Include="src\libs\os\file.cpp" />
     <ClCompile Include="src\libs\os\input.cpp" />
@@ -206,7 +205,6 @@
     <ClInclude Include="src\libs\ds\stack.h" />
     <ClInclude Include="src\libs\enum_helper.h" />
     <ClInclude Include="src\libs\mesh_loader.h" />
-    <ClInclude Include="src\libs\os\camera.h" />
     <ClInclude Include="src\libs\os\event.h" />
     <ClInclude Include="src\libs\os\file.h" />
     <ClInclude Include="src\libs\os\input.h" />
@@ -220,6 +218,7 @@
     <ClInclude Include="src\libs\math\common.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
+    <ClInclude Include="src\libs\utils.h" />
     <ClInclude Include="src\render\font.h" />
     <ClInclude Include="src\render\hlsl.h" />
     <ClInclude Include="src\render\model.h" />
