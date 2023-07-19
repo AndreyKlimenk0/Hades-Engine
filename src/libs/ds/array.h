@@ -76,6 +76,18 @@ inline void merge(Array<T> *dst, Array<T> *src)
 	dst->count += src->count;
 }
 
+template <typename T>
+inline void free_memory(Array<T *> *array)
+{
+	for (u32 i = 0; i < array->count; i++) {
+		T *ptr = array->get(i);
+		if (ptr) {
+			delete ptr;
+			ptr = NULL;
+		}
+	}
+}
+
 
 template <typename T>
 void Array<T>::reserve(u32 _count)

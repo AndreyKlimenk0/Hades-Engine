@@ -10,11 +10,10 @@
 #include "../game/world.h"
 #include "../libs/math/matrix.h"
 #include "../libs/math/common.h"
-#include "../win32/win_types.h"
-#include "../libs/os/camera.h"
-#include "../libs/ds/hash_table.h"
 #include "../libs/ds/array.h"
+#include "../libs/ds/hash_table.h"
 #include "../libs/ds/linked_list.h"
+#include "../win32/win_types.h"
 
 
 struct Engine;

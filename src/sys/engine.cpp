@@ -1,8 +1,10 @@
 #include "engine.h"
+#include "sys_local.h"
 #include "../gui/gui.h"
 #include "../win32/test.h"
 #include "../win32/win_time.h"
 #include "../libs/os/file.h"
+#include "../libs/os/event.h"
 
 #define DRAW_TEST_GUI 0
 
@@ -15,6 +17,8 @@ void Engine::init(Win32_Info *_win32_info)
 	
 	win32_info = *_win32_info;
 	init_os_path();
+
+	editor.init(this);
 
 	font_manager.init();
 
@@ -32,8 +36,6 @@ void Engine::init(Win32_Info *_win32_info)
 	if (file_exists(path)) {
 		init_from_map();
 	}
-
-	editor.init();
 
 	engine->is_initialized = true;
 }
@@ -77,6 +79,8 @@ void Engine::frame()
 
 	pump_events();
 	run_event_loop();
+
+	editor.handle_events();
 
 	render_world.update();
 
