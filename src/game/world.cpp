@@ -13,23 +13,46 @@ inline void init_entity(Entity *entity, Entity_Type type, const Vector3 &positio
 Entity *Game_World::get_entity(Entity_Id entity_id)
 {
 	switch (entity_id.type) {
-		case ENTITY_TYPE_COMMON:
+		case ENTITY_TYPE_ENTITY:
+			if (entities.count <= entity_id.index) {
+				assert(false);
+			}
 			return &entities[entity_id.index];
 		case ENTITY_TYPE_LIGHT:
 			return &lights[entity_id.index];
 		case ENTITY_TYPE_GEOMETRY:
 			return &geometry_entities[entity_id.index];
+		case ENTITY_TYPE_CAMERA:
+			return get_camera(entity_id);
 	}
+	return NULL;
+}
+
+Camera *Game_World::get_camera(Entity_Id entity_id)
+{
+	if ((entity_id.type == ENTITY_TYPE_CAMERA) && (entity_id.index < cameras.count)) {
+		return &cameras[entity_id.index];
+	}
+	print("Game_World::get_camera: Failed to get a camera. The entity id not valied.");
 	return NULL;
 }
 
 Entity_Id Game_World::make_entity(const Vector3 &position)
 {
 	Entity entity;
-	init_entity(&entity, ENTITY_TYPE_COMMON, position);
+	init_entity(&entity, ENTITY_TYPE_ENTITY, position);
 	entity.idx = entities.count;
 	entities.push(entity);
 	return get_entity_id(&entity);
+}
+
+Entity_Id Game_World::make_camera(const Vector3 &position, const Vector3 &target)
+{
+	Camera camera;
+	init_entity(&camera, ENTITY_TYPE_CAMERA, position);
+	camera.target = target;
+	camera.idx = cameras.push(camera);
+	return get_entity_id(&camera);
 }
 
 Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data)
@@ -152,9 +175,65 @@ void Game_World::set_entity_AABB(Entity_Id entity_id, AABB *bounding_box)
 
 Entity_Id::Entity_Id()
 {
+	type = ENTITY_TYPE_UNKNOWN;
 }
 
 Entity_Id::Entity_Id(Entity_Type type, u32 index) : type(type), index(index)
 {
 }
 
+void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
+{
+	Entity_Command *entity_command = NULL;
+
+	For((*entity_commands), entity_command) {
+		switch (entity_command->type) {
+			case ENTITY_COMMAND_MOVE: {
+				Entity_Command_Move *move_command = static_cast<Entity_Command_Move *>(entity_command);
+				switch (move_command->move_direction) {
+					case MOVE_DIRECTION_FORWARD: {
+						Vector3 target_direction = (target - position);
+						Vector3 move_distance = normalize(&target_direction) * move_command->distance;
+						position += move_distance;
+						target += move_distance;
+						break;
+					}
+					case MOVE_DIRECTION_BACK: {
+						Vector3 target_direction = (target - position);
+						Vector3 move_distance = normalize(&target_direction) * move_command->distance;
+						position -= move_distance;
+						target -= move_distance;
+						break;
+					}
+					case MOVE_DIRECTION_LEFT: {
+						break;
+					}
+					case MOVE_DIRECTION_RIGHT: {
+						break;
+					}
+					case MOVE_DIRECTION_UP: {
+						position.z += move_command->distance;
+						target.z += move_command->distance;
+						break;
+					}
+					case MOVE_DIRECTION_DOWN: {
+						position.z -= move_command->distance;
+						target.z -= move_command->distance;
+						break;
+					}
+				}
+				break;
+			}
+			case ENTITY_COMMAND_ROTATE: {
+				Entity_Command_Rotate *rotate_command = static_cast<Entity_Command_Rotate *>(entity_command);
+
+				Matrix4 rotation_matrix = rotate_about_x(rotate_command->y_angle) * rotate_about_y(rotate_command->x_angle);
+				//@Note: Why I just don't normalize target vector ?
+				Vector3 target_direction = target - position;
+				Vector3 normalized_target = normalize(&target_direction);
+				target = (normalized_target * rotation_matrix) + position;
+				break;
+			}
+		}
+	}
+}

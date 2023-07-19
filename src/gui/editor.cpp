@@ -1,6 +1,8 @@
 #include "editor.h"
 #include "../sys/engine.h"
 #include "../sys/sys_local.h"
+#include "../libs/os/event.h"
+#include "../libs/math/common.h"
 #include "../libs/geometry_helper.h"
 #include "../render/render_api.h"
 #include "../render/render_system.h"
@@ -9,8 +11,10 @@
 
 void Editor_Window::init(Engine *engine)
 {
+	editor = &engine->editor;
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
+	render_system = &engine->render_sys;
 }
 
 Make_Entity_Window::Make_Entity_Window()
@@ -30,7 +34,7 @@ void Make_Entity_Window::init(Engine *engine)
 	Editor_Window::init(engine);
 	
 	set_normal_enum_formatting();
-	entity_type_helper = MAKE_ENUM_HELPER(Entity_Type, ENTITY_TYPE_UNKNOWN, ENTITY_TYPE_COMMON, ENTITY_TYPE_LIGHT, ENTITY_TYPE_GEOMETRY);
+	entity_type_helper = MAKE_ENUM_HELPER(Entity_Type, ENTITY_TYPE_UNKNOWN, ENTITY_TYPE_ENTITY, ENTITY_TYPE_LIGHT, ENTITY_TYPE_GEOMETRY, ENTITY_TYPE_CAMERA);
 	entity_type_helper->get_string_enums(&entity_types);
 
 	light_type_helper = MAKE_ENUM_HELPER(Light_Type, SPOT_LIGHT_TYPE, POINT_LIGHT_TYPE, DIRECTIONAL_LIGHT_TYPE);
@@ -49,6 +53,9 @@ void Make_Entity_Window::reset_state()
 	position = Vector3(0.0f, 0.0f, 0.0f);
 	direction = Vector3(0.2f, -1.0f, 0.2f);
 	color = Vector3(255.0, 255.0, 255.0);
+
+	camera_fields.position = Vector3::zero;
+	camera_fields.target = Vector3::base_z;
 }
 
 void Make_Entity_Window::draw()
@@ -84,6 +91,9 @@ void Make_Entity_Window::draw()
 
 				Triangle_Mesh mesh;
 				make_box_mesh(&box, &mesh);
+				AABB aabb = make_AABB(&mesh);
+				//@Note: don't like set_entity_AABB
+				game_world->set_entity_AABB(entity_id, &aabb);
 
 				char *mesh_name = format("Box", box.width, box.height, box.depth);
 				Mesh_Idx mesh_idx;
@@ -113,6 +123,14 @@ void Make_Entity_Window::draw()
 				free_string(mesh_name);
 			}
 		}
+	} else if (type == ENTITY_TYPE_CAMERA) {
+		gui::edit_field("Position", &camera_fields.position);
+		gui::edit_field("Target", &camera_fields.target);
+
+		if (gui::button("Make")) {
+			Entity_Id entity_id = game_world->make_camera(camera_fields.position, camera_fields.target);
+			editor->editor_camera_ids.push(entity_id);
+		}
 	}
 }
 
@@ -124,12 +142,135 @@ Editor::~Editor()
 {
 }
 
-void Editor::init()
+void Editor::init(Engine *engine)
 {
-	Engine *engine = Engine::get_instance();
+	game_world = &engine->game_world;
+
 	make_entity_window.init(engine);
 	game_world_window.init(engine);
 	render_world_window.init(engine);
+
+	editor_camera_ids.push(game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f)));
+	editor_camera_id = editor_camera_ids.last_item();
+	engine->render_world.set_camera_for_rendering(editor_camera_ids.last_item());
+
+	key_command_bindings.init();
+	key_command_bindings.set("move_camera_forward", KEY_W);
+	key_command_bindings.set("move_camera_back",    KEY_S);
+	key_command_bindings.set("move_camera_right",   KEY_D);
+	key_command_bindings.set("move_camera_left",    KEY_A);
+	key_command_bindings.set("start_rotate_camera", KEY_LMOUSE);
+	key_command_bindings.set("end_rotate_camera",   KEY_LMOUSE, false);
+	
+	//Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
+	//mesh_loader->load("camera.fbx");
+}
+
+void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands)
+{
+	static s32 last_x = 0;
+	static s32 last_y = 0;
+	static bool rotate_camera = false;
+
+	for (u32 i = 0; i < editor_commands->count; i++) {
+		Editor_Command &editor_command = editor_commands->get(i);
+		String &command = editor_command.command;
+		void *additional_info = editor_command.additional_info;
+		
+		if (command == "move_camera_forward") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_FORWARD;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+		
+		} else if (command == "move_camera_back") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_BACK;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+		
+		} else if (command == "move_camera_left") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_LEFT;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+		
+		} else if (command == "move_camera_right") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_RIGHT;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+
+		} else if (command == "start_rotate_camera") {
+			rotate_camera = true;
+			last_x = Mouse_Input::x;
+			last_y = Mouse_Input::y;
+		
+		} else if (command == "end_rotate_camera") {
+			rotate_camera = false;
+
+		} else if (command == "rotate_camera") {
+			if (!rotate_camera) {
+				continue;
+			}
+			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
+			float x_angle = degress_to_radians(mouse_info->x - last_x);
+			float y_angle = -degress_to_radians(mouse_info->y - last_y);
+
+			Entity_Command_Rotate *rotate_command = new Entity_Command_Rotate;
+			rotate_command->x_angle = x_angle * editor_settings.camera_rotation_speed;
+			rotate_command->y_angle = y_angle * editor_settings.camera_rotation_speed;
+
+			entity_commands->push(rotate_command);
+
+			last_x = mouse_info->x;
+			last_y = mouse_info->y;
+		} else {
+			print("Editor::convert_editor_commands_to_entity_commands: For the editor command {} there is no a entity command.", command);
+		}
+	}
+}
+
+void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands)
+{
+	Queue<Event> *events = get_event_queue();
+	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+		Event *event = &node->item;
+
+		Editor_Command editor_command;
+		if (event->type == EVENT_TYPE_KEY) {
+			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.is_pressed, &editor_command.command);
+			if (result == COMMAND_FIND) {
+				editor_commands->push(editor_command);
+			
+			} else if (result == COMMAND_NOT_FOUND) {
+				print("Editor::convert_user_input_events_to_edtior_commands: There is no an editor key binding for {}.", to_string(event->key_info.key));
+			}
+		
+		} else if (event->type == EVENT_TYPE_MOUSE) {
+			Editor_Command rotate_camera_command;
+			editor_command.command = "rotate_camera";
+			editor_command.additional_info = (void *)&event->mouse_info;
+			editor_commands->push(editor_command);
+		}
+	}
+}
+
+void Editor::handle_events()
+{
+	if (!gui::were_events_handled()) {
+		//@Note: In the future here better to use linear allocator.
+		Array<Editor_Command> editor_commands;
+		Array<Entity_Command *> entity_commands;
+		
+		convert_user_input_events_to_edtior_commands(&editor_commands);
+		convert_editor_commands_to_entity_commands(&editor_commands, &entity_commands);
+		
+		Camera *camera = game_world->get_camera(editor_camera_id);
+		camera->handle_commands(&entity_commands);
+
+		free_memory(&entity_commands);
+	}
 }
 
 void Editor::render()
@@ -145,13 +286,6 @@ void Editor::render()
 			game_world_window.draw();
 		}
 
-		if (gui::add_tab("Camera")) {
-			Camera *camera = &Engine::get_render_world()->camera;
-			gui::text("Camera Type: Free");
-			gui::edit_field("Position", &camera->position);
-			gui::edit_field("Direction", &camera->target);
-		}
-
 		if (gui::add_tab("Render World")) {
 			render_world_window.draw();
 		}
@@ -163,6 +297,7 @@ void Editor::render()
 void Game_World_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
+
 	entity_index = 0;
 	window_width_delta = 20;
 	world_entities_height = 200;
@@ -187,22 +322,21 @@ void Game_World_Window::draw()
 	Size_s32 window_size = gui::get_window_size();
 	gui::set_next_window_size(window_size.width - window_width_delta, world_entities_height);
 	gui::set_next_theme(&world_entities_window_theme);
-	if (gui::begin_child("World Entities", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
+	if (gui::begin_child("World entities", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
 		buttons_theme.rect.width = window_size.width - window_width_delta;
 		gui::set_theme(&buttons_theme);
 
-		Game_World *game_world = Engine::get_game_world();
+		draw_entity_list("Camera", game_world->cameras.count, ENTITY_TYPE_CAMERA);
 		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
 		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
 
 		gui::reset_button_theme();
 		gui::end_child();
 	}
-
+	
 	gui::set_next_theme(&entity_info_window_theme);
 	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
-	if (gui::begin_child("Entity Info", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
-
+	if (gui::begin_child("Entity info", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
 		Entity *entity = NULL;
 		if (entity_type == ENTITY_TYPE_GEOMETRY) {
 			entity = &game_world->geometry_entities[entity_index];
@@ -233,7 +367,39 @@ void Game_World_Window::draw()
 					render_world->update_lights();
 				}
 			}
+		} else if (entity_type == ENTITY_TYPE_CAMERA) {
+			Camera *camera = &game_world->cameras[entity_index];
+			gui::edit_field("Position", &camera->position);
+			gui::edit_field("Target", &camera->target);
+
+			if (!draw_frustum_states.key_in_table(camera->idx)) {
+				draw_frustum_states[camera->idx] = false;
+			}
+			bool was_click = gui::radio_button("Draw frustum", &draw_frustum_states[camera->idx]);
+			Entity_Id entity_id = Entity_Id(entity_type, entity_index);
+			
+			if (was_click && draw_frustum_states[camera->idx] && !find_render_entity(&render_world->bounding_box_entities, entity_id)) {
+				char *name = format(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov);
+				String_Id string_id = fast_hash(name);
+
+				Mesh_Idx mesh_idx;
+				if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
+					Line_Mesh frustum_mesh;
+					make_frustum_mesh(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov, &frustum_mesh);
+					render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
+				}
+				free_string(name);
+				render_world->make_line_render_entity(entity_id, mesh_idx);
+
+			} else if (was_click && !draw_frustum_states[camera->idx]) {
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				u32 render_entity_index = 0;
+				if (find_render_entity(&render_world->bounding_box_entities, entity_id, &render_entity_index)) {
+					render_world->bounding_box_entities.remove(render_entity_index);
+				}
+			}
 		}
+		
 		if (entity && (entity->bounding_box_type != BOUNDING_BOX_TYPE_UNKNOWN) && (entity_type != DIRECTIONAL_LIGHT_TYPE) && (entity_type != ENTITY_TYPE_UNKNOWN)) {
 			if (!draw_AABB_states.key_in_table(entity->idx)) {
 				draw_AABB_states[entity->idx] = false;
@@ -370,7 +536,6 @@ void Render_World_Window::draw()
 	//		free_string(text);
 	//	}
 	//}
-	static bool debug_cascaded_shadows = false;
 	if (gui::radio_button("Debug cascaded shadows", &debug_cascaded_shadows)) {
 		if (render_world->render_passes.forward_light.initialized && render_world->render_passes.debug_cascade_shadows.initialized) {
 			if (debug_cascaded_shadows) {
@@ -391,5 +556,21 @@ void Render_World_Window::draw()
 		} else {
 			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes was not initialized.");
 		}
+	}
+
+    Array<String> strings;
+    for (u32 i = 0; i < game_world->cameras.count; i++) {
+ 		strings.push("Camera");
+    }
+    static u32 index = 0;
+	static u32 prev_index = 1;
+
+    gui::list_box(&strings, &index);
+
+	if (index != prev_index) {
+		Entity_Id camera_id = Entity_Id(ENTITY_TYPE_CAMERA, index);
+		editor->editor_camera_id = camera_id;
+		render_world->set_camera_for_rendering(camera_id);
+		prev_index = index;
 	}
 }
