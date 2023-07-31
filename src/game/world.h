@@ -40,6 +40,9 @@ struct Entity {
 	Entity() { type = ENTITY_TYPE_ENTITY; bounding_box_type = BOUNDING_BOX_TYPE_UNKNOWN; }
 	u32 idx;
 	Entity_Type type;
+	
+	Vector3 scaling;
+	Vector3 rotation;
 	Vector3 position;
 	
 	//@Note: Why is this here ?
@@ -147,6 +150,7 @@ struct Game_World {
 	Camera *get_camera(Entity_Id entity_id);
 
 	Entity_Id make_entity(const Vector3 &position);
+	Entity_Id make_entity(const Vector3 &scaling, const Vector3 &rotation, const Vector3 &position);
 
 	Entity_Id make_camera(const Vector3 &position, const Vector3 &target);
 

@@ -3,7 +3,6 @@
 
 #include "../game/world.h"
 #include "../libs/os/path.h"
-#include "../libs/mesh_loader.h"
 #include "../render/font.h"
 #include "../render/model.h"
 #include "../render/render_world.h"
@@ -37,7 +36,6 @@ struct Engine {
 	Font_Manager font_manager;
 	Editor editor;
 	Win32_Info win32_info;
-	Mesh_Loader mesh_loader;
 	
 	Game_World game_world;
 	Render_World render_world;
@@ -58,7 +56,6 @@ struct Engine {
 	static Render_World *get_render_world();
 	static Render_System *get_render_system();
 	static Font_Manager *get_font_manager();
-	static Mesh_Loader *get_mesh_loader();
 	static Win32_Info *get_win32_info();
 };
 

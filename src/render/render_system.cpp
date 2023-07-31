@@ -683,7 +683,7 @@ void Render_System::init(Engine *engine)
 	multisample_info.count = 4;
 	multisample_info.quality = 0;
 
-	view.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
+	view.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 100000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
 

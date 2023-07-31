@@ -214,8 +214,8 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 				continue;
 			}
 			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
-			float x_angle = degress_to_radians(mouse_info->x - last_x);
-			float y_angle = -degress_to_radians(mouse_info->y - last_y);
+			float x_angle = degrees_to_radians((float)(mouse_info->x - last_x));
+			float y_angle = -degrees_to_radians((float)(mouse_info->y - last_y));
 
 			Entity_Command_Rotate *rotate_command = new Entity_Command_Rotate;
 			rotate_command->x_angle = x_angle * editor_settings.camera_rotation_speed;

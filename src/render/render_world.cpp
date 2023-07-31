@@ -4,6 +4,7 @@
 #include "../gui/gui.h"
 #include "../sys/engine.h"
 #include "../collision/collision.h"
+#include "../libs/mesh_loader.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
@@ -13,7 +14,7 @@ inline Matrix4 get_world_matrix(Entity *entity)
 		Camera *camera = static_cast<Camera *>(entity);
 		return inverse(&make_view_matrix(&camera->position, &camera->target));
 	}
-	return make_translation_matrix(&entity->position);
+	return make_scale_matrix(&entity->scaling) * rotate(&entity->rotation) * make_translation_matrix(&entity->position);
 }
 
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index)
@@ -100,32 +101,46 @@ void Render_World::init()
 	render_sys->gpu_device.create_shader_resource_view(&default_texture);
 	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
 
-	//game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
 	game_world->make_direction_light(Vector3(1.0f, -1.0f, 0.0f), Vector3(1.0f, 1.0f, 1.0f));
+	//game_world->make_direction_light(Vector3(0.5f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f));
 
-	Mesh_Loader *mesh_loader = Engine::get_mesh_loader();
-	mesh_loader->load("mutant.fbx");
-	//mesh_loader->load("Scene_Demo2.fbx");
-
-	Mesh_Loader::Mesh_Instance *mesh_instance = NULL;
-	For(mesh_loader->mesh_instances, mesh_instance) {
-		Mesh_Idx mesh_idx;
-		if (add_mesh(mesh_instance->name, &mesh_instance->mesh, &mesh_idx)) {
-			for (u32 j = 0; j < mesh_instance->transform_matrices.count; j++) {
-				Entity_Id entity_id = game_world->make_entity(Vector3(0.0f, 0.0f, 0.0f));
-				auto m = rotate_about_y(XMConvertToRadians(90.0f));
-				make_render_entity(entity_id, mesh_idx, &mesh_instance->transform_matrices[j]);
-			}
-		}
-	}
-
-	//for (u32 i = 0; i < 10000; i++) {
-	//	Entity_Id entity_id = game_world->make_entity(Vector3(0.0f, 0.0f, 0.0f));
-	//}
+	//build_full_path_to_model_file("mutant.fbx", path);
+	//load_fbx_mesh(path, &mesh);
 
 	if (!render_camera.is_entity_camera_set()) {
 		error("Render Camera was not initialized. There is no a view for rendering.");
 	}
+}
+
+void Render_World::init_meshes()
+{
+	u32 entity_index = 0;
+	Array<Import_Mesh> meshes;
+	String path;
+	//build_full_path_to_model_file("camera.fbx", path);
+	//build_full_path_to_model_file("walls.fbx", path);
+	build_full_path_to_model_file("Scene_Demo3.fbx", path);
+	load_fbx_mesh(path, &meshes);
+	print("Start make render entities");
+	Import_Mesh *imported_mesh = NULL;
+	print("Mesh count = ", meshes.count);
+	For(meshes, imported_mesh) {
+		Mesh_Idx mesh_idx;
+		add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx);
+		Import_Mesh::Transform_Info *mesh_instance = NULL;
+		if (!imported_mesh->mesh_instances.is_empty()) {
+			For(imported_mesh->mesh_instances, mesh_instance) {
+				//print("Make entity with index = ", entity_index++);
+				Entity_Id entity_id = game_world->make_entity(mesh_instance->scaling, mesh_instance->rotation, mesh_instance->translation);
+				//Entity_Id entity_id = game_world->make_entity(mesh_instance->scaling, mesh_instance->rotation, Vector3(0.0f, 0.0f, 0.0f));
+				make_render_entity(entity_id, mesh_idx);
+			}
+		} else {
+			Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
+			make_render_entity(entity_id, mesh_idx);
+		}
+	}
+	print("End make render entities");
 }
 
 void Render_World::init_shadow_rendering()
@@ -280,17 +295,6 @@ void Render_World::make_line_render_entity(Entity_Id entity_id, Mesh_Idx mesh_id
 	world_matrices_struct_buffer.update(&world_matrices);
 }
 
-void Render_World::make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Matrix4 *matrix)
-{
-	Render_Entity render_entity;
-	render_entity.entity_id = entity_id;
-	render_entity.mesh_idx = mesh_idx;
-	render_entity.world_matrix_idx = world_matrices.push(*matrix);
-	render_entities.push(render_entity);
-
-	world_matrices_struct_buffer.update(&world_matrices);
-}
-
 void Frustum_Box::Plane::setup(float plane_width, float plane_height, float z_position)
 {
 	plane_width *= 0.5f;
@@ -334,7 +338,7 @@ void Frustum_Box::calculate_length()
 	len = (u32)math::max(get_length(&x), get_length(&y));
 }
 
-#include <limits.h>
+#include <limits>
 
 void Frustum_Box::update_min_max_values()
 {
@@ -554,8 +558,8 @@ void Render_World::update_shadows()
 			//Matrix4 light_view_matrix = inverse(&camera.get_view_matrix());
 			//Matrix4 light_view_matrix = make_translation_matrix(&camera.position) * camera.rotation_matrix
 			//Matrix4 light_view_matrix = light_matrix;
-			Matrix4 light_view_matrix = (rotate_about_x(degress_to_radians(45)) * rotate_about_y(degress_to_radians(90))) * inverse(&render_camera.view_matrix);
-			//Matrix4 light_view_matrix = make_identity_matrix();
+			//Matrix4 light_view_matrix = (rotate_about_x(degress_to_radians(45)) * rotate_about_y(degress_to_radians(90))) * inverse(&render_camera.view_matrix);
+			Matrix4 light_view_matrix = make_identity_matrix();
 			//Matrix4 light_view_matrix = XMMatrixInverse(NULL, camera.get_view_matrix());
 			cascaded_shadow_maps[i].cascaded_shadows[j].transform(&light_view_matrix);
 			world_matrices[cascaded_shadow->matrix_index] = light_view_matrix;
