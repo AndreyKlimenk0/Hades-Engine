@@ -216,7 +216,7 @@ void Hash_Table<_Key_, _Value_>::rehash()
 	hash_facotr2 = rand() % 256;
 	size = _size;
 	count = 0;
-	table_size = table_size *2;
+	table_size = table_size * 2;
 	max_loop = table_size;
 
 	Table_Entry **old_nodes = nodes.items;

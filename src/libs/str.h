@@ -2,12 +2,13 @@
 #define STRING_H
 
 #include "ds/array.h"
-#include "../libs/math/common.h"
+#include "math/common.h"
 #include "../win32/win_local.h"
 #include "../win32/win_types.h"
 
 struct Vector2;
 struct Vector3;
+struct Matrix4;
 struct String;
 typedef u32 String_Id;
 
@@ -46,6 +47,7 @@ char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
 char *to_string(Rect_f32 *rect);
 char *to_string(Point_s32 *point);
+char *to_string(Matrix4 *matrix);
 
 int is_format_string(const char *string);
 

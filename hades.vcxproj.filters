@@ -227,9 +227,6 @@
     <ClInclude Include="src\libs\mesh_loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\libs\utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="scripts\tool.py" />

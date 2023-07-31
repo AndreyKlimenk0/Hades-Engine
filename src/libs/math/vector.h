@@ -13,6 +13,7 @@ struct Vector2 : XMFLOAT2 {
 	Vector2(const Vector2 &other);
 	Vector2(float x, float y) : XMFLOAT2(x, y) {}
 
+	static Vector2 one;
 	static Vector2 zero;
 	static Vector2 base_x;
 	static Vector2 base_y;
@@ -53,6 +54,7 @@ struct Vector3 : XMFLOAT3 {
 	Vector3(const Vector3 &other);
 	Vector3(float x, float y, float z) : XMFLOAT3(x, y, z) {}
 
+	static Vector3 one;
 	static Vector3 zero;
 	static Vector3 base_x;
 	static Vector3 base_y;

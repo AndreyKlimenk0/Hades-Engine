@@ -5,8 +5,10 @@
 #include <ctype.h>
 
 #include "str.h"
-#include "../sys/sys_local.h"
+#include "math/common.h"
 #include "math/vector.h"
+#include "math/matrix.h"
+#include "../sys/sys_local.h"
 
 
 #define MAX_DIGITS_IN_INT 12
@@ -107,10 +109,14 @@ static void format_string(const char *format_string, Array<char> *formatting_str
 			continue;
 		}
 		if (*f_string == '{') {
+			if (!strcmp(vars->items[var_index], "")) {
+				var_index++;
+				f_string++;
+				continue;
+			}
 			COPY_STRING_TO_CHAR_ARRAY(vars->items[var_index], formatting_string);
 			var_index++;
-		}
-		else {
+		} else {
 			formatting_string->push(*f_string);
 		}
 		f_string++;
@@ -323,6 +329,15 @@ char *to_string(Point_s32 *point)
 	return format("Point_s32({}, {})", point->x, point->y);
 }
 
+char *to_string(Matrix4 *matrix)
+{
+	return format("Matrix4({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} {}, {}, {}, {})", 
+		matrix->_11, matrix->_12, matrix->_13, matrix->_14,
+		matrix->_21, matrix->_22, matrix->_23, matrix->_24,
+		matrix->_31, matrix->_32, matrix->_33, matrix->_34,
+		matrix->_41, matrix->_42, matrix->_43, matrix->_44);
+}
+
 // Check the string has format braces if it has return number of braces 
 // if not return 0 and it means that this string is not format string 
 int is_format_string(const char *string)
@@ -371,7 +386,6 @@ String::String(float number)
 String::String(const char *string)
 {
 	assert(string != NULL);
-	assert(string[0] != '\0');
 
 	if (string == data) {
 		return;
@@ -405,7 +419,6 @@ String::String(const String &other)
 String &String::operator=(const char *string)
 {
 	assert(string != NULL);
-	assert(string[0] != '\0');
 
 	if (string == data) {
 		return *this;

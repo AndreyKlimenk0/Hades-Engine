@@ -9,14 +9,14 @@
 const float PI = 3.1415926535f;
 const float RADIANS_360 = 6.28319f;
 
-inline s32 radians_to_degrees(float radians)
+inline float radians_to_degrees(float radians)
 {
-	return (s32)(radians * (180.0f / PI));
+	return radians * (180.0f / PI);
 }
 
-inline float degress_to_radians(s32 degrees)
+inline float degrees_to_radians(float degrees)
 {
-	return ((float)degrees * PI) / 180.0f;
+	return (degrees * PI) / 180.0f;
 }
 
 #ifdef max

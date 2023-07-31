@@ -38,13 +38,15 @@ inline Vector4 transform(Vector4 *vector, Matrix4 *transform_matrix);
 inline Matrix4 rotate_about_x(float angle);
 inline Matrix4 rotate_about_y(float angle);
 inline Matrix4 rotate_about_z(float angle);
+inline Matrix4 rotate(Vector3 *xyz_angles);
 inline Matrix4 rotate(float x_angle, float y_angle, float z_angle);
 
 inline Matrix4 inverse(Matrix4 *matrix);
 inline Matrix4 transpose(Matrix4 *matrix);
 
 inline Matrix4 make_identity_matrix();
-inline Matrix4 make_scale_matrix(float value);
+inline Matrix4 make_scale_matrix(Vector3 *scaling);
+inline Matrix4 make_scale_matrix(float scale_x, float scale_y, float scale_z);
 inline Matrix4 make_translation_matrix(Vector2 *vector);
 inline Matrix4 make_translation_matrix(Vector3 *vector);
 
@@ -105,6 +107,11 @@ inline Matrix4 rotate_about_z(float angle)
 	return XMMatrixRotationZ(angle);
 }
 
+inline Matrix4 rotate(Vector3 *xyz_angles)
+{
+	return rotate(xyz_angles->x, xyz_angles->y, xyz_angles->z);
+}
+
 inline Matrix4 rotate(float x_angle, float y_angle, float z_angle)
 {
 	return XMMatrixRotationRollPitchYaw(x_angle, y_angle, z_angle);
@@ -127,9 +134,14 @@ inline Matrix4 make_identity_matrix()
 	return XMMatrixIdentity();
 }
 
-inline Matrix4 make_scale_matrix(float value)
+inline Matrix4 make_scale_matrix(Vector3 *scale_xyz)
 {
-	return XMMatrixScaling(value, value, value);
+	return make_scale_matrix(scale_xyz->x, scale_xyz->y, scale_xyz->z);
+}
+
+inline Matrix4 make_scale_matrix(float scale_x, float scale_y, float scale_z)
+{
+	return XMMatrixScaling(scale_x, scale_y, scale_z);
 }
 
 inline Matrix4 make_translation_matrix(Vector2 *vector)

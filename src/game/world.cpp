@@ -7,6 +7,16 @@
 inline void init_entity(Entity *entity, Entity_Type type, const Vector3 &position)
 {
 	entity->type = type;
+	entity->scaling = Vector3(1.0f, 1.0f, 1.0f);
+	entity->rotation = Vector3(0.0f, 0.0f, 0.0f);
+	entity->position = position;
+}
+
+inline void init_entity(Entity *entity, Entity_Type type, const Vector3 &scaling, const Vector3 &rotation, const Vector3 position)
+{
+	entity->type = type;
+	entity->scaling = scaling;
+	entity->rotation = rotation;
 	entity->position = position;
 }
 
@@ -41,6 +51,15 @@ Entity_Id Game_World::make_entity(const Vector3 &position)
 {
 	Entity entity;
 	init_entity(&entity, ENTITY_TYPE_ENTITY, position);
+	entity.idx = entities.count;
+	entities.push(entity);
+	return get_entity_id(&entity);
+}
+
+Entity_Id Game_World::make_entity(const Vector3 &scaling, const Vector3 &rotation, const Vector3 &position)
+{
+	Entity entity;
+	init_entity(&entity, ENTITY_TYPE_ENTITY, scaling, rotation, position);
 	entity.idx = entities.count;
 	entities.push(entity);
 	return get_entity_id(&entity);

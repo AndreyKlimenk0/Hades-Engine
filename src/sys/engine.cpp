@@ -5,6 +5,7 @@
 #include "../win32/win_time.h"
 #include "../libs/os/file.h"
 #include "../libs/os/event.h"
+#include "../libs/mesh_loader.h"
 
 #define DRAW_TEST_GUI 0
 
@@ -17,6 +18,7 @@ void Engine::init(Win32_Info *_win32_info)
 	
 	win32_info = *_win32_info;
 	init_os_path();
+	init_fbx_lib();
 
 	editor.init(this);
 
@@ -36,6 +38,7 @@ void Engine::init(Win32_Info *_win32_info)
 	if (file_exists(path)) {
 		init_from_map();
 	}
+	render_world.init_meshes();
 
 	engine->is_initialized = true;
 }
@@ -112,6 +115,7 @@ void Engine::shutdown()
 {
 	gui::shutdown();
 	save_to_file();
+	shutdown_fbx_lib();
 }
 
 bool Engine::initialized()
@@ -155,11 +159,6 @@ Render_System *Engine::get_render_system()
 Font_Manager *Engine::get_font_manager()
 {
 	return &engine->font_manager;
-}
-
-Mesh_Loader *Engine::get_mesh_loader()
-{
-	return &engine->mesh_loader;
 }
 
 void Engine::Performance_Displayer::init(Engine *_engine)

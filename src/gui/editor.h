@@ -102,7 +102,7 @@ struct Editor {
 	Game_World *game_world = NULL;
 	
 	struct Settings {
-		float camera_speed = 10.0f;
+		float camera_speed = 100.0f;
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 

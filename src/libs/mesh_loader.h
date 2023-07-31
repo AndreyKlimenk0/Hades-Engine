@@ -1,37 +1,31 @@
 #ifndef MESH_LOADER_H
 #define MESH_LOADER_H
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
-#include "str.h"
-#include "os/path.h"
 #include "ds/array.h"
 #include "ds/hash_table.h"
-#include "../render/model.h"
-#include "../sys/sys_local.h"
-#include "../win32/win_types.h"
+#include "math/vector.h"
 #include "math/matrix.h"
+#include "../render/model.h"
+#include "../render/render_helpers.h"
 
+typedef Hash_Table<String, Array<Texture_File_Info>> Mesh_Texture_Names_Table;
 
-struct Mesh_Loader {
-	struct Mesh_Instance {
-		String name;
-		Array<Matrix4> transform_matrices;
-		Triangle_Mesh mesh;
+struct Import_Mesh {
+	struct Transform_Info {
+		Vector3 scaling;
+		Vector3 rotation; // stores angles in radians
+		Vector3 translation;
 	};
-
-	Array<Mesh_Instance *> mesh_instances;
-	Hash_Table<String, Mesh_Instance *> mesh_instance_table;
-
-	Assimp::Importer importer;
-	aiScene* scene;
-
-	bool load(const char *file_name, bool print_info = false);
-	void process_nodes(aiNode *node, aiMatrix4x4 parent_transform_matrix);
-	void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh);
-	void clear();
+	Array<Transform_Info> mesh_instances;
+	Triangle_Mesh mesh;
+	
+	Import_Mesh() = default;
+	Import_Mesh(const Import_Mesh &other);
+	Import_Mesh &operator=(const Import_Mesh &other);
 };
 
+void init_fbx_lib();
+void shutdown_fbx_lib();
+bool load_fbx_mesh(const char *full_path_to_file, Array<Import_Mesh> *imported_meshes, bool display_info = false);
+bool load_fbx_mesh_texture_info(const char *full_path_file);
 #endif
