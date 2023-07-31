@@ -180,6 +180,7 @@ struct Render_World {
 	} render_passes;
 
 	void init();
+	void init_meshes();
 	void init_shadow_rendering();
 	void init_render_passes();
 
@@ -190,7 +191,6 @@ struct Render_World {
 	
 	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
 	void make_line_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx);
-	void make_render_entity(Entity_Id entity_id, Mesh_Idx mesh_idx, Matrix4 *matrix);
 	bool make_shadow(Light *light);
 
 	void render();

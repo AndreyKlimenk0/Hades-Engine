@@ -8,6 +8,8 @@
 
 template <typename T>
 struct Mesh {
+	String name;
+
 	Array<T> vertices;
 	Array<u32> indices;
 };
