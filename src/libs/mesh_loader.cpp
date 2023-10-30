@@ -27,19 +27,9 @@ static inline Vector3 to_vector3(FbxDouble3 *fbx_vector)
 	return Vector3((float)fbx_vector->mData[0], (float)fbx_vector->mData[1], (float)fbx_vector->mData[2]);
 }
 
-static inline Matrix4 to_matrix4(FbxMatrix *fbx_matrix)
+static inline Vector3 to_vector3(FbxVector4 *fbx_vector)
 {
-	FbxDouble4 row0 = fbx_matrix->GetRow(0);
-	FbxDouble4 row1 = fbx_matrix->GetRow(1);
-	FbxDouble4 row2 = fbx_matrix->GetRow(2);
-	FbxDouble4 row3 = fbx_matrix->GetRow(3);
-
-	Matrix4 matrix;
-	matrix.set_row_0(Vector4((float)row0.mData[0], (float)row0.mData[1], (float)row0.mData[2], (float)row0.mData[3]));
-	matrix.set_row_1(Vector4((float)row1.mData[0], (float)row1.mData[1], (float)row1.mData[2], (float)row1.mData[3]));
-	matrix.set_row_2(Vector4((float)row2.mData[0], (float)row2.mData[1], (float)row2.mData[2], (float)row2.mData[3]));
-	matrix.set_row_3(Vector4((float)row3.mData[0], (float)row3.mData[1], (float)row3.mData[2], (float)row3.mData[3]));
-	return matrix;
+	return Vector3((float)fbx_vector->mData[0], (float)fbx_vector->mData[1], (float)fbx_vector->mData[2]);
 }
 
 static FbxScene *load_scene_from_fbx_file(const char *full_path_to_file)
@@ -304,54 +294,27 @@ static Vector2 get_fbx_mesh_uv(FbxMesh *fbx_mesh, s32 vertex_index, s32 uv_index
 	return uv;
 }
 
-static inline void convert_to_y_up_axis(FbxAxisSystem::EUpVector up_axis, u32 *x_axis_index, u32 *y_axis_index, u32 *z_axis_index)
+static bool process_mesh(FbxNode *fbx_node, Triangle_Mesh *mesh)
 {
-	if (up_axis == FbxAxisSystem::EUpVector::eYAxis) {
-		*x_axis_index = 0;
-		*y_axis_index = 1;
-		*z_axis_index = 2;
-	} else if (up_axis == FbxAxisSystem::EUpVector::eZAxis) {
-		*x_axis_index = 1;
-		*y_axis_index = 2;
-		*z_axis_index = 0;
-	} else if (up_axis == FbxAxisSystem::EUpVector::eXAxis) {
-		print("convert_to_y_up_axis: Unable to convert from x up axis to y up axis.");
-	}
-}
+	assert(fbx_node);
+	assert(mesh);
 
-static void process_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
-{
-	assert(fbx_mesh);
+	FbxMesh *fbx_mesh = fbx_node->GetMesh();
 
-	FbxVector4 *vertices = fbx_mesh->GetControlPoints();
-	if (!vertices) {
-		print("process_mesh: A mesh can not be processed. There are no vertices in {}.", fbx_mesh->GetName());
-		return;
-	}
 	mesh->name = fbx_mesh->GetName();
-	mesh->vertices.clear();
-	mesh->indices.clear();
 	mesh->vertices.reserve(fbx_mesh->GetControlPointsCount());
 	mesh->indices.resize(fbx_mesh->GetPolygonCount() * TRIANGLE_POLYGON);
 
-	u32 x_axis_index = 0;
-	u32 y_axis_index = 1;
-	u32 z_axis_index = 2;
-
-	if (fbx_scene_up_axis != FbxAxisSystem::EUpVector::eYAxis) {
-		convert_to_y_up_axis(fbx_scene_up_axis, &x_axis_index, &y_axis_index, &z_axis_index);
-	}
-
 	for (s32 i = 0; i < fbx_mesh->GetControlPointsCount(); i++) {
 		FbxVector4 fbx_vector = fbx_mesh->GetControlPointAt(i);
-		mesh->vertices[i].position.x = (float)fbx_vector.mData[x_axis_index];
-		mesh->vertices[i].position.y = (float)fbx_vector.mData[y_axis_index];
-		mesh->vertices[i].position.z = (float)fbx_vector.mData[z_axis_index];
+		mesh->vertices[i].position.x = (float)fbx_vector.mData[0];
+		mesh->vertices[i].position.y = (float)fbx_vector.mData[1];
+		mesh->vertices[i].position.z = (float)fbx_vector.mData[2];
 	}
 
 	s32 vertex_count = 0;
 	for (s32 polygon_index = 0; polygon_index < fbx_mesh->GetPolygonCount(); polygon_index++) {
-		s32 index_buffer[32];
+		s32 index_buffer[255];
 		s32 polygon_size = fbx_mesh->GetPolygonSize(polygon_index);
 		for (s32 i = 0; i < polygon_size; i++) {
 			s32 vertex_index = fbx_mesh->GetPolygonVertex(polygon_index, i);
@@ -360,50 +323,68 @@ static void process_mesh(FbxMesh *fbx_mesh, Triangle_Mesh *mesh)
 			index_buffer[i] = vertex_index;
 			vertex_count++;
 		}
-		switch (polygon_size) {
-			case TRIANGLE_POLYGON: {
-				mesh->indices.push(index_buffer[0]);
-				mesh->indices.push(index_buffer[1]);
-				mesh->indices.push(index_buffer[2]);
-				break;
-			}
-			case QUAD_POLYGON: {
-				//Convert to triangle polygon
-				mesh->indices.push(index_buffer[0]);
-				mesh->indices.push(index_buffer[1]);
-				mesh->indices.push(index_buffer[2]);
 
-				mesh->indices.push(index_buffer[2]);
-				mesh->indices.push(index_buffer[3]);
-				mesh->indices.push(index_buffer[0]);
-				break;
-			}
-			default: {
-				print("process_mesh: Unable to process a polygon. The polygon has unsupported size {}.", polygon_size);
-			}
+		if (polygon_size == TRIANGLE_POLYGON) {
+			mesh->indices.push(index_buffer[0]);
+			mesh->indices.push(index_buffer[1]);
+			mesh->indices.push(index_buffer[2]);
+		} else if (polygon_size == QUAD_POLYGON) {
+			mesh->indices.push(index_buffer[0]);
+			mesh->indices.push(index_buffer[1]);
+			mesh->indices.push(index_buffer[2]);
+
+			mesh->indices.push(index_buffer[2]);
+			mesh->indices.push(index_buffer[3]);
+			mesh->indices.push(index_buffer[0]);
+		} else {
+			return false;
 		}
 	}
+	return true;
 }
 
-static void process_node(FbxNode *fbx_node, Array<Import_Mesh> *imported_meshes, Hash_Table<String, u32> *mesh_cache)
+static void process_node(FbxNode *fbx_node, Array<Import_Mesh> *imported_meshes, Hash_Table<String, s32> *mesh_cache)
 {
 	assert(fbx_node);
-	
-	FbxMesh *fbx_mesh = fbx_node->GetMesh();
-	if (fbx_node->GetNodeAttribute() && (fbx_node->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eMesh) && fbx_mesh) {
-		u32 mesh_index = 0;
-		const char *fbx_mesh_name = fbx_mesh->GetName();
-		if (!mesh_cache->get(fbx_mesh_name, &mesh_index)) {
-			mesh_index = imported_meshes->push(Import_Mesh());
-			mesh_cache->set(fbx_mesh_name, mesh_index);
-			process_mesh(fbx_mesh, &imported_meshes->last_item().mesh);
+	assert(imported_meshes);
+	assert(mesh_cache);
+
+	for (s32 i = 0; i < fbx_node->GetNodeAttributeCount(); i++) {
+		if ((fbx_node->GetNodeAttributeByIndex(i)->GetAttributeType() == FbxNodeAttribute::eMesh) && fbx_node->GetMesh()) {
+			s32 mesh_index = 0;
+			const char *mesh_name = fbx_node->GetMesh()->GetName();
+			if (!mesh_cache->get(mesh_name, &mesh_index)) {
+				Import_Mesh import_mesh;
+				if (!process_mesh(fbx_node, &import_mesh.mesh)) {
+					print("process_mesh: Mesh {} has polygon with unsupported size. The mesh will be triangulated.", mesh_name);
+
+					FbxGeometryConverter geometry_converter = FbxGeometryConverter(fbx_manager);
+					FbxNodeAttribute *current_node_attribute = fbx_node->GetNodeAttribute();
+					FbxNodeAttribute *new_node_attribute = geometry_converter.Triangulate(current_node_attribute, true);
+
+					if (!new_node_attribute || (new_node_attribute == current_node_attribute)) {
+						print("process_mesh: Unable to triangulate the fbx mesh.");
+						mesh_index = -1;
+						continue;
+					}
+					fbx_node->AddNodeAttribute(new_node_attribute);
+					process_mesh(fbx_node, &import_mesh.mesh);
+				}
+				mesh_index = (s32)imported_meshes->push(import_mesh);
+				mesh_cache->set(mesh_name, mesh_index);
+			} else {
+				if (mesh_index > -1) {
+					FbxAMatrix transform_matrix = fbx_node->EvaluateGlobalTransform();
+
+					Import_Mesh::Transform_Info transform_info;
+					transform_info.scaling = to_vector3(&transform_matrix.GetS());
+					transform_info.rotation = degrees_to_radians(&to_vector3(&transform_matrix.GetR()));
+					transform_info.translation = to_vector3(&transform_matrix.GetT());
+
+					imported_meshes->get((u32)mesh_index).mesh_instances.push(transform_info);
+				}
+			}
 		}
-		Import_Mesh::Transform_Info transform_info;
-		transform_info.scaling = to_vector3(&fbx_node->LclScaling.Get());
-		transform_info.rotation = degrees_to_radians(&to_vector3(&fbx_node->LclRotation.Get()));
-		transform_info.translation = to_vector3(&fbx_node->LclTranslation.Get());
-		
-		imported_meshes->get(mesh_index).mesh_instances.push(transform_info);
 	}
 
 	s32 count = fbx_node->GetChildCount();
@@ -415,10 +396,11 @@ static void process_node(FbxNode *fbx_node, Array<Import_Mesh> *imported_meshes,
 static bool process_scene_nodes(FbxScene *fbx_scene, Array<Import_Mesh> *imported_meshes)
 {
 	assert(fbx_scene);
+	assert(imported_meshes);
 
 	FbxNode *fbx_node = fbx_scene->GetRootNode();
 	if (fbx_node) {
-		Hash_Table<String, u32> mesh_cache;
+		Hash_Table<String, s32> mesh_cache;
 		for (s32 i = 0; i < fbx_node->GetChildCount(); i++) {
 			process_node(fbx_node->GetChild(i), imported_meshes, &mesh_cache);
 		}
@@ -470,9 +452,8 @@ bool load_fbx_mesh(const char *full_path_to_file, Array<Import_Mesh> *imported_m
 		return false;
 	}
 
-	FbxAxisSystem scene_axis_system = fbx_scene->GetGlobalSettings().GetAxisSystem();
-	if (scene_axis_system != FbxAxisSystem::DirectX) {
-		FbxAxisSystem::DirectX.ConvertScene(fbx_scene);
+	if (fbx_scene->GetGlobalSettings().GetAxisSystem() != FbxAxisSystem::DirectX) {
+		FbxAxisSystem::DirectX.DeepConvertScene(fbx_scene);
 	}
 
 	if (display_info) {

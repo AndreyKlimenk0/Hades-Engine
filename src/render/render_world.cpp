@@ -117,9 +117,10 @@ void Render_World::init_meshes()
 	u32 entity_index = 0;
 	Array<Import_Mesh> meshes;
 	String path;
-	//build_full_path_to_model_file("camera.fbx", path);
+	//build_full_path_to_model_file("mutant.fbx", path);
 	//build_full_path_to_model_file("walls.fbx", path);
-	build_full_path_to_model_file("Scene_Demo3.fbx", path);
+	build_full_path_to_model_file("scene_demo_unreal.fbx", path);
+	//build_full_path_to_model_file("camera.fbx", path);
 	load_fbx_mesh(path, &meshes);
 	print("Start make render entities");
 	Import_Mesh *imported_mesh = NULL;
