@@ -32,7 +32,7 @@ void Engine::init(Win32_Info *_win32_info)
 
 	game_world.init();
 	render_world.init();
-	
+
 	String path;
 	build_full_path_to_map_file("temp_map.bmap", path);
 	if (file_exists(path)) {
@@ -69,7 +69,7 @@ void Engine::init_from_map()
 			print("Engine::init_from_file: Unknown geometry type.");
 		}
 		render_world.add_mesh(mesh_name, &triangle_mesh, &mesh_idx);
-		render_world.make_render_entity(get_entity_id(geometry_entity), mesh_idx);
+		render_world.add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, get_entity_id(geometry_entity), mesh_idx);
 		
 		free_string(mesh_name);
 	}
@@ -84,6 +84,7 @@ void Engine::frame()
 	run_event_loop();
 
 	editor.handle_events();
+	editor.update();
 
 	render_world.update();
 

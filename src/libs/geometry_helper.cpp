@@ -1,3 +1,4 @@
+#include "math/common.h"
 #include "math/vector.h"
 #include "geometry_helper.h"
 #include "../render/vertex.h"
@@ -223,26 +224,26 @@ void make_AABB_mesh(Vector3 *min, Vector3 *max, Line_Mesh *mesh)
 	mesh->indices.push(3 + 4);
 }
 
-void make_frustum_mesh(u32 width, u32 height, u32 depth, float fov, Line_Mesh *mesh)
+void make_frustum_mesh(float fov, float aspect_ratio, float near_plane, float far_plane, Line_Mesh *mesh)
 {
-	float half_width = (float)width * 0.5f;
-	float half_height = (float)height * 0.5f;
-	
 	// Near plane
-	float w = 32.5f;
-	float h = 18.3f;
+	//@Note: Hard code
+	//float w = 32.5f;
+	//float h = 18.3f;
+	float w = 0.0f;
+	float h = 0.0f;
 	mesh->vertices.push(Vector3(w, h, 0.0f));
 	mesh->vertices.push(Vector3(w, -h, 0.0f));
 	mesh->vertices.push(Vector3(-w, -h, 0.0f));
 	mesh->vertices.push(Vector3(-w, h, 0.0f));
 
-	// Far plane
-	half_width *= fov;
-	half_height *= fov;
-	mesh->vertices.push(Vector3(half_width, half_height, (float)depth));
-	mesh->vertices.push(Vector3(half_width, -half_height, (float)depth));
-	mesh->vertices.push(Vector3(-half_width, -half_height, (float)depth));
-	mesh->vertices.push(Vector3(-half_width, half_height, (float)depth));
+	float frustum_depth = far_plane - near_plane;
+	float half_height = frustum_depth * math::tan(fov * 0.5f);
+	float half_width = half_height * aspect_ratio;
+	mesh->vertices.push(Vector3(half_width, half_height, frustum_depth));
+	mesh->vertices.push(Vector3(half_width, -half_height, frustum_depth));
+	mesh->vertices.push(Vector3(-half_width, -half_height, frustum_depth));
+	mesh->vertices.push(Vector3(-half_width, half_height, frustum_depth));
 
 	// Near plane
 	mesh->indices.push(0);

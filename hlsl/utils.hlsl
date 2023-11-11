@@ -22,11 +22,12 @@ float4 normalize_rgb(int r, int g, int b)
 	return float4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
 }
 
-float2 calculate_ndc_coordinates(float4 transformed_vertex_position)
+float3 calculate_ndc_coordinates(float4 transformed_vertex_position)
 {
-    float2 ndc_coordinates;
+    float3 ndc_coordinates;
     ndc_coordinates.x = 0.5f + ((transformed_vertex_position.x / transformed_vertex_position.w) * 0.5f);
 	ndc_coordinates.y = 0.5f - ((transformed_vertex_position.y / transformed_vertex_position.w) * 0.5f);
+	ndc_coordinates.z = 0.5f - ((transformed_vertex_position.z / transformed_vertex_position.w) * 0.5f);
 	return ndc_coordinates;
 }
 

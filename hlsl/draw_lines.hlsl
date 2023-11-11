@@ -3,17 +3,17 @@
 
 #include "globals.hlsl"
 
-StructuredBuffer<float3> unified_vertices : register(t0);
-StructuredBuffer<uint> unified_indices : register(t1);
-StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
-StructuredBuffer<float4x4> world_matrices : register(t3);
-
-cbuffer Pass_Data : register(b2) {
+cbuffer Pass_Data : register(b0) {
 	uint mesh_id;
 	uint world_matrix_id;
 	uint pad11;
 	uint pad22;
 }
+
+StructuredBuffer<float3> unified_vertices : register(t0);
+StructuredBuffer<uint> unified_indices : register(t1);
+StructuredBuffer<Mesh_Instance> mesh_instances : register(t2);
+StructuredBuffer<float4x4> world_matrices : register(t3);
 
 float4 vs_main(uint vertex_id : SV_VertexID) : SV_POSITION
 {

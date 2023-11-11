@@ -17,8 +17,8 @@ Vertex_XUV_Out vs_main(Vertex_XUV_In vertex)
 
 float4 ps_main(Vertex_XUV_Out pixel) : SV_TARGET
 {
-	float4 color = primitive_color * texture_map.Sample(sampler_anisotropic, pixel.uv);
-	float alpha = texture_map.Sample(sampler_anisotropic, pixel.uv).a;
+	float4 color = primitive_color * texture_map.Sample(point_sampling, pixel.uv);
+	float alpha = texture_map.Sample(point_sampling, pixel.uv).a;
 	if (color.w < 1.0f) {
 		alpha = color.w;
 	}

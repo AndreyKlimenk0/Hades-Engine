@@ -8,7 +8,6 @@
 #include "../render/model.h"
 #include "../render/render_helpers.h"
 
-typedef Hash_Table<String, Array<Texture_File_Info>> Mesh_Texture_Names_Table;
 
 struct Import_Mesh {
 	struct Transform_Info {
