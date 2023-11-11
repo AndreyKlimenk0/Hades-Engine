@@ -6,21 +6,6 @@
 #include "../libs/math/vector.h"
 #include "../win32/win_types.h"
 
-enum Texture_Type {
-	TEXTURE_TYPE_NORMAL,
-	TEXTURE_TYPE_DIFFUSE,
-	TEXTURE_TYPE_SPECULAR,
-};
-
-struct Texture_File_Info {
-	Texture_Type type;
-	String name;
-};
-
-typedef Vector2 Pad2;
-typedef Vector3 Pad3;
-typedef Vector4 Pad4;
-
 bool is_valid_texture(Texture2D *texture2d, String *error_message = NULL);
 void fill_texture_with_value(void *value, Texture2D *texture2d);
 

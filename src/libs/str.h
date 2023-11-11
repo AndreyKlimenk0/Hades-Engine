@@ -2,7 +2,9 @@
 #define STRING_H
 
 #include "ds/array.h"
-#include "math/common.h"
+#include "../libs/math/common.h"
+#include "../libs/math/vector.h"
+#include "../libs/math/matrix.h"
 #include "../win32/win_local.h"
 #include "../win32/win_types.h"
 
@@ -43,6 +45,8 @@ char *to_string(String &string);
 char *to_string(String *string);
 char *to_string(Vector2 *vector);
 char *to_string(Vector3 *vector);
+char *to_string(Vector4 *vector);
+char *to_string(Matrix4 *matrix);
 char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
 char *to_string(Rect_f32 *rect);

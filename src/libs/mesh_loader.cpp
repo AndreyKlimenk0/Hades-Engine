@@ -370,6 +370,7 @@ static void process_node(FbxNode *fbx_node, Array<Import_Mesh> *imported_meshes,
 					fbx_node->AddNodeAttribute(new_node_attribute);
 					process_mesh(fbx_node, &import_mesh.mesh);
 				}
+				FbxAMatrix transform_matrix = fbx_node->EvaluateGlobalTransform();
 				mesh_index = (s32)imported_meshes->push(import_mesh);
 				mesh_cache->set(mesh_name, mesh_index);
 			} else {

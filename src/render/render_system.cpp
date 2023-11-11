@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "hlsl.h"
 #include "font.h"
 #include "render_pass.h"
 #include "render_system.h"
@@ -473,11 +474,6 @@ Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_m
 	return primitive;
 }
 
-struct CB_Render_2d_Info {
-	Matrix4 position_orthographic_matrix;
-	Vector4 color;
-};
-
 Render_2D::~Render_2D()
 {
 	Primitive_2D *primitive = NULL;
@@ -588,7 +584,7 @@ void Render_2D::render_frame()
 		vertex_buffer_desc.data_count = total_vertex_count;
 		vertex_buffer_desc.data_size = sizeof(Vertex_X2UV);
 		vertex_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
-		vertex_buffer_desc.bind_flags = BIND_SHADER_RESOURCE;
+		vertex_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
 		vertex_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
 		
 		gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
@@ -597,7 +593,7 @@ void Render_2D::render_frame()
 		index_buffer_desc.data_count = total_index_count;
 		index_buffer_desc.data_size = sizeof(u32);
 		index_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
-		index_buffer_desc.bind_flags = BIND_SHADER_RESOURCE;
+		index_buffer_desc.bind_flags = BIND_INDEX_BUFFER;
 		index_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
 		
 		gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
@@ -626,7 +622,7 @@ void Render_2D::render_frame()
 
 	render_pipeline->set_vertex_shader(render_2d);
 	render_pipeline->set_pixel_shader(render_2d);
-	render_pipeline->set_pixel_shader_sampler(render_system->render_pipeline_states.default_sampler_state);
+	render_pipeline->set_pixel_shader_sampler(POINT_SAMPLING_REGISTER, render_system->render_pipeline_states.point_sampling);
 
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
@@ -647,8 +643,8 @@ void Render_2D::render_frame()
 			cb_render_info.color = render_primitive->color.value;
 			
 			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
-			render_pipeline->set_vertex_shader_resource(0, constant_buffer);
-			render_pipeline->set_pixel_shader_resource(0, constant_buffer);
+			render_pipeline->set_vertex_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
+			render_pipeline->set_pixel_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
 			if (render_primitive->texture->get_pitch()) {
 				render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->srv);
 			}
@@ -662,10 +658,10 @@ void Render_2D::render_frame()
 	render_pipeline->reset_depth_stencil_state();
 }
 
-void View::update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane)
+void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
 {
 	ratio = (float)width / (float)height;
-	fov = XMConvertToRadians(45);
+	fov = degrees_to_radians(60.0f);
 	near_plane = _near_plane;
 	far_plane = _far_plane;
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
@@ -683,7 +679,7 @@ void Render_System::init(Engine *engine)
 	multisample_info.count = 4;
 	multisample_info.quality = 0;
 
-	view.update_projection_matries(Render_System::screen_width, Render_System::screen_height, 1.0f, 100000.0f);
+	view.update_projection_matries(60, Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
 
@@ -725,7 +721,7 @@ void Render_System::resize(u32 window_width, u32 window_height)
 	Render_System::screen_height = window_height;
 
 	if (Engine::initialized()) {
-		view.update_projection_matries(window_width, window_height, 1.0f, 10000.0f);
+		view.update_projection_matries(60, window_width, window_height, 1.0f, 100000.0f);
 		assert(false);
 		//swap_chain.resize(window_width, window_height);
 	}
@@ -835,7 +831,6 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	Rasterizer_Desc default_rasterizer_state_desc;
 	gpu_device->create_rasterizer_state(&default_rasterizer_state_desc, &default_rasterizer_state);
 
-
 	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
 	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &default_depth_stencil_state);
 
@@ -845,5 +840,55 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	Blend_State_Desc blend_state_desc;
 	gpu_device->create_blend_state(&blend_state_desc, &default_blend_state);
 
-	gpu_device->create_sampler(&default_sampler_state);
+	Blend_State_Desc transparent_blend_state_desc;
+	transparent_blend_state_desc.enable = true;
+	transparent_blend_state_desc.src = BLEND_SRC_ALPHA;
+	transparent_blend_state_desc.dest = BLEND_INV_SRC_ALPHA;
+	transparent_blend_state_desc.blend_op = BLEND_OP_ADD;
+	transparent_blend_state_desc.src_alpha = BLEND_ONE;
+	transparent_blend_state_desc.dest_alpha = BLEND_ZERO;
+	transparent_blend_state_desc.blend_op_alpha = BLEND_OP_ADD;
+
+	gpu_device->create_blend_state(&transparent_blend_state_desc, &transparent_blend_state);
+
+	D3D11_SAMPLER_DESC point_sampling_desc;
+	ZeroMemory(&point_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
+	point_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	point_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	point_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	point_sampling_desc.AddressW =D3D11_TEXTURE_ADDRESS_CLAMP;
+	point_sampling_desc.MinLOD = -FLT_MAX;
+	point_sampling_desc.MaxLOD = FLT_MAX;
+	point_sampling_desc.MipLODBias = 0.0f;
+	point_sampling_desc.MaxAnisotropy = 1;
+	point_sampling_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	point_sampling_desc.BorderColor[0] = 1.0f;
+	point_sampling_desc.BorderColor[0] = 1.0f;
+	point_sampling_desc.BorderColor[0] = 1.0f;
+	point_sampling_desc.BorderColor[0] = 1.0f;
+
+	HR(gpu_device->dx11_device.Get()->CreateSamplerState(&point_sampling_desc, point_sampling.ReleaseAndGetAddressOf()));
+
+	D3D11_SAMPLER_DESC linear_sampling_desc;
+	ZeroMemory(&linear_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
+	linear_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	linear_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	linear_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	linear_sampling_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	linear_sampling_desc.MinLOD = -FLT_MAX;
+	linear_sampling_desc.MaxLOD = FLT_MAX;
+	linear_sampling_desc.MipLODBias = 0.0f;
+	linear_sampling_desc.MaxAnisotropy = 1;
+	linear_sampling_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	linear_sampling_desc.BorderColor[0] = 1.0f;
+	linear_sampling_desc.BorderColor[0] = 1.0f;
+	linear_sampling_desc.BorderColor[0] = 1.0f;
+	linear_sampling_desc.BorderColor[0] = 1.0f;
+
+	HR(gpu_device->dx11_device.Get()->CreateSamplerState(&linear_sampling_desc, linear_sampling.ReleaseAndGetAddressOf()));
+}
+
+Render_Pipeline_States *get_pipelines_states()
+{
+	return &Engine::get_render_system()->render_pipeline_states;
 }

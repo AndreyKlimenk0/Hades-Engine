@@ -82,7 +82,15 @@ struct Game_World_Window : Editor_Window {
 
 struct Render_World_Window : Editor_Window {
 	bool debug_cascaded_shadows = false;
+	bool show_cascaded_shadow_frustums = false;
 	Texture2D shadow_display_texture;
+	
+	struct Draw_Cascade_Info {
+		Entity_Id entity_id;
+		u32 cascaded_shadow_map_index;
+		u32 shadow_cascade_index;
+	};
+	Array<Draw_Cascade_Info> frustum_entity_ids;
 
 	void init(Engine *engine);
 	void update();
@@ -102,13 +110,12 @@ struct Editor {
 	Game_World *game_world = NULL;
 	
 	struct Settings {
-		float camera_speed = 100.0f;
+		float camera_speed = 5.0f;
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 
 	Key_Binding key_command_bindings;
 	Entity_Id editor_camera_id;
-	Array<Entity_Id> editor_camera_ids;
 
 	Make_Entity_Window make_entity_window;
 	Game_World_Window game_world_window;
@@ -116,6 +123,7 @@ struct Editor {
 
 	void init(Engine *engine);
 	void handle_events();
+	void update();
 	void render();
 	
 	void convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands);

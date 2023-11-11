@@ -27,6 +27,8 @@ struct Render_Pass {
 };
 
 struct Forwar_Light_Pass : Render_Pass {
+	Gpu_Buffer shadow_atlas_info_cbuffer;
+
 	bool init(void *_render_context, Render_System *render_sys);
 	bool setup_pipeline_state(Render_System *render_system);
 	void render(Render_Pipeline *render_pipeline);
@@ -51,16 +53,15 @@ struct Shadows_Pass : Render_Pass {
 };
 
 struct Debug_Cascade_Shadows_Pass : Render_Pass {
-	struct Shadow_Atlas_Info {
-		u32 shadow_atlas_width;
-		u32 shadow_atlas_height;
-		u32 shadow_cascade_width;
-		u32 shadow_cascade_height;
-		u32 cascaded_shadow_count;
-		Pad3 pad;
-	};
-
 	Gpu_Buffer shadow_atlas_info_cbuffer;
+
+	bool init(void *_render_context, Render_System *render_sys);
+	bool setup_pipeline_state(Render_System *render_system);
+	void render(Render_Pipeline *render_pipeline);
+};
+
+struct Draw_Vertices_Pass : Render_Pass {
+	Gpu_Buffer mesh_color_cbuffer;
 
 	bool init(void *_render_context, Render_System *render_sys);
 	bool setup_pipeline_state(Render_System *render_system);

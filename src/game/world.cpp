@@ -163,6 +163,7 @@ void Game_World::init_from_file()
 	file.read(&entities);
 	file.read(&lights);
 	file.read(&geometry_entities);
+	file.read(&cameras);
 }
 
 void Game_World::save_to_file()
@@ -179,6 +180,7 @@ void Game_World::save_to_file()
 	file.write(&entities);
 	file.write(&lights);
 	file.write(&geometry_entities);
+	file.write(&cameras);
 }
 
 void Game_World::set_entity_AABB(Entity_Id entity_id, AABB *bounding_box)
