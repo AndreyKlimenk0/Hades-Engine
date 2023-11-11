@@ -60,7 +60,7 @@ def get_output_file_name(shader_name: str, shader_type : Shader_Type) -> str:
 class Shader_File:
     def __init__(self, name, *args):
         self.name : str = name
-        self.shader_types: [Shader_Type] = [ item for item in args if isinstance(item, Shader_Type)]
+        self.shader_types: [Shader_Type] = [item for item in args if isinstance(item, Shader_Type)]
 
 
 
@@ -73,7 +73,8 @@ shader_files = [
     Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("draw_lines.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
-    Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
+    Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
 ]
 
 

@@ -4,7 +4,7 @@
 #include "globals.hlsl"
 #include "vertex.hlsl"
 
-cbuffer Pass_Data : register(b3) {
+cbuffer Pass_Data : register(b0) {
 	uint mesh_idx;
 	uint world_matrix_idx;
 	uint depth_view_projection_matrix_idx;

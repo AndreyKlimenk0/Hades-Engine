@@ -87,12 +87,24 @@ enum Resource_Usage {
 
 template <typename T>
 struct Gpu_Resource {
-	Gpu_Resource() {}
+	Gpu_Resource();
+	~Gpu_Resource();
 	ComPtr<T> resource;
 
 	void release();
 	T *get();
 };
+
+template<typename T>
+inline Gpu_Resource<T>::Gpu_Resource() 
+{
+}
+
+template<typename T>
+inline Gpu_Resource<T>::~Gpu_Resource()
+{
+	release();
+}
 
 template<typename T>
 inline void Gpu_Resource<T>::release()
@@ -259,8 +271,9 @@ struct Multisample_Info {
 };
 
 struct Texture_Desc {
-	u32 width;
-	u32 height; 
+	u32 width = 0;
+	u32 height = 0;
+	u32 depth = 0;
 	u32 array_count = 1;
 	u32 mip_levels = 0;
 	u32 cpu_access = 0;
@@ -271,27 +284,33 @@ struct Texture_Desc {
 	Multisample_Info multisampling;
 };
 
-struct Texture2D : Gpu_Resource<ID3D11Texture2D> {
-	Texture2D() {}
+struct Gpu_Resource_Views {
+	Gpu_Resource_Views();
+	~Gpu_Resource_Views();
 
-	u32 mip_levels = 0;
-	u32 width = 0;
-	u32 height = 0;
-	u32 format_size = 0;
-	Resource_Usage usage;
-	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
-	Multisample_Info multisampling;
-
-	String name;
-	
 	Shader_Resource_View srv;
 	Depth_Stencil_View dsv;
 	Render_Target_View rtv;
 	Unordered_Access_View uav;
 
+	void release();
+};
+
+struct Texture2D : Gpu_Resource<ID3D11Texture2D>, Gpu_Resource_Views {
+	Texture2D();
+	~Texture2D();
+
+	//@Note Can I remove some useless methods from the code ?
 	bool is_multisampled();
 	u32 get_pitch();
 	u32 get_size();
+	void release();
+};
+
+struct Texture3D : Gpu_Resource<ID3D11Texture3D>, Gpu_Resource_Views {
+	Texture3D();
+	~Texture3D();
+
 	void release();
 };
 
@@ -309,16 +328,16 @@ struct Gpu_Device {
 	void create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer);
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
 
-	void create_sampler(Sampler_State *sampler_state);
 	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture);
+	void create_texture_3d(Texture_Desc *texture_desc, Texture3D *texture);
 
 	void create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state);
 	void create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state);
 	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
 
 	void create_shader_resource_view(Gpu_Buffer *gpu_buffer);
-	
 	void create_shader_resource_view(Texture2D *texture);
+	void create_shader_resource_view(Texture3D *texture);
 	void create_depth_stencil_view(Texture2D *texture);
 	void create_render_target_view(Texture2D *texture);
 	void create_unordered_access_view(Texture2D *texture);
@@ -401,7 +420,7 @@ struct Render_Pipeline {
 	void set_vertex_shader_resource(u32 gpu_register, const Shader_Resource_View &shader_resource);
 	void set_vertex_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);
 	
-	void set_pixel_shader_sampler(const Sampler_State &sampler_state);
+	void set_pixel_shader_sampler(u32 sampler_register, const Sampler_State &sampler_state);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);

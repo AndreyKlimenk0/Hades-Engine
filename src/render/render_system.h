@@ -140,7 +140,7 @@ struct View {
 	Matrix4 perspective_matrix;
 	Matrix4 orthogonal_matrix;
 
-	void update_projection_matries(u32 width, u32 height, float _near_plane, float _far_plane);
+	void update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane);
 };
 
 struct Projection_Plane {
@@ -164,10 +164,14 @@ struct Render_Pipeline_States {
 	Depth_Stencil_State default_depth_stencil_state;
 	Depth_Stencil_State disabled_depth_test;
 	Blend_State default_blend_state;
-	Sampler_State default_sampler_state;
+	Blend_State transparent_blend_state;
+	Sampler_State point_sampling;
+	Sampler_State linear_sampling;
 
 	void init(Gpu_Device *gpu_device);
 };
+
+Render_Pipeline_States *get_pipelines_states();
 
 struct Render_System {
 	static u32 screen_width;
