@@ -100,7 +100,14 @@ void Make_Entity_Window::draw()
 				Mesh_Idx mesh_idx;
 				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx);
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 
 				free_string(mesh_name);
 			}
@@ -119,7 +126,14 @@ void Make_Entity_Window::draw()
 				Mesh_Idx mesh_idx;
 				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx);
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 
 				free_string(mesh_name);
 			}
@@ -403,7 +417,15 @@ void Game_World_Window::draw()
 					render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
 				}
 				free_string(name);
-				render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, entity_id, mesh_idx, (void *)&Color::Red);
+
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+				render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, entity_id, mesh_idx, &render_entity_textures, (void *)&Color::Red);
 
 			} else if (was_click && !draw_frustum_states[camera->idx]) {
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

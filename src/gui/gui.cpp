@@ -1159,13 +1159,7 @@ void Gui_Manager::image(Texture2D *texture, s32 width, s32 height)
 {
 	assert(texture);
 
-	Rect_s32 image_rect = { 0, 0, (s32)texture->width, (s32)texture->height };
-	if (width > 0) {
-		image_rect.width = width;
-	}
-	if (height > 0) {
-		image_rect.height = height;
-	}
+	Rect_s32 image_rect = { 0, 0, width, height };
 
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &image_rect);

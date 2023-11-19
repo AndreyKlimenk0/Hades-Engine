@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -72,51 +73,6 @@ Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_
 	return NULL;
 }
 
-
-template<typename T>
-void Gpu_Struct_Buffer::allocate(u32 elements_count)
-{
-	Gpu_Buffer_Desc desc;
-	desc.usage = RESOURCE_USAGE_DYNAMIC;
-	desc.data = NULL;
-	desc.data_size = sizeof(T);
-	desc.struct_size = sizeof(T);
-	desc.data_count = elements_count;
-	desc.bind_flags = BIND_SHADER_RESOURCE;
-	desc.cpu_access = CPU_ACCESS_WRITE;
-	desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
-
-	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
-	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
-	gpu_device->create_shader_resource_view(&gpu_buffer);
-}
-
-template<typename T>
-void Gpu_Struct_Buffer::update(Array<T> *array)
-{
-	if (array->count == 0) {
-		return;
-	}
-
-	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
-
-	if (array->count > gpu_buffer.data_count) {
-		free();
-		allocate<T>(array->count);
-	}
-
-	T *buffer = (T *)render_pipeline->map(gpu_buffer);
-	memcpy((void *)buffer, (void *)array->items, sizeof(T) * array->count);
-	render_pipeline->unmap(gpu_buffer);
-}
-
-void Gpu_Struct_Buffer::free()
-{
-	if (!gpu_buffer.is_empty()) {
-		gpu_buffer.free();
-	}
-}
-
 void Render_Camera::update(Camera *camera, Camera *camera_info)
 {
 	view_matrix = make_look_at_matrix(camera->position, camera->target);
@@ -162,7 +118,7 @@ void Unified_Mesh_Storate<T>::allocate_gpu_memory()
 {
 	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
 	index_struct_buffer.allocate<u32>(100000);
-	vertex_struct_buffer.allocate<Vertex_XNUV>(100000);
+	vertex_struct_buffer.allocate<Vertex_PNTUV>(100000);
 }
 
 template<typename T>
@@ -242,6 +198,8 @@ void Render_World::init()
 	init_shadow_rendering();
 
 	init_render_passes();
+
+	render_entity_texture_storage.init(&render_sys->gpu_device, &render_sys->render_pipeline);
 	
 	render_sys->gpu_device.create_constant_buffer(sizeof(CB_Frame_Info), &frame_info_cbuffer);
 
@@ -249,14 +207,14 @@ void Render_World::init()
 	world_matrices_struct_buffer.allocate<Matrix4>(100);
 	cascaded_view_projection_matrices_sb.allocate<Matrix4>(100);
 	
-	Texture_Desc texture_desc;
+	Texture2D_Desc texture_desc;
 	texture_desc.width = 200;
 	texture_desc.height = 200;
 	texture_desc.mip_levels = 1;
 	
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
-	render_sys->gpu_device.create_shader_resource_view(&default_texture);
-	fill_texture_with_value((void *)&DEFAULT_MESH_COLOR, &default_texture);
+	render_sys->gpu_device.create_shader_resource_view(&texture_desc, &default_texture);
+	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
 
 	if (!render_camera.is_entity_camera_set()) {
 		error("Render Camera was not initialized. There is no a view for rendering.");
@@ -276,10 +234,19 @@ void Render_World::init_meshes()
 	//build_full_path_to_model_file("walls.fbx", path);
 	//build_full_path_to_model_file("scene_demo_unreal.fbx", path);
 	//build_full_path_to_model_file("camera.fbx", path);
-	load_fbx_mesh(path, &meshes);
+	load_fbx_mesh(path, &meshes, true);
 	print("Start make render entities");
 	Import_Mesh *imported_mesh = NULL;
 	print("Mesh count = ", meshes.count);
+
+
+	Render_Entity_Textures render_entity_textures;
+	render_entity_textures.ambient_texture_idx = render_entity_texture_storage.black_texture_idx;
+	render_entity_textures.normal_texture_idx = render_entity_texture_storage.green_texture_idx;
+	render_entity_textures.diffuse_texture_idx = render_entity_texture_storage.default_texture_idx;
+	render_entity_textures.specular_texture_idx = render_entity_texture_storage.white_texture_idx;
+	render_entity_textures.displacement_texture_idx = render_entity_texture_storage.white_texture_idx;
+
 	For(meshes, imported_mesh) {
 		Mesh_Idx mesh_idx;
 		if (add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
@@ -287,18 +254,18 @@ void Render_World::init_meshes()
 				for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
 					Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
 					Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
-					add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx);
+					add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 				}
 			} else {
 				Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
-				add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx);
+				add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 			}
 		}
 	}
 }
 void Render_World::init_shadow_rendering()
 {	
-	Texture_Desc depth_stencil_desc;
+	Texture2D_Desc depth_stencil_desc;
 	depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
@@ -307,10 +274,10 @@ void Render_World::init_shadow_rendering()
 	depth_stencil_desc.multisampling = { 1, 0 };
 
 	render_sys->gpu_device.create_texture_2d(&depth_stencil_desc, &shadow_atlas);
-	render_sys->gpu_device.create_depth_stencil_view(&shadow_atlas);
-	render_sys->gpu_device.create_shader_resource_view(&shadow_atlas);
+	render_sys->gpu_device.create_depth_stencil_view(&depth_stencil_desc, &shadow_atlas);
+	render_sys->gpu_device.create_shader_resource_view(&depth_stencil_desc, &shadow_atlas);
 
-	fill_texture_with_value((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
+	fill_texture((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
 
 	shadow_cascade_ranges.push({ 1, 15 });
 	shadow_cascade_ranges.push({ 15, 150 });
@@ -324,7 +291,7 @@ void Render_World::init_shadow_rendering()
 	Array<Vector2> jittered_samples;
 	make_jittering_sampling_filters(jittering_tile_size, jittering_filter_size, jittered_samples);
 
-	Texture_Desc jittering_samples_texture_desc;
+	Texture3D_Desc jittering_samples_texture_desc;
 	jittering_samples_texture_desc.width = math::pow2(jittering_filter_size);
 	jittering_samples_texture_desc.height = jittering_tile_size;
 	jittering_samples_texture_desc.depth = jittering_tile_size;
@@ -334,7 +301,7 @@ void Render_World::init_shadow_rendering()
 	jittering_samples_texture_desc.mip_levels = 1;
 
 	render_sys->gpu_device.create_texture_3d(&jittering_samples_texture_desc, &jittering_samples);
-	render_sys->gpu_device.create_shader_resource_view(&jittering_samples);
+	render_sys->gpu_device.create_shader_resource_view(&jittering_samples_texture_desc, &jittering_samples);
 }
 
 void Render_World::init_render_passes()
@@ -414,7 +381,6 @@ void Render_World::update_lights()
 		hlsl_light.radius = light->radius;
 		hlsl_light.range = light->range;
 		hlsl_light.light_type = light->light_type;
-		hlsl_light.shadow_map_idx = 0;
 		add_shadow(light);
 		shader_lights.push(hlsl_light);
 	}
@@ -432,12 +398,19 @@ Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
 	return NULL;
 }
 
-void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, void *args)
+void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, Render_Entity_Textures *render_entity_textures, void *args)
 {
+	assert(render_entity_textures);
+
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
 	render_entity.mesh_idx = mesh_idx;
 	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
+	render_entity.ambient_texture_idx = render_entity_textures->ambient_texture_idx;
+	render_entity.normal_texture_idx = render_entity_textures->normal_texture_idx;
+	render_entity.diffuse_texture_idx = render_entity_textures->diffuse_texture_idx;
+	render_entity.specular_texture_idx = render_entity_textures->specular_texture_idx;
+	render_entity.displacement_texture_idx = render_entity_textures->displacement_texture_idx;
 
 	switch (rendering_type) {
 		case RENDERING_TYPE_FORWARD_RENDERING: {
@@ -573,7 +546,7 @@ void Render_World::update_shadows()
 	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
 }
 
-bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx)
+bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Idx *mesh_idx)
 {
 	Bounding_Sphere temp = make_bounding_sphere(Vector3(0.0f, 0.0f, 0.0f), mesh);
 	if (temp.radious > world_bounding_sphere.radious) {
@@ -646,4 +619,74 @@ void Render_World::render()
 	For(render_passes_array, render_pass) {
 		render_pass->render(&render_sys->render_pipeline);
 	}
+}
+
+void Render_Entity_Texture_Storage::init(Gpu_Device *_gpu_device, Render_Pipeline *_render_pipeline)
+{
+	assert(_gpu_device);
+	
+	gpu_device = _gpu_device;
+	render_pipeline = _render_pipeline;
+
+	Texture2D_Desc texture_desc;
+	texture_desc.width = 200;
+	texture_desc.height = 200;
+	texture_desc.mip_levels = 1;
+
+	Texture2D default_texture;
+	gpu_device->create_texture_2d(&texture_desc, &default_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
+	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
+	
+	default_texture_idx = textures.push(default_texture);
+
+	Texture2D white_texture;
+	gpu_device->create_texture_2d(&texture_desc, &white_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &white_texture);
+	fill_texture((void *)&Color::White, &white_texture);
+
+	white_texture_idx = textures.push(white_texture);
+
+	Texture2D black_texture;
+	gpu_device->create_texture_2d(&texture_desc, &black_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &black_texture);
+	fill_texture((void *)&Color::Black, &black_texture);
+
+	black_texture_idx = textures.push(black_texture);
+
+	Color temp = { 0.5f, 0.5f, 1.0f };
+	Texture2D green_texture;
+	gpu_device->create_texture_2d(&texture_desc, &green_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &green_texture);
+	fill_texture((void *)&temp, &green_texture);
+
+	green_texture_idx = textures.push(green_texture);
+}
+
+Texture_Idx Render_Entity_Texture_Storage::add_texture(const char *name, u32 width, u32 height, void *data)
+{
+	assert(name);
+	assert(data);
+
+	Texture_Idx texture_idx;
+	if (texture_table.get(name, &texture_idx)) {
+		return texture_idx;
+	}
+
+	Texture2D_Desc texture_desc;
+	texture_desc.width = width;
+	texture_desc.height = height;
+	texture_desc.data = data;
+	texture_desc.mip_levels = 0;
+
+	Texture2D texture;
+	gpu_device->create_texture_2d(&texture_desc, &texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &texture);
+	render_pipeline->update_subresource(&texture, data, width * 4);
+	render_pipeline->generate_mips(texture.srv);
+
+	texture_idx = textures.push(texture);
+	texture_table.set(name, texture_idx);
+
+	return texture_idx;
 }

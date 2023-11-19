@@ -495,15 +495,15 @@ void Render_2D::init(Engine *engine)
 	
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
 
-	Texture_Desc texture_desc;
+	Texture2D_Desc texture_desc;
 	texture_desc.width = 100;
 	texture_desc.height = 100;
 	texture_desc.mip_levels = 1;
 	texture_desc.multisampling = { 1, 0 };
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
-	gpu_device->create_shader_resource_view(&default_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
 
-	fill_texture_with_value((void *)&Color::White, &default_texture);
+	fill_texture((void *)&Color::White, &default_texture);
 
 	Rasterizer_Desc rasterizer_desc;
 	rasterizer_desc.set_sciccor(true);
@@ -645,9 +645,9 @@ void Render_2D::render_frame()
 			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
 			render_pipeline->set_vertex_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
-			if (render_primitive->texture->get_pitch()) {
+			//if (render_primitive->texture->get_pitch()) {
 				render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->srv);
-			}
+			//}
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
 		}
@@ -703,7 +703,7 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	swap_chain.get_back_buffer_as_texture(&back_buffer);
 	gpu_device.create_render_target_view(&back_buffer);
 
-	Texture_Desc depth_texture_desc;
+	Texture2D_Desc depth_texture_desc;
 	depth_texture_desc.width = window_width;
 	depth_texture_desc.height = window_height;
 	depth_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -712,7 +712,7 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	depth_texture_desc.multisampling = swap_chain.multisampling;
 
 	gpu_device.create_texture_2d(&depth_texture_desc, &depth_back_buffer);
-	gpu_device.create_depth_stencil_view(&depth_back_buffer);
+	gpu_device.create_depth_stencil_view(&depth_texture_desc, &depth_back_buffer);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -783,16 +783,16 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 	assert(font);
 	assert(font_uvs);
 
-	Texture_Desc texture_desc;
-	texture_desc.width = 200;
-	texture_desc.height = 200;
-	texture_desc.mip_levels = 1;
-	texture_desc.multisampling = { 1, 0 };
+	Texture2D_Desc texture_atlas_desc;
+	texture_atlas_desc.width = 200;
+	texture_atlas_desc.height = 200;
+	texture_atlas_desc.mip_levels = 1;
+	texture_atlas_desc.multisampling = { 1, 0 };
 
-	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &font_atlas);
-	Engine::get_render_system()->gpu_device.create_shader_resource_view(&font_atlas);
+	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_atlas_desc, &font_atlas);
+	Engine::get_render_system()->gpu_device.create_shader_resource_view(&texture_atlas_desc, &font_atlas);
 
-	fill_texture_with_value((void *)&Color::Black, &font_atlas);
+	fill_texture((void *)&Color::Black, &font_atlas);
 
 	Array<Rect_u32 *> rect_pointers;
 	Array<Rect_u32> rects;
@@ -804,7 +804,7 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 		rect_pointers.push(&rects[c]);
 	}
 
-	Rect_u32 atlas_rect = Rect_u32(font_atlas.width, font_atlas.height);
+	Rect_u32 atlas_rect = Rect_u32(texture_atlas_desc.width, texture_atlas_desc.height);
 	pack_rects_in_rect(&atlas_rect, rect_pointers);
 
 	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {		
@@ -812,10 +812,10 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 		Rect_u32 rect = rects[c];
 
 		Rect_f32 uv;
-		uv.x = static_cast<float>(rect.x) / static_cast<float>(font_atlas.width);
-		uv.y = static_cast<float>(rect.y) / static_cast<float>(font_atlas.height);
-		uv.width = static_cast<float>(rect.width) / static_cast<float>(font_atlas.width);
-		uv.height = static_cast<float>(rect.height) / static_cast<float>(font_atlas.height);
+		uv.x = static_cast<float>(rect.x) / static_cast<float>(texture_atlas_desc.width);
+		uv.y = static_cast<float>(rect.y) / static_cast<float>(texture_atlas_desc.height);
+		uv.width = static_cast<float>(rect.width) / static_cast<float>(texture_atlas_desc.width);
+		uv.height = static_cast<float>(rect.height) / static_cast<float>(texture_atlas_desc.height);
 
 		font_uvs->set((char)c, uv);
 

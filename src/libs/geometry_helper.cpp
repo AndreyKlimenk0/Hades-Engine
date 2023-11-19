@@ -32,6 +32,7 @@ void make_grid_mesh(Grid *grid, Triangle_Mesh *mesh)
 			mesh->vertices[i * grid->columns_count + j].normal = Vector3(0.0f, 1.0f, 0.0f);
 			mesh->vertices[i * grid->columns_count + j].uv.x = (float)j;
 			mesh->vertices[i * grid->columns_count + j].uv.y = (float)i;
+			mesh->vertices[i * grid->columns_count + j].tangent = Vector3(1.0f, 0.0f, 0.0f);
 		}
 	}
 
@@ -59,35 +60,35 @@ void make_box_mesh(Box *box, Triangle_Mesh *mesh)
 
 	mesh->vertices.reserve(24);
 
-	mesh->vertices[0]  = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[1]  = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[2]  = Vertex_XNUV(Vector3(+w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[3]  = Vertex_XNUV(Vector3(+w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[0]  = Vertex_PNTUV(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[1]  = Vertex_PNTUV(Vector3(-w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[2]  = Vertex_PNTUV(Vector3(+w, +h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[3]  = Vertex_PNTUV(Vector3(+w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
 	
-	mesh->vertices[4]  = Vertex_XNUV(Vector3(-w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 1.0f));
-	mesh->vertices[5]  = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[6]  = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[7]  = Vertex_XNUV(Vector3(-w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[4]  = Vertex_PNTUV(Vector3(-w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[5]  = Vertex_PNTUV(Vector3(+w, -h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[6]  = Vertex_PNTUV(Vector3(+w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[7]  = Vertex_PNTUV(Vector3(-w, +h, +d), Vector3(0.0f, 0.0f, 1.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
 
-	mesh->vertices[8]  = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[9]  = Vertex_XNUV(Vector3(-w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[10] = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[11] = Vertex_XNUV(Vector3(+w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[8]  = Vertex_PNTUV(Vector3(-w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[9]  = Vertex_PNTUV(Vector3(-w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[10] = Vertex_PNTUV(Vector3(+w, +h, +d), Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[11] = Vertex_PNTUV(Vector3(+w, +h, -d), Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
 
-	mesh->vertices[12] = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector2(1.0f, 1.0f));
-	mesh->vertices[13] = Vertex_XNUV(Vector3(+w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[14] = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[15] = Vertex_XNUV(Vector3(-w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[12] = Vertex_PNTUV(Vector3(-w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[13] = Vertex_PNTUV(Vector3(+w, -h, -d), Vector3(0.0f, -1.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[14] = Vertex_PNTUV(Vector3(+w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[15] = Vertex_PNTUV(Vector3(-w, -h, +d), Vector3(0.0f, -1.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
 
-	mesh->vertices[16] = Vertex_XNUV(Vector3(-w, -h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[17] = Vertex_XNUV(Vector3(-w, +h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[18] = Vertex_XNUV(Vector3(-w, +h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[19] = Vertex_XNUV(Vector3(-w, -h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[16] = Vertex_PNTUV(Vector3(-w, -h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[17] = Vertex_PNTUV(Vector3(-w, +h, +d), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, -1.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[18] = Vertex_PNTUV(Vector3(-w, +h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[19] = Vertex_PNTUV(Vector3(-w, -h, -d), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, -1.0f), Vector2(1.0f, 1.0f));
 	
-	mesh->vertices[20] = Vertex_XNUV(Vector3(+w, -h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
-	mesh->vertices[21] = Vertex_XNUV(Vector3(+w, +h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
-	mesh->vertices[22] = Vertex_XNUV(Vector3(+w, +h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 0.0f));
-	mesh->vertices[23] = Vertex_XNUV(Vector3(+w, -h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector2(1.0f, 1.0f));
+	mesh->vertices[20] = Vertex_PNTUV(Vector3(+w, -h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 1.0f));
+	mesh->vertices[21] = Vertex_PNTUV(Vector3(+w, +h, -d), Vector3(1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f));
+	mesh->vertices[22] = Vertex_PNTUV(Vector3(+w, +h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f));
+	mesh->vertices[23] = Vertex_PNTUV(Vector3(+w, -h, +d), Vector3(1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector2(1.0f, 1.0f));
 
 	mesh->indices.reserve(36);
 	u32 *i = mesh->indices.items;
@@ -113,10 +114,10 @@ void make_box_mesh(Box *box, Triangle_Mesh *mesh)
 
 void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 {
-	Vertex_XNUV topVertex(0.0f, +sphere->radius, 0.0f, 0.0f, +1.0f, 0.0f, 0.0f, 0.0f);
-	Vertex_XNUV bottomVertex(0.0f, -sphere->radius, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f);
+	Vertex_PNTUV top_vertex = Vertex_PNTUV(Vector3(0.0f, sphere->radius, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
+	Vertex_PNTUV bottom_vertex = Vertex_PNTUV(Vector3(0.0f, -sphere->radius, 0.0f), Vector3(0.0f, -1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
 
-	mesh->vertices.push(topVertex);
+	mesh->vertices.push(top_vertex);
 
 	float phiStep = PI / sphere->stack_count;
 	float thetaStep = 2.0f * PI / sphere->slice_count;
@@ -127,10 +128,15 @@ void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 		for (UINT j = 0; j <= sphere->slice_count; ++j) {
 			float theta = j * thetaStep;
 
-			Vertex_XNUV v;
+			Vertex_PNTUV v;
 			v.position.x = sphere->radius * sinf(phi) * cosf(theta);
 			v.position.y = sphere->radius * cosf(phi);
 			v.position.z = sphere->radius * sinf(phi) * sinf(theta);
+
+			v.tangent.x = -sphere->radius * sinf(phi) * sinf(theta);
+			v.tangent.y = 0.0f;
+			v.tangent.z = sphere->radius * sinf(phi)*cosf(theta);
+			v.tangent = normalize(&v.tangent);
 
 			Vector3 n = v.position;
 			v.normal = normalize(&n);
@@ -141,7 +147,7 @@ void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 			mesh->vertices.push(v);
 		}
 	}
-	mesh->vertices.push(bottomVertex);
+	mesh->vertices.push(bottom_vertex);
 
 	for (UINT i = 1; i <= sphere->slice_count; ++i) {
 		mesh->indices.push(0);

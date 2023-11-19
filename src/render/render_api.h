@@ -265,25 +265,6 @@ struct Shader {
 	String name;
 };
 
-struct Multisample_Info {
-	u32 count = 1;
-	u32 quality = 0;
-};
-
-struct Texture_Desc {
-	u32 width = 0;
-	u32 height = 0;
-	u32 depth = 0;
-	u32 array_count = 1;
-	u32 mip_levels = 0;
-	u32 cpu_access = 0;
-	u32 bind = BIND_SHADER_RESOURCE;
-	void *data = NULL; 
-	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
-	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	Multisample_Info multisampling;
-};
-
 struct Gpu_Resource_Views {
 	Gpu_Resource_Views();
 	~Gpu_Resource_Views();
@@ -296,15 +277,46 @@ struct Gpu_Resource_Views {
 	void release();
 };
 
+struct Multisample_Info {
+	u32 count = 1;
+	u32 quality = 0;
+};
+
+struct Texture2D_Desc {
+	u32 width = 0;
+	u32 height = 0;
+	u32 array_count = 1;
+	u32 mip_levels = 0;
+	u32 cpu_access = 0;
+	u32 bind = BIND_SHADER_RESOURCE;
+	void *data = NULL;
+	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Multisample_Info multisampling;
+};
+struct Texture3D_Desc {
+	u32 width = 0;
+	u32 height = 0;
+	u32 depth = 0;
+	u32 mip_levels = 0;
+	u32 cpu_access = 0;
+	u32 bind = BIND_SHADER_RESOURCE;
+	void *data = NULL;
+	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+};
+
+bool is_multisampled_texture(Texture2D_Desc *texture_desc);
+u32 get_texture_size(Texture2D_Desc *texture_desc);
+u32 get_texture_pitch(Texture2D_Desc *texture_desc);
+
 struct Texture2D : Gpu_Resource<ID3D11Texture2D>, Gpu_Resource_Views {
 	Texture2D();
 	~Texture2D();
 
-	//@Note Can I remove some useless methods from the code ?
-	bool is_multisampled();
-	u32 get_pitch();
-	u32 get_size();
 	void release();
+	void get_desc(Texture2D_Desc *texture_desc);
+	Texture2D &operator=(const Texture2D &other);
 };
 
 struct Texture3D : Gpu_Resource<ID3D11Texture3D>, Gpu_Resource_Views {
@@ -328,19 +340,19 @@ struct Gpu_Device {
 	void create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer);
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
 
-	void create_texture_2d(Texture_Desc *texture_desc, Texture2D *texture);
-	void create_texture_3d(Texture_Desc *texture_desc, Texture3D *texture);
+	void create_texture_2d(Texture2D_Desc *texture_desc, Texture2D *texture);
+	void create_texture_3d(Texture3D_Desc *texture_desc, Texture3D *texture);
 
 	void create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Rasterizer_State *rasterizer_state);
 	void create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state);
 	void create_depth_stencil_state(Depth_Stencil_State_Desc *depth_stencil_desc, Depth_Stencil_State *depth_stencil_state);
 
 	void create_shader_resource_view(Gpu_Buffer *gpu_buffer);
-	void create_shader_resource_view(Texture2D *texture);
-	void create_shader_resource_view(Texture3D *texture);
-	void create_depth_stencil_view(Texture2D *texture);
+	void create_shader_resource_view(Texture2D_Desc *texture_desc, Texture2D *texture);
+	void create_shader_resource_view(Texture3D_Desc *texture_desc, Texture3D *texture);
+	void create_depth_stencil_view(Texture2D_Desc *texture_desc, Texture2D *texture);
+	void create_unordered_access_view(Texture2D_Desc *texture_desc, Texture2D *texture);
 	void create_render_target_view(Texture2D *texture);
-	void create_unordered_access_view(Texture2D *texture);
 };
 
 enum Render_Primitive_Type {
@@ -488,8 +500,10 @@ inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 ds
 	dx11_context->CopySubresourceRegion(dst.resource.Get(), 0, dst_x, dst_y, 0, src.resource.Get(), 0, NULL);
 }
 
+u32 get_dxgi_format_size(DXGI_FORMAT format);
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
+Multisample_Info get_default_multisample();
 
 #endif
 

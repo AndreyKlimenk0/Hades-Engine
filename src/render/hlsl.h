@@ -29,12 +29,12 @@ struct CB_Frame_Info {
 	Matrix4 view_matrix;
 	Matrix4 perspective_matrix;
 	Matrix4 orthographic_matrix;
-	Vector4 camera_position;
-	Vector4 camera_direction;
+	Vector3 camera_position;
 	float near_plane;
+	Vector3 camera_direction;
 	float far_plane;
 	u32 light_count;
-	Pad1 pad;
+	Pad3 pad;
 };
 
 struct CB_Shadow_Atlas_Info {
@@ -47,13 +47,12 @@ struct CB_Shadow_Atlas_Info {
 };
 
 struct Hlsl_Light {
-	Vector4 position;
-	Vector4 direction;
-	Vector4 color;
+	Vector3 position;
 	float radius;
+	Vector3 direction;
 	float range;
+	Vector3 color;
 	u32 light_type;
-	u32 shadow_map_idx;
 };
 
 struct Cascaded_Shadows_Info {

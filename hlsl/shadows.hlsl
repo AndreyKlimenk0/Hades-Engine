@@ -20,10 +20,11 @@ StructuredBuffer<Cascaded_Shadows_Info> cascaded_shadows_info_buffer : register(
 
 static bool is_in_range(float value, float min, float max)
 {
+    bool result = false;
     if ((min <= value) && (value <= max)) {
-        return true;
+        result = true;
     }
-    return false;
+    return result;
 }
 
 float4 calculate_shadow_factor(float3 world_position, float2 screen_position, float3 normal, out uint cascade_index)
