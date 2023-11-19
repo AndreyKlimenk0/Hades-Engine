@@ -1,26 +1,12 @@
 #ifndef __UTILS__
 #define __UTILS__
 
-struct Material {
-	float4 ambient;
-	float4 diffuse;
-	float4 specular;
+const static float3x3 identity_matrix3x3 =
+{
+    { 1, 0, 0 },
+    { 0, 1, 0 },
+    { 0, 0, 1 },
 };
-
-//@Note: Temp function
-Material get_material()
-{
-    static Material default_material;
-    default_material.ambient = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    default_material.diffuse = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    default_material.specular = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    return default_material;
-}
-
-float4 normalize_rgb(int r, int g, int b)
-{
-	return float4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
-}
 
 float3 calculate_ndc_coordinates(float4 transformed_vertex_position)
 {
@@ -31,4 +17,19 @@ float3 calculate_ndc_coordinates(float4 transformed_vertex_position)
 	return ndc_coordinates;
 }
 
+float3 normal_sample_to_world_space(float3 normal_sample, float3 vertex_normal, float3 tangent)
+{
+    float3 uncompress_normal = (normal_sample * 2.0f) - 1.0f;
+    float3x3 TBN = identity_matrix3x3;
+    TBN[0] = tangent;
+    TBN[1] = cross(vertex_normal, tangent);
+    TBN[2] = vertex_normal;
+    return mul(uncompress_normal, TBN);
+}
+
+float4 normalize_rgb(int r, int g, int b)
+{
+	return float4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+}
+        
 #endif

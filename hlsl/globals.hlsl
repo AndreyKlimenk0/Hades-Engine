@@ -15,12 +15,12 @@ cbuffer Frame_Info : register(b5) {
 	float4x4 view_matrix;
 	float4x4 perspective_matrix;
 	float4x4 frame_orthographics_matrix;
-	float4 camera_position;
-	float4 camera_direction;
+	float3 camera_position;
 	float near_plane;
+	float3 camera_direction;
 	float far_plane;
 	uint light_count;
-    uint pad5;
+    uint3 pad50;
 };
 
 cbuffer Shadow_Info : register(b6) {
@@ -42,6 +42,12 @@ struct Mesh_Instance {
 Texture2D<float4> texture_map : register(t0);
 Texture2D<float> shadow_atlas : register(t1);
 Texture3D<float2> jittering_samples : register(t2);
+
+Texture2D<float4> ambient_texture : register(t10);
+Texture2D<float4> normal_texture : register(t11);
+Texture2D<float4> diffuse_texture : register(t12);
+Texture2D<float4> specular_texture : register(t13);
+Texture2D<float4> displacement_texture : register(t14);
 
 SamplerState point_sampling : register(s0);
 SamplerState linear_sampling : register(s1);
