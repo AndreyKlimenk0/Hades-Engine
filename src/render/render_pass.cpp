@@ -82,14 +82,19 @@ void Forwar_Light_Pass::render(Render_Pipeline *render_pipeline)
 
 	Render_Entity *render_entity = NULL;
 	Forwar_Light_Pass::Pass_Data pass_data;
-	
+
 	For(render_world->forward_rendering_entities, render_entity) {
-		
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
+
+		render_pipeline->set_pixel_shader_resource(10, render_world->render_entity_texture_storage.textures[render_entity->ambient_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(11, render_world->render_entity_texture_storage.textures[render_entity->normal_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(12, render_world->render_entity_texture_storage.textures[render_entity->diffuse_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(13, render_world->render_entity_texture_storage.textures[render_entity->specular_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(14, render_world->render_entity_texture_storage.textures[render_entity->displacement_texture_idx].srv);
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 	}
@@ -129,7 +134,6 @@ void Draw_Lines_Pass::render(Render_Pipeline *render_pipeline)
 	Forwar_Light_Pass::Pass_Data pass_data;
 
 	For(render_world->line_rendering_entities, render_entity) {
-
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
@@ -251,12 +255,17 @@ void Debug_Cascade_Shadows_Pass::render(Render_Pipeline *render_pipeline)
 	Debug_Cascade_Shadows_Pass::Pass_Data pass_data;
 
 	For(render_world->forward_rendering_entities, render_entity) {
-
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
+
+		render_pipeline->set_pixel_shader_resource(10, render_world->render_entity_texture_storage.textures[render_entity->ambient_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(11, render_world->render_entity_texture_storage.textures[render_entity->normal_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(12, render_world->render_entity_texture_storage.textures[render_entity->diffuse_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(13, render_world->render_entity_texture_storage.textures[render_entity->specular_texture_idx].srv);
+		render_pipeline->set_pixel_shader_resource(14, render_world->render_entity_texture_storage.textures[render_entity->displacement_texture_idx].srv);
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 	}

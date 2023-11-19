@@ -24,6 +24,7 @@ struct Vertex_XUV_Out {
 struct Vertex_XNUV {
     float3 position;
     float3 normal;
+    float3 tangent;
     float2 uv;
 };
 

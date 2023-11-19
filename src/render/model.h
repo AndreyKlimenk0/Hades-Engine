@@ -14,7 +14,7 @@ struct Mesh {
 	Array<u32> indices;
 };
 
-typedef Mesh<Vertex_XNUV> Triangle_Mesh;
+typedef Mesh<Vertex_PNTUV> Triangle_Mesh;
 typedef Mesh<Vector3> Line_Mesh;
 
 //template <typename T>
