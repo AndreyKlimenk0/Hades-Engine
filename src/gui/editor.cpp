@@ -222,8 +222,8 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 
 		} else if (command == "start_rotate_camera") {
 			rotate_camera = true;
-			last_x = Mouse_Input::x;
-			last_y = Mouse_Input::y;
+			last_x = Mouse_Async_Info::x;
+			last_y = Mouse_Async_Info::y;
 		
 		} else if (command == "end_rotate_camera") {
 			rotate_camera = false;
@@ -258,12 +258,12 @@ void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> 
 
 		Editor_Command editor_command;
 		if (event->type == EVENT_TYPE_KEY) {
-			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.is_pressed, &editor_command.command);
+			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.key_state, &editor_command.command);
 			if (result == COMMAND_FIND) {
 				editor_commands->push(editor_command);
 			
 			} else if (result == COMMAND_NOT_FOUND) {
-				print("Editor::convert_user_input_events_to_edtior_commands: There is no an editor key binding for {}.", to_string(event->key_info.key));
+				print("Editor::convert_user_input_events_to_edtior_commands: There is no an editor key command binding for {}.", to_string(event->key_info.key));
 			}
 		
 		} else if (event->type == EVENT_TYPE_MOUSE) {

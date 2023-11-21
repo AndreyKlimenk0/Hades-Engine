@@ -64,7 +64,7 @@ void push_event(Event_Type type, int first_value, int second_value)
 	switch (type) {
 		case EVENT_TYPE_KEY: {
 			event.key_info.key = win32_key_to_engine_key(first_value);
-			event.key_info.is_pressed = second_value;
+			event.key_info.key_state = second_value > 0 ? KEY_DOWN : KEY_UP;
 			update_left_mouse_button_state(&event);
 			break;
 		}
@@ -91,16 +91,16 @@ void run_event_loop()
 		Event event = node->item;
 
 		if (event.type == EVENT_TYPE_KEY) {
-			if (event.key_info.is_pressed) {
-				Key_Input::key_down(event.key_info.key);
+			if (event.key_info.key_state == KEY_DOWN) {
+				Key_Async_Info::key_down(event.key_info.key);
 			} else {
-				Key_Input::key_up(event.key_info.key);
+				Key_Async_Info::key_up(event.key_info.key);
 			}
 		} else if (event.type == EVENT_TYPE_MOUSE) {
-			Mouse_Input::last_x = Mouse_Input::x;
-			Mouse_Input::last_y = Mouse_Input::y;
-			Mouse_Input::x = event.mouse_info.x;
-			Mouse_Input::y = event.mouse_info.y;
+			Mouse_Async_Info::last_x = Mouse_Async_Info::x;
+			Mouse_Async_Info::last_y = Mouse_Async_Info::y;
+			Mouse_Async_Info::x = event.mouse_info.x;
+			Mouse_Async_Info::y = event.mouse_info.y;
 		}
 	}
 }
@@ -130,20 +130,12 @@ bool was_left_mouse_button_just_pressed()
 	return left_mouse_button_just_pressed;
 }
 
-void Mouse_Info::set(s32 _x, s32 _y)
+bool Event::is_key_up(Key key)
 {
-	last_x = x;
-	last_y = y;
-	x = _x;
-	y = _y;
+	return (key_info.key == key) && (key_info.key_state == KEY_UP);
 }
 
-s32 Mouse_Info::x_delta()
+bool Event::is_key_down(Key key)
 {
-	return x - last_x;
-}
-
-s32 Mouse_Info::y_delta()
-{
-	return y - last_y;
+	return (key_info.key == key) && (key_info.key_state == KEY_DOWN);
 }
