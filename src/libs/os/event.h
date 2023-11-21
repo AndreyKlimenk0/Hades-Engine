@@ -13,22 +13,6 @@ enum Event_Type {
 	EVENT_TYPE_CHAR,
 };
 
-struct Key_Info {
-	bool is_pressed = false;
-	Key key;
-};
-
-struct Mouse_Info {
-	s32 x = 0;
-	s32 y = 0;
-	s32 last_x = 0;
-	s32 last_y = 0;
-
-	void set(s32 _x, s32 _y);
-	s32 x_delta();
-	s32 y_delta();
-};
-
 struct Event {
 	Event() {};
 	Event_Type type;
@@ -40,13 +24,9 @@ struct Event {
 		Mouse_Info mouse_info;
 	};
 
+	bool is_key_up(Key key);
 	bool is_key_down(Key key);
 };
-
-inline bool Event::is_key_down(Key key)
-{
-	return (key_info.key == key) && key_info.is_pressed;
-}
 
 void pump_events();
 void push_event(Event_Type type, int first_value, int second_value);

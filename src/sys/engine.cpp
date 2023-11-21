@@ -10,7 +10,7 @@
 //@Note: Temp code
 #include "../libs/png_image.h"
 
-#define DRAW_TEST_GUI 0
+#define DRAW_TEST_GUI 1
 
 static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
@@ -107,6 +107,8 @@ void Engine::frame()
 
 	pump_events();
 	run_event_loop();
+
+	gui::handle_events();
 
 	editor.handle_events();
 	editor.update();
