@@ -147,7 +147,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <PreprocessorDefinitions>_CRT_OBSOLETE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_OBSOLETE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4099;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -172,6 +172,7 @@
     <ClCompile Include="src\libs\ds\dict.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\geometry_helper.cpp" />
+    <ClCompile Include="src\libs\key_binding.cpp" />
     <ClCompile Include="src\libs\math\common.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
     <ClCompile Include="src\libs\mesh_loader.cpp" />
@@ -211,6 +212,7 @@
     <ClInclude Include="src\libs\ds\stack.h" />
     <ClInclude Include="src\libs\enum_helper.h" />
     <ClInclude Include="src\libs\geometry_helper.h" />
+    <ClInclude Include="src\libs\key_binding.h" />
     <ClInclude Include="src\libs\math\common.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\vector.h" />
