@@ -121,6 +121,37 @@ static String get_node_attribute_type_name(FbxNode *fbx_node)
 	return type_name;
 }
 
+static FbxTexture *find_texture(FbxNode *mesh_node, const char *texture_type)
+{
+	int count = mesh_node->GetSrcObjectCount<FbxSurfaceMaterial>();
+
+	for (int index = 0; index < count; index++) {
+		FbxSurfaceMaterial *material = (FbxSurfaceMaterial *)mesh_node->GetSrcObject<FbxSurfaceMaterial>(index);
+		if (material) {
+			FbxProperty prop = material->FindProperty(texture_type);
+
+			int layered_texture_count = prop.GetSrcObjectCount<FbxLayeredTexture>();
+			if (layered_texture_count > 0) {
+				for (int j = 0; j < layered_texture_count; j++) {
+					FbxLayeredTexture* layered_texture = FbxCast<FbxLayeredTexture>(prop.GetSrcObject<FbxLayeredTexture>(j));
+					int lcount = layered_texture->GetSrcObjectCount<FbxTexture>();
+					for (int k = 0; k < lcount; k++) {
+						FbxTexture* texture = FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
+						return texture;
+					}
+				}
+			} else {
+				int texture_count = prop.GetSrcObjectCount<FbxTexture>();
+				for (int j = 0; j < texture_count; j++) {
+					FbxTexture* texture = FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
+					return texture;
+				}
+			}
+		}
+	}
+	return NULL;
+}
+
 static void display_node(FbxNode *fbx_node, u32 node_level = 0)
 {
 	assert(fbx_node);
@@ -146,6 +177,14 @@ static void display_node(FbxNode *fbx_node, u32 node_level = 0)
 			case FbxNodeAttribute::eMesh: {
 				FbxMesh *fbx_mesh = fbx_node->GetMesh();
 				if (fbx_mesh) {
+					print("          Tanges count", fbx_mesh->GetElementTangentCount());
+					print("          Binormal count", fbx_mesh->GetElementBinormalCount());
+					if (fbx_mesh->GetElementTangentCount() == 0) {
+						if (fbx_mesh->GenerateTangentsDataForAllUVSets()) {
+							print("          Tanges count", fbx_mesh->GetElementTangentCount());
+							print("          Binormal count", fbx_mesh->GetElementBinormalCount());
+						}
+					}
 					print("{}        Mesh info:", spaces);
 					print("{}        Mesh name:", spaces, fbx_mesh->GetName());
 					print("{}        Polygons count:", spaces, fbx_mesh->GetPolygonCount());
@@ -236,6 +275,68 @@ static Vector3 get_fbx_mesh_normal(FbxMesh *fbx_mesh, s32 vertex_index, s32 vert
 	return normal;
 }
 
+static Vector3 get_fbx_mesh_tangent(FbxMesh *fbx_mesh, s32 vertex_index, s32 vertex_count)
+{
+	assert(fbx_mesh);
+
+	Vector3 tangent = Vector3::zero;
+	if (fbx_mesh->GetElementTangentCount() > 0) {
+		FbxGeometryElementTangent *element_tangent = fbx_mesh->GetElementTangent(0);
+		switch (element_tangent->GetMappingMode()) {
+		case FbxGeometryElement::eByControlPoint: {
+			switch (element_tangent->GetReferenceMode()) {
+				case FbxGeometryElement::eDirect: {
+					FbxVector4 fbx_normal = element_tangent->GetDirectArray().GetAt(vertex_index);
+					tangent.x = (float)fbx_normal.mData[0];
+					tangent.y = (float)fbx_normal.mData[1];
+					tangent.z = (float)fbx_normal.mData[2];
+					break;
+				}
+				case FbxGeometryElement::eIndexToDirect: {
+					s32 index = element_tangent->GetIndexArray().GetAt(vertex_index);
+					FbxVector4 fbx_normal = element_tangent->GetDirectArray().GetAt(index);
+					tangent.x = (float)fbx_normal.mData[0];
+					tangent.y = (float)fbx_normal.mData[1];
+					tangent.z = (float)fbx_normal.mData[2];
+					break;
+				}
+				default: {
+					print("get_fbx_mesh_normal: Unable to get fbx mesh tangent. Fbx element tangent has unsupported reference mode.");
+				}
+			}
+			break;
+		}
+		case FbxGeometryElement::eByPolygonVertex: {
+			switch (element_tangent->GetReferenceMode()) {
+				case FbxGeometryElement::eDirect: {
+					FbxVector4 fbx_normal = element_tangent->GetDirectArray().GetAt(vertex_count);
+					tangent.x = (float)fbx_normal.mData[0];
+					tangent.y = (float)fbx_normal.mData[1];
+					tangent.z = (float)fbx_normal.mData[2];
+					break;
+				}
+				case FbxGeometryElement::eIndexToDirect: {
+					s32 index = element_tangent->GetIndexArray().GetAt(vertex_count);
+					FbxVector4 fbx_normal = element_tangent->GetDirectArray().GetAt(index);
+					tangent.x = (float)fbx_normal.mData[0];
+					tangent.y = (float)fbx_normal.mData[1];
+					tangent.z = (float)fbx_normal.mData[2];
+					break;
+				}
+				default: {
+					print("get_fbx_mesh_normal: Unable to get fbx mesh tangent. Fbx element tangent has unsupported reference mode.");
+				}
+			}
+			break;
+		}
+		default: {
+			print("get_fbx_mesh_normal: Unable to get fbx mesh tangent. Fbx element tangent has unsupported mapping mode.");
+		}
+		}
+	}
+	return tangent;
+}
+
 static Vector2 get_fbx_mesh_uv(FbxMesh *fbx_mesh, s32 vertex_index, s32 uv_index)
 {
 	assert(fbx_mesh);
@@ -312,18 +413,25 @@ static bool process_mesh(FbxNode *fbx_node, Triangle_Mesh *mesh)
 		mesh->vertices[i].position.z = (float)fbx_vector.mData[2];
 	}
 
+	if ((fbx_mesh->GetElementNormalCount() == 0) && !fbx_mesh->GenerateNormals()) {
+		print("process_mesh: Unable to generage normals for {}.", fbx_mesh->GetName());
+	}
+
+	if ((fbx_mesh->GetElementTangentCount() == 0) && !fbx_mesh->GenerateTangentsDataForAllUVSets()) {
+		print("process_mesh: Unable to generage tangents for {}.", fbx_mesh->GetName());
+	}
+
 	s32 vertex_count = 0;
+	s32 index_buffer[255];
 	for (s32 polygon_index = 0; polygon_index < fbx_mesh->GetPolygonCount(); polygon_index++) {
-		s32 index_buffer[255];
 		s32 polygon_size = fbx_mesh->GetPolygonSize(polygon_index);
 		for (s32 i = 0; i < polygon_size; i++) {
 			s32 vertex_index = fbx_mesh->GetPolygonVertex(polygon_index, i);
-			mesh->vertices[vertex_index].uv = get_fbx_mesh_uv(fbx_mesh, vertex_index, fbx_mesh->GetTextureUVIndex(polygon_index, i));
 			mesh->vertices[vertex_index].normal = get_fbx_mesh_normal(fbx_mesh, vertex_index, vertex_count);
-			index_buffer[i] = vertex_index;
-			vertex_count++;
+			mesh->vertices[vertex_index].tangent = get_fbx_mesh_tangent(fbx_mesh, vertex_index, vertex_count);
+			mesh->vertices[vertex_index].uv = get_fbx_mesh_uv(fbx_mesh, vertex_index, fbx_mesh->GetTextureUVIndex(polygon_index, i));
+			index_buffer[i] = vertex_index++;
 		}
-
 		if (polygon_size == TRIANGLE_POLYGON) {
 			mesh->indices.push(index_buffer[0]);
 			mesh->indices.push(index_buffer[1]);

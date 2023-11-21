@@ -7,7 +7,10 @@
 #include "../libs/os/event.h"
 #include "../libs/mesh_loader.h"
 
-#define DRAW_TEST_GUI 0
+//@Note: Temp code
+#include "../libs/png_image.h"
+
+#define DRAW_TEST_GUI 1
 
 static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
@@ -43,6 +46,20 @@ void Engine::init(Win32_Info *_win32_info)
 	engine->is_initialized = true;
 }
 
+static inline Texture_Idx add_texture(const char *name)
+{
+	u32 width;
+	u32 height;
+	u8 *data = NULL;
+	String path;
+	build_full_path_to_texture_file(name, path);
+	load_png_file(path, &data, &width, &height);
+
+	Texture_Idx index = Engine::get_render_world()->render_entity_texture_storage.add_texture(name, width, height, (void *)data);
+	DELETE_PTR(data);
+	return index;
+}
+
 void Engine::init_from_map()
 {
 	game_world.init_from_file();
@@ -68,8 +85,16 @@ void Engine::init_from_map()
 		} else {
 			print("Engine::init_from_file: Unknown geometry type.");
 		}
+
+		Render_Entity_Textures render_entity_textures;
+		render_entity_textures.ambient_texture_idx = add_texture("Rock_Mosaic_AO.png");
+		render_entity_textures.normal_texture_idx = add_texture("Rock_Mosaic_NORM.png");
+		render_entity_textures.diffuse_texture_idx = add_texture("Rock_Mosaic_DIFF.png");
+		render_entity_textures.specular_texture_idx = add_texture("Rock_Mosaic_SPEC.png");
+		render_entity_textures.displacement_texture_idx = render_world.render_entity_texture_storage.white_texture_idx;
+
 		render_world.add_mesh(mesh_name, &triangle_mesh, &mesh_idx);
-		render_world.add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, get_entity_id(geometry_entity), mesh_idx);
+		render_world.add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, get_entity_id(geometry_entity), mesh_idx, &render_entity_textures);
 		
 		free_string(mesh_name);
 	}
@@ -82,6 +107,8 @@ void Engine::frame()
 
 	pump_events();
 	run_event_loop();
+
+	gui::handle_events();
 
 	editor.handle_events();
 	editor.update();

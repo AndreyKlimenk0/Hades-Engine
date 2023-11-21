@@ -100,7 +100,14 @@ void Make_Entity_Window::draw()
 				Mesh_Idx mesh_idx;
 				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx);
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 
 				free_string(mesh_name);
 			}
@@ -119,7 +126,14 @@ void Make_Entity_Window::draw()
 				Mesh_Idx mesh_idx;
 				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx);
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 
 				free_string(mesh_name);
 			}
@@ -208,8 +222,8 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 
 		} else if (command == "start_rotate_camera") {
 			rotate_camera = true;
-			last_x = Mouse_Input::x;
-			last_y = Mouse_Input::y;
+			last_x = Mouse_Async_Info::x;
+			last_y = Mouse_Async_Info::y;
 		
 		} else if (command == "end_rotate_camera") {
 			rotate_camera = false;
@@ -244,12 +258,12 @@ void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> 
 
 		Editor_Command editor_command;
 		if (event->type == EVENT_TYPE_KEY) {
-			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.is_pressed, &editor_command.command);
+			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.key_state, &editor_command.command);
 			if (result == COMMAND_FIND) {
 				editor_commands->push(editor_command);
 			
 			} else if (result == COMMAND_NOT_FOUND) {
-				print("Editor::convert_user_input_events_to_edtior_commands: There is no an editor key binding for {}.", to_string(event->key_info.key));
+				print("Editor::convert_user_input_events_to_edtior_commands: There is no an editor key command binding for {}.", to_string(event->key_info.key));
 			}
 		
 		} else if (event->type == EVENT_TYPE_MOUSE) {
@@ -403,7 +417,15 @@ void Game_World_Window::draw()
 					render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
 				}
 				free_string(name);
-				render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, entity_id, mesh_idx, (void *)&Color::Red);
+
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+				render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, entity_id, mesh_idx, &render_entity_textures, (void *)&Color::Red);
 
 			} else if (was_click && !draw_frustum_states[camera->idx]) {
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

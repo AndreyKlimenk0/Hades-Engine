@@ -22,13 +22,13 @@ struct Vertex_X2UV {
 	Vector2 uv;
 };
 
-struct Vertex_XNUV {
-	Vertex_XNUV() {}
-	Vertex_XNUV(Vector3 position, Vector3 normal, Vector2 uv) : position(position), normal(normal), uv(uv) {}
-	Vertex_XNUV(float p1, float p2, float p3, float n1, float n2, float n3, float uv1, float uv2) : Vertex_XNUV(Vector3(p1, p2, p3), Vector3(n1, n2, n3), Vector2(uv1, uv2)) {}
-	
+struct Vertex_PNTUV {
+	Vertex_PNTUV() {}
+	Vertex_PNTUV(Vector3 position, Vector3 normal, Vector3 tangent, Vector2 uv) : position(position), normal(normal), tangent(tangent), uv(uv) {}
+
 	Vector3 position;
 	Vector3 normal;
+	Vector3 tangent;
 	Vector2 uv;
 };
 #endif

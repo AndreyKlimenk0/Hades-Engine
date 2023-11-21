@@ -17,6 +17,7 @@ struct Vertex_Out {
 	float4 position : SV_POSITION;
 	float3 world_position : POSITION;
 	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
 	float2 uv : TEXCOORD;
 };
 
@@ -36,8 +37,9 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	
 	Vertex_Out vertex_out;
 	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(view_matrix, perspective_matrix))); 
-	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix);
-	vertex_out.normal = normalize(mul(vertex.normal, (float3x3)world_matrix));
+	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix).xyz;
+	vertex_out.normal = mul(vertex.normal, (float3x3)world_matrix);
+	vertex_out.tangent = mul(vertex.tangent, (float3x3)world_matrix);
 	vertex_out.uv = vertex.uv;
 	return vertex_out;
 }
@@ -46,15 +48,25 @@ StructuredBuffer<Light> lights : register(t7);
 
 float4 ps_main(Vertex_Out vertex_out) : SV_Target
 {
-	float4 texel = texture_map.Sample(linear_sampling, vertex_out.uv);
+    Material material;
+    material.ambient = ambient_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    material.diffuse = diffuse_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    material.specular = specular_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    material.displacement = displacement_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    
+    float3 normal_sample = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    //float3 normal_sample = float3(0.5f, 0.5f, 1.0f);
+    float3 normal = normal_sample_to_world_space(normal_sample, vertex_out.normal, vertex_out.tangent);
+
+    //@Note: hard code
 	if (light_count == 0) {
-		return texel;
+		return float4(material.diffuse, 1.0f);
 	}
     uint shadow_cascade_index;
-    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, vertex_out.normal, shadow_cascade_index);    
-    float4 light_factor = calculate_light(vertex_out.world_position, vertex_out.normal, get_material(), lights, light_count);
-    
-    return texel * light_factor * shadow_factor;
+    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);    
+    float3 light_factor = calculate_light(vertex_out.world_position, normal, material, light_count, lights);
+
+    return float4(light_factor, 1.0f) * shadow_factor;
 }
 
 #endif

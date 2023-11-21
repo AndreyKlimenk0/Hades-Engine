@@ -8,12 +8,13 @@
 #include "render_helpers.h"
 #include "../libs/ds/array.h"
 #include "../libs/math/common.h"
+#include "../libs/math/matrix.h"
 #include "../game/world.h"
 
 
 struct Render_Pass;
-typedef u32 Render_Model_Idx;
 typedef u32 Mesh_Idx;
+typedef u32 Texture_Idx;
 
 const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_SIZE = 8192;
@@ -21,20 +22,23 @@ const u32 CASCADE_SIZE = 1024;
 
 const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
-struct Gpu_Struct_Buffer {
-	Gpu_Buffer gpu_buffer;
-
-	template <typename T>
-	void allocate(u32 elements_count);
-	template <typename T>
-	void update(Array<T> *array);
-	void free();
+struct Render_Entity_Textures {
+	Texture_Idx ambient_texture_idx;
+	Texture_Idx normal_texture_idx;
+	Texture_Idx diffuse_texture_idx;
+	Texture_Idx specular_texture_idx;
+	Texture_Idx displacement_texture_idx;
 };
 
 struct Render_Entity {
 	Entity_Id entity_id;
-	Mesh_Idx mesh_idx;
 	u32 world_matrix_idx;
+	Texture_Idx ambient_texture_idx;
+	Texture_Idx normal_texture_idx;
+	Texture_Idx diffuse_texture_idx;
+	Texture_Idx specular_texture_idx;
+	Texture_Idx displacement_texture_idx;
+	Mesh_Idx mesh_idx;
 };
 
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
@@ -60,6 +64,22 @@ struct Unified_Mesh_Storate {
 	void allocate_gpu_memory();
 	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx);
 	bool update_mesh(Mesh_Idx mesh_idx, Mesh<T> *mesh);
+};
+
+struct Render_Entity_Texture_Storage {
+	Gpu_Device *gpu_device = NULL;
+	Render_Pipeline *render_pipeline = NULL;
+
+	Texture_Idx default_texture_idx;
+	Texture_Idx white_texture_idx;
+	Texture_Idx black_texture_idx;
+	Texture_Idx green_texture_idx;
+
+	Array<Texture2D> textures;
+	Hash_Table<String, Texture_Idx> texture_table;
+
+	void init(Gpu_Device *_gpu_device, Render_Pipeline *_render_pipeline);
+	Texture_Idx add_texture(const char *name, u32 width, u32 height, void *data);
 };
 
 struct Shadow_Cascade_Range {
@@ -142,8 +162,9 @@ struct Render_World {
 	
 	Array<Render_Pass *> render_passes_array;
 
-	Unified_Mesh_Storate<Vertex_XNUV> triangle_meshes;
 	Unified_Mesh_Storate<Vector3> line_meshes;
+	Unified_Mesh_Storate<Vertex_PNTUV> triangle_meshes;
+	Render_Entity_Texture_Storage render_entity_texture_storage;
 	
 	Texture2D default_texture;
 	Texture2D shadow_atlas;
@@ -174,7 +195,7 @@ struct Render_World {
 	void update_shadows();
 	void update_render_entities();
 
-	void add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, void *args = NULL);
+	void add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, Render_Entity_Textures *render_entity_textures, void *args = NULL);
 	bool add_shadow(Light *light);
 
 	void render();
@@ -183,7 +204,7 @@ struct Render_World {
 	void set_camera_for_debuging(Entity_Id camera_info_id);
 	
 	bool get_shadow_atls_viewport(Viewport *viewport);
-	bool add_mesh(const char *mesh_name, Mesh<Vertex_XNUV> *mesh, Mesh_Idx *mesh_idx);
+	bool add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Idx *mesh_idx);
 	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx);
 	
 	Render_Entity *find_render_entity(Entity_Id entity_id);

@@ -6,6 +6,7 @@
 #include "../libs/os/input.h"
 #include "../libs/ds/array.h"
 #include "../libs/enum_helper.h"
+#include "../libs/key_binding.h"
 #include "../game/world.h"
 #include "../render/render_world.h"
 
@@ -114,7 +115,7 @@ struct Editor {
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 
-	Key_Binding key_command_bindings;
+	Key_Command_Bindings key_command_bindings;
 	Entity_Id editor_camera_id;
 
 	Make_Entity_Window make_entity_window;
