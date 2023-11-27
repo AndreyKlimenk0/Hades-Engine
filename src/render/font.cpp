@@ -17,9 +17,13 @@ Font::Font()
 	characters.reserve(MAX_CHARACTERS);
 }
 
+u32 Font::get_char_bearing(char c) {
+	return characters[c].bearing.width;
+}
+
 u32 Font::get_char_width(char c)
 {
-	return characters[c].size.width;
+	return characters[c].advance_x >> 6;
 }
 
 u32 Font::get_char_advance(char c)
@@ -45,21 +49,14 @@ Size_u32 Font::get_text_size(const char *text)
 		u8 c = text[index];
 		Font_Char *font_char = get_font_char(c);
 
-		if (font_char->size.height > max_height) {
-			max_height = font_char->size.height;
-			result.height = font_char->size.height;
+		if (index == (len - 1)) {
+			result.width += font_char->bearing.width + font_char->size.width;
+		} else {
+			result.width += (font_char->advance_x >> 6);
 		}
 		
-		if ((index == 0) && (index == (len - 1))) {
-			result.width += (font_char->advance_x >> 6) - (font_char->bearing.width * 2);
-			break;
-		}
-
-		if ((index == 0) || (index == (len - 1))) {
-			result.width += (font_char->advance_x >> 6) - font_char->bearing.width;
-		} else {
-			result.width += font_char->advance_x >> 6;
-		}
+		result.height = math::max(result.height, font_char->size.height);
+		
 	}
 	
 	return result;
