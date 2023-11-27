@@ -46,6 +46,7 @@ struct Font {
 
 	Array<Font_Char> characters;
 
+	u32 get_char_bearing(char c);
 	u32 get_char_width(char c);
 	u32 get_char_advance(char c);
 	u32 get_text_width(const char *text);
