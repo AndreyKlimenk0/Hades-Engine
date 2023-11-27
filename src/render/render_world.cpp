@@ -234,7 +234,7 @@ void Render_World::init_meshes()
 	//build_full_path_to_model_file("walls.fbx", path);
 	//build_full_path_to_model_file("scene_demo_unreal.fbx", path);
 	//build_full_path_to_model_file("camera.fbx", path);
-	load_fbx_mesh(path, &meshes, true);
+	load_fbx_mesh(path, &meshes);
 	print("Start make render entities");
 	Import_Mesh *imported_mesh = NULL;
 	print("Mesh count = ", meshes.count);

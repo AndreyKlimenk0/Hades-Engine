@@ -655,6 +655,7 @@ void String::copy(const String & string, u32 start, u32 end)
 	data = new char[string_len + 1];
 	memcpy(data, ptr, sizeof(char) * string_len);
 	data[string_len] = '\0';
+	len = string_len;
 }
 
 String *String::copy()

@@ -21,7 +21,8 @@ struct Gui_Edit_Field_Theme {
 	Rect_s32 caret_rect{ 0, 0, 1, 14 };
 	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 rect = { 0, 0, 220, 20 };
-	Color color = Color(66, 70, 75);
+	//Color color = Color(66, 70, 75);
+	Color color = Color(50, 50, 50);
 };
 
 struct Gui_Radio_Button_Theme {

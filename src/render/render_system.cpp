@@ -315,6 +315,9 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 		u8 c = text[i];
 		Font_Char *font_char = font->get_font_char(c);
 		u32 x_pos = (u32)x + font_char->bearing.width;
+		if (i == 0) {
+			x_pos = (u32)x;
+		}
 		u32 y_pos = 0;
 		if (font_char->size.height >= font_char->bearing.height) {
 			y_pos = (u32)y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height);
@@ -645,9 +648,8 @@ void Render_2D::render_frame()
 			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
 			render_pipeline->set_vertex_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
-			//if (render_primitive->texture->get_pitch()) {
-				render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->srv);
-			//}
+			render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->srv);
+			
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
 		}
@@ -767,9 +769,9 @@ void Render_Font::init(Render_2D *render_2d, Font *font)
 		Primitive_2D *primitive = new Primitive_2D();
 
 		primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
-		primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.x + uv.width, uv.y));
-		primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.x + uv.width, uv.y + uv.height));
-		primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.y + uv.height));
+		primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.right(), uv.y));
+		primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.right(), uv.bottom()));
+		primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.bottom()));
 
 		primitive->make_triangle_polygon();
 		render_2d->add_primitive(primitive);
