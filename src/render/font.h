@@ -21,13 +21,12 @@ struct Font_Char {
 	
 	u8 character;
 	u32 *bitmap = NULL;
-	u32 advance_y;
-	u32 advance_x;
-	Size_u32 size;
+	u32 advance;
 	Size_u32 bearing;
-	Size_u32 bitmap_size;
+	Size_u32 size;
+
 	
-	void operator=(const Font_Char &other);
+	Font_Char &operator=(const Font_Char &other);
 	u32 get_index();
 };
 
@@ -46,8 +45,6 @@ struct Font {
 
 	Array<Font_Char> characters;
 
-	u32 get_char_bearing(char c);
-	u32 get_char_width(char c);
 	u32 get_char_advance(char c);
 	u32 get_text_width(const char *text);
 	Size_u32 get_text_size(const char *text);

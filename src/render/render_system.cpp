@@ -306,35 +306,37 @@ void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text)
 void Render_Primitive_List::add_text(int x, int y, const char *text)
 {
 	assert(text);
-
+	
 	u32 len = (u32)strlen(text);
+	if (len == 0) {
+		return;
+	}
 	u32 max_height = font->get_text_size(text).height;
+	Font_Char *font_char = font->get_font_char(text[0]);
+	Vector2 position = { (float)x, (float)(y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height)) };
 
-	for (u32 i = 0; i < len; i++) {
+	Render_Primitive_2D info;
+	info.texture = render_font->font_atlas;
+	info.transform_matrix = make_translation_matrix(&position);
+	info.color = Color::White;
+	info.primitive = render_font->lookup_table[text[0]];
+	get_clip_rect(&info.clip_rect);
 
-		u8 c = text[i];
-		Font_Char *font_char = font->get_font_char(c);
-		u32 x_pos = (u32)x + font_char->bearing.width;
-		if (i == 0) {
-			x_pos = (u32)x;
-		}
-		u32 y_pos = 0;
-		if (font_char->size.height >= font_char->bearing.height) {
-			y_pos = (u32)y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height);
-		} else {
-			y_pos = (u32)y + max_height - font_char->size.height - font_char->bearing.height;
-		}
-		Vector2 position = Vector2((float)x_pos, (float)y_pos);
-		
+	x += font_char->advance;
+	render_primitives.push(info);
+
+	for (u32 i = 1; i < len; i++) {
+		Font_Char *font_char = font->get_font_char(text[i]);
+		Vector2 position = { (float)x + font_char->bearing.width, (float)(y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height)) };
+
 		Render_Primitive_2D info;
-		info.texture = &render_font->font_atlas;
+		info.texture = render_font->font_atlas;
 		info.transform_matrix = make_translation_matrix(&position);
 		info.color = Color::White;
-		info.primitive = render_font->lookup_table[c];
+		info.primitive = render_font->lookup_table[text[i]];
 		get_clip_rect(&info.clip_rect);
 
-		x += (font_char->advance_x >> 6);
-
+		x += font_char->advance;
 		render_primitives.push(info);
 	}
 }
@@ -390,6 +392,11 @@ void Render_Primitive_List::add_rect(float x, float y, float width, float height
 
 	primitive->make_triangle_polygon();
 	render_2d->add_primitive(primitive);
+}
+
+void Render_Primitive_List::add_texture(Rect_s32 *rect, Texture2D *resource) 
+{
+	add_texture(rect->x, rect->y, rect->width, rect->height, resource);
 }
 
 void Render_Primitive_List::add_texture(int x, int y, int width, int height, Texture2D *resource)
@@ -458,7 +465,7 @@ Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_m
 {
 	Render_Primitive_2D render_primitive;
 	render_primitive.color.value = color.value;
-	render_primitive.texture = texture;
+	render_primitive.texture = *texture;
 	render_primitive.transform_matrix = transform_matrix;
 	get_clip_rect(&render_primitive.clip_rect);
 
@@ -648,7 +655,7 @@ void Render_2D::render_frame()
 			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
 			render_pipeline->set_vertex_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
-			render_pipeline->set_pixel_shader_resource(0, render_primitive->texture->srv);
+			render_pipeline->set_pixel_shader_resource(0, render_primitive->texture.srv);
 			
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
@@ -802,7 +809,7 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 
 	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
 		Font_Char *font_char = font->get_font_char(c);
-		rects[c] = Rect_u32(font_char->bitmap_size);
+		rects[c] = Rect_u32(font_char->size);
 		rect_pointers.push(&rects[c]);
 	}
 

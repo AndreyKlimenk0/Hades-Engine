@@ -8,27 +8,16 @@
 #include "render_helpers.h"
 #include "../sys/engine.h"
 
-
 const char *DEFAULT_PATH_TO_FONT_DIR = "C:/Windows/Fonts/";
-
 
 Font::Font()
 {
 	characters.reserve(MAX_CHARACTERS);
 }
 
-u32 Font::get_char_bearing(char c) {
-	return characters[c].bearing.width;
-}
-
-u32 Font::get_char_width(char c)
-{
-	return characters[c].advance_x >> 6;
-}
-
 u32 Font::get_char_advance(char c)
 {
-	return characters[c].advance_x >> 6;
+	return characters[c].advance;
 }
 
 u32 Font::get_text_width(const char *text)
@@ -40,24 +29,23 @@ u32 Font::get_text_width(const char *text)
 Size_u32 Font::get_text_size(const char *text)
 {
 	assert(text);
-
+	
 	u32 len = (u32)strlen(text);
-	u32 max_height = 0;
+	u32 mines_one_len = len - 1;
 	Size_u32 result = { 0, 0 };
-
-	for (u32 index = 0; index < len; index++) {
-		u8 c = text[index];
-		Font_Char *font_char = get_font_char(c);
-
-		if (index == (len - 1)) {
-			result.width += font_char->bearing.width + font_char->size.width;
-		} else {
-			result.width += (font_char->advance_x >> 6);
-		}
-		
-		result.height = math::max(result.height, font_char->size.height);
-		
+	if (len == 0) {
+		return result;
 	}
+
+	Font_Char *font_char = NULL;
+	for (u32 index = 0; index < mines_one_len; index++) {
+		font_char = get_font_char(text[index]);
+		result.width += (font_char->advance);
+		result.height = math::max(result.height, font_char->size.height);
+	}
+	font_char = get_font_char(text[mines_one_len]);
+	result.width += font_char->bearing.width + font_char->size.width;
+	result.height = math::max(result.height, font_char->size.height);
 	
 	return result;
 }
@@ -74,28 +62,24 @@ Font_Char::~Font_Char()
 
 Font_Char::Font_Char(const Font_Char &other)
 {
-	character = other.character;
-	advance_y = other.advance_y;
-	advance_x = other.advance_x;
-	size = other.size;
-	bearing = other.bearing;
-	bitmap_size = other.bitmap_size;
-
-	bitmap = new u32[size.width * size.height];
-	memcpy((void *)bitmap, (void *)other.bitmap, (other.bitmap_size.width * other.bitmap_size.height) * sizeof(u32));
+	*this = other;
 }
 
-void Font_Char::operator=(const Font_Char &other)
+Font_Char &Font_Char::operator=(const Font_Char &other)
 {
-	character = other.character;
-	advance_y = other.advance_y;
-	advance_x = other.advance_x;
-	size = other.size;
-	bearing = other.bearing;
-	bitmap_size = other.bitmap_size;
-
-	bitmap = new u32[size.width * size.height];
-	memcpy((void *)bitmap, (void *)other.bitmap, (other.bitmap_size.width * other.bitmap_size.height) * sizeof(u32));
+	if (this != &other) {
+		character = other.character;
+		advance = other.advance;
+		size = other.size;
+		bearing = other.bearing;
+		
+		if (other.bitmap) {
+			DELETE_PTR(bitmap);
+			bitmap = new u32[size.width * size.height];
+			memcpy((void *)bitmap, (void *)other.bitmap, (size.width * size.height) * sizeof(u32));
+		}
+	}
+	return *this;
 }
 
 u32 Font_Char::get_index()
@@ -154,14 +138,12 @@ bool Font_Manager::load_font(const char *name, u32 font_size)
 
 		Font_Char font_char;
 		font_char.character = c;
-		font_char.advance_y = face->glyph->advance.y;
-		font_char.advance_x = face->glyph->advance.x;
-		font_char.size = Size_u32(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+		font_char.advance = face->glyph->advance.x >> 6;
 		font_char.bearing = Size_u32(face->glyph->bitmap_left, face->glyph->bitmap_top);
+		font_char.size = Size_u32(face->glyph->bitmap.width, face->glyph->bitmap.rows);
 
 		u32 *data = r8_to_rgba32((u8 *)face->glyph->bitmap.buffer, face->glyph->bitmap.width, face->glyph->bitmap.rows);
 		font_char.bitmap = data;
-		font_char.bitmap_size = Size_u32(face->glyph->bitmap.width, face->glyph->bitmap.rows);
 
 		if (font_char.size.width > font.max_width) {
 			font.max_width = font_char.size.width;

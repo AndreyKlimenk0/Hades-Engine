@@ -1,4 +1,6 @@
+#include <assert.h>
 #include <stdlib.h>
+
 #include "gui.h"
 
 #include "../render/font.h"
@@ -16,6 +18,7 @@
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/ds/stack.h"
+#include "../libs/png_image.h"
 #include "../libs/math/common.h"
 #include "../libs/key_binding.h"
 #include "../libs/ds/hash_table.h"
@@ -29,6 +32,7 @@
 typedef u32 Gui_ID;
 
 const u32 BUTTON_HASH = fast_hash("button");
+const u32 IMAGE_BUTTON_HASH = fast_hash("image_button");
 const u32 RADIO_BUTTON_HASH = fast_hash("radio_button");
 const u32 LIST_BOX_HASH = fast_hash("list_box");
 const u32 EDIT_FIELD_HASH = fast_hash("edit_Field");
@@ -41,6 +45,7 @@ const u32 VECTOR3_EDIT_FIELD_NUMBER = 3;
 #define GET_LIST_BOX_GUI_ID() (window->gui_id + LIST_BOX_HASH + list_box_count)
 #define GET_EDIT_FIELD_GUI_ID() (window->gui_id + EDIT_FIELD_HASH + edit_field_count)
 #define GET_RADIO_BUTTON_GUI_ID() (window->gui_id + RADIO_BUTTON_HASH + radio_button_count)
+#define GET_IMAGE_BUTTON_GUI_ID() (window->gui_id + IMAGE_BUTTON_HASH + image_button_count)
 #define GET_SCROLL_BAR_GUI_ID() (window->gui_id + SCROLL_BAR_HASH)
 #define GET_TAB_GUI_ID() (window->gui_id + TAB_HASH + tab_count)
 
@@ -80,7 +85,7 @@ inline void reverse_state(bool *state)
 
 inline bool detect_collision(Rect_s32 *rect)
 {
-	if ((Mouse_Async_Info::x > rect->x) && (Mouse_Async_Info::x < (rect->x + rect->width)) && (Mouse_Async_Info::y > rect->y) && (Mouse_Async_Info::y < (rect->y + rect->height))) {
+	if ((Mouse_State::x > rect->x) && (Mouse_State::x < (rect->x + rect->width)) && (Mouse_State::y > rect->y) && (Mouse_State::y < (rect->y + rect->height))) {
 		return true;
 	}
 	return false;
@@ -177,15 +182,16 @@ enum Window_Type {
 };
 
 struct Gui_Window {
+	bool open = true;
 	bool tab_was_added = false;
 	bool tab_was_drawn;
-	Gui_ID gui_id;
 	u32 edit_field_count = 0;
 	u32 max_edit_field_number = 0;
 	s32 tab_offset = 0;
 	s32 prev_rect_height = 0;
 	s32 index_in_windows_array = -1;
 	s32 index_in_windows_order = -1;
+	Gui_ID gui_id;
 
 	Window_Type type;
 	Element_Alignment alignment;
@@ -354,6 +360,7 @@ struct Gui_Manager {
 
 	u32 tab_count;
 	u32 button_count;
+	u32 image_button_count;
 	u32 radio_button_count;
 	u32 list_box_count;
 	u32 edit_field_count;
@@ -379,6 +386,11 @@ struct Gui_Manager {
 	Font *font = NULL;
 	Render_Font *render_font = NULL;
 	Render_2D *render_2d = NULL;
+	
+	Texture2D cross_texture;
+	Texture2D check_texture;
+	Texture2D default_texture;
+	Texture2D expand_down_texture;
 
 	Rect_s32 window_rect;
 	Cursor_Type cursor_type;
@@ -389,6 +401,7 @@ struct Gui_Manager {
 
 	Gui_Tab_Theme tab_theme;
 	Gui_Window_Theme window_theme;
+	Gui_List_Box_Theme list_box_theme;
 	Gui_Window_Theme backup_window_theme;
 	Gui_Window_Theme future_window_theme;
 	Gui_Text_Button_Theme button_theme;
@@ -400,6 +413,8 @@ struct Gui_Manager {
 	Key_Bindings key_bindings;
 
 	void init(Engine *engine, const char *font_name, u32 font_size);
+	void init_from_save_file();
+	void load_and_init_textures(Gpu_Device *gpu_device);
 	void handle_events();
 	void handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
 	void set_font(const char *font_name, u32 font_size);
@@ -411,7 +426,7 @@ struct Gui_Manager {
 	void update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect);
 	void update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect);
 
-	void begin_window(const char *name, Window_Type window_type, Window_Style window_style);
+	bool begin_window(const char *name, Window_Type window_type, Window_Style window_style);
 	void end_window();
 	void begin_child(const char *name, Window_Style window_style);
 	void end_child();
@@ -423,7 +438,6 @@ struct Gui_Manager {
 	void set_next_window_theme(Gui_Window_Theme *theme);
 	
 	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
-	void draw_edit_field(Edit_Field_Instance *edit_field_instance);
 	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
 
 	void text(const char *some_text);
@@ -436,12 +450,13 @@ struct Gui_Manager {
 	bool add_tab(const char *tab_name);
 	bool button(const char *name, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
+	bool image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect);
 	
 	bool edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z);
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color, u32 index);
 
-	bool handle_edit_field_shortcut_event(Gui_Window *window, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index = 0);
+	bool handle_edit_field_shortcut_event(Gui_Window *window, Rect_s32 *edit_field_rect, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index = 0);
 	
 	bool update_edit_field(Edit_Field_Instance *edit_field_instance);
 
@@ -463,13 +478,8 @@ struct Gui_Manager {
 
 Rect_s32 Gui_Manager::get_text_rect(const char *text)
 {
-	Rect_s32 name_rect;
-	name_rect.x = 0;
-	name_rect.y = 0;
 	Size_u32 size = font->get_text_size(text);
-	name_rect.width = (s32)size.width;
-	name_rect.height = (s32)size.height;
-	return name_rect;
+	return Rect_s32(0, 0, (s32)size.width, (s32)size.height);
 }
 
 void Gui_Manager::set_next_window_pos(s32 x, s32 y)
@@ -604,6 +614,7 @@ Gui_Window *Gui_Manager::find_window_in_order(const char *name, int *window_inde
 Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type, Window_Style window_style)
 {
 	Gui_Window window;
+	window.open = true;
 	window.name = name;
 	window.gui_id = fast_hash(name);
 	window.type = window_type;
@@ -628,6 +639,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type, Window_Style window_style, Rect_s32 *rect)
 {
 	Gui_Window window;
+	window.open = true;
 	window.name = name;
 	window.gui_id = fast_hash(name);
 	window.type = window_type;
@@ -719,9 +731,9 @@ Rect_s32 calculate_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 bool Gui_Manager::radio_button(const char *name, bool *state)
 {
 	bool was_click = false;
-	Rect_s32 true_rect = radio_button_theme.true_rect;
-	Rect_s32 radio_rect = radio_button_theme.radio_rect;
 	Rect_s32 rect = radio_button_theme.rect;
+	Rect_s32 radio_rect = radio_button_theme.radio_rect;
+	Rect_s32 check_texture_rect = radio_button_theme.check_texture_rect;
 	Rect_s32 name_rect = get_text_rect(name);
 	rect.width = name_rect.width + radio_rect.width + radio_button_theme.text_shift;
 
@@ -733,7 +745,7 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 
 		place_in_middle_and_by_left(&rect, &name_rect, radio_rect.width + radio_button_theme.text_shift);
 		place_in_middle_and_by_left(&rect, &radio_rect, 0);
-		place_in_middle(&radio_rect, &true_rect, BOTH_AXIS);
+		place_in_middle(&radio_rect, &check_texture_rect, BOTH_AXIS);
 
 		Gui_ID radio_button_gui_id = GET_RADIO_BUTTON_GUI_ID();
 		update_active_and_hot_state(window, radio_button_gui_id, &radio_rect);
@@ -749,9 +761,11 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
-		render_list->add_rect(&radio_rect, radio_button_theme.default_color, radio_button_theme.rounded_border);
 		if (*state) {
-			render_list->add_rect(&true_rect, radio_button_theme.color_for_true, radio_button_theme.rounded_border);
+			render_list->add_rect(&radio_rect, radio_button_theme.true_background_color, radio_button_theme.rounded_border);
+			render_list->add_texture(&check_texture_rect, &check_texture);
+		} else {
+			render_list->add_rect(&radio_rect, radio_button_theme.default_background_color, radio_button_theme.rounded_border);
 		}
 		render_list->add_text(&name_rect, name);
 		render_list->pop_clip_rect();
@@ -760,6 +774,31 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 	return was_click;
 }
 
+bool Gui_Manager::image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect)
+{
+	assert(rect);
+	assert(texture);
+	assert((rect->width > 0) && (rect->height > 0));
+
+	Gui_Window *window = get_window();
+	Rect_s32 image_rect = *rect;
+
+	if ((image_rect.x < 0) && (image_rect.y < 0)) {
+		place_rect_in_window(window, &image_rect);
+	}
+	Gui_ID image_button_gui_id = GET_IMAGE_BUTTON_GUI_ID();
+	if (must_rect_be_drawn(&window->rect, &image_rect)) {
+		update_active_and_hot_state(image_button_gui_id, &image_rect);
+
+		Rect_s32 clip_rect = calculate_clip_rect(window_view_rect, &image_rect);
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_texture(&image_rect, texture);
+		render_list->pop_clip_rect();
+	}
+	image_button_count++;
+	return ((hot_item == image_button_gui_id) && was_click_by_left_mouse_button());
+}
 static bool is_symbol_int_valid(char symbol)
 {
 	return (isdigit(symbol) || (symbol == '-'));
@@ -782,7 +821,8 @@ void Gui_Manager::edit_field(const char *name, int *value)
 void Gui_Manager::edit_field(const char *name, float *value)
 {
 	char *str_value = to_string(*value, GUI_FLOAT_PRECISION);
-	if (edit_field(name, str_value, 15, &is_symbol_float_valid)) {
+	bool result = edit_field(name, str_value, 15, &is_symbol_float_valid);
+	if (result && !edit_field_state.data.is_empty()) {
 		*value = (float)atof(edit_field_state.data.c_str());
 	}
 	free_string(str_value);
@@ -795,26 +835,27 @@ void Gui_Manager::edit_field(const char *name, String *value)
 
 bool Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
 {
+	bool result = false;
 	bool was_data_updated = false;
-	u32 color = 140;
-	auto xx = Color(color, 0, 0);
-	auto yy = Color(0, color, 0);
-	auto zz = Color(0, 0, color);
-	Color main_color = Color(0, 73, 206);
+	u32 max_chars_number = 12;
 	char *x_str = to_string(vector->x, GUI_FLOAT_PRECISION);
 	char *y_str = to_string(vector->y, GUI_FLOAT_PRECISION);
 	char *z_str = to_string(vector->z, GUI_FLOAT_PRECISION);
+	Gui_Edit_Field_Theme *theme = &edit_field_theme;
 	
 	same_line();
-	if (edit_field(x, x_str, 12, &is_symbol_float_valid, xx, 0)) {
+	result = edit_field(x, x_str, max_chars_number, &is_symbol_float_valid, theme->x_edit_field_color, 0);
+	if (result && !edit_field_state.data.is_empty()) {
 		vector->x = (float)atof(edit_field_state.data.c_str());
 		was_data_updated = true;
 	}
-	if (edit_field(y, y_str, 12, &is_symbol_float_valid, yy, 1)) {
+	result = edit_field(y, y_str, max_chars_number, &is_symbol_float_valid, theme->y_edit_field_color, 1);
+	if (result && !edit_field_state.data.is_empty()) {
 		vector->y = (float)atof(edit_field_state.data.c_str());
 		was_data_updated = true;
 	}
-	if (edit_field(z, z_str, 12, &is_symbol_float_valid, zz, 2)) {
+	result = edit_field(z, z_str, max_chars_number, &is_symbol_float_valid, theme->z_edit_field_color, 2);
+	if (result && !edit_field_state.data.is_empty()) {
 		vector->z = (float)atof(edit_field_state.data.c_str());
 		was_data_updated = true;
 	}
@@ -825,6 +866,59 @@ bool Gui_Manager::edit_field(const char *name, Vector3 *vector, const char *x, c
 	free_string(y_str);
 	free_string(z_str);
 	return was_data_updated;
+}
+
+bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol)) {
+	Gui_Edit_Field_Theme *theme = &edit_field_theme;
+
+	Edit_Field_Instance edit_field_instance;
+	edit_field_instance.name = name;
+	edit_field_instance.editing_value = editing_value;
+	edit_field_instance.symbol_validation = symbol_validation;
+	edit_field_instance.max_chars_number = max_chars_number;
+	edit_field_instance.caret_rect = { 0, 0, 1, 14 };
+	edit_field_instance.rect = theme->rect;
+	edit_field_instance.edit_field_rect = theme->edit_field_rect;
+	edit_field_instance.name_rect = get_text_rect(name);
+	edit_field_instance.value_rect = get_text_rect(editing_value);
+	edit_field_instance.rect.width = edit_field_instance.name_rect.width + edit_field_instance.edit_field_rect.width + theme->text_shift;
+
+	Gui_Window *window = get_window();
+	place_rect_in_window(window, &edit_field_instance.rect);
+
+	bool update_value = false;
+	if (must_rect_be_drawn(&window->rect, &edit_field_instance.rect)) {
+		place_in_middle_and_by_left(&edit_field_instance.rect, &edit_field_instance.edit_field_rect, 0);
+		place_in_middle_and_by_left(&edit_field_instance.rect, &edit_field_instance.name_rect, edit_field_instance.edit_field_rect.width + theme->text_shift);
+		place_in_middle_and_by_left(&edit_field_instance.edit_field_rect, &edit_field_instance.value_rect, theme->text_shift);
+		place_in_middle_and_by_left(&edit_field_instance.value_rect, &edit_field_instance.caret_rect, edit_field_instance.value_rect.width);
+
+		update_value = update_edit_field(&edit_field_instance);
+		Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
+		if (active_edit_field == edit_field_gui_id) {
+			bool result = handle_edit_field_shortcut_event(window, &edit_field_instance.edit_field_rect, edit_field_gui_id, EDIT_FIELD_TYPE_COMMON);
+			update_value = update_value ? update_value : result;
+		}
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &edit_field_instance.rect);
+		
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_rect(&edit_field_instance.edit_field_rect, theme->color, theme->rounded_border);
+		render_list->add_text(&edit_field_instance.name_rect, edit_field_instance.name);
+
+		if (active_edit_field == edit_field_gui_id) {
+			render_list->add_rect(&edit_field_state.caret, Color::White);
+			if (!edit_field_state.data.is_empty()) {
+				render_list->add_text(&edit_field_instance.value_rect, edit_field_state.data);
+			}
+		} else {
+			render_list->add_text(&edit_field_instance.value_rect, edit_field_instance.editing_value);
+		}
+		render_list->pop_clip_rect();
+	}
+	edit_field_count++;
+	window->edit_field_count++;
+	return update_value;
 }
 
 bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color, u32 field_index)
@@ -858,11 +952,12 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 
 		update_value = update_edit_field(&edit_field_instance);
 		Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
-		bool result = handle_edit_field_shortcut_event(window, edit_field_gui_id, EDIT_FIELD_TYPE_VECTOR3, field_index);
-		update_value = update_value ? update_value : result;
-
+		if (active_edit_field == edit_field_gui_id) {
+			bool result = handle_edit_field_shortcut_event(window, &edit_field_instance.edit_field_rect, edit_field_gui_id, EDIT_FIELD_TYPE_VECTOR3, field_index);
+			update_value = update_value ? update_value : result;
+		}
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
-		Rect_s32 clip_rect = calculate_clip_rect(&window->rect, &edit_field_instance.rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &edit_field_instance.rect);
 		render_list->push_clip_rect(&clip_rect);
 
 		render_list->add_rect(&edit_field_instance.rect, edit_field_theme.color, edit_field_theme.rounded_border);
@@ -871,10 +966,9 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 
 		if (active_edit_field == edit_field_gui_id) {
 			render_list->add_rect(&edit_field_state.caret, Color::White);
-		}
-
-		if (!edit_field_state.data.is_empty() && (active_edit_field == edit_field_gui_id)) {
-			render_list->add_text(&edit_field_instance.value_rect, edit_field_state.data);
+			if (!edit_field_state.data.is_empty()) {
+				render_list->add_text(&edit_field_instance.value_rect, edit_field_state.data);
+			}
 		} else {
 			render_list->add_text(&edit_field_instance.value_rect, edit_field_instance.editing_value);
 		}
@@ -886,115 +980,84 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 	return update_value;
 }
 
-bool Gui_Manager::handle_edit_field_shortcut_event(Gui_Window *window, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index) {
+bool Gui_Manager::handle_edit_field_shortcut_event(Gui_Window *window, Rect_s32 *edit_field_rect, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index) {
 	bool update_value = false;
 	static bool move_vertically = false;
 
-	if (active_edit_field == edit_field_gui_id) {
-		if (!change_active_field) {
-			if (edit_field_type == EDIT_FIELD_TYPE_VECTOR3) {
-				if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_LEFT)) {
-					if (((s32)vector3_edit_field_index - 1) >= 0) {
-						active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - 1;
-						update_value = true;
-						change_active_field = true;
-						move_vertically = false;
-					}
-				}
-				if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_RIGHT)) {
-					if ((vector3_edit_field_index + 1) < VECTOR3_EDIT_FIELD_NUMBER) {
-						active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count + 1;
-						update_value = true;
-						change_active_field = true;
-						move_vertically = false;
-					}
-				}
-			}
-			if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_UP)) {
-				if (edit_field_type == EDIT_FIELD_TYPE_COMMON) {
-					if (window->edit_field_count > 0) {
-						active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - 1;
-						update_value = true;
-						change_active_field = true;
-					}
-				} else if (edit_field_type == EDIT_FIELD_TYPE_VECTOR3) {
-					if (((s32)window->edit_field_count - (s32)VECTOR3_EDIT_FIELD_NUMBER) > 0) {
-						active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - (vector3_edit_field_index + 1);
-						update_value = true;
-						change_active_field = true;
-						move_vertically = true;
-					}
-				} else {
-					loop_print("Gui_Manager::handle_edit_field_shortcuts_event: Failed to handle key binding trigger. Unknown edit field type was passed.");
-				}
-			}
-			if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_DOWN)) {
-				if (edit_field_type == EDIT_FIELD_TYPE_COMMON) {
-					if ((window->edit_field_count + 1) < window->max_edit_field_number) {
-						active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count + 1;
-						update_value = true;
-						change_active_field = true;
-					}
-				} else if (edit_field_type == EDIT_FIELD_TYPE_VECTOR3) {
-					if ((window->edit_field_count + VECTOR3_EDIT_FIELD_NUMBER) < window->max_edit_field_number) {
-						active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count + (VECTOR3_EDIT_FIELD_NUMBER - vector3_edit_field_index);
-						update_value = true;
-						change_active_field = true;
-						move_vertically = true;
-					}
-				} else {
-					loop_print("Gui_Manager::handle_edit_field_shortcuts_event: Failed to handle key binding trigger. Unknown edit field type was passed.");
-
-				}
-			}
-		} else {
-			if ((vector3_edit_field_index == 2) && move_vertically) {
-				active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - 2;
-				update_value = true;
-				change_active_field = true;
-			} else {
-				change_active_field = false;
-			}
+	if (key_bindings.is_binding_down(KEY_CTRL, KEY_BACKSPACE)) {
+		if (edit_field_state.caret_index_in_text > -1) {
+			String remaining_substring = String(edit_field_state.data, edit_field_state.caret_index_for_inserting, edit_field_state.data.len);
+			edit_field_state.caret.x = edit_field_rect->x + edit_field_theme.text_shift;
+			edit_field_state.caret_index_for_inserting = 0;
+			edit_field_state.caret_index_in_text = -1;
+			edit_field_state.data = remaining_substring;
+			update_value = true;
 		}
 	}
-	return update_value;
-}
-
-bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol))
-{
-	Gui_Edit_Field_Theme *theme = &edit_field_theme;
-
-	Edit_Field_Instance edit_field_instance;
-	edit_field_instance.name = name;
-	edit_field_instance.editing_value = editing_value;
-	edit_field_instance.symbol_validation = symbol_validation;
-	edit_field_instance.max_chars_number = max_chars_number;
-	edit_field_instance.caret_rect = { 0, 0, 1, 14 };
-	edit_field_instance.rect = theme->rect;
-	edit_field_instance.edit_field_rect = theme->edit_field_rect;
-	edit_field_instance.name_rect = get_text_rect(name);
-	edit_field_instance.value_rect = get_text_rect(editing_value);
-	edit_field_instance.rect.width = edit_field_instance.name_rect.width + edit_field_instance.edit_field_rect.width + theme->text_shift;
-
-	Gui_Window *window = get_window();
-	place_rect_in_window(window, &edit_field_instance.rect);
-
-	bool update_value = false;
-	if (must_rect_be_drawn(&window->rect, &edit_field_instance.rect)) {
-		place_in_middle_and_by_left(&edit_field_instance.rect, &edit_field_instance.edit_field_rect, 0);
-		place_in_middle_and_by_left(&edit_field_instance.rect, &edit_field_instance.name_rect, edit_field_instance.edit_field_rect.width + theme->text_shift);
-		place_in_middle_and_by_left(&edit_field_instance.edit_field_rect, &edit_field_instance.value_rect, theme->text_shift);
-		place_in_middle_and_by_left(&edit_field_instance.value_rect, &edit_field_instance.caret_rect, edit_field_instance.value_rect.width);
-
-		update_value = update_edit_field(&edit_field_instance);
-		Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
-		bool result = handle_edit_field_shortcut_event(window, edit_field_gui_id, EDIT_FIELD_TYPE_COMMON);
-		update_value = update_value ? update_value : result;
-
-		draw_edit_field(&edit_field_instance);
+	if (!change_active_field) {
+		if (edit_field_type == EDIT_FIELD_TYPE_VECTOR3) {
+			if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_LEFT)) {
+				if (((s32)vector3_edit_field_index - 1) >= 0) {
+					active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - 1;
+					update_value = true;
+					change_active_field = true;
+					move_vertically = false;
+				}
+			}
+			if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_RIGHT)) {
+				if ((vector3_edit_field_index + 1) < VECTOR3_EDIT_FIELD_NUMBER) {
+					active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count + 1;
+					update_value = true;
+					change_active_field = true;
+					move_vertically = false;
+				}
+			}
+		}
+		if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_UP)) {
+			if (edit_field_type == EDIT_FIELD_TYPE_COMMON) {
+				if (window->edit_field_count > 0) {
+					active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - 1;
+					update_value = true;
+					change_active_field = true;
+				}
+			} else if (edit_field_type == EDIT_FIELD_TYPE_VECTOR3) {
+				if (((s32)window->edit_field_count - (s32)vector3_edit_field_index) > 0) {
+					active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - (vector3_edit_field_index + 1);
+					update_value = true;
+					change_active_field = true;
+					move_vertically = true;
+				}
+			} else {
+				loop_print("Gui_Manager::handle_edit_field_shortcuts_event: Failed to handle key binding trigger. Unknown edit field type was passed.");
+			}
+		}
+		if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_ARROW_DOWN)) {
+			if (edit_field_type == EDIT_FIELD_TYPE_COMMON) {
+				if ((window->edit_field_count + 1) < window->max_edit_field_number) {
+					active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count + 1;
+					update_value = true;
+					change_active_field = true;
+				}
+			} else if (edit_field_type == EDIT_FIELD_TYPE_VECTOR3) {
+				if ((window->edit_field_count + VECTOR3_EDIT_FIELD_NUMBER) < window->max_edit_field_number) {
+					active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count + (VECTOR3_EDIT_FIELD_NUMBER - vector3_edit_field_index);
+					update_value = true;
+					change_active_field = true;
+					move_vertically = true;
+				}
+			} else {
+				loop_print("Gui_Manager::handle_edit_field_shortcuts_event: Failed to handle key binding trigger. Unknown edit field type was passed.");
+			}
+		}
+	} else {
+		if ((vector3_edit_field_index == 2) && move_vertically) {
+			active_edit_field = window->gui_id + EDIT_FIELD_HASH + edit_field_count - 2;
+			update_value = true;
+			change_active_field = true;
+		} else {
+			change_active_field = false;
+		}
 	}
-	edit_field_count++;
-	window->edit_field_count++;
 	return update_value;
 }
 
@@ -1028,51 +1091,15 @@ bool Gui_Manager::update_edit_field(Edit_Field_Instance *edit_field_instance)
 		if (change_active_field) {
 			edit_field_state = make_edit_field_state(&edit_field_instance->caret_rect, edit_field_instance->editing_value, edit_field_instance->max_chars_number, edit_field_instance->symbol_validation);
 		}
-		handle_events(&update_editing_value, &update_next_time_editing_value, &edit_field_instance->edit_field_rect, &edit_field_instance->value_rect);
+		if (!Keys_State::is_key_down(KEY_CTRL)) {
+			handle_events(&update_editing_value, &update_next_time_editing_value, &edit_field_instance->edit_field_rect, &edit_field_instance->value_rect);
+		}
 	}
 	return update_editing_value;
 }
 
-void Gui_Manager::draw_edit_field(Edit_Field_Instance *edit_field_instance)
-{
-	Gui_Window *window = get_window();
-	Gui_Edit_Field_Theme *theme = &edit_field_theme;
-	Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
-	Render_Primitive_List *render_list = GET_RENDER_LIST();
-
-	Rect_s32 clip_rect = calculate_clip_rect(&window->view_rect, &edit_field_instance->rect);
-	render_list->push_clip_rect(&clip_rect);
-	render_list->add_rect(&edit_field_instance->edit_field_rect, theme->color, theme->rounded_border);
-	render_list->add_text(&edit_field_instance->name_rect, edit_field_instance->name);
-
-	if (active_edit_field == edit_field_gui_id) {
-		render_list->add_rect(&edit_field_state.caret, Color::White);
-	}
-	if (!edit_field_state.data.is_empty() && (active_edit_field == edit_field_gui_id)) {
-		render_list->add_text(&edit_field_instance->value_rect, edit_field_state.data);
-	} else {
-		render_list->add_text(&edit_field_instance->value_rect, edit_field_instance->editing_value);
-	}
-	render_list->pop_clip_rect();
-}
-
 void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	if (key_bindings.is_binding_down(KEY_CTRL, KEY_BACKSPACE)) {
-		if (edit_field_state.caret_index_in_text > -1) {
-			String remaining_substring = String(edit_field_state.data, edit_field_state.caret_index_for_inserting, edit_field_state.data.len);
-			String removed_substring = String(edit_field_state.data, 0, edit_field_state.caret_index_for_inserting);
-			edit_field_state.caret.x = rect->x + edit_field_theme.text_shift;
-			edit_field_state.caret_index_for_inserting = 0;
-			edit_field_state.caret_index_in_text = -1;
-			edit_field_state.data = remaining_substring;
-
-		}
-		return;
-	}
-	if (Key_Async_Info::is_key_down(KEY_CTRL)) {
-		return;
-	}
 	Queue<Event> *events = get_event_queue();
 	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 		Event *event = &node->item;
@@ -1085,7 +1112,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
 					edit_field_state.data.remove(edit_field_state.caret_index_in_text);
 
-					edit_field_state.caret.x -= (s32)font->get_char_width(c);
+					edit_field_state.caret.x -= (s32)font->get_char_advance(c);
 					edit_field_state.caret_index_in_text -= 1;
 					edit_field_state.caret_index_for_inserting -= 1;
 				}
@@ -1093,7 +1120,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 				if (edit_field_state.caret_index_in_text > -1) {
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
 
-					edit_field_state.caret.x -= (s32)font->get_char_width(c);
+					edit_field_state.caret.x -= (s32)font->get_char_advance(c);
 					edit_field_state.caret_index_in_text -= 1;
 					edit_field_state.caret_index_for_inserting -= 1;
 				}
@@ -1103,7 +1130,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 					edit_field_state.caret_index_for_inserting += 1;
 
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
-					edit_field_state.caret.x += (s32)font->get_char_width(c);
+					edit_field_state.caret.x += (s32)font->get_char_advance(c);
 				}
 			} else if (event->is_key_down(KEY_HOME)) {
 				Size_u32 size = font->get_text_size(edit_field_state.data);
@@ -1143,7 +1170,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 				edit_field_state.caret_index_in_text += 1;
 				edit_field_state.caret_index_for_inserting += 1;
 
-				edit_field_state.caret.x += (s32)font->get_char_width(event->char_key);
+				edit_field_state.caret.x += (s32)font->get_char_advance(event->char_key);
 			}
 		}
 	}
@@ -1151,38 +1178,32 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 
 void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect)
 {
-	u32 text_width = font->get_text_size(edit_field_state.data).width;
+	u32 text_width = font->get_text_width(edit_field_state.data);
 	u32 mouse_x_relative_text = (u32)math::abs(mouse_x - rect->x - edit_field_theme.text_shift);
 
 	if (mouse_x_relative_text > text_width) {
 		edit_field_state.caret.x = editing_value_rect->x + text_width;
 		edit_field_state.caret_index_for_inserting = edit_field_state.data.len;
 		edit_field_state.caret_index_in_text = edit_field_state.data.len - 1;
-		return;
-	}
-
-	if ((mouse_x >= rect->x) && (mouse_x <= (rect->x + edit_field_theme.text_shift))) {
+	} else if ((mouse_x >= rect->x) && (mouse_x <= (rect->x + edit_field_theme.text_shift))) {
 		edit_field_state.caret.x = rect->x + edit_field_theme.text_shift;
 		edit_field_state.caret_index_for_inserting = 0;
 		edit_field_state.caret_index_in_text = -1;
-		return;
-	}
+	} else {
+		u32 chars_width = 0;
+		u32 prev_chars_advance_width = 0;
 
-	u32 chars_width = 0;
-	u32 chars_advance_width = 0;
-	u32 prev_chars_advance_width = 0;
+		String *text = &edit_field_state.data;
+		for (u32 i = 0; i < text->len; i++) {
+			char c = text->data[i];
+			chars_width += font->get_char_advance(c);
 
-	String *text = &edit_field_state.data;
-	for (u32 i = 0; i < text->len; i++) {
-		char c = text->data[i];
-		chars_width += font->get_char_advance(c);
-		chars_advance_width += font->get_char_advance(c);
-
-		if ((mouse_x_relative_text >= prev_chars_advance_width) && (mouse_x_relative_text <= chars_advance_width)) {
-			edit_field_state.caret.x = rect->x + edit_field_theme.text_shift + chars_width;
-			edit_field_state.caret_index_for_inserting = i + 1;
-			edit_field_state.caret_index_in_text = i;
-			break;
+			if ((mouse_x_relative_text >= prev_chars_advance_width) && (mouse_x_relative_text <= chars_width)) {
+				edit_field_state.caret.x = rect->x + edit_field_theme.text_shift + chars_width;
+				edit_field_state.caret_index_for_inserting = i + 1;
+				edit_field_state.caret_index_in_text = i;
+				break;
+			}
 		}
 	}
 }
@@ -1279,8 +1300,8 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 	if (*item_index >= array->count) {
 		*item_index = 0;
 	}
-
-	Rect_s32 list_box_rect = { 0, 0, 220, 20 };
+	Rect_s32 list_box_rect = list_box_theme.default_rect;
+	Rect_s32 expand_down_texture_rect = list_box_theme.expand_down_texture_rect;
 	
 	Gui_Window *window = get_window();
 	place_rect_in_window(window, &list_box_rect);
@@ -1352,17 +1373,19 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		Rect_s32 name_rect = get_text_rect(array->get(*item_index));
 		
 		if (alignment & RIGHT_ALIGNMENT) {
-			place_in_middle_and_by_right(&list_box_rect, &name_rect, button_theme.shift_from_size);
+			place_in_middle_and_by_right(&list_box_rect, &name_rect, list_box_theme.shift_from_size);
 		} else if (alignment & LEFT_ALIGNMENT) {
-			place_in_middle_and_by_left(&list_box_rect, &name_rect, button_theme.shift_from_size);
+			place_in_middle_and_by_left(&list_box_rect, &name_rect, list_box_theme.shift_from_size);
 		} else {
 			place_in_middle(&list_box_rect, &name_rect, BOTH_AXIS);
 		}
+		place_in_middle_and_by_right(&list_box_rect, &expand_down_texture_rect, list_box_theme.expand_down_texture_shift);
 		
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&clip_rect);
-		render_list->add_rect(&list_box_rect, Color(66, 70, 75), button_theme.rounded_border);
+		render_list->add_rect(&list_box_rect, list_box_theme.background_color, list_box_theme.rounded_border);
 		render_list->add_text(&name_rect, array->get(*item_index));
+		render_list->add_texture(&expand_down_texture_rect, &expand_down_texture);
 		render_list->pop_clip_rect();
 	}
 	list_box_count++;
@@ -1444,7 +1467,12 @@ void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 	key_bindings.bind(KEY_CTRL, KEY_ARROW_RIGHT);
 
 	set_font(font_name, font_size);
+	init_from_save_file();
+	load_and_init_textures(&engine->render_sys.gpu_device);
+}
 
+void Gui_Manager::init_from_save_file() 
+{
 	String path_to_save_file;
 	build_full_path_to_gui_file("new_gui_data.gui", path_to_save_file);
 
@@ -1462,7 +1490,7 @@ void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 		save_file.read((void *)&window_style, sizeof(u32));
 		int string_len = 0;
 		save_file.read((void *)&string_len, sizeof(int));
-		
+
 		char *string = new char[string_len + 1];
 		save_file.read((void *)string, string_len);
 		string[string_len] = '\0';
@@ -1472,6 +1500,50 @@ void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 
 		create_window(string, WINDOW_TYPE_PARENT, window_style, &rect);
 		free_string(string);
+	}
+}
+
+struct Name_Texture {
+	const char *name = NULL;
+	Texture2D *texture = NULL;
+};
+
+void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device) 
+{
+	assert(gpu_device);
+
+	const u32 TEXTURE_COUNT = 3;
+	Name_Texture pairs[TEXTURE_COUNT] = { {"expand_down1.png", &expand_down_texture }, { "cross-small.png", &cross_texture }, { "check2.png", &check_texture } };
+
+	Texture2D_Desc texture_desc;
+	texture_desc.width = 64;
+	texture_desc.height = 64;
+	texture_desc.mip_levels = 1;
+	texture_desc.multisampling = { 1, 0 };
+	
+	gpu_device->create_texture_2d(&texture_desc, &default_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
+	
+	Color transparent_value = Color(255, 255, 255, 0);
+	fill_texture((void *)&transparent_value, &default_texture);
+
+	u8 *image_data = NULL;
+	u32 width = 0;
+	u32 height = 0;
+	String full_path;
+	for (u32 i = 0; i < TEXTURE_COUNT; i++) {
+		build_full_path_to_editor_file(pairs[i].name, full_path);
+		if (load_png_file(full_path, &image_data, &width, &height)) {
+			texture_desc.width = width;
+			texture_desc.height = height;
+			texture_desc.data = (void *)image_data;
+			gpu_device->create_texture_2d(&texture_desc, pairs[i].texture);
+			gpu_device->create_shader_resource_view(&texture_desc, pairs[i].texture);
+			DELETE_PTR(image_data);
+		} else {
+			print("Gui_Manager::load_and_init_textures: Failed to load {}.", pairs[i].name);
+			*pairs[i].texture = default_texture;
+		}
 	}
 }
 
@@ -1531,12 +1603,13 @@ void Gui_Manager::new_frame()
 	window_rect = DEFAULT_WINDOW_RECT;
 
 	is_window_order_update = false;
-	mouse_x = Mouse_Async_Info::x;
-	mouse_y = Mouse_Async_Info::y;
+	mouse_x = Mouse_State::x;
+	mouse_y = Mouse_State::y;
 	mouse_x_delta = mouse_x - last_mouse_x;
 	mouse_y_delta = mouse_y - last_mouse_y;
 	hot_item = 0;
 	button_count = 0;
+	image_button_count = 0;
 	radio_button_count = 0;
 	tab_count = 0;
 	list_box_count = 0;
@@ -1594,8 +1667,8 @@ void Gui_Manager::end_frame()
 		active_item = 0;
 		resizing_window = 0;
 	}
-	last_mouse_x = Mouse_Async_Info::x;
-	last_mouse_y = Mouse_Async_Info::y;
+	last_mouse_x = Mouse_State::x;
+	last_mouse_y = Mouse_State::y;
 #if PRINT_GUI_INFO
 	if (curr_parent_windows_index_sum != prev_parent_windows_index_sum) {
 		print("Gui_Manager::end_frame: curr_parent_windows_index_sum = ", curr_parent_windows_index_sum);
@@ -1627,7 +1700,7 @@ void Gui_Manager::end_frame()
 	}
 }
 
-void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window_Style window_style)
+bool Gui_Manager::begin_window(const char *name, Window_Type window_type, Window_Style window_style)
 {	
 	u32 window_index = 0;
 	Gui_Window *window = find_window(name, &window_index);
@@ -1646,8 +1719,11 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 			parent_window->child_windows.push(window);
 		}
 	}
+	if (!window->open) {
+		return false;
+	}
+
 	window_stack.push(window_index);
-	
 	window->start_new_frame(window_style);
 
 	Rect_s32  *rect = &window->rect;
@@ -1753,13 +1829,21 @@ void Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 		Rect_s32 name_rect = get_text_rect(window->name);
 		place_in_middle(&header_rect, &name_rect, BOTH_AXIS);
 		render_list->add_text(&name_rect, window->name);
+
+		Rect_s32 cross_texture_rect = { 0, 0, header_rect.height, header_rect.height };
+		place_in_middle_and_by_right(&header_rect, &cross_texture_rect, 5);
+		if (image_button(&cross_texture_rect, &cross_texture, &window->rect)) {
+			window->open = false;
+		}
 	}
+	return window->open;
 }
 
 void Gui_Manager::end_window()
 {
 	u32 window_index = window_stack.top();
-	Gui_Window *window = get_window();;
+	Gui_Window *window = get_window();
+	
 	if (window->index_in_windows_order < 0) {
 		window->set_index_with_offset(windows_order.count);
 		windows_order.push(window_index);
@@ -2110,6 +2194,13 @@ bool gui::radio_button(const char *name, bool *state)
 	return gui_manager.radio_button(name, state);
 }
 
+bool gui::image_button(u32 width, u32 height, Texture2D *texture) 
+{
+	Gui_Window *window = gui_manager.get_window();
+	Rect_s32 rect = { -1, -1, (s32)width, (s32)height };
+	return gui_manager.image_button(&rect, texture, &window->view_rect);
+}
+
 void gui::edit_field(const char *name, int *value)
 {
 	gui_manager.edit_field(name, value);
@@ -2148,8 +2239,7 @@ void gui::end_frame()
 
 bool gui::begin_window(const char *name, Window_Style window_style)
 {
-	gui_manager.begin_window(name, WINDOW_TYPE_PARENT, window_style);
-	return true;
+	return gui_manager.begin_window(name, WINDOW_TYPE_PARENT, window_style);
 }
 void gui::end_window()
 {
@@ -2239,6 +2329,14 @@ void gui::draw_test_gui()
 	Gui_Window_Theme theme;
 	theme.place_between_elements = 5;
 	if (begin_window("Test window")) {
+		static bool state;
+		radio_button("Turn on shadows", &state);
+		static u32 index = 0;
+		Array<String> array;
+		array.push("String 1");
+		array.push("String 2");
+		array.push("String 3");
+		list_box(&array, &index);
 		static Vector3 position1 = Vector3::zero;
 		static Vector3 position2 = Vector3::zero;
 		static Vector3 position3 = Vector3::zero;
@@ -2259,8 +2357,8 @@ void gui::draw_test_gui()
 		edit_field("Value4", &value4);
 		edit_field("Value5", &value5);
 		edit_field("Value6", &value6);
+		end_window();
 	}
-	end_window();
 
 	if (begin_window("Test window  2")) {
 		//static Vector3 position = Vector3::zero;
@@ -2279,8 +2377,29 @@ void gui::draw_test_gui()
 		edit_field("Value4", &value4);
 		edit_field("Value5", &value5);
 		edit_field("Value6", &value6);
+
+		u8 *image_data = NULL;
+		u32 width = 0;
+		u32 height = 0;
+		String full_path;
+		build_full_path_to_editor_file("search.png", full_path);
+		if (load_png_file(full_path, &image_data, &width, &height)) {
+			Texture2D texture;
+			Texture2D_Desc texture_desc;
+			texture_desc.mip_levels = 1;
+			texture_desc.multisampling = { 1, 0 };
+			texture_desc.width = width;
+			texture_desc.height = height;
+			texture_desc.data = (void *)image_data;
+			Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &texture);
+			Engine::get_render_system()->gpu_device.create_shader_resource_view(&texture_desc, &texture);
+			DELETE_PTR(image_data);
+			image_button(width, height, &texture);
+		} else {
+		}
+
+		end_window();
 	}
-	end_window();
 	
 	end_frame();
 }

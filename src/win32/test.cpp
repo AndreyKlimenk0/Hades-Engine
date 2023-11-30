@@ -26,7 +26,6 @@ struct Parallel_Job_Manager {
 
 void test()
 {
-	String c("string");
-	String test = "test";
-	test.copy(c, 0, 6);
+	String s = "A";
+	print(s);
 }

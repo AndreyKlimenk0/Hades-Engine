@@ -3,14 +3,14 @@
 #include "input.h"
 #include "../../sys/sys_local.h"
 
-s32 Mouse_Async_Info::x = 0;
-s32 Mouse_Async_Info::y = 0;
-s32 Mouse_Async_Info::last_x = 0;
-s32 Mouse_Async_Info::last_y = 0;
+s32 Mouse_State::x = 0;
+s32 Mouse_State::y = 0;
+s32 Mouse_State::last_x = 0;
+s32 Mouse_State::last_y = 0;
 
-bool Key_Async_Info::was_char_key_input;
-bool Key_Async_Info::keys[KEYBOARD_KEY_NUMBER];
-char Key_Async_Info::inputed_char;
+bool Keys_State::was_char_key_input;
+bool Keys_State::keys[KEYBOARD_KEY_NUMBER];
+char Keys_State::inputed_char;
 
 const char *string_keys[KEYBOARD_KEY_NUMBER] = {
 	"KEY_UNKNOWN",
@@ -126,34 +126,34 @@ s32 Mouse_Info::y_delta()
 	return y - last_y;
 }
 
-s32 Mouse_Async_Info::x_delta()
+s32 Mouse_State::x_delta()
 {
-	return Mouse_Async_Info::x - Mouse_Async_Info::last_x;
+	return Mouse_State::x - Mouse_State::last_x;
 }
 
-s32 Mouse_Async_Info::y_delta()
+s32 Mouse_State::y_delta()
 {
-	return Mouse_Async_Info::y - Mouse_Async_Info::last_y;
+	return Mouse_State::y - Mouse_State::last_y;
 }
 
-void Key_Async_Info::setup()
+void Keys_State::setup()
 {
 	for (int i = 0; i < KEYBOARD_KEY_NUMBER; i++) {
 		keys[i] = false;
 	}
 }
 
-void Key_Async_Info::key_down(int key)
+void Keys_State::key_down(int key)
 {
 	keys[key] = true;
 }
 
-void Key_Async_Info::key_up(int key)
+void Keys_State::key_up(int key)
 {
 	keys[key] = false;
 }
 
-bool Key_Async_Info::is_key_down(int key)
+bool Keys_State::is_key_down(int key)
 {
 	if (key < KEYBOARD_KEY_NUMBER) {
 		return keys[key];

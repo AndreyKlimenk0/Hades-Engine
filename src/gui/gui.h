@@ -5,6 +5,7 @@
 #include "../render/render_system.h"
 
 struct Engine;
+struct Texture2D;
 
 typedef u32 Window_Style;
 const Window_Style NO_WINDOW_STYLE = 0x0;
@@ -21,18 +22,20 @@ struct Gui_Edit_Field_Theme {
 	Rect_s32 caret_rect{ 0, 0, 1, 14 };
 	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
 	Rect_s32 rect = { 0, 0, 220, 20 };
-	//Color color = Color(66, 70, 75);
 	Color color = Color(50, 50, 50);
+	Color x_edit_field_color = Color(140, 0, 0);
+	Color y_edit_field_color = Color(0, 140, 0);
+	Color z_edit_field_color = Color(0, 0, 140);
 };
 
 struct Gui_Radio_Button_Theme {
-	s32 rounded_border = 10;
+	s32 rounded_border = 5;
 	s32 text_shift = 5;
-	Color default_color = Color(74, 82, 90);
-	Color color_for_true = Color(0, 75, 168);
-	Rect_s32 true_rect = { 0, 0, 15, 15 };
-	Rect_s32 radio_rect = { 0, 0, 20, 20 };
-	Rect_s32 rect = { 0, 0, 220, 20 };
+	Color default_background_color = Color(50, 50, 50);
+	Color true_background_color = Color(0, 92, 206);
+	Rect_s32 rect = { 0, 0, 220, 16 };
+	Rect_s32 radio_rect = { 0, 0, 16, 16 };
+	Rect_s32 check_texture_rect = { 0, 0, 12, 12 };
 };
 
 struct Gui_Tab_Theme {
@@ -42,6 +45,15 @@ struct Gui_Tab_Theme {
 	Color tab_color = Color(40, 40, 40);
 	Color tab_bar_color = Color(40, 40, 40);
 	Color active_tab_color = Color(30, 30, 30);
+};
+
+struct Gui_List_Box_Theme {
+	s32 rounded_border = 5;
+	s32 shift_from_size = 10;
+	s32 expand_down_texture_shift = 5;
+	Color background_color = Color(50, 50, 50);
+	Rect_s32 default_rect = { 0, 0, 170, 20 };
+	Rect_s32 expand_down_texture_rect = { 0, 0, 15, 15 };
 };
 
 struct Gui_Text_Button_Theme {
@@ -99,6 +111,7 @@ namespace gui {
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
+	bool image_button(u32 width, u32 height, Texture2D *texture);
 
 	bool add_tab(const char *tab_name);
 

@@ -92,15 +92,15 @@ void run_event_loop()
 
 		if (event.type == EVENT_TYPE_KEY) {
 			if (event.key_info.key_state == KEY_DOWN) {
-				Key_Async_Info::key_down(event.key_info.key);
+				Keys_State::key_down(event.key_info.key);
 			} else {
-				Key_Async_Info::key_up(event.key_info.key);
+				Keys_State::key_up(event.key_info.key);
 			}
 		} else if (event.type == EVENT_TYPE_MOUSE) {
-			Mouse_Async_Info::last_x = Mouse_Async_Info::x;
-			Mouse_Async_Info::last_y = Mouse_Async_Info::y;
-			Mouse_Async_Info::x = event.mouse_info.x;
-			Mouse_Async_Info::y = event.mouse_info.y;
+			Mouse_State::last_x = Mouse_State::x;
+			Mouse_State::last_y = Mouse_State::y;
+			Mouse_State::x = event.mouse_info.x;
+			Mouse_State::y = event.mouse_info.y;
 		}
 	}
 }

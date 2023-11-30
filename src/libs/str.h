@@ -112,7 +112,7 @@ struct String {
 	void place_end_char();
 	void copy(const String &string, u32 start, u32 end);
 
-	bool is_empty() { return data == NULL && len == 0; }
+	bool is_empty();
 	
 	u32 find_text(const char *text, u32 start = 0);
 
