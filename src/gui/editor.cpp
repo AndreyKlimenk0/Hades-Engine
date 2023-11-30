@@ -222,8 +222,8 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 
 		} else if (command == "start_rotate_camera") {
 			rotate_camera = true;
-			last_x = Mouse_Async_Info::x;
-			last_y = Mouse_Async_Info::y;
+			last_x = Mouse_State::x;
+			last_y = Mouse_State::y;
 		
 		} else if (command == "end_rotate_camera") {
 			rotate_camera = false;
@@ -329,11 +329,11 @@ void Game_World_Window::init(Engine *engine)
 	window_style = WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES;
 	entity_type = ENTITY_TYPE_UNKNOWN;
 
-	world_entities_window_theme.background_color = Color(42, 42, 42);
+	world_entities_window_theme.background_color = Color(40, 40, 40);
 	world_entities_window_theme.header_color = Color(36, 36, 36);
 	world_entities_window_theme.place_between_elements = 0;
 
-	entity_info_window_theme.background_color = Color(42, 42, 42);
+	entity_info_window_theme.background_color = Color(40, 40, 40);
 	entity_info_window_theme.header_color = Color(36, 36, 36);
 	entity_info_window_theme.place_between_elements = 8;
 
