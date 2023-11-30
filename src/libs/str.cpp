@@ -436,12 +436,13 @@ String &String::operator=(const char *string)
 
 String &String::operator=(const String &other)
 {
-	if (!other.data) {
+	if ((other.data == NULL) && (other.len == 0)) {
+		free();
 		return *this;
 	}
 
 	if (this == &other) {
-		return *this;;
+		return *this;
 	}
 
 	DELETE_ARRAY(data);
@@ -514,6 +515,12 @@ void String::insert(u32 index, char c)
 void String::remove(u32 index)
 {
 	assert(len > index);
+
+	if (len == 1) {
+		len = 0;
+		data = NULL;
+		return;
+	}
 
 	String *copied_str = copy();
 
@@ -646,16 +653,25 @@ u32 String::find_text(const char *text, u32 start)
 
 void String::copy(const String & string, u32 start, u32 end)
 {
-	DELETE_ARRAY(data);
-	
 	u32 string_len = end - start;
-	const char *ptr = string.data;
-	ptr += start;
+	if (string_len > 0) {
+		DELETE_ARRAY(data);
+		len = string_len;
+		const char *ptr = string.data;
+		ptr += start;
 
-	data = new char[string_len + 1];
-	memcpy(data, ptr, sizeof(char) * string_len);
-	data[string_len] = '\0';
-	len = string_len;
+		data = new char[string_len + 1];
+		memcpy(data, ptr, sizeof(char) * string_len);
+		data[string_len] = '\0';
+	}
+}
+
+bool String::is_empty() 
+{
+	if ((data == NULL) && (len == 0)) {
+		return true;
+	}
+	return false;
 }
 
 String *String::copy()

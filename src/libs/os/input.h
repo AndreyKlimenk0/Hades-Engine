@@ -75,7 +75,7 @@ struct Mouse_Info {
 	s32 y_delta();
 };
 
-struct Mouse_Async_Info {
+struct Mouse_State {
 	static s32 x;
 	static s32 y;
 	static s32 last_x;
@@ -85,7 +85,7 @@ struct Mouse_Async_Info {
 	static s32 y_delta();
 };
 
-struct Key_Async_Info {
+struct Keys_State {
 	static bool was_char_key_input;
 	static bool keys[KEYBOARD_KEY_NUMBER];
 	static char inputed_char;

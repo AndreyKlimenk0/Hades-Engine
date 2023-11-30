@@ -39,9 +39,9 @@ struct Primitive_2D {
 
 struct Render_Primitive_2D {
 	Primitive_2D *primitive = NULL;
-	Texture2D *texture = NULL;
 	Color color;
 	Rect_s32 clip_rect;
+	Texture2D texture;
 	Matrix4 transform_matrix;
 };
 
@@ -80,6 +80,7 @@ struct Render_Primitive_List {
 	void add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void add_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 
+	void add_texture(Rect_s32 *rect, Texture2D *resource);
 	void add_texture(int x, int y, int width, int height, Texture2D *resource);
 
 	void add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thicknesss = 0.5f);
