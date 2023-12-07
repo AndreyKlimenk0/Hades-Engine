@@ -111,7 +111,6 @@ void make_box_mesh(Box *box, Triangle_Mesh *mesh)
 	i[33] = 20; i[34] = 22; i[35] = 23;
 }
 
-
 void make_sphere_mesh(Sphere *sphere, Triangle_Mesh *mesh)
 {
 	Vertex_PNTUV top_vertex = Vertex_PNTUV(Vector3(0.0f, sphere->radius, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 0.0f));
