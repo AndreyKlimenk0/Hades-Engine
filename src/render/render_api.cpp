@@ -783,6 +783,12 @@ void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, co
 	dx11_context->PSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
 
+void Render_Pipeline::reset_pixel_shader_resource(u32 shader_resource_register) 
+{
+	Shader_Resource_View temp = nullptr;
+	dx11_context->PSSetShaderResources(shader_resource_register, 1, temp.GetAddressOf());
+}
+
 void Render_Pipeline::set_rasterizer_state(const Rasterizer_State &rasterizer_state)
 {
 	dx11_context->RSSetState(rasterizer_state.Get());

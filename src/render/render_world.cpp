@@ -661,6 +661,14 @@ void Render_Entity_Texture_Storage::init(Gpu_Device *_gpu_device, Render_Pipelin
 	fill_texture((void *)&temp, &green_texture);
 
 	green_texture_idx = textures.push(green_texture);
+
+	temp = { 0.2f, 0.2f, 0.2f };
+	Texture2D default_specular_texture;
+	gpu_device->create_texture_2d(&texture_desc, &default_specular_texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &default_specular_texture);
+	fill_texture((void *)&temp, &default_specular_texture);
+
+	default_specular_texture_idx = textures.push(default_specular_texture);
 }
 
 Texture_Idx Render_Entity_Texture_Storage::add_texture(const char *name, u32 width, u32 height, void *data)

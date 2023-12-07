@@ -86,12 +86,20 @@ void Engine::init_from_map()
 			print("Engine::init_from_file: Unknown geometry type.");
 		}
 
+		//Render_Entity_Textures render_entity_textures;
+		//render_entity_textures.ambient_texture_idx = add_texture("Rock_Mosaic_AO.png");
+		//render_entity_textures.normal_texture_idx = add_texture("Rock_Mosaic_NORM.png");
+		//render_entity_textures.diffuse_texture_idx = add_texture("Rock_Mosaic_DIFF.png");
+		//render_entity_textures.specular_texture_idx = add_texture("Rock_Mosaic_SPEC.png");
+		//render_entity_textures.displacement_texture_idx = add_texture("Rock_Mosaic_DISP_alternative.png");
+
 		Render_Entity_Textures render_entity_textures;
-		render_entity_textures.ambient_texture_idx = add_texture("Rock_Mosaic_AO.png");
-		render_entity_textures.normal_texture_idx = add_texture("Rock_Mosaic_NORM.png");
-		render_entity_textures.diffuse_texture_idx = add_texture("Rock_Mosaic_DIFF.png");
-		render_entity_textures.specular_texture_idx = add_texture("Rock_Mosaic_SPEC.png");
-		render_entity_textures.displacement_texture_idx = render_world.render_entity_texture_storage.white_texture_idx;
+		render_entity_textures.ambient_texture_idx = render_world.render_entity_texture_storage.white_texture_idx;
+		render_entity_textures.normal_texture_idx = add_texture("toy_box2.png");
+		render_entity_textures.diffuse_texture_idx = add_texture("toy_box1.png");
+		//render_entity_textures.diffuse_texture_idx = render_world.render_entity_texture_storage.white_texture_idx;;
+		render_entity_textures.displacement_texture_idx = add_texture("toy_box3.png");
+		render_entity_textures.specular_texture_idx = render_world.render_entity_texture_storage.default_specular_texture_idx;
 
 		render_world.add_mesh(mesh_name, &triangle_mesh, &mesh_idx);
 		render_world.add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, get_entity_id(geometry_entity), mesh_idx, &render_entity_textures);

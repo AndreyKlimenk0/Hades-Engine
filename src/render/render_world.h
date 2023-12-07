@@ -71,6 +71,7 @@ struct Render_Entity_Texture_Storage {
 	Render_Pipeline *render_pipeline = NULL;
 
 	Texture_Idx default_texture_idx;
+	Texture_Idx default_specular_texture_idx;
 	Texture_Idx white_texture_idx;
 	Texture_Idx black_texture_idx;
 	Texture_Idx green_texture_idx;

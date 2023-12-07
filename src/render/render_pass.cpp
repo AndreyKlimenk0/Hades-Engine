@@ -73,7 +73,7 @@ void Forwar_Light_Pass::render(Render_Pipeline *render_pipeline)
 
 	render_pipeline->set_pixel_shader_resource(CB_SHADOW_ATLAS_INFO_REGISTER, shadow_atlas_info_cbuffer);
 	render_pipeline->set_pixel_shader_resource(0, render_world->default_texture.srv);
-	render_pipeline->set_pixel_shader_resource(1, render_world->shadow_atlas.srv);
+	render_pipeline->set_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER, render_world->shadow_atlas.srv);
 	render_pipeline->set_pixel_shader_resource(7, render_world->lights_struct_buffer);
 	render_pipeline->set_pixel_shader_resource(8, render_world->cascaded_view_projection_matrices_sb);
 	render_pipeline->set_pixel_shader_resource(9, render_world->cascaded_shadows_info_sb);
@@ -98,6 +98,8 @@ void Forwar_Light_Pass::render(Render_Pipeline *render_pipeline)
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 	}
+	// Reset shadow atlas in order to get rid of warnings (Resource being set to OM DepthStencil is still bound on input!, Forcing PS shader resource slot 1 to NULL) from directx 11.
+	render_pipeline->reset_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER);
 }
 
 bool Draw_Lines_Pass::init(void *_render_context, Render_System *render_sys)
@@ -243,7 +245,7 @@ void Debug_Cascade_Shadows_Pass::render(Render_Pipeline *render_pipeline)
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
 	render_pipeline->set_pixel_shader_resource(CB_SHADOW_ATLAS_INFO_REGISTER, shadow_atlas_info_cbuffer);
-	render_pipeline->set_pixel_shader_resource(1, render_world->shadow_atlas.srv);
+	render_pipeline->set_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER, render_world->shadow_atlas.srv);
 	render_pipeline->set_pixel_shader_resource(7, render_world->lights_struct_buffer);
 	render_pipeline->set_pixel_shader_resource(8, render_world->cascaded_view_projection_matrices_sb);
 	render_pipeline->set_pixel_shader_resource(9, render_world->cascaded_shadows_info_sb);
@@ -269,6 +271,8 @@ void Debug_Cascade_Shadows_Pass::render(Render_Pipeline *render_pipeline)
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 	}
+	// Reset shadow atlas in order to get rid of warnings (Resource being set to OM DepthStencil is still bound on input!, Forcing PS shader resource slot 1 to NULL) from directx 11.
+	render_pipeline->reset_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER);
 }
 
 bool Draw_Vertices_Pass::init(void *_render_context, Render_System *render_sys)

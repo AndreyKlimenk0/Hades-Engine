@@ -61,10 +61,10 @@ float4 ps_main(Vertex_Out vertex_out) : SV_TARGET
     material.ambient = ambient_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     material.diffuse = diffuse_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     material.specular = specular_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    material.displacement = displacement_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    float3 temp = displacement_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     
     float3 normal_sample = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    float3 normal = normal_sample_to_world_space(normal_sample, vertex_out.normal, vertex_out.tangent);
+    float3 normal = normal_mapping(normal_sample, vertex_out.normal, vertex_out.tangent);
     
     uint shadow_cascade_index;
     float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);

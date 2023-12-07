@@ -46,17 +46,66 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 
 StructuredBuffer<Light> lights : register(t7);
 
+float2 parallax_mapping(float2 uv, float3 camera_direction, float3x3 TBN_matrix)
+{ 
+    // number of depth layers
+    const float minLayers = 8;
+    const float maxLayers = 32;
+    float numLayers = lerp(maxLayers, minLayers, abs(dot(float3(0.0, 0.0, 1.0), camera_direction)));  
+    // calculate the size of each layer
+    float layerDepth = 1.0 / numLayers;
+    // depth of current layer
+    float currentLayerDepth = 0.0;
+    // the amount to shift the texture coordinates per layer (from vector P)
+    float heightScale = 0.1f;
+    float2 P = camera_direction.xy / camera_direction.z * heightScale; 
+    float2 deltaTexCoords = P / numLayers;
+  
+    // get initial values
+    float2  currentTexCoords     = uv;
+    float currentDepthMapValue = displacement_texture.SampleLevel(linear_sampling, currentTexCoords, 0).r;
+      
+    while(currentLayerDepth < currentDepthMapValue)
+    {
+        // shift texture coordinates along direction of P
+        currentTexCoords -= deltaTexCoords;
+        // get depthmap value at current texture coordinates
+        currentDepthMapValue = displacement_texture.SampleLevel(linear_sampling, currentTexCoords, 0).r;  
+        // get depth of next layer
+        currentLayerDepth += layerDepth;  
+    }
+    
+    // get texture coordinates before collision (reverse operations)
+    float2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+    // get depth after and before collision for linear interpolation
+    float afterDepth  = currentDepthMapValue - currentLayerDepth;
+    float beforeDepth = displacement_texture.SampleLevel(linear_sampling, prevTexCoords, 0).r - currentLayerDepth + layerDepth;
+ 
+    // interpolation of texture coordinates
+    float weight = afterDepth / (afterDepth - beforeDepth);
+    float2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+    return finalTexCoords;
+}
 float4 ps_main(Vertex_Out vertex_out) : SV_Target
 {
+    float3x3 t = get_TBN_matrix(vertex_out.tangent, vertex_out.normal);
+    //float3 dir = normalize(camera_direction - camera_position);
+    float3 p = mul(camera_position, transpose(t));
+    float3 p1 = mul(vertex_out.world_position, transpose(t));
+    float3 dir = normalize(p - p1);
+    //dir = mul(dir, transpose(t));
+    //dir = normalize(dir);
+    vertex_out.uv = parallax_mapping(vertex_out.uv, dir, t);
+    
     Material material;
     material.ambient = ambient_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     material.diffuse = diffuse_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     material.specular = specular_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    material.displacement = displacement_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     
     float3 normal_sample = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    //float3 normal_sample = float3(0.5f, 0.5f, 1.0f);
-    float3 normal = normal_sample_to_world_space(normal_sample, vertex_out.normal, vertex_out.tangent);
+    float3 normal = normal_mapping(normal_sample, vertex_out.normal, vertex_out.tangent);
 
     //@Note: hard code
 	if (light_count == 0) {

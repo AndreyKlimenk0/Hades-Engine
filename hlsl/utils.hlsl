@@ -17,7 +17,16 @@ float3 calculate_ndc_coordinates(float4 transformed_vertex_position)
 	return ndc_coordinates;
 }
 
-float3 normal_sample_to_world_space(float3 normal_sample, float3 vertex_normal, float3 tangent)
+float3x3 get_TBN_matrix(float3 tangent, float3 vertex_normal)
+{
+    float3x3 TBN = identity_matrix3x3;
+    TBN[0] = tangent;
+    TBN[1] = cross(vertex_normal, tangent);
+    TBN[2] = vertex_normal;
+    return TBN;
+}
+
+float3 normal_mapping(float3 normal_sample, float3 vertex_normal, float3 tangent)
 {
     float3 uncompress_normal = (normal_sample * 2.0f) - 1.0f;
     float3x3 TBN = identity_matrix3x3;

@@ -12,7 +12,6 @@ struct Material {
     float3 ambient;
     float3 diffuse;
     float3 specular;
-    float3 displacement;
 };
 
 struct Light {
