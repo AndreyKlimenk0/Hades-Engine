@@ -436,6 +436,7 @@ struct Render_Pipeline {
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);
+	void reset_pixel_shader_resource(u32 shader_resource_register);
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
