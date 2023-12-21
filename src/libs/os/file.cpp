@@ -9,10 +9,11 @@
 
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names)
 {
-	full_path = concatenate_c_str(full_path, "*");
+	String path = full_path;
+	path.append("\\*");
 
 	WIN32_FIND_DATA data;
-	HANDLE handle = FindFirstFile(full_path, &data);
+	HANDLE handle = FindFirstFile(path, &data);
 
 	if (handle == INVALID_HANDLE_VALUE) {
 		//@Note: may be here need to be warring message
@@ -27,6 +28,13 @@ bool get_file_names_from_dir(const char *full_path, Array<String> *file_names)
 	} while (FindNextFile(handle, &data));
 	FindClose(handle);
 	return true;
+}
+
+u32 get_file_count_in_dir(const char *full_path)
+{
+	Array<String> file_names;
+	bool result = get_file_names_from_dir(full_path, &file_names);
+	return result ? file_names.count : 0;
 }
 
 bool file_exists(const char *full_path)
@@ -210,7 +218,7 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	
 	if (file_handle == INVALID_HANDLE_VALUE) {
 		DWORD error_id = GetLastError();
-		char *error_message = get_str_error_message_from_hresult_description(error_id);
+		char *error_message = get_error_message_from_error_code(error_id);
 		u32 len = (u32)strlen(error_message);
 		if (len > 0) {
 			error_message[len - 1] = '\0';
@@ -238,7 +246,7 @@ void File::read(void *data, u32 data_size)
 
 	if (result == FALSE) {
 		DWORD error_id = GetLastError();
-		char *error_message = get_str_error_message_from_hresult_description(error_id);
+		char *error_message = get_error_message_from_error_code(error_id);
 		print("File::read failed. Error message: ", error_message);
 		free_string(error_message);
 		return;
@@ -259,7 +267,7 @@ void File::write(void *data, u32 data_size)
 
 	if (result == FALSE) {
 		DWORD error_id = GetLastError();
-		char *error_message = get_str_error_message_from_hresult_description(error_id);
+		char *error_message = get_error_message_from_error_code(error_id);
 		print("File::write failed. Error message: ", error_message);
 		free_string(error_message);
 		return;
@@ -281,7 +289,7 @@ void File::write(const char *string, bool new_line)
 
 	if (result == FALSE) {
 		DWORD error_id = GetLastError();
-		char *error_message = get_str_error_message_from_hresult_description(error_id);
+		char *error_message = get_error_message_from_error_code(error_id);
 		print("File::write failed. Error message: ", error_message);
 		free_string(error_message);
 		return;

@@ -9,5 +9,6 @@
 
 
 void test();
+void update_test();
 
 #endif

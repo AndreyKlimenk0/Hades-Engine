@@ -110,6 +110,8 @@ void Engine::init_from_map()
 
 void Engine::frame()
 {
+	update_test();
+
 	s64 start_time = milliseconds_counter();
 	s64 ticks_counter = cpu_ticks_counter();
 

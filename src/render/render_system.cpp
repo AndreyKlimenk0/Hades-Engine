@@ -109,7 +109,7 @@ static void init_shaders_table(Gpu_Device *gpu_device, Hash_Table<String, Shader
 	get_path_to_data_dir("shader", path_to_shader_dir);
 
 	Array<String> file_names;
-	bool success = get_file_names_from_dir(path_to_shader_dir + "\\", &file_names);
+	bool success = get_file_names_from_dir(path_to_shader_dir, &file_names);
 	
 	if (!success) {
 		error("init_shaders_table: has not found compiled shader files.");
