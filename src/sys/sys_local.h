@@ -8,7 +8,7 @@
 void report_info(const char *info_message);
 void report_error(const char *error_message);
 void report_hresult_error(const char *file, u32 line, HRESULT hr, const char *expr);
-char *get_str_error_message_from_hresult_description(HRESULT hr);
+char *get_error_message_from_error_code(DWORD hr);
 
 
 #if defined(DEBUG) | defined(_DEBUG)
@@ -92,47 +92,29 @@ void error(Args... args)
 	void operator=(const class_name &other) = delete; \
 
 
-struct Args;
-
 struct Callback {
 	~Callback() {}
-	virtual void call() = 0;
-	virtual Callback *copy() = 0;
+	virtual void call(void *args) = 0;
 };
 
 template< typename T>
 struct Member_Callback : Callback {
-	Member_Callback(T *object, void (T::*callback)()) : object(object), member(callback) {}
+	Member_Callback(T *object, void (T::*member)(void *args)) : object(object), member(member) {}
+	~Member_Callback() {}
 
-	T *object;
-	void (T::*member)();
+	T *object = NULL;
+	void (T::*member)(void *args) = NULL;
 
-	void call() { (object->*member)(); }
-	Callback *copy() { return new Member_Callback<T>(object, member); }
-
+	void call(void *args) 
+	{ 
+		(object->*member)(args); 
+	}
 };
 
 template <typename T>
-Member_Callback<T> *make_member_callback(T *object, void (T::*callback)())
+inline Member_Callback<T> *make_member_callback(T *object, void (T::*callback)(void *args))
 {
 	return new Member_Callback<T>(object, callback);
 }
-
-struct Function_Callback : Callback {
-	Function_Callback(void(*callback)()) : callback(callback) {}
-	void(*callback)();
-
-	void call() { (*callback)(); }
-	Callback *copy() { return new Function_Callback(callback); }
-};
-
-struct Function_Callback_With_Arg : Callback {
-	Function_Callback_With_Arg(void(*callback)(Args *args)) : callback(callback) {}
-	void(*callback)(Args *args);
-
-	void call() {}
-	void call(Args *args) { (*callback)(args); }
-	Callback *copy() { assert(false); return NULL; }
-};
 
 #endif
