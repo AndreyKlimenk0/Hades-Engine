@@ -1,6 +1,8 @@
+#include <assert.h>
+
 #include "path.h"
 #include "../ds/array.h"
-
+#include "../ds/hash_table.h"
 
 const char DATA_DIR_NAME[] = "data";
 const char ENGINE_NAME[] = "hades";
@@ -124,4 +126,9 @@ void build_full_path_to_model_file(const char * file_name, String & full_path)
 {
 	String &value = os_path.data_dir_paths["model"];
 	full_path = value + "\\" + file_name;
+}
+
+const char *get_base_path()
+{
+	return os_path.base_path.c_str();
 }

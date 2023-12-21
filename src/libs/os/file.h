@@ -13,6 +13,7 @@ void extract_file_name(const char *file_name, String &result);
 void extract_file_extension(const char *file_name, String &result);
 void extract_file_from_path(const char *path, String &result);
 
+u32 get_file_count_in_dir(const char *full_path);
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names);
 bool file_exists(const char *full_path);
 bool directory_exists(const char *full_path);
