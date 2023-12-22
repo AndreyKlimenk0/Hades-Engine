@@ -190,7 +190,9 @@
     <ClCompile Include="src\render\render_pass.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\render\render_world.cpp" />
+    <ClCompile Include="src\render\shader_manager.cpp" />
     <ClCompile Include="src\sys\engine.cpp" />
+    <ClCompile Include="src\sys\file_tracking.cpp" />
     <ClCompile Include="src\sys\map.cpp" />
     <ClCompile Include="src\sys\sys_debug.cpp" />
     <ClCompile Include="src\sys\sys_output_info.cpp" />
@@ -232,8 +234,10 @@
     <ClInclude Include="src\render\render_pass.h" />
     <ClInclude Include="src\render\render_system.h" />
     <ClInclude Include="src\render\render_world.h" />
+    <ClInclude Include="src\render\shader_manager.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\sys\engine.h" />
+    <ClInclude Include="src\sys\file_tracking.h" />
     <ClInclude Include="src\sys\map.h" />
     <ClInclude Include="src\sys\sys_local.h" />
     <ClInclude Include="src\win32\test.h" />

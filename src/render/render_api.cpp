@@ -298,10 +298,6 @@ u32 Gpu_Buffer::get_data_width()
 	return data_count * data_size;
 }
 
-Input_Layout Gpu_Device::vertex_xc;
-Input_Layout Gpu_Device::vertex_xnuv;
-Input_Layout Gpu_Device::vertex_xuv;
-
 void Gpu_Device::create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer)
 {
 	assert(buffer);
@@ -562,60 +558,34 @@ void Gpu_Device::create_unordered_access_view(Texture2D_Desc *texture_desc, Text
 	HR(dx11_device->CreateUnorderedAccessView(texture->resource.Get(), &unordered_access_view_desc, texture->uav.ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_input_layouts(Hash_Table<String, Shader *> &shader_table)
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Vertex_Shader &shader)
 {
-	const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2] = {
-	{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	{"TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-
-	const D3D11_INPUT_ELEMENT_DESC vertex_xc_desc[2] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-
-	const D3D11_INPUT_ELEMENT_DESC vertex_xnuv_desc[3] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	};
-
-	Shader *forward_light = shader_table["forward_light.hlsl"];
-	Shader *text = shader_table["draw_text.hlsl"];
-
-	HR(dx11_device->CreateInputLayout(vertex_xnuv_desc, 3, (void *)forward_light->byte_code, forward_light->byte_code_size, Gpu_Device::vertex_xnuv.ReleaseAndGetAddressOf()));
-	HR(dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)text->byte_code, text->byte_code_size, Gpu_Device::vertex_xuv.ReleaseAndGetAddressOf()));
+	HR(dx11_device->CreateVertexShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
 }
 
-void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Shader_Type shader_type, Shader *shader)
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Geometry_Shader &shader)
 {
-	assert(shader);
-	switch (shader_type) {
-		case VERTEX_SHADER: {
-			HR(dx11_device->CreateVertexShader((void *)byte_code, byte_code_size, NULL, shader->vertex_shader.ReleaseAndGetAddressOf()));
-			break;
-		}
-		case GEOMETRY_SHADER: {
-			HR(dx11_device->CreateGeometryShader((void *)byte_code, byte_code_size, NULL, shader->geometry_shader.ReleaseAndGetAddressOf()));
-			break;
-		}
-		case COMPUTE_SHADER: {
-			HR(dx11_device->CreateComputeShader((void *)byte_code, byte_code_size, NULL, shader->compute_shader.ReleaseAndGetAddressOf()));
-			break;
-		}
-		case HULL_SHADER: {
-			HR(dx11_device->CreateHullShader((void *)byte_code, byte_code_size, NULL, shader->hull_shader.ReleaseAndGetAddressOf()));
-			break;
-		}
-		case DOMAIN_SHADER: {
-			HR(dx11_device->CreateDomainShader((void *)byte_code, byte_code_size, NULL, shader->domain_shader.ReleaseAndGetAddressOf()));
-			break;
-		}
-		case PIXEL_SHADER: {
-			HR(dx11_device->CreatePixelShader((void *)byte_code, byte_code_size, NULL, shader->pixel_shader.ReleaseAndGetAddressOf()));
-			break;
-		}
-	}
+	HR(dx11_device->CreateGeometryShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
+}
+
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Compute_Shader &shader)
+{
+	HR(dx11_device->CreateComputeShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
+}
+
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Hull_Shader &shader)
+{
+	HR(dx11_device->CreateHullShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
+}
+
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Domain_Shader &shader)
+{
+	HR(dx11_device->CreateDomainShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
+}
+
+void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Pixel_Shader &shader)
+{
+	HR(dx11_device->CreatePixelShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
 }
 
 void Render_Pipeline_State::setup_default_state(Render_System *render_sys)
@@ -1124,4 +1094,23 @@ void Texture3D::release()
 {
 	Gpu_Resource<ID3D11Texture3D>::release();
 	Gpu_Resource_Views::release();
+}
+
+Shader::Shader()
+{
+}
+
+Shader::~Shader()
+{
+	free();
+}
+
+void Shader::free()
+{
+	vertex_shader.Reset();
+	geometry_shader.Reset();
+	compute_shader.Reset();
+	hull_shader.Reset();
+	domain_shader.Reset();
+	pixel_shader.Reset();
 }

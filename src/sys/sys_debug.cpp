@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <windows.h>
 
 #include "sys_local.h"
@@ -12,6 +13,13 @@ char *get_error_message_from_error_code(DWORD error_code)
 	if (!result) {
 		//printf("[Could not find a description for error # %#x.]\n", hr);
 		return NULL;
+	}
+	int len = strlen(error_message);
+	if ((len > 1) && (error_message[len - 1] == '\n')) {
+		error_message[len - 1] = '\0';
+	}
+	if ((len > 2) && (error_message[len - 2] == '\r')) {
+		error_message[len - 2] = '\0';
 	}
 	return _strdup(error_message);
 }

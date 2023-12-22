@@ -239,17 +239,8 @@ struct Depth_Stencil_State_Desc {
 	Comparison_Func compare_func = COMPARISON_ALWAYS;
 };
 
-enum Shader_Type {
-	VERTEX_SHADER,
-	GEOMETRY_SHADER,
-	COMPUTE_SHADER,
-	HULL_SHADER,
-	DOMAIN_SHADER,
-	PIXEL_SHADER,
-};
-
 struct Shader {
-	Shader() {};
+	Shader();
 	~Shader();
 
 	Vertex_Shader vertex_shader;
@@ -258,11 +249,8 @@ struct Shader {
 	Hull_Shader hull_shader;
 	Domain_Shader domain_shader;
 	Pixel_Shader pixel_shader;
-
-	u8 *byte_code = NULL;
-	u32 byte_code_size = 0;
-
-	String name;
+	
+	void free();
 };
 
 struct Gpu_Resource_Views {
@@ -329,13 +317,13 @@ struct Texture3D : Gpu_Resource<ID3D11Texture3D>, Gpu_Resource_Views {
 struct Gpu_Device {
 	Dx11_Device dx11_device;
 	Dx11_Debug debug;
-	
-	static Input_Layout vertex_xc;
-	static Input_Layout vertex_xnuv;
-	static Input_Layout vertex_xuv;
 
-	void create_input_layouts(Hash_Table<String, Shader *> &shader_table);
-	void create_shader(u8 *byte_code, u32 byte_code_size, Shader_Type shader_type, Shader *shader);
+	void create_shader(u8 *byte_code, u32 byte_code_size, Vertex_Shader &shader);
+	void create_shader(u8 *byte_code, u32 byte_code_size, Geometry_Shader &shader);
+	void create_shader(u8 *byte_code, u32 byte_code_size, Compute_Shader &shader);
+	void create_shader(u8 *byte_code, u32 byte_code_size, Hull_Shader &shader);
+	void create_shader(u8 *byte_code, u32 byte_code_size, Domain_Shader &shader);
+	void create_shader(u8 *byte_code, u32 byte_code_size, Pixel_Shader &shader);
 	
 	void create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer);
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
@@ -370,7 +358,6 @@ enum Map_Type {
 
 struct Render_Pipeline_State {
 	Render_Primitive_Type primitive_type;
-	String shader_name;
 	Shader *shader = NULL;
 	Blend_State blend_state;
 	Depth_Stencil_State depth_stencil_state;
