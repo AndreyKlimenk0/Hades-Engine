@@ -43,6 +43,8 @@ void Engine::init(Win32_Info *_win32_info)
 	}
 	render_world.init_meshes();
 
+	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
+
 	engine->is_initialized = true;
 }
 
@@ -110,8 +112,6 @@ void Engine::init_from_map()
 
 void Engine::frame()
 {
-	update_test();
-
 	s64 start_time = milliseconds_counter();
 	s64 ticks_counter = cpu_ticks_counter();
 
@@ -121,6 +121,9 @@ void Engine::frame()
 	gui::handle_events();
 
 	editor.handle_events();
+
+	file_tracking_sys.update();
+	
 	editor.update();
 
 	render_world.update();

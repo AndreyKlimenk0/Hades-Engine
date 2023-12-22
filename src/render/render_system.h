@@ -5,15 +5,16 @@
 #include <DirectXMath.h>
 
 #include "font.h"
-#include "render_api.h"
 #include "vertex.h"
+#include "render_api.h"
+#include "shader_manager.h"
 #include "../game/world.h"
+#include "../win32/win_types.h"
+#include "../libs/ds/array.h"
 #include "../libs/math/matrix.h"
 #include "../libs/math/common.h"
-#include "../libs/ds/array.h"
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/linked_list.h"
-#include "../win32/win_types.h"
 
 
 struct Engine;
@@ -178,6 +179,10 @@ struct Render_System {
 	static u32 screen_width;
 	static u32 screen_height;
 
+	Input_Layout vertex_xc;
+	Input_Layout vertex_xnuv;
+	Input_Layout vertex_xuv;
+
 	//@Note: Why I need to have this var here ?
 	View view;
 	//@Note: Why I need to have this var here ?
@@ -190,17 +195,14 @@ struct Render_System {
 	Gpu_Device gpu_device;
 	Render_Pipeline render_pipeline;
 	Render_Pipeline_States render_pipeline_states;
-	
-	Hash_Table<String, Shader *> shader_table;
 
 	void init(Engine *engine);
 	void init_render_targets(u32 window_width, u32 window_height);
+	void init_shader_input_layouts(Shader_Manager *shader_manager);
 	
 	void resize(u32 window_width, u32 window_height);
 
 	void new_frame();
 	void end_frame();
-
-	Shader *get_shader(const char *name);
 };
 #endif
