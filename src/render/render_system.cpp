@@ -14,9 +14,6 @@
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 
-
-const String HLSL_FILE_EXTENSION = "cso";
-
 u32 Render_System::screen_width = 0;
 u32 Render_System::screen_height = 0;
 
@@ -43,119 +40,6 @@ inline Vector2 make_vector2(Point_V2<T> *first_point, Point_V2<T> *second_point)
 inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
 {
 	return (float)pow((1.0f - t), 2.0f) * p0 + 2.0f * (1.0f - t) * t * p1 + (float)pow(t, 2.0f) * p2;
-}
-
-static void get_shader_name_from_file(const char *file_name, String &name)
-{
-	String f_name = file_name;
-
-	Array<String> buffer;
-	if (split(&f_name, "_", &buffer)) {
-		for (u32 i = 0; i < (buffer.count - 1); i++) {
-			if (i != 0) {
-				name.append("_");
-			}
-			name.append(buffer[i]);
-		}
-	}
-}
-
-static bool get_shader_type_from_file_name(const char *file_name, Shader_Type *shader_type)
-{
-	String name;
-	String file_extension;
-
-	extract_file_extension(file_name, file_extension);
-	if (file_extension != HLSL_FILE_EXTENSION) {
-		print("get_shader_type_from_file: {} has wrong file extension.", file_name);
-		return false;
-	}
-
-	extract_file_name(file_name, name);
-
-	Array<String> strings;
-	bool result = split(&name, "_", &strings);
-	if (!result) {
-		print("get_shader_type_from_file: can not extract shader type from {}.", file_name);
-		return false;
-	}
-
-	String type = strings.last_item();
-
-	if (type == "vs") {
-		*shader_type = VERTEX_SHADER;
-	} else if (type == "gs") {
-		*shader_type = GEOMETRY_SHADER;
-	} else if (type == "cs") {
-		*shader_type = COMPUTE_SHADER;
-	} else if (type == "hs") {
-		*shader_type = HULL_SHADER;
-	} else if (type == "ds") {
-		*shader_type = DOMAIN_SHADER;
-	} else if (type == "ps") {
-		*shader_type = PIXEL_SHADER;
-	} else {
-		print("get_shader_type_from_file: can not extract shader type from {}.", file_name);
-		return false;
-	}
-	return true;
-}
-
-static void init_shaders_table(Gpu_Device *gpu_device, Hash_Table<String, Shader *> *shader_table)
-{
-	print("[Load hlsl shaders]");
-
-	String path_to_shader_dir;
-	get_path_to_data_dir("shader", path_to_shader_dir);
-
-	Array<String> file_names;
-	bool success = get_file_names_from_dir(path_to_shader_dir, &file_names);
-	
-	if (!success) {
-		error("init_shaders_table: has not found compiled shader files.");
-	}
-
-	for (u32 i = 0; i < file_names.count; i++) {
-		Shader_Type shader_type;
-		if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
-			continue;
-		}
-
-		String path_to_shader_file;
-		build_full_path_to_shader_file(file_names[i], path_to_shader_file);
-
-		int file_size;
-		char *compiled_shader = read_entire_file(path_to_shader_file, "rb", &file_size);
-		if (!compiled_shader) {
-			continue;
-		}
-
-		String shader_name;
-		get_shader_name_from_file(file_names[i].c_str(), shader_name);
-		shader_name.append(".hlsl");
-
-		Shader *existing_shader = NULL;
-		if (shader_table->get(shader_name, existing_shader)) {
-			gpu_device->create_shader((u8 *)compiled_shader, file_size, shader_type, existing_shader);
-
-			if (shader_type == VERTEX_SHADER) {
-				existing_shader->byte_code = (u8 *)compiled_shader;
-				existing_shader->byte_code_size = file_size;
-			}
-		} else {
-			Shader *new_shader = new Shader();
-			new_shader->name = shader_name;
-			gpu_device->create_shader((u8 *)compiled_shader, file_size, shader_type, new_shader);
-
-			if (shader_type == VERTEX_SHADER) {
-				new_shader->byte_code = (u8 *)compiled_shader;
-				new_shader->byte_code_size = file_size;
-			}
-
-			shader_table->set(shader_name, new_shader);
-			print("init_shaders_table: {} was loaded.", shader_name);
-		}
-	}
 }
 
 static int compare_rects_u32(const void *first_rect, const void *second_rect)
@@ -501,7 +385,9 @@ void Render_2D::init(Engine *engine)
 	render_system = &engine->render_sys;
 	gpu_device = &render_system->gpu_device;
 	render_pipeline = &render_system->render_pipeline;
-	render_2d = render_system->get_shader("render_2d.hlsl");
+	
+	Shader_Manager *shader_manager = &engine->shader_manager;
+	render_2d = GET_SHADER(shader_manager, render_2d);
 	
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
 
@@ -624,7 +510,7 @@ void Render_2D::render_frame()
 		render_pipeline->unmap(index_buffer);
 	}
 
-	render_pipeline->set_input_layout(Gpu_Device::vertex_xuv);
+	render_pipeline->set_input_layout(render_system->vertex_xuv);
 	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
 
 	render_pipeline->set_vertex_buffer(&vertex_buffer);
@@ -700,9 +586,7 @@ void Render_System::init(Engine *engine)
 
 	init_render_targets(Render_System::screen_width, Render_System::screen_height);
 	
-	init_shaders_table(&gpu_device, &shader_table);
-
-	gpu_device.create_input_layouts(shader_table);
+	init_shader_input_layouts(&engine->shader_manager);
 
 	render_2d.init(engine);
 }
@@ -722,6 +606,31 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 
 	gpu_device.create_texture_2d(&depth_texture_desc, &depth_back_buffer);
 	gpu_device.create_depth_stencil_view(&depth_texture_desc, &depth_back_buffer);
+}
+
+void Render_System::init_shader_input_layouts(Shader_Manager *shader_manager)
+{
+	const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2] = {
+	{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{"TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+
+	const D3D11_INPUT_ELEMENT_DESC vertex_xc_desc[2] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+
+	const D3D11_INPUT_ELEMENT_DESC vertex_xnuv_desc[3] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	};
+
+	Extend_Shader *forward_light = GET_SHADER(shader_manager, forward_light);
+	Extend_Shader *render_2d = GET_SHADER(shader_manager, render_2d);
+	
+	HR(gpu_device.dx11_device->CreateInputLayout(vertex_xnuv_desc, 3, (void *)forward_light->byte_code, forward_light->byte_code_size, vertex_xnuv.ReleaseAndGetAddressOf()));
+	HR(gpu_device.dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, vertex_xuv.ReleaseAndGetAddressOf()));
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -752,11 +661,6 @@ void Render_System::end_frame()
 #ifdef REPORT_LIVE_OBJECTS
 	gpu_device.debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 #endif
-}
-
-Shader *Render_System::get_shader(const char *name)
-{
-	return shader_table[name];
 }
 
 void Render_Font::init(Render_2D *render_2d, Font *font)

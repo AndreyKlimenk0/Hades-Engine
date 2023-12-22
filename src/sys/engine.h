@@ -1,15 +1,16 @@
 #ifndef SYS_ENGINE
 #define SYS_ENGINE
 
+#include "file_tracking.h"
+#include "../gui/editor.h"
 #include "../game/world.h"
 #include "../libs/os/path.h"
 #include "../render/font.h"
 #include "../render/model.h"
 #include "../render/render_world.h"
 #include "../render/render_system.h"
+#include "../render/shader_manager.h"
 #include "../win32/win_local.h"
-#include "../gui/editor.h"
-
 
 struct Game_World;
 
@@ -33,14 +34,14 @@ struct Engine {
 	s64 frame_time = 0;
 	Engine_Mode engine_mode;
 
-	Font_Manager font_manager;
-	Editor editor;
 	Win32_Info win32_info;
-	
+	Editor editor;
+	Font_Manager font_manager;
 	Game_World game_world;
 	Render_World render_world;
-	
 	Render_System render_sys;
+	Shader_Manager shader_manager;
+	File_Tracking_System file_tracking_sys;
 
 	void init(Win32_Info *_win32_state);
 	void init_from_map();
