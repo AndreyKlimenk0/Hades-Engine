@@ -10,7 +10,6 @@
 
 #include "../win32/win_time.h"
 #include "../win32/win_local.h"
-#include "../win32/win_types.h"
 
 #include "../libs/str.h"
 #include "../libs/os/path.h"
@@ -19,7 +18,6 @@
 #include "../libs/os/event.h"
 #include "../libs/ds/stack.h"
 #include "../libs/png_image.h"
-#include "../libs/math/common.h"
 #include "../libs/key_binding.h"
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/linked_list.h"

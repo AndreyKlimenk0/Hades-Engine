@@ -1,14 +1,12 @@
+#include <assert.h>
+
 #include "render_api.h"
-#include "../sys/sys_local.h"
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
-#include "render_world.h"
 #include "../sys/engine.h"
 
-
 static Multisample_Info default_render_api_multisample;
-
 
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
 {
@@ -364,7 +362,6 @@ void Gpu_Device::create_texture_2d(Texture2D_Desc *texture_desc, Texture2D *text
 		texture_2d_desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 	}
 
-	//if (texture_desc->data && (texture_desc->mip_levels == 1)) {
 	if (texture_desc->data && !is_multisampled_texture(texture_desc) && (texture_desc->mip_levels > 0)) {
 		D3D11_SUBRESOURCE_DATA subresource_desc;
 		ZeroMemory(&subresource_desc, sizeof(D3D11_SUBRESOURCE_DATA));
@@ -588,15 +585,6 @@ void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Pixel_Shader &
 	HR(dx11_device->CreatePixelShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
 }
 
-void Render_Pipeline_State::setup_default_state(Render_System *render_sys)
-{
-	blend_state = render_sys->render_pipeline_states.default_blend_state;
-	depth_stencil_state = render_sys->render_pipeline_states.default_depth_stencil_state;
-	rasterizer_state = render_sys->render_pipeline_states.default_rasterizer_state;
-	view_port.width = Render_System::screen_width;
-	view_port.height = Render_System::screen_height;
-}
-
 void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 {
 	set_primitive(render_pipeline_state->primitive_type);
@@ -611,11 +599,16 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 
 	set_rasterizer_state(render_pipeline_state->rasterizer_state);
 	
-	set_viewport(&render_pipeline_state->view_port);
+	set_viewport(&render_pipeline_state->viewport);
 	
 	set_pixel_shader(render_pipeline_state->shader);
 	
 	set_render_target(render_pipeline_state->render_target_view, render_pipeline_state->depth_stencil_view);
+}
+
+void Render_Pipeline::clear_depth_stencil_view(const Depth_Stencil_View &depth_stencil_view, float depth_value, u8 stencil_value)
+{
+	dx11_context->ClearDepthStencilView(depth_stencil_view.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, depth_value, stencil_value);
 }
 
 void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
@@ -775,15 +768,15 @@ void Render_Pipeline::set_scissor(Rect_s32 *rect)
 	dx11_context->RSSetScissorRects(1, rects);
 }
 
-void Render_Pipeline::set_viewport(Viewport *view_port)
+void Render_Pipeline::set_viewport(Viewport *viewport)
 {
 	D3D11_VIEWPORT dx11_view_port;
-	dx11_view_port.TopLeftX = (float)view_port->x;
-	dx11_view_port.TopLeftY = (float)view_port->y;
-	dx11_view_port.Width = (float)view_port->width;
-	dx11_view_port.Height = (float)view_port->height;
-	dx11_view_port.MinDepth = (float)view_port->min_depth;
-	dx11_view_port.MaxDepth = (float)view_port->max_depth;
+	dx11_view_port.TopLeftX = (float)viewport->x;
+	dx11_view_port.TopLeftY = (float)viewport->y;
+	dx11_view_port.Width = (float)viewport->width;
+	dx11_view_port.Height = (float)viewport->height;
+	dx11_view_port.MinDepth = (float)viewport->min_depth;
+	dx11_view_port.MaxDepth = (float)viewport->max_depth;
 
 	dx11_context->RSSetViewports(1, &dx11_view_port);
 }

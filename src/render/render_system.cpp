@@ -585,8 +585,6 @@ void Render_System::init(Engine *engine)
 	swap_chain.init(&gpu_device, &engine->win32_info);
 
 	init_render_targets(Render_System::screen_width, Render_System::screen_height);
-	
-	init_shader_input_layouts(&engine->shader_manager);
 
 	render_2d.init(engine);
 }
@@ -799,9 +797,4 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	linear_sampling_desc.BorderColor[0] = 1.0f;
 
 	HR(gpu_device->dx11_device.Get()->CreateSamplerState(&linear_sampling_desc, linear_sampling.ReleaseAndGetAddressOf()));
-}
-
-Render_Pipeline_States *get_pipelines_states()
-{
-	return &Engine::get_render_system()->render_pipeline_states;
 }

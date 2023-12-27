@@ -674,24 +674,24 @@ void Render_World_Window::draw()
 	}
 
 	if (gui::radio_button("Debug cascaded shadows", &debug_cascaded_shadows)) {
-		if (render_world->render_passes.forward_light.initialized && render_world->render_passes.debug_cascade_shadows.initialized) {
+		if (render_world->render_passes.forward_light.is_valid && render_world->render_passes.debug_cascade_shadows.is_valid) {
 			if (debug_cascaded_shadows) {
 				u32 forward_light_index = 0;
-				if (get_render_pass_index("Forward_Light", render_world->render_passes_array, &forward_light_index)) {
-					render_world->render_passes_array[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
+				if (get_render_pass_index("Forward_Light", render_world->every_frame_render_passes, &forward_light_index)) {
+					render_world->every_frame_render_passes[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
 				} else {
 					print("Render_World_Window::draw: Failed turn on cascaded shadows debuging. Forward light pass was not found.");
 				}
 			} else {
 				u32 debug_cascaded_shadows = 0;
-				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->render_passes_array, &debug_cascaded_shadows)) {
-					render_world->render_passes_array[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
+				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->every_frame_render_passes, &debug_cascaded_shadows)) {
+					render_world->every_frame_render_passes[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
 				} else {
 					print("Render_World_Window::draw: Failed turn off cascaded shadows debuging. Debug cascaded shadows pass was not found.");
 				}
 			}
 		} else {
-			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes was not initialized.");
+			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes is not valid.");
 		}
 	}
 

@@ -10,6 +10,7 @@
 #include "shader_manager.h"
 #include "../game/world.h"
 #include "../win32/win_types.h"
+#include "../libs/color.h"
 #include "../libs/ds/array.h"
 #include "../libs/math/matrix.h"
 #include "../libs/math/common.h"
@@ -172,8 +173,6 @@ struct Render_Pipeline_States {
 
 	void init(Gpu_Device *gpu_device);
 };
-
-Render_Pipeline_States *get_pipelines_states();
 
 struct Render_System {
 	static u32 screen_width;

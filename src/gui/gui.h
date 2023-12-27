@@ -1,8 +1,11 @@
 #ifndef HADES_GUI_H
 #define HADES_GUI_H
 
+#include "../libs/str.h"
+#include "../libs/color.h"
 #include "../libs/ds/array.h"
-#include "../render/render_system.h"
+#include "../libs/math/common.h"
+#include "../win32/win_types.h"
 
 struct Engine;
 struct Texture2D;

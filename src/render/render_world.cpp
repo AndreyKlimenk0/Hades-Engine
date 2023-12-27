@@ -189,15 +189,16 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 	view_position = shadow_cascade_range->get_center_point();
 }
 
-void Render_World::init()
+void Render_World::init(Engine *engine)
 {	
+	print("-------------------- Initializing Render World --------------------");
 	//@Note: Why don't pass just the engine pointer ?
-	game_world = Engine::get_game_world();
-	render_sys = Engine::get_render_system();
+	game_world = &engine->game_world;
+	render_sys = &engine->render_sys;
 
 	init_shadow_rendering();
 
-	init_render_passes();
+	init_render_passes(&engine->shader_manager);
 
 	render_entity_texture_storage.init(&render_sys->gpu_device, &render_sys->render_pipeline);
 	
@@ -304,20 +305,44 @@ void Render_World::init_shadow_rendering()
 	render_sys->gpu_device.create_shader_resource_view(&jittering_samples_texture_desc, &jittering_samples);
 }
 
-void Render_World::init_render_passes()
+void Render_World::init_render_passes(Shader_Manager *shader_manager)
 {
-	if (!render_passes.debug_cascade_shadows.init((void *)this, render_sys)) {
-		print("Render_World::init_render_passes: Failed to initialize render pass {}.", render_passes.debug_cascade_shadows.name);
+	assert(shader_manager);
+	//print("-------------------- Initializing Render Passes --------------------");
+	print("-------------------- Initializing Render Passes --------------------");
+
+	Array<Render_Pass *> render_passes_list;
+	render_passes.get_all_passes(&render_passes_list);
+
+	for (u32 i = 0; i < render_passes_list.count; i++) {
+		render_passes_list[i]->init(&render_sys->gpu_device, &render_sys->render_pipeline_states);
 	}
 
-	render_passes_array.push(&render_passes.shadows);
-	render_passes_array.push(&render_passes.draw_lines);
-	render_passes_array.push(&render_passes.forward_light);
-	render_passes_array.push(&render_passes.draw_vertices);
+	Viewport viewport;
+	viewport.width = Render_System::screen_width;
+	viewport.height = Render_System::screen_height;
 
-	for (u32 i = 0; i < render_passes_array.count; i++) {
-		if (!render_passes_array[i]->init((void *)this, render_sys)) {
-			print("Render_World::init_render_passes: Failed to initialize render pass {}.", render_passes_array[i]->name);
+	render_passes.shadows.setup_render_pipeline(shader_manager, shadow_atlas.dsv);
+	render_passes.draw_lines.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+
+	Array<Render_Pass *> temp;
+	temp.push(&render_passes.shadows);
+	temp.push(&render_passes.draw_lines);
+	temp.push(&render_passes.draw_vertices);
+	temp.push(&render_passes.forward_light);
+
+	for (u32 i = 0; i < temp.count; i++) {
+		if (temp[i]->is_valid) {
+			every_frame_render_passes.push(temp[i]);
+		} else {
+			if (temp[i]->name.is_empty()) {
+				print("Render_World::init_render_passes: A render pass is not valid. The render pass will not be used for rendering.");
+			} else {
+				print("Render_World::init_render_passes: Render pass '{}' is not valid. The render pass will not be used for rendering.", &temp[i]->name);
+			}
 		}
 	}
 }
@@ -616,8 +641,8 @@ void Render_World::render()
 	render_sys->render_pipeline.set_pixel_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
 	
 	Render_Pass *render_pass = NULL;
-	For(render_passes_array, render_pass) {
-		render_pass->render(&render_sys->render_pipeline);
+	For(every_frame_render_passes, render_pass) {
+		render_pass->render(this, &render_sys->render_pipeline);
 	}
 }
 
@@ -697,4 +722,13 @@ Texture_Idx Render_Entity_Texture_Storage::add_texture(const char *name, u32 wid
 	texture_table.set(name, texture_idx);
 
 	return texture_idx;
+}
+
+void Render_World::Render_Passes::get_all_passes(Array<Render_Pass *> *render_passes_list)
+{
+	render_passes_list->push(&shadows);
+	render_passes_list->push(&draw_lines);
+	render_passes_list->push(&draw_vertices);
+	render_passes_list->push(&forward_light);
+	render_passes_list->push(&debug_cascade_shadows);
 }

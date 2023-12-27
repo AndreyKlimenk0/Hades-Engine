@@ -2,10 +2,14 @@
 #define RENDER_PASS_H
 
 #include "render_api.h"
-#include "render_helpers.h"
 #include "../libs/str.h"
 #include "../libs/math/matrix.h"
 #include "../libs/math/vector.h"
+
+struct Gpu_Device;
+struct Shader_Manager;
+struct Render_World;
+struct Render_Pipeline_States;
 
 struct Render_Pass {
 	struct Pass_Data {
@@ -14,30 +18,28 @@ struct Render_Pass {
 		u32 pad1;
 		u32 pad2;
 	};
-	bool initialized = false;
-	void *render_context = NULL;
+	bool is_valid = false;
+	Render_Pipeline_States *render_pipeline_states = NULL;
 	String name;
 	Gpu_Buffer pass_data_cbuffer;
 	Render_Pipeline_State render_pipeline_state;
 
-	virtual bool init(void *_render_context, Render_System *render_sys);
-	virtual bool validate_render_pipeline(const char *render_pass_name, Render_System *render_system);
-	virtual bool setup_pipeline_state(Render_System *render_system) = 0;
-	virtual void render(Render_Pipeline *render_pipeline) = 0;
+	virtual void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	virtual void render(Render_World *render_world, Render_Pipeline *render_pipeline) = 0;
 };
 
 struct Forwar_Light_Pass : Render_Pass {
 	Gpu_Buffer shadow_atlas_info_cbuffer;
 
-	bool init(void *_render_context, Render_System *render_sys);
-	bool setup_pipeline_state(Render_System *render_system);
-	void render(Render_Pipeline *render_pipeline);
+	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
+	bool setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
 };
 
 struct Draw_Lines_Pass : Render_Pass {
-	bool init(void *_render_context, Render_System *render_sys);
-	bool setup_pipeline_state(Render_System *render_system);
-	void render(Render_Pipeline *render_pipeline);
+	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
+	bool setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
 };
 
 struct Shadows_Pass : Render_Pass {
@@ -47,25 +49,25 @@ struct Shadows_Pass : Render_Pass {
 		u32 cascade_view_projection_matrix_idx;
 		u32 pad;
 	};
-	bool init(void *_render_context, Render_System *render_sys);
-	bool setup_pipeline_state(Render_System *render_system);
-	void render(Render_Pipeline *render_pipeline);
+	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
+	bool setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view);
 };
 
 struct Debug_Cascade_Shadows_Pass : Render_Pass {
 	Gpu_Buffer shadow_atlas_info_cbuffer;
 
-	bool init(void *_render_context, Render_System *render_sys);
-	bool setup_pipeline_state(Render_System *render_system);
-	void render(Render_Pipeline *render_pipeline);
+	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
+	bool setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
 };
 
 struct Draw_Vertices_Pass : Render_Pass {
 	Gpu_Buffer mesh_color_cbuffer;
 
-	bool init(void *_render_context, Render_System *render_sys);
-	bool setup_pipeline_state(Render_System *render_system);
-	void render(Render_Pipeline *render_pipeline);
+	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
+	bool setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
 };
 
 #endif
