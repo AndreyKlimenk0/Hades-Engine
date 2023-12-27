@@ -10,6 +10,7 @@
 #include "../libs/math/common.h"
 #include "../libs/math/matrix.h"
 #include "../game/world.h"
+#include "../libs/color.h"
 
 
 struct Render_Pass;
@@ -161,7 +162,7 @@ struct Render_World {
 	Array<Cascaded_Shadows_Info> cascaded_shadows_info_list;
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
 	
-	Array<Render_Pass *> render_passes_array;
+	Array<Render_Pass *> every_frame_render_passes;
 
 	Unified_Mesh_Storate<Vector3> line_meshes;
 	Unified_Mesh_Storate<Vertex_PNTUV> triangle_meshes;
@@ -184,12 +185,14 @@ struct Render_World {
 		Draw_Vertices_Pass draw_vertices;
 		Forwar_Light_Pass forward_light;
 		Debug_Cascade_Shadows_Pass debug_cascade_shadows;
+
+		void get_all_passes(Array<Render_Pass *> *render_passes_list);
 	} render_passes;
 
-	void init();
+	void init(Engine *engine);
 	void init_meshes();
 	void init_shadow_rendering();
-	void init_render_passes();
+	void init_render_passes(Shader_Manager *shader_manager);
 
 	void update();
 	void update_lights();
