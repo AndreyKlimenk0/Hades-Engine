@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <d3d11.h>
 
+#include "../win32/win_local.h"
 #include "../win32/win_types.h"
-#include "../libs/str.h"
-#include "../libs/ds/hash_table.h"
-#include "../libs/color.h"
+#include "../libs/math/common.h"
+#include "../sys/sys_local.h"
 
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
@@ -362,12 +362,9 @@ struct Render_Pipeline_State {
 	Blend_State blend_state;
 	Depth_Stencil_State depth_stencil_state;
 	Rasterizer_State rasterizer_state;
-	Sampler_State sampler_state;
-	Viewport view_port;
+	Viewport viewport;
 	Depth_Stencil_View depth_stencil_view;
 	Render_Target_View render_target_view;
-
-	void setup_default_state(Render_System *render_sys);
 };
 
 struct Swap_Chain {
@@ -395,6 +392,7 @@ struct Render_Pipeline {
 	template <typename T>
 	void unmap(Gpu_Resource<T> &resource);
 
+	void clear_depth_stencil_view(const Depth_Stencil_View &depth_stencil_view, float depth_value = 1.0f, u8 stencil_value = 0);
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
 	void update_subresource(Texture2D *resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
 	void generate_mips(const Shader_Resource_View &shader_resource);
@@ -427,7 +425,7 @@ struct Render_Pipeline {
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
-	void set_viewport(Viewport *view_port);
+	void set_viewport(Viewport *viewport);
 	void reset_rasterizer();
 
 	void set_blend_state(const Blend_State &blend_state);

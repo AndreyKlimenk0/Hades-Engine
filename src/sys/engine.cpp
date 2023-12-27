@@ -28,13 +28,16 @@ void Engine::init(Win32_Info *_win32_info)
 	font_manager.init();
 
 	render_sys.init(this);
+	shader_manager.init(&render_sys.gpu_device);
+	//@Note: It will be nice to get rid of input layouts in the future.
+	render_sys.init_shader_input_layouts(&shader_manager);
 	
 	gui::init_gui(this, "consola", FONT_SIZE);
 
 	performance_displayer.init(this);
 
 	game_world.init();
-	render_world.init();
+	render_world.init(this);
 
 	String path;
 	build_full_path_to_map_file("temp_map.bmap", path);
