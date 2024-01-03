@@ -144,32 +144,36 @@ inline Extend_Shader *find_shader_in_shader_table(const char *shader_name)
 void Shader_Manager::init(Gpu_Device *_gpu_device)
 {
 	assert(_gpu_device);
-	print("------------------------- Initializing Shader Manager -------------------------");
 
 	gpu_device = _gpu_device;
 
-	u32 shader_index = 0;
-	shader_table[shader_index++] = { "cascaded_shadow.hlsl", &shaders.cascaded_shadow };
-	shader_table[shader_index++] = { "debug_cascaded_shadows.hlsl", &shaders.debug_cascaded_shadows };
-	shader_table[shader_index++] = { "depth_map.hlsl", &shaders.depth_map };
-	shader_table[shader_index++] = { "draw_lines.hlsl", &shaders.draw_lines };
-	shader_table[shader_index++] = { "draw_vertices.hlsl", &shaders.draw_vertices };
-	shader_table[shader_index++] = { "forward_light.hlsl", &shaders.forward_light };
-	shader_table[shader_index++] = { "outlining.hlsl", &shaders.outlining };
-	shader_table[shader_index++] = { "render_2d.hlsl", &shaders.render_2d };
+	u32 shader_count = 0;
+	shader_table[shader_count++] = { "cascaded_shadow.hlsl", &shaders.cascaded_shadow };
+	shader_table[shader_count++] = { "debug_cascaded_shadows.hlsl", &shaders.debug_cascaded_shadows };
+	shader_table[shader_count++] = { "depth_map.hlsl", &shaders.depth_map };
+	shader_table[shader_count++] = { "draw_lines.hlsl", &shaders.draw_lines };
+	shader_table[shader_count++] = { "draw_vertices.hlsl", &shaders.draw_vertices };
+	shader_table[shader_count++] = { "forward_light.hlsl", &shaders.forward_light };
+	shader_table[shader_count++] = { "outlining.hlsl", &shaders.outlining };
+	shader_table[shader_count++] = { "render_2d.hlsl", &shaders.render_2d };
 
-	if ((SHADER_COUNT - 1) > shader_index) {
+	for (u32 i = 0; i < shader_count; i++) {
+		shader_table[i].shader->name = shader_table[i].name;
+	}
+
+	if ((SHADER_COUNT - 1) > shader_count) {
 		print("Shader_Manager::init: Number of shaders in Shader_List struct is more than number of shader entries in the shader table. Maybe some shader was not added to the shader table.");
 	}
 
 	String path_to_shader_dir;
-	get_path_to_data_dir("shader", path_to_shader_dir);
+	get_path_to_data_dir("shaders", path_to_shader_dir);
 
 	Array<String> file_names;
-	bool success = get_file_names_from_dir(path_to_shader_dir, &file_names);
-
-	if (!success) {
-		error("Shader_Manager::init: has not found compiled shader files.");
+	get_file_names_from_dir(path_to_shader_dir, &file_names);
+	if (file_names.is_empty()) {
+		print("Shader_Manager::init: Shader Manager has not found compiled shader files.");
+	} else {
+		print("Shader_Manager::init: Load and create shaders.");
 	}
 
 	for (u32 i = 0; i < file_names.count; i++) {
@@ -181,8 +185,6 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 
 		Extend_Shader *shader = find_shader_in_shader_table(shader_name);
 		if (shader) {
-			shader->name = shader_name;
-
 			u8 *byte_code = NULL;
 			s32 byte_code_size = 0;
 			if ((shader->byte_code == NULL) && (shader->byte_code_size == 0)) {
@@ -197,7 +199,7 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 				print("Shader_Manager::init: The shader manager can get a shader type from {}.", file_names[i].c_str());
 				continue;
 			}
-			print("Shader_Manager::init: {} was loaded.", shader_name);
+			loop_print("  {} was loaded.", shader_name);
 			switch (shader_type) {
 				case VERTEX_SHADER: {
 					gpu_device->create_shader(byte_code, byte_code_size, shader->vertex_shader);

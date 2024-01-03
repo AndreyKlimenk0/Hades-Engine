@@ -101,6 +101,8 @@ struct Render_Font {
 struct Render_2D {
 	~Render_2D();
 
+	bool initialized = false;
+
 	Texture2D default_texture;
 	
 	Gpu_Buffer constant_buffer;
@@ -111,7 +113,7 @@ struct Render_2D {
 	Blend_State blend_state;
 	Depth_Stencil_State depth_stencil_state;
 
-	Shader *render_2d = NULL;
+	Extend_Shader *render_2d = NULL;
 	
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
@@ -163,13 +165,15 @@ struct Projection_Matries {
 };
 
 struct Render_Pipeline_States {
-	Rasterizer_State default_rasterizer_state;
-	Depth_Stencil_State default_depth_stencil_state;
-	Depth_Stencil_State disabled_depth_test;
 	Blend_State default_blend_state;
 	Blend_State transparent_blend_state;
 	Sampler_State point_sampling;
 	Sampler_State linear_sampling;
+	Rasterizer_State default_rasterizer_state;
+	Depth_Stencil_State default_depth_stencil_state;
+	Depth_Stencil_State disabled_depth_test;
+	Depth_Stencil_State outlining_depth_stencil_state;
+	Depth_Stencil_State pre_outlining_depth_stencil_state;
 
 	void init(Gpu_Device *gpu_device);
 };
@@ -178,8 +182,6 @@ struct Render_System {
 	static u32 screen_width;
 	static u32 screen_height;
 
-	Input_Layout vertex_xc;
-	Input_Layout vertex_xnuv;
 	Input_Layout vertex_xuv;
 
 	//@Note: Why I need to have this var here ?
@@ -187,6 +189,7 @@ struct Render_System {
 	//@Note: Why I need to have this var here ?
 	Render_2D render_2d;
 
+	Texture2D outlining_depth_stencil_buffer;
 	Texture2D back_buffer;
 	Texture2D depth_back_buffer;
 
@@ -197,7 +200,7 @@ struct Render_System {
 
 	void init(Engine *engine);
 	void init_render_targets(u32 window_width, u32 window_height);
-	void init_shader_input_layouts(Shader_Manager *shader_manager);
+	void init_shader_input_layout(Shader_Manager *shader_manager);
 	
 	void resize(u32 window_width, u32 window_height);
 

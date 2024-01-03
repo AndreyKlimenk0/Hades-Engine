@@ -14,7 +14,7 @@ char *get_error_message_from_error_code(DWORD error_code)
 		//printf("[Could not find a description for error # %#x.]\n", hr);
 		return NULL;
 	}
-	int len = strlen(error_message);
+	size_t len = strlen(error_message);
 	if ((len > 1) && (error_message[len - 1] == '\n')) {
 		error_message[len - 1] = '\0';
 	}

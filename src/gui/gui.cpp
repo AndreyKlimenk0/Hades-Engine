@@ -1444,7 +1444,6 @@ bool Gui_Manager::can_window_be_resized(Gui_Window *window)
 
 void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 {
-	print("[Init Hades gui]");
 	render_2d = &engine->render_sys.render_2d;
 	win32_info = &engine->win32_info;
 
@@ -1476,12 +1475,16 @@ void Gui_Manager::init_from_save_file()
 
 	File save_file;
 	if (!save_file.open(path_to_save_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
-		print("Gui_Manager::init: Hades gui file was not found.");
+		print("Gui_Manager::init_from_save_file: Hades gui file was not found.");
 		return;
 	}
 
 	u32 window_count = 0;
 	save_file.read((void *)&window_count, sizeof(u32));
+
+	if (window_count > 0) {
+		print("Gui_Manager::init_from_save_file: Create windows from a save file.");
+	}
 
 	for (u32 i = 0; i < window_count; i++) {
 		u32 window_style = 0;
@@ -1497,6 +1500,7 @@ void Gui_Manager::init_from_save_file()
 		save_file.read((void *)&rect, sizeof(Rect_s32));
 
 		create_window(string, WINDOW_TYPE_PARENT, window_style, &rect);
+		print("  Window {} {}x{} was created.", string, rect.width, rect.height);
 		free_string(string);
 	}
 }

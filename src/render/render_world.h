@@ -106,6 +106,7 @@ struct Cascaded_Shadow_Map {
 	u32 view_projection_matrix_index;
 	Vector3 view_position;
 	Viewport viewport;
+	Matrix4 view_projection_matrix;
 
 	void init(float fov, float aspect_ratio, Shadow_Cascade_Range *shadow_cascade_range);
 };
@@ -185,6 +186,7 @@ struct Render_World {
 		Draw_Vertices_Pass draw_vertices;
 		Forwar_Light_Pass forward_light;
 		Debug_Cascade_Shadows_Pass debug_cascade_shadows;
+		Outlining_Pass outlining;
 
 		void get_all_passes(Array<Render_Pass *> *render_passes_list);
 	} render_passes;
