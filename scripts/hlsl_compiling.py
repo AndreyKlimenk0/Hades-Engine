@@ -4,7 +4,7 @@ import enum
 import subprocess
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUTPUT_DIR = os.path.join("data", "shader")
+OUTPUT_DIR = os.path.join("data", "shaders")
 HLSH_DIR = "hlsl"
 
 

@@ -29,8 +29,9 @@ void Engine::init(Win32_Info *_win32_info)
 
 	render_sys.init(this);
 	shader_manager.init(&render_sys.gpu_device);
+	render_sys.render_2d.init(this);
 	//@Note: It will be nice to get rid of input layouts in the future.
-	render_sys.init_shader_input_layouts(&shader_manager);
+	render_sys.init_shader_input_layout(&shader_manager);
 	
 	gui::init_gui(this, "consola", FONT_SIZE);
 

@@ -10,66 +10,71 @@ const u32 SKIP_PIXEL_SHADER_VALIDATION       = 0x4;
 
 inline void setup_default_render_pipeline_state(Render_Pipeline_State *render_pipeline_state, Render_Pipeline_States *render_pipeline_states)
 {
+	assert(render_pipeline_state);
+	assert(render_pipeline_states);
+
 	render_pipeline_state->blend_state = render_pipeline_states->default_blend_state;
 	render_pipeline_state->depth_stencil_state = render_pipeline_states->default_depth_stencil_state;
 	render_pipeline_state->rasterizer_state = render_pipeline_states->default_rasterizer_state;
 }
 
-inline bool validate_render_pass(Render_Pass *render_pass, u32 validation_flags = 0)
+inline bool validate_render_pipeline(String *render_pass_name, Render_Pipeline_State *render_pipeline_state, u32 validation_flags = 0)
 {
-	assert(render_pass);
+	assert(render_pass_name);
+	assert(render_pipeline_state);
 
 	bool result = true;
-	if (render_pass->name.is_empty()) {
-		print("validate_render_pass: A render pass doesn't have a name. The render pass is not valid.");
+	if (!render_pipeline_state->blend_state) {
+		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a blend state.", render_pass_name);
 		result = false;
 	}
-	if (!render_pass->render_pipeline_state.blend_state) {
-		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a blend state.", &render_pass->name);
-		result = false;
-	}
-	if (!render_pass->render_pipeline_state.depth_stencil_state) {
-		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a depth stencil state.", &render_pass->name);
+	if (!render_pipeline_state->depth_stencil_state) {
+		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a depth stencil state.", render_pass_name);
 		result = false;
 	} 
-	if (((render_pass->render_pipeline_state.viewport.width == 0) || (render_pass->render_pipeline_state.viewport.height == 0)) && !(validation_flags & SKIP_VIEWPORT_VALIDATION)) {
-		print("validate_render_pass: Render Pass '{}' is not valid.. A render pipeline has a wrong setup viewport.", &render_pass->name);
+	if (((render_pipeline_state->viewport.width == 0) || (render_pipeline_state->viewport.height == 0)) && !(validation_flags & SKIP_VIEWPORT_VALIDATION)) {
+		print("validate_render_pass: Render Pass '{}' is not valid.. A render pipeline has a wrong setup viewport.", render_pass_name);
 		result = false;
 	} 
-	if (!render_pass->render_pipeline_state.depth_stencil_view) {
-		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a depth stencil view.", &render_pass->name);
+	if (!render_pipeline_state->depth_stencil_view) {
+		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a depth stencil view.", render_pass_name);
 		result = false;
-	} if ((!render_pass->render_pipeline_state.render_target_view) && !(validation_flags & SKIP_RENDER_TARGET_VIEW_VALIDATION)) {
-		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a render target view.", &render_pass->name);
+	} if ((!render_pipeline_state->render_target_view) && !(validation_flags & SKIP_RENDER_TARGET_VIEW_VALIDATION)) {
+		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a render target view.", render_pass_name);
 		result = false;
 	}
-	if (render_pass->render_pipeline_state.shader) {
-		Extend_Shader *shader = (Extend_Shader *)render_pass->render_pipeline_state.shader;
+	if (render_pipeline_state->shader) {
+		Extend_Shader *shader = (Extend_Shader *)render_pipeline_state->shader;
 		if (validation_flags & SKIP_PIXEL_SHADER_VALIDATION) {
 			if (!is_valid(shader, VALIDATE_RENDERING_SHADER)) {
-				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", &render_pass->name, shader->name);
+				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", render_pass_name, shader->name);
 				result = false;
 			}
 		} else {
 			if (!is_valid(shader, VALIDATE_VERTEX_SHADER)) {
-				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", &render_pass->name, shader->name);
+				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", render_pass_name, shader->name);
 				result = false;
 			}
 		}
 	} else {
-		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a shader.", &render_pass->name);
+		print("validate_render_pass: Render Pass '{}' is not valid. For a render pipeline was not assigned a shader.", render_pass_name);
 		result = false;
-	}
-	if (result) {
-		render_pass->is_valid = true;
 	}
 	return result;
 }
+
+struct Depth_Map_Pass_Data {
+	u32 mesh_idx;
+	u32 world_matrix_idx;
+	Pad2 pad;
+	Matrix4 view_projection_matrix;
+};
 
 void Render_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
 {
 	assert(gpu_device);
 	assert(_render_pipeline_states);
+	assert(!name.is_empty());
 
 	render_pipeline_states = _render_pipeline_states;
 	setup_default_render_pipeline_state(&render_pipeline_state, render_pipeline_states);
@@ -83,7 +88,7 @@ void Forwar_Light_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_re
 	Render_Pass::init(gpu_device, _render_pipeline_states);
 }
 
-bool Forwar_Light_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
+void Forwar_Light_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
 {
 	assert(shader_manager);
 	assert(viewport);
@@ -93,7 +98,8 @@ bool Forwar_Light_Pass::setup_render_pipeline(Shader_Manager *shader_manager, co
 	render_pipeline_state.depth_stencil_view = depth_stencil_view;
 	render_pipeline_state.render_target_view = render_target_view;
 	render_pipeline_state.viewport = *viewport;
-	return validate_render_pass(this);
+	
+	is_valid = validate_render_pipeline(&name, &render_pipeline_state);
 }
 
 void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
@@ -157,7 +163,7 @@ void Draw_Lines_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_rend
 	Render_Pass::init(gpu_device, _render_pipeline_states);
 }
 
-bool Draw_Lines_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
+void Draw_Lines_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
 {
 	assert(shader_manager);
 	assert(viewport);
@@ -167,7 +173,7 @@ bool Draw_Lines_Pass::setup_render_pipeline(Shader_Manager *shader_manager, cons
 	render_pipeline_state.depth_stencil_view = depth_stencil_view;
 	render_pipeline_state.render_target_view = render_target_view;
 	render_pipeline_state.viewport = *viewport;
-	return validate_render_pass(this);
+	is_valid = validate_render_pipeline(&name, &render_pipeline_state);
 }
 
 void Draw_Lines_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
@@ -200,11 +206,11 @@ void Draw_Lines_Pass::render(Render_World *render_world, Render_Pipeline *render
 void Shadows_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
 {
 	name = "Shadows";
-	gpu_device->create_constant_buffer(sizeof(Shadows_Pass::Pass_Data), &pass_data_cbuffer);
+	gpu_device->create_constant_buffer(sizeof(Depth_Map_Pass_Data), &pass_data_cbuffer);
 	Render_Pass::init(gpu_device, _render_pipeline_states);
 }
 
-bool Shadows_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view)
+void Shadows_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view)
 {
 	assert(shader_manager);
 
@@ -212,7 +218,7 @@ bool Shadows_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const D
 	render_pipeline_state.shader = GET_SHADER(shader_manager, depth_map);
 	render_pipeline_state.depth_stencil_view = depth_stencil_view;
 	render_pipeline_state.render_target_view = nullptr;
-	return validate_render_pass(this, SKIP_VIEWPORT_VALIDATION | SKIP_RENDER_TARGET_VIEW_VALIDATION);
+	is_valid = validate_render_pipeline(&name, &render_pipeline_state, SKIP_VIEWPORT_VALIDATION | SKIP_RENDER_TARGET_VIEW_VALIDATION);
 }
 
 void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
@@ -231,9 +237,8 @@ void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pi
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(6, render_world->cascaded_view_projection_matrices_sb);
 
-	Shadows_Pass::Pass_Data pass_data;
+	Depth_Map_Pass_Data pass_data;
 
 	Cascaded_Shadows *cascaded_shadows = NULL;
 	For(render_world->cascaded_shadows_list, cascaded_shadows) {
@@ -245,7 +250,7 @@ void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pi
 			For(render_world->forward_rendering_entities, render_entity) {
 				pass_data.mesh_idx = render_entity->mesh_idx;
 				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
-				pass_data.cascade_view_projection_matrix_idx = cascaded_shadow_map->view_projection_matrix_index;
+				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
 
 				render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 				render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
@@ -264,7 +269,7 @@ void Debug_Cascade_Shadows_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_St
 	return Render_Pass::init(gpu_device, _render_pipeline_states);
 }
 
-bool Debug_Cascade_Shadows_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
+void Debug_Cascade_Shadows_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
 {
 	assert(shader_manager);
 	assert(viewport);
@@ -274,7 +279,8 @@ bool Debug_Cascade_Shadows_Pass::setup_render_pipeline(Shader_Manager *shader_ma
 	render_pipeline_state.depth_stencil_view = depth_stencil_view;
 	render_pipeline_state.render_target_view = render_target_view;
 	render_pipeline_state.viewport = *viewport;
-	return validate_render_pass(this);
+	
+	is_valid = validate_render_pipeline(&name, &render_pipeline_state);
 }
 
 void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
@@ -308,7 +314,6 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 	render_pipeline->set_pixel_shader_resource(JITTERING_SAMPLES_TEXTURE_REGISTER, render_world->jittering_samples.srv);
 	render_pipeline->set_pixel_shader_sampler(POINT_SAMPLING_REGISTER, render_pipeline_states->point_sampling);
 
-
 	Render_Entity *render_entity = NULL;
 	Debug_Cascade_Shadows_Pass::Pass_Data pass_data;
 
@@ -339,7 +344,7 @@ void Draw_Vertices_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_r
 	Render_Pass::init(gpu_device, _render_pipeline_states);
 }
 
-bool Draw_Vertices_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
+void Draw_Vertices_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
 {
 	assert(shader_manager);
 	assert(viewport);
@@ -350,7 +355,8 @@ bool Draw_Vertices_Pass::setup_render_pipeline(Shader_Manager *shader_manager, c
 	render_pipeline_state.depth_stencil_view = depth_stencil_view;
 	render_pipeline_state.render_target_view = render_target_view;
 	render_pipeline_state.viewport = *viewport;
-	return validate_render_pass(this);
+	
+	is_valid = validate_render_pipeline(&name, &render_pipeline_state);
 }
 
 void Draw_Vertices_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
@@ -381,6 +387,103 @@ void Draw_Vertices_Pass::render(Render_World *render_world, Render_Pipeline *ren
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
+
+		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
+	}
+}
+
+void Outlining_Pass::add_render_entity_index(u32 entity_index)
+{
+	if (render_entity_indices.count < 0xff) {
+		render_entity_indices.push(entity_index);
+	}
+}
+
+void Outlining_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
+{
+	name = "Outlining";
+	gpu_device->create_constant_buffer(sizeof(Render_Pass::Pass_Data), &pass_data_cbuffer);
+	gpu_device->create_constant_buffer(sizeof(Depth_Map_Pass_Data), &depth_map_pass_data_cbuffer);
+	gpu_device->create_constant_buffer(sizeof(Outlining_Info), &outlining_info_cbuffer);
+	Render_Pass::init(gpu_device, _render_pipeline_states);
+	setup_default_render_pipeline_state(&pre_render_pipeline_state, render_pipeline_states);
+}
+
+void Outlining_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
+{
+	pre_render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
+	pre_render_pipeline_state.shader = GET_SHADER(shader_manager, depth_map);
+	pre_render_pipeline_state.depth_stencil_state = render_pipeline_states->pre_outlining_depth_stencil_state;
+	pre_render_pipeline_state.depth_stencil_view = depth_stencil_view;
+	pre_render_pipeline_state.render_target_view = nullptr;
+	pre_render_pipeline_state.viewport = *viewport;
+
+	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
+	render_pipeline_state.shader = GET_SHADER(shader_manager, outlining);
+	render_pipeline_state.depth_stencil_state = render_pipeline_states->outlining_depth_stencil_state;
+	render_pipeline_state.depth_stencil_view = depth_stencil_view;
+	render_pipeline_state.render_target_view = render_target_view;
+	render_pipeline_state.viewport = *viewport;
+
+	is_valid = validate_render_pipeline(&name, &pre_render_pipeline_state, SKIP_RENDER_TARGET_VIEW_VALIDATION) && validate_render_pipeline(&name, &render_pipeline_state);
+}
+
+void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
+{
+	render_pipeline->apply(&pre_render_pipeline_state);
+
+	render_pipeline->clear_depth_stencil_view(render_world->render_sys->outlining_depth_stencil_buffer.dsv);
+
+	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
+
+	Depth_Map_Pass_Data depth_map_pass_data;
+	depth_map_pass_data.view_projection_matrix = render_world->render_camera.debug_view_matrix * render_world->render_sys->view.perspective_matrix;
+
+	for (u32 i = 0; i < render_entity_indices.count; i++) {
+		Render_Entity *render_entity = &render_world->forward_rendering_entities[i];
+
+		depth_map_pass_data.mesh_idx = render_entity->mesh_idx;
+		depth_map_pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+
+		render_pipeline->update_constant_buffer(&depth_map_pass_data_cbuffer, (void *)&depth_map_pass_data);
+		render_pipeline->set_vertex_shader_resource(0, depth_map_pass_data_cbuffer);
+
+		render_pipeline->set_depth_stencil_state(render_pipeline_states->pre_outlining_depth_stencil_state, i + 1);
+
+		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
+	}
+
+	render_pipeline->apply(&render_pipeline_state);
+
+	Outlining_Info outlining_info;
+	outlining_info.outlining_color = Color(196, 114, 31);
+	outlining_info.scaling_matrix = make_scale_matrix(1.05f);
+	//outlining_info.scaling_matrix = make_scale_matrix(1.05f);
+	render_pipeline->update_constant_buffer(&outlining_info_cbuffer, (void *)&outlining_info);
+
+	render_pipeline->set_vertex_shader_resource(1, outlining_info_cbuffer);
+	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
+	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
+
+	render_pipeline->set_pixel_shader_resource(1, outlining_info_cbuffer);
+
+	Render_Pass::Pass_Data pass_data;
+
+	for (u32 i = 0; i < render_entity_indices.count; i++) {
+		Render_Entity *render_entity = &render_world->forward_rendering_entities[i];
+
+		pass_data.mesh_idx = render_entity->mesh_idx;
+		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+
+		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
+		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
+
+		render_pipeline->set_depth_stencil_state(render_pipeline_states->outlining_depth_stencil_state, i + 1);
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 	}

@@ -452,13 +452,13 @@ void Gpu_Device::create_depth_stencil_state(Depth_Stencil_State_Desc *depth_sten
 	desc.StencilWriteMask = depth_stencil_desc->stencil_write_mack;
 
 	desc.FrontFace.StencilFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_failed);
-	desc.FrontFace.StencilDepthFailOp = to_dx11_stencil_op(depth_stencil_desc->depth_failed);
-	desc.FrontFace.StencilPassOp = to_dx11_stencil_op(depth_stencil_desc->pass);
+	desc.FrontFace.StencilDepthFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_passed_depth_failed);
+	desc.FrontFace.StencilPassOp = to_dx11_stencil_op(depth_stencil_desc->stencil_and_depth_passed);
 	desc.FrontFace.StencilFunc = to_dx11_comparison_func(depth_stencil_desc->compare_func);
 
 	desc.BackFace.StencilFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_failed);
-	desc.BackFace.StencilDepthFailOp = to_dx11_stencil_op(depth_stencil_desc->depth_failed);
-	desc.BackFace.StencilPassOp = to_dx11_stencil_op(depth_stencil_desc->pass);
+	desc.BackFace.StencilDepthFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_passed_depth_failed);
+	desc.BackFace.StencilPassOp = to_dx11_stencil_op(depth_stencil_desc->stencil_and_depth_passed);
 	desc.BackFace.StencilFunc = to_dx11_comparison_func(depth_stencil_desc->compare_func);
 
 	HR(dx11_device->CreateDepthStencilState(&desc, depth_stencil_state->ReleaseAndGetAddressOf()));
@@ -861,8 +861,8 @@ Rasterizer_Desc::Rasterizer_Desc()
 	desc.SlopeScaledDepthBias = 0;
 	desc.DepthClipEnable = true;
 	desc.ScissorEnable = false;
-	desc.MultisampleEnable = false;
-	desc.AntialiasedLineEnable = false;
+	desc.MultisampleEnable = true;
+	desc.AntialiasedLineEnable = true;
 }
 
 void Rasterizer_Desc::set_sciccor(bool state)
@@ -946,7 +946,6 @@ u32 get_texture_pitch(Texture2D_Desc *texture_desc)
 
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 {
-	print("[Initialze render API]");
 	UINT create_device_flag = 0;
 
 #if defined(DEBUG) || defined(_DEBUG)  
