@@ -159,6 +159,7 @@ Editor::~Editor()
 void Editor::init(Engine *engine)
 {
 	game_world = &engine->game_world;
+	render_world = &engine->render_world;
 
 	make_entity_window.init(engine);
 	game_world_window.init(engine);
@@ -295,6 +296,7 @@ void Editor::handle_events()
 void Editor::update()
 {
 	render_world_window.update();
+	picking();
 }
 
 void Editor::render()
@@ -316,6 +318,17 @@ void Editor::render()
 		gui::end_window();
 	}
 	gui::end_frame();
+
+	render_world->render_passes.outlining.render(render_world, &render_world->render_sys->render_pipeline);
+}
+
+void Editor::picking()
+{
+	render_world->render_passes.outlining.render_entity_indices.clear();
+
+	for (u32 i = 0; i < render_world->forward_rendering_entities.count; i++) {
+		render_world->render_passes.outlining.add_render_entity_index(i);
+	}
 }
 
 void Game_World_Window::init(Engine *engine)

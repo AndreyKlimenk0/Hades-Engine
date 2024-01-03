@@ -230,12 +230,12 @@ enum Comparison_Func {
 
 struct Depth_Stencil_State_Desc {
 	bool enable_depth_test = true;
-	bool enalbe_stencil_test = false;
+	bool enable_stencil_test = false;
 	u32 stencil_read_mask = 0xff;
 	u32 stencil_write_mack = 0xff;
 	Stencil_Operation stencil_failed = STENCIL_OP_KEEP;
-	Stencil_Operation depth_failed = STENCIL_OP_KEEP;
-	Stencil_Operation pass = STENCIL_OP_KEEP;
+	Stencil_Operation stencil_passed_depth_failed = STENCIL_OP_KEEP;
+	Stencil_Operation stencil_and_depth_passed = STENCIL_OP_KEEP;
 	Comparison_Func compare_func = COMPARISON_ALWAYS;
 };
 

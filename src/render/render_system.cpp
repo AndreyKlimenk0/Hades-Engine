@@ -388,6 +388,10 @@ void Render_2D::init(Engine *engine)
 	
 	Shader_Manager *shader_manager = &engine->shader_manager;
 	render_2d = GET_SHADER(shader_manager, render_2d);
+	if (!is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
+		print("Render_2D::init: Failed to initialize Render_2D. {} is not valid.", render_2d->name);
+		return;
+	}
 	
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
 
@@ -422,6 +426,8 @@ void Render_2D::init(Engine *engine)
 	blending_test_desc.blend_op_alpha = BLEND_OP_ADD;
 
 	gpu_device->create_blend_state(&blending_test_desc, &blend_state);
+
+	initialized = true;
 }
 
 void Render_2D::add_primitive(Primitive_2D *primitive)
@@ -462,7 +468,7 @@ void Render_2D::new_frame()
 
 void Render_2D::render_frame()
 {
-	if (total_vertex_count == 0) {
+	if ((total_vertex_count == 0) || !initialized) {
 		return;
 	}
 
@@ -565,10 +571,11 @@ void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, 
 
 void Render_System::init(Engine *engine)
 {
-	print("[Initialize Render System]");
-
 	Render_System::screen_width = engine->win32_info.window_width;
 	Render_System::screen_height = engine->win32_info.window_height;
+
+	//print("Render_System::init: Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
+	//print("Render_System::init: fov {} degrees.", 60);
 	
 	Multisample_Info multisample_info;
 	multisample_info.count = 4;
@@ -577,6 +584,7 @@ void Render_System::init(Engine *engine)
 	view.update_projection_matries(60, Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
+	//print("Render_System::init: Render API based on directx 11 was successfully initialized.");
 
 	setup_multisampling(&gpu_device, &multisample_info);
 
@@ -586,7 +594,10 @@ void Render_System::init(Engine *engine)
 
 	init_render_targets(Render_System::screen_width, Render_System::screen_height);
 
-	render_2d.init(engine);
+	print("Rendering system info:");
+	print("  Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
+	print("  FOV {} degrees.", 60);
+	print("  Render API based on Directx 11.");
 }
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
@@ -604,31 +615,22 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 
 	gpu_device.create_texture_2d(&depth_texture_desc, &depth_back_buffer);
 	gpu_device.create_depth_stencil_view(&depth_texture_desc, &depth_back_buffer);
+
+	gpu_device.create_texture_2d(&depth_texture_desc, &outlining_depth_stencil_buffer);
+	gpu_device.create_depth_stencil_view(&depth_texture_desc, &outlining_depth_stencil_buffer);
 }
 
-void Render_System::init_shader_input_layouts(Shader_Manager *shader_manager)
+void Render_System::init_shader_input_layout(Shader_Manager *shader_manager)
 {
 	const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2] = {
-	{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	{"TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-
-	const D3D11_INPUT_ELEMENT_DESC vertex_xc_desc[2] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{"TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
-	const D3D11_INPUT_ELEMENT_DESC vertex_xnuv_desc[3] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	};
-
-	Extend_Shader *forward_light = GET_SHADER(shader_manager, forward_light);
 	Extend_Shader *render_2d = GET_SHADER(shader_manager, render_2d);
-	
-	HR(gpu_device.dx11_device->CreateInputLayout(vertex_xnuv_desc, 3, (void *)forward_light->byte_code, forward_light->byte_code_size, vertex_xnuv.ReleaseAndGetAddressOf()));
-	HR(gpu_device.dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, vertex_xuv.ReleaseAndGetAddressOf()));
+	if (is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
+		HR(gpu_device.dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, vertex_xuv.ReleaseAndGetAddressOf()));
+	}
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -797,4 +799,21 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	linear_sampling_desc.BorderColor[0] = 1.0f;
 
 	HR(gpu_device->dx11_device.Get()->CreateSamplerState(&linear_sampling_desc, linear_sampling.ReleaseAndGetAddressOf()));
+
+	Depth_Stencil_State_Desc temp;
+	temp.enable_depth_test = true;
+	temp.enable_stencil_test = true;
+	temp.stencil_failed = STENCIL_OP_KEEP;
+	temp.stencil_passed_depth_failed = STENCIL_OP_KEEP;
+	temp.stencil_and_depth_passed = STENCIL_OP_REPLACE;
+
+	gpu_device->create_depth_stencil_state(&temp, &pre_outlining_depth_stencil_state);
+
+	Depth_Stencil_State_Desc temp2;
+	//temp2.enable_depth_test = false;
+	temp2.enable_stencil_test = true;
+	temp2.compare_func = COMPARISON_NOT_EQUAL;
+
+	gpu_device->create_depth_stencil_state(&temp2, &outlining_depth_stencil_state);
+
 }

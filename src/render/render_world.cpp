@@ -187,11 +187,11 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 	cascade_height = max_value;
 	cascade_depth = max_value;
 	view_position = shadow_cascade_range->get_center_point();
+	view_projection_matrix = make_identity_matrix();
 }
 
 void Render_World::init(Engine *engine)
 {	
-	print("-------------------- Initializing Render World --------------------");
 	//@Note: Why don't pass just the engine pointer ?
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
@@ -206,7 +206,6 @@ void Render_World::init(Engine *engine)
 
 	lights_struct_buffer.allocate<Hlsl_Light>(100);
 	world_matrices_struct_buffer.allocate<Matrix4>(100);
-	cascaded_view_projection_matrices_sb.allocate<Matrix4>(100);
 	
 	Texture2D_Desc texture_desc;
 	texture_desc.width = 200;
@@ -308,14 +307,14 @@ void Render_World::init_shadow_rendering()
 void Render_World::init_render_passes(Shader_Manager *shader_manager)
 {
 	assert(shader_manager);
-	//print("-------------------- Initializing Render Passes --------------------");
-	print("-------------------- Initializing Render Passes --------------------");
 
-	Array<Render_Pass *> render_passes_list;
-	render_passes.get_all_passes(&render_passes_list);
+	print("Render_World::init: Initializing render passes.");
 
-	for (u32 i = 0; i < render_passes_list.count; i++) {
-		render_passes_list[i]->init(&render_sys->gpu_device, &render_sys->render_pipeline_states);
+	Array<Render_Pass *> render_pass_list;
+	render_passes.get_all_passes(&render_pass_list);
+
+	for (u32 i = 0; i < render_pass_list.count; i++) {
+		render_pass_list[i]->init(&render_sys->gpu_device, &render_sys->render_pipeline_states);
 	}
 
 	Viewport viewport;
@@ -327,6 +326,7 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
 	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
 	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+	render_passes.outlining.setup_render_pipeline(shader_manager, render_sys->outlining_depth_stencil_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
 
 	Array<Render_Pass *> temp;
 	temp.push(&render_passes.shadows);
@@ -334,15 +334,16 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	temp.push(&render_passes.draw_vertices);
 	temp.push(&render_passes.forward_light);
 
+	for (u32 i = 0; i < render_pass_list.count; i++) {
+		if (render_pass_list[i]->is_valid) {
+			print("  Render pass '{}' was successfully initialized.", &render_pass_list[i]->name);
+		} else {
+			print("  Render pass '{}' is not valid. The render pass will not be used for rendering.", &render_pass_list[i]->name);
+		}
+	}
 	for (u32 i = 0; i < temp.count; i++) {
 		if (temp[i]->is_valid) {
 			every_frame_render_passes.push(temp[i]);
-		} else {
-			if (temp[i]->name.is_empty()) {
-				print("Render_World::init_render_passes: A render pass is not valid. The render pass will not be used for rendering.");
-			} else {
-				print("Render_World::init_render_passes: Render pass '{}' is not valid. The render pass will not be used for rendering.", &temp[i]->name);
-			}
 		}
 	}
 }
@@ -542,9 +543,9 @@ void Render_World::update_shadows()
 
 			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius,  -5000.0f, 5000.0f);
 			
-			cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index] = light_view_matrix * projection_matrix;
+			cascaded_shadow_map->view_projection_matrix = light_view_matrix * projection_matrix;
 
-			XMMATRIX shadowMatrix = XMLoadFloat4x4(&cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index]);
+			XMMATRIX shadowMatrix = XMLoadFloat4x4(&cascaded_shadow_map->view_projection_matrix);
 			XMVECTOR shadowOrigin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 			shadowOrigin = XMVector4Transform(shadowOrigin, shadowMatrix);
 			shadowOrigin = XMVectorScale(shadowOrigin, (float)CASCADE_SIZE / 2.0f);
@@ -555,19 +556,18 @@ void Render_World::update_shadows()
 			roundOffset = XMVectorSetZ(roundOffset, 0.0f);
 			roundOffset = XMVectorSetW(roundOffset, 0.0f);
 
-			Matrix4 matrix = cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index];
+			Matrix4 matrix = cascaded_shadow_map->view_projection_matrix;
 			Vector4 vector = roundOffset;
 			vector.x += matrix.m[3][0];
 			vector.y += matrix.m[3][1];
 			vector.z += matrix.m[3][2];
 			vector.w += matrix.m[3][3];
 			matrix.set_row_3(vector);
+			cascaded_shadow_map->view_projection_matrix = matrix;
 			cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index] = matrix;
 		}
 	}
-
 	world_matrices_struct_buffer.update(&render_entity_world_matrices);
-
 	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
 }
 
@@ -731,4 +731,5 @@ void Render_World::Render_Passes::get_all_passes(Array<Render_Pass *> *render_pa
 	render_passes_list->push(&draw_vertices);
 	render_passes_list->push(&forward_light);
 	render_passes_list->push(&debug_cascade_shadows);
+	render_passes_list->push(&outlining);
 }

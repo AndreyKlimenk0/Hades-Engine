@@ -60,14 +60,14 @@ void init_os_path()
 	init_base_path();
 
 	char *texture_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "textures");
-	char *shader_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "shader");
+	char *shader_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "shaders");
 	char *model_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "models");
 	char *editor_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "editor");
 	char *maps_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "maps");
 	char *gui_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "gui");
 
 	os_path.data_dir_paths.set("texture", texture_dir);
-	os_path.data_dir_paths.set("shader", shader_dir);
+	os_path.data_dir_paths.set("shaders", shader_dir);
 	os_path.data_dir_paths.set("model", model_dir);
 	os_path.data_dir_paths.set("editor", editor_dir);
 	os_path.data_dir_paths.set("maps", maps_dir);
@@ -118,7 +118,7 @@ void build_full_path_to_editor_file(const char *file_name, String &full_path)
 
 void build_full_path_to_shader_file(const char *file_name, String &full_path)
 {
-	String &value = os_path.data_dir_paths["shader"];
+	String &value = os_path.data_dir_paths["shaders"];
 	full_path = value + "\\" + file_name;
 }
 
