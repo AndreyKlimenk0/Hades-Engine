@@ -119,13 +119,13 @@ void fill_texture(void *value, Texture2D *texture2d)
 
 R24U8::R24U8(u32 r24u8_value)
 {
-	numerator = (r24u8_value & 0x0ffffff);
+	numerator = (r24u8_value & 0x00ffffff);
 	typeless_bits = (u8)(r24u8_value >> 24);
 }
 
 R24U8::R24U8(u32 numerator, u8 typeless_bits) : numerator(numerator), typeless_bits(typeless_bits)
 {
-	numerator &= 0x0ffffff;
+	numerator &= 0x00ffffff;
 }
 
 u32 R24U8::get_packed_value()

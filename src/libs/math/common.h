@@ -82,6 +82,11 @@ namespace math {
 	{
 		return (float)::sqrt((double)value);
 	}
+
+	inline float ceil(float value)
+	{
+		return ::ceilf(value);
+	}
 };
 
 template <typename T>

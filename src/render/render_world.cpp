@@ -271,7 +271,6 @@ void Render_World::init_shadow_rendering()
 	depth_stencil_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
 	depth_stencil_desc.mip_levels = 1;
 	depth_stencil_desc.bind |= BIND_DEPTH_STENCIL;
-	depth_stencil_desc.multisampling = { 1, 0 };
 
 	render_sys->gpu_device.create_texture_2d(&depth_stencil_desc, &shadow_atlas);
 	render_sys->gpu_device.create_depth_stencil_view(&depth_stencil_desc, &shadow_atlas);
@@ -326,7 +325,9 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
 	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
 	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
-	render_passes.outlining.setup_render_pipeline(shader_manager, render_sys->outlining_depth_stencil_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+	
+	render_passes.outlining.setup_outlining(2, Color(245, 176, 66));
+	render_passes.outlining.setup_render_pipeline(shader_manager, &render_sys->silhouette_buffer, &render_sys->silhouette_depth_stencil_buffer, &render_sys->back_buffer, &viewport);
 
 	Array<Render_Pass *> temp;
 	temp.push(&render_passes.shadows);

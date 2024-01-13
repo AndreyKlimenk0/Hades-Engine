@@ -166,6 +166,7 @@ struct Projection_Matries {
 
 struct Render_Pipeline_States {
 	Blend_State default_blend_state;
+	Blend_State disabled_blend_state;
 	Blend_State transparent_blend_state;
 	Sampler_State point_sampling;
 	Sampler_State linear_sampling;
@@ -189,7 +190,8 @@ struct Render_System {
 	//@Note: Why I need to have this var here ?
 	Render_2D render_2d;
 
-	Texture2D outlining_depth_stencil_buffer;
+	Texture2D silhouette_buffer;
+	Texture2D silhouette_depth_stencil_buffer;
 	Texture2D back_buffer;
 	Texture2D depth_back_buffer;
 

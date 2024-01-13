@@ -399,7 +399,6 @@ void Render_2D::init(Engine *engine)
 	texture_desc.width = 100;
 	texture_desc.height = 100;
 	texture_desc.mip_levels = 1;
-	texture_desc.multisampling = { 1, 0 };
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
 	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
 
@@ -586,8 +585,6 @@ void Render_System::init(Engine *engine)
 	init_render_api(&gpu_device, &render_pipeline);
 	//print("Render_System::init: Render API based on directx 11 was successfully initialized.");
 
-	setup_multisampling(&gpu_device, &multisample_info);
-
 	render_pipeline_states.init(&gpu_device);
 
 	swap_chain.init(&gpu_device, &engine->win32_info);
@@ -604,6 +601,11 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 {	
 	swap_chain.get_back_buffer_as_texture(&back_buffer);
 	gpu_device.create_render_target_view(&back_buffer);
+	
+	Texture2D_Desc back_buffer_texture_desc;
+	back_buffer.get_desc(&back_buffer_texture_desc);
+
+	gpu_device.create_unordered_access_view(&back_buffer_texture_desc, &back_buffer);
 
 	Texture2D_Desc depth_texture_desc;
 	depth_texture_desc.width = window_width;
@@ -611,13 +613,31 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	depth_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depth_texture_desc.mip_levels = 1;
 	depth_texture_desc.bind = BIND_DEPTH_STENCIL;
-	depth_texture_desc.multisampling = swap_chain.multisampling;
 
 	gpu_device.create_texture_2d(&depth_texture_desc, &depth_back_buffer);
 	gpu_device.create_depth_stencil_view(&depth_texture_desc, &depth_back_buffer);
 
-	gpu_device.create_texture_2d(&depth_texture_desc, &outlining_depth_stencil_buffer);
-	gpu_device.create_depth_stencil_view(&depth_texture_desc, &outlining_depth_stencil_buffer);
+	Texture2D_Desc silhouette_texture_desc;
+	silhouette_texture_desc.width = window_width;
+	silhouette_texture_desc.height = window_height;
+	silhouette_texture_desc.format = DXGI_FORMAT_R32_UINT;
+	silhouette_texture_desc.mip_levels = 1;
+	silhouette_texture_desc.bind = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+
+	gpu_device.create_texture_2d(&silhouette_texture_desc, &silhouette_buffer);
+	gpu_device.create_shader_resource_view(&silhouette_texture_desc, &silhouette_buffer);
+	gpu_device.create_render_target_view(&silhouette_buffer);
+
+	Texture2D_Desc depth_texture_desc2;
+	depth_texture_desc2.width = window_width;
+	depth_texture_desc2.height = window_height;
+	depth_texture_desc2.format = DXGI_FORMAT_R24G8_TYPELESS;
+	depth_texture_desc2.mip_levels = 1;
+	depth_texture_desc2.bind = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+
+	gpu_device.create_texture_2d(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
+	gpu_device.create_depth_stencil_view(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
+	gpu_device.create_shader_resource_view(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
 }
 
 void Render_System::init_shader_input_layout(Shader_Manager *shader_manager)
@@ -647,8 +667,11 @@ void Render_System::resize(u32 window_width, u32 window_height)
 
 void Render_System::new_frame()
 {
-	render_pipeline.dx11_context->ClearRenderTargetView(back_buffer.rtv.Get(), (float *)&Color::LightSteelBlue);
-	render_pipeline.dx11_context->ClearDepthStencilView(depth_back_buffer.dsv.Get(), CLEAR_DEPTH_BUFFER | CLEAR_STENCIL_BUFFER, 1.0f, 0);
+	render_pipeline.clear_render_target_view(back_buffer.rtv, Color::LightSteelBlue);
+	render_pipeline.clear_depth_stencil_view(depth_back_buffer.dsv);
+	
+	render_pipeline.clear_depth_stencil_view(silhouette_depth_stencil_buffer.dsv);
+	render_pipeline.clear_render_target_view(silhouette_buffer.rtv, Color(0.0f, 0.0f, 0.0f, 0.0f));
 
 	render_2d.new_frame();
 }
@@ -700,7 +723,6 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 	texture_atlas_desc.width = 200;
 	texture_atlas_desc.height = 200;
 	texture_atlas_desc.mip_levels = 1;
-	texture_atlas_desc.multisampling = { 1, 0 };
 
 	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_atlas_desc, &font_atlas);
 	Engine::get_render_system()->gpu_device.create_shader_resource_view(&texture_atlas_desc, &font_atlas);
@@ -764,6 +786,11 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 
 	gpu_device->create_blend_state(&transparent_blend_state_desc, &transparent_blend_state);
 
+	Blend_State_Desc disabled_blend_state_desc;
+	disabled_blend_state_desc.enable = false;
+
+	gpu_device->create_blend_state(&disabled_blend_state_desc, &disabled_blend_state);
+
 	D3D11_SAMPLER_DESC point_sampling_desc;
 	ZeroMemory(&point_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
 	point_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -812,7 +839,7 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	Depth_Stencil_State_Desc temp2;
 	//temp2.enable_depth_test = false;
 	temp2.enable_stencil_test = true;
-	temp2.compare_func = COMPARISON_NOT_EQUAL;
+	temp2.stencil_compare_func = COMPARISON_NOT_EQUAL;
 
 	gpu_device->create_depth_stencil_state(&temp2, &outlining_depth_stencil_state);
 
