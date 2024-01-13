@@ -1521,7 +1521,6 @@ void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
 	texture_desc.width = 64;
 	texture_desc.height = 64;
 	texture_desc.mip_levels = 1;
-	texture_desc.multisampling = { 1, 0 };
 	
 	gpu_device->create_texture_2d(&texture_desc, &default_texture);
 	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
@@ -2389,7 +2388,6 @@ void gui::draw_test_gui()
 			Texture2D texture;
 			Texture2D_Desc texture_desc;
 			texture_desc.mip_levels = 1;
-			texture_desc.multisampling = { 1, 0 };
 			texture_desc.width = width;
 			texture_desc.height = height;
 			texture_desc.data = (void *)image_data;

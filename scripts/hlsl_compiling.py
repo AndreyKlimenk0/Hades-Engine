@@ -12,7 +12,7 @@ HLSH_DIR = "hlsl"
 
 class Shader_Type(enum.Enum):
     VERTEX_SHADER = 1
-    COMPUTER_SHADER = 2
+    COMPUTE_SHADER = 2
     DOMAIN_SHADER = 3
     GEOMETRY_SHADER = 4
     PIXEL_SHADER = 5
@@ -22,7 +22,7 @@ class Shader_Type(enum.Enum):
 def get_entry_point(shader_type: Shader_Type) -> str:
     shader_entry_points = { 
         Shader_Type.VERTEX_SHADER : "vs_main",
-        Shader_Type.COMPUTER_SHADER : "cs_main",
+        Shader_Type.COMPUTE_SHADER : "cs_main",
         Shader_Type.DOMAIN_SHADER : "ds_main",
         Shader_Type.GEOMETRY_SHADER : "gs_main",
         Shader_Type.PIXEL_SHADER : "ps_main",
@@ -34,7 +34,7 @@ def get_entry_point(shader_type: Shader_Type) -> str:
 def get_profile(shader_type: Shader_Type) -> str:
     shader_entry_points = { 
         Shader_Type.VERTEX_SHADER : "vs_5_0",
-        Shader_Type.COMPUTER_SHADER : "cs_5_0",
+        Shader_Type.COMPUTE_SHADER : "cs_5_0",
         Shader_Type.DOMAIN_SHADER : "ds_5_0",
         Shader_Type.GEOMETRY_SHADER : "gs_5_0",
         Shader_Type.PIXEL_SHADER : "ps_5_0",
@@ -47,7 +47,7 @@ def get_profile(shader_type: Shader_Type) -> str:
 def get_output_file_name(shader_name: str, shader_type : Shader_Type) -> str:
     file_prefix = { 
         Shader_Type.VERTEX_SHADER : "_vs",
-        Shader_Type.COMPUTER_SHADER : "_cs",
+        Shader_Type.COMPUTE_SHADER : "_cs",
         Shader_Type.DOMAIN_SHADER : "_ds",
         Shader_Type.GEOMETRY_SHADER : "_gs",
         Shader_Type.PIXEL_SHADER : "_ps",
@@ -69,12 +69,13 @@ shader_files = [
     Shader_File("vertex.hlsl", Shader_Type.HEADER_FILE),
     Shader_File("utils.hlsl", Shader_Type.HEADER_FILE),
     Shader_File("render_2d.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("outlining.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("draw_lines.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
     Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
+    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER)
 ]
 
 

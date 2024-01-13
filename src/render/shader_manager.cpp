@@ -35,7 +35,9 @@ bool is_valid(Shader *shader, u32 flags)
 		assert(false);
 	}
 	if (flags & VALIDATE_COMPUTE_SHADER) {
-		assert(false);
+		if (!shader->compute_shader) {
+			return false;
+		}
 	}
 	if (flags & VALIDATE_HULL_SHADER) {
 		assert(false);
@@ -156,6 +158,7 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 	shader_table[shader_count++] = { "forward_light.hlsl", &shaders.forward_light };
 	shader_table[shader_count++] = { "outlining.hlsl", &shaders.outlining };
 	shader_table[shader_count++] = { "render_2d.hlsl", &shaders.render_2d };
+	shader_table[shader_count++] = { "silhouette.hlsl", &shaders.silhouette };
 
 	for (u32 i = 0; i < shader_count; i++) {
 		shader_table[i].shader->name = shader_table[i].name;

@@ -3,6 +3,7 @@
 #include "hlsl.h"
 #include "render_pass.h"
 #include "render_world.h"
+#include "../libs/math/common.h"
 
 const u32 SKIP_RENDER_TARGET_VIEW_VALIDATION = 0x1;
 const u32 SKIP_VIEWPORT_VALIDATION           = 0x2;
@@ -373,7 +374,7 @@ void Draw_Vertices_Pass::render(Render_World *render_world, Render_Pipeline *ren
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
 	Render_Entity *render_entity = NULL;
-	Debug_Cascade_Shadows_Pass::Pass_Data pass_data;
+	Render_Pass::Pass_Data pass_data;
 
 	for (u32 i = 0; i < render_world->vertex_rendering_entities.count; i++) {
 		Color mesh_color = render_world->vertex_rendering_entity_colors[i];
@@ -399,92 +400,91 @@ void Outlining_Pass::add_render_entity_index(u32 entity_index)
 	}
 }
 
+void Outlining_Pass::setup_outlining(u32 outlining_size_in_pixels, const Color &color)
+{
+	u32 samples_in_one_row = outlining_size_in_pixels * 2 + 1; 
+	outlining_info.offset_range = (s32)floor((float)samples_in_one_row * 0.5f);
+	outlining_info.color = (Color)color;
+}
+
 void Outlining_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
 {
 	name = "Outlining";
 	gpu_device->create_constant_buffer(sizeof(Render_Pass::Pass_Data), &pass_data_cbuffer);
-	gpu_device->create_constant_buffer(sizeof(Depth_Map_Pass_Data), &depth_map_pass_data_cbuffer);
 	gpu_device->create_constant_buffer(sizeof(Outlining_Info), &outlining_info_cbuffer);
 	Render_Pass::init(gpu_device, _render_pipeline_states);
-	setup_default_render_pipeline_state(&pre_render_pipeline_state, render_pipeline_states);
 }
 
-void Outlining_Pass::setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport)
+void Outlining_Pass::setup_render_pipeline(Shader_Manager *shader_manager, Texture2D *_silhouette_back_buffer, Texture2D *_silhouette_depth_stencil_buffer, Texture2D *_screen_back_buffer, Viewport *viewport)
 {
-	pre_render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
-	pre_render_pipeline_state.shader = GET_SHADER(shader_manager, depth_map);
-	pre_render_pipeline_state.depth_stencil_state = render_pipeline_states->pre_outlining_depth_stencil_state;
-	pre_render_pipeline_state.depth_stencil_view = depth_stencil_view;
-	pre_render_pipeline_state.render_target_view = nullptr;
-	pre_render_pipeline_state.viewport = *viewport;
+	assert(shader_manager);
+	assert(_silhouette_back_buffer);
+	assert(_silhouette_depth_stencil_buffer);
+	assert(_screen_back_buffer);
+	assert(viewport);
+
+	silhouette_back_buffer = _silhouette_back_buffer;
+	silhoueete_depth_stencil_buffer = _silhouette_depth_stencil_buffer;
+	screen_back_buffer = _screen_back_buffer;
+
+	outlining_compute_shader = GET_SHADER(shader_manager, outlining);
 
 	render_pipeline_state.primitive_type = RENDER_PRIMITIVE_TRIANGLES;
-	render_pipeline_state.shader = GET_SHADER(shader_manager, outlining);
-	render_pipeline_state.depth_stencil_state = render_pipeline_states->outlining_depth_stencil_state;
-	render_pipeline_state.depth_stencil_view = depth_stencil_view;
-	render_pipeline_state.render_target_view = render_target_view;
+	render_pipeline_state.shader = GET_SHADER(shader_manager, silhouette);
+	render_pipeline_state.blend_state = render_pipeline_states->disabled_blend_state; // DXGI_FORMAT_R32_UINT doesn't support blending.
+	render_pipeline_state.depth_stencil_view = silhoueete_depth_stencil_buffer->dsv;
+	render_pipeline_state.render_target_view = silhouette_back_buffer->rtv;
 	render_pipeline_state.viewport = *viewport;
 
-	is_valid = validate_render_pipeline(&name, &pre_render_pipeline_state, SKIP_RENDER_TARGET_VIEW_VALIDATION) && validate_render_pipeline(&name, &render_pipeline_state);
+	float compute_shader_thread_number = 32.0f;
+	thread_group_count_x = (u32)math::ceil((float)viewport->width / compute_shader_thread_number);
+	thread_group_count_y = (u32)math::ceil((float)viewport->height / compute_shader_thread_number);
+
+	is_valid = validate_render_pipeline(&name, &render_pipeline_state) && (outlining_info.offset_range != 0) && ::is_valid(outlining_compute_shader, VALIDATE_COMPUTE_SHADER);
 }
 
 void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_pipeline)
 {
-	render_pipeline->apply(&pre_render_pipeline_state);
-
-	render_pipeline->clear_depth_stencil_view(render_world->render_sys->outlining_depth_stencil_buffer.dsv);
-
-	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
-	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
-
-	Depth_Map_Pass_Data depth_map_pass_data;
-	depth_map_pass_data.view_projection_matrix = render_world->render_camera.debug_view_matrix * render_world->render_sys->view.perspective_matrix;
-
-	for (u32 i = 0; i < render_entity_indices.count; i++) {
-		Render_Entity *render_entity = &render_world->forward_rendering_entities[i];
-
-		depth_map_pass_data.mesh_idx = render_entity->mesh_idx;
-		depth_map_pass_data.world_matrix_idx = render_entity->world_matrix_idx;
-
-		render_pipeline->update_constant_buffer(&depth_map_pass_data_cbuffer, (void *)&depth_map_pass_data);
-		render_pipeline->set_vertex_shader_resource(0, depth_map_pass_data_cbuffer);
-
-		render_pipeline->set_depth_stencil_state(render_pipeline_states->pre_outlining_depth_stencil_state, i + 1);
-
-		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
-	}
+	assert(render_world);
+	assert(render_pipeline);
+	assert(is_valid);
+	assert(outlining_compute_shader);
 
 	render_pipeline->apply(&render_pipeline_state);
 
-	Outlining_Info outlining_info;
-	outlining_info.outlining_color = Color(196, 114, 31);
-	outlining_info.scaling_matrix = make_scale_matrix(1.05f);
-	//outlining_info.scaling_matrix = make_scale_matrix(1.05f);
-	render_pipeline->update_constant_buffer(&outlining_info_cbuffer, (void *)&outlining_info);
-
-	render_pipeline->set_vertex_shader_resource(1, outlining_info_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
-	render_pipeline->set_pixel_shader_resource(1, outlining_info_cbuffer);
-
+	Render_Entity *render_entity = NULL;
 	Render_Pass::Pass_Data pass_data;
 
-	for (u32 i = 0; i < render_entity_indices.count; i++) {
+	for (u32 i = 0; i < render_world->forward_rendering_entities.count; i++) {
 		Render_Entity *render_entity = &render_world->forward_rendering_entities[i];
 
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+		pass_data.pad1 = i + 1;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
-
-		render_pipeline->set_depth_stencil_state(render_pipeline_states->outlining_depth_stencil_state, i + 1);
+		render_pipeline->set_pixel_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_idx].index_count);
 	}
+
+	render_pipeline->reset_render_target();
+
+	render_pipeline->update_constant_buffer(&outlining_info_cbuffer, (void *)&outlining_info);
+	render_pipeline->set_compute_shader_resource(CB_OUTLINING_INFO_REGISTER, outlining_info_cbuffer);
+	render_pipeline->set_compute_shader(outlining_compute_shader);
+	render_pipeline->set_compute_shader_resource(SILHOUETTE_TEXTURE_REGISTER, silhouette_back_buffer->srv);
+	render_pipeline->set_compute_shader_resource(SILHOUETTE_DEPTH_STENCIL_TEXTURE_REGISTER, silhoueete_depth_stencil_buffer->srv);
+	render_pipeline->set_compute_shader_resource(SCREEN_BACK_BUFFER,  screen_back_buffer->uav);
+	
+	render_pipeline->dispatch(thread_group_count_x, thread_group_count_y, 1);
+	
+	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_TEXTURE_REGISTER);
 }
+

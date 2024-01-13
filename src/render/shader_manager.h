@@ -45,6 +45,7 @@ struct Shader_Manager {
 		Extend_Shader forward_light;
 		Extend_Shader outlining;
 		Extend_Shader render_2d;
+		Extend_Shader silhouette;
 	} shaders;
 
 	Gpu_Device *gpu_device = NULL;

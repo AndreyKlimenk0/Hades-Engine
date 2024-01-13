@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <d3d11.h>
 
-#include "../win32/win_local.h"
-#include "../win32/win_types.h"
+#include "../libs/color.h"
 #include "../libs/math/common.h"
 #include "../sys/sys_local.h"
+#include "../win32/win_types.h"
+#include "../win32/win_local.h"
 
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
@@ -233,10 +234,11 @@ struct Depth_Stencil_State_Desc {
 	bool enable_stencil_test = false;
 	u32 stencil_read_mask = 0xff;
 	u32 stencil_write_mack = 0xff;
+	Comparison_Func depth_compare_func = COMPARISON_LESS;
+	Comparison_Func stencil_compare_func = COMPARISON_ALWAYS;
 	Stencil_Operation stencil_failed = STENCIL_OP_KEEP;
 	Stencil_Operation stencil_passed_depth_failed = STENCIL_OP_KEEP;
 	Stencil_Operation stencil_and_depth_passed = STENCIL_OP_KEEP;
-	Comparison_Func compare_func = COMPARISON_ALWAYS;
 };
 
 struct Shader {
@@ -368,7 +370,6 @@ struct Render_Pipeline_State {
 };
 
 struct Swap_Chain {
-	Multisample_Info multisampling;
 	DXGI_Swap_Chain dxgi_swap_chain;
 
 	void init(Gpu_Device *gpu_device, Win32_Info *win32_info);
@@ -393,6 +394,8 @@ struct Render_Pipeline {
 	void unmap(Gpu_Resource<T> &resource);
 
 	void clear_depth_stencil_view(const Depth_Stencil_View &depth_stencil_view, float depth_value = 1.0f, u8 stencil_value = 0);
+	void clear_render_target_view(const Render_Target_View &render_target_view, const Color &color);
+
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
 	void update_subresource(Texture2D *resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
 	void generate_mips(const Shader_Resource_View &shader_resource);
@@ -421,23 +424,31 @@ struct Render_Pipeline {
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);
+
+	void set_compute_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
+	void set_compute_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
+	void set_compute_shader_resource(u32 shader_resource_register, const Unordered_Access_View &unordered_access_view);
+	
 	void reset_pixel_shader_resource(u32 shader_resource_register);
+	void reset_compute_shader_resource_view(u32 shader_resource_register);
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);
 	void set_viewport(Viewport *viewport);
-	void reset_rasterizer();
 
 	void set_blend_state(const Blend_State &blend_state);
-	void reset_blending_state();
-
 	void set_depth_stencil_state(const Depth_Stencil_State &depth_stencil_state, u32 stencil_ref = 0);
-	void reset_depth_stencil_state();
-
 	void set_render_target(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view);
+	
+	void reset_rasterizer();
+	void reset_blending_state();
+	void reset_depth_stencil_state();
+	void reset_render_target();
 
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
+
+	void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z);
 };
 
 template <typename T>
@@ -489,7 +500,6 @@ inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 ds
 u32 get_dxgi_format_size(DXGI_FORMAT format);
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
-Multisample_Info get_default_multisample();
 
 #endif
 
