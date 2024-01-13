@@ -440,12 +440,11 @@ void Gpu_Device::create_depth_stencil_state(Depth_Stencil_State_Desc *depth_sten
 	if (depth_stencil_desc->enable_depth_test) {
 		desc.DepthEnable = true;
 		desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		desc.DepthFunc = D3D11_COMPARISON_LESS;
 	} else {
 		desc.DepthEnable = false;
 		desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-		desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
 	}
+	desc.DepthFunc = to_dx11_comparison_func(depth_stencil_desc->depth_compare_func);
 	
 	desc.StencilEnable = true;
 	desc.StencilReadMask = depth_stencil_desc->stencil_read_mask;
@@ -454,12 +453,12 @@ void Gpu_Device::create_depth_stencil_state(Depth_Stencil_State_Desc *depth_sten
 	desc.FrontFace.StencilFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_failed);
 	desc.FrontFace.StencilDepthFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_passed_depth_failed);
 	desc.FrontFace.StencilPassOp = to_dx11_stencil_op(depth_stencil_desc->stencil_and_depth_passed);
-	desc.FrontFace.StencilFunc = to_dx11_comparison_func(depth_stencil_desc->compare_func);
+	desc.FrontFace.StencilFunc = to_dx11_comparison_func(depth_stencil_desc->stencil_compare_func);
 
 	desc.BackFace.StencilFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_failed);
 	desc.BackFace.StencilDepthFailOp = to_dx11_stencil_op(depth_stencil_desc->stencil_passed_depth_failed);
 	desc.BackFace.StencilPassOp = to_dx11_stencil_op(depth_stencil_desc->stencil_and_depth_passed);
-	desc.BackFace.StencilFunc = to_dx11_comparison_func(depth_stencil_desc->compare_func);
+	desc.BackFace.StencilFunc = to_dx11_comparison_func(depth_stencil_desc->stencil_compare_func);
 
 	HR(dx11_device->CreateDepthStencilState(&desc, depth_stencil_state->ReleaseAndGetAddressOf()));
 }
@@ -491,6 +490,7 @@ inline DXGI_FORMAT to_shader_resource_view_format(DXGI_FORMAT format)
 {
 	switch (format) {
 		case DXGI_FORMAT_R24G8_TYPELESS:
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
 			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
 	return format;
@@ -545,7 +545,7 @@ void Gpu_Device::create_render_target_view(Texture2D *texture)
 
 void Gpu_Device::create_unordered_access_view(Texture2D_Desc *texture_desc, Texture2D *texture)
 {
-	assert(is_multisampled_texture(texture_desc));
+	assert(!is_multisampled_texture(texture_desc));
 	
 	D3D11_UNORDERED_ACCESS_VIEW_DESC unordered_access_view_desc;
 	ZeroMemory(&unordered_access_view_desc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
@@ -609,6 +609,11 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 void Render_Pipeline::clear_depth_stencil_view(const Depth_Stencil_View &depth_stencil_view, float depth_value, u8 stencil_value)
 {
 	dx11_context->ClearDepthStencilView(depth_stencil_view.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, depth_value, stencil_value);
+}
+
+void Render_Pipeline::clear_render_target_view(const Render_Target_View &render_target_view, const Color &color)
+{
+	dx11_context->ClearRenderTargetView(render_target_view.Get(), (float *)&color);
 }
 
 void Render_Pipeline::update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data)
@@ -752,6 +757,28 @@ void Render_Pipeline::reset_pixel_shader_resource(u32 shader_resource_register)
 	dx11_context->PSSetShaderResources(shader_resource_register, 1, temp.GetAddressOf());
 }
 
+void Render_Pipeline::reset_compute_shader_resource_view(u32 shader_resource_register)
+{
+	Shader_Resource_View temp = nullptr;
+	dx11_context->CSSetShaderResources(shader_resource_register, 1, temp.GetAddressOf());
+}
+
+void Render_Pipeline::set_compute_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer)
+{
+	dx11_context->CSSetConstantBuffers(gpu_register, 1, constant_buffer.resource.GetAddressOf());
+}
+
+void Render_Pipeline::set_compute_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view)
+{
+	dx11_context->CSSetShaderResources(shader_resource_register, 1, shader_resource_view.GetAddressOf());
+}
+
+void Render_Pipeline::set_compute_shader_resource(u32 shader_resource_register, const Unordered_Access_View &unordered_access_view)
+{
+	u32 uav_initial_counts = -1;
+	dx11_context->CSSetUnorderedAccessViews(shader_resource_register, 1, unordered_access_view.GetAddressOf(), &uav_initial_counts);
+}
+
 void Render_Pipeline::set_rasterizer_state(const Rasterizer_State &rasterizer_state)
 {
 	dx11_context->RSSetState(rasterizer_state.Get());
@@ -808,6 +835,11 @@ void Render_Pipeline::reset_depth_stencil_state()
 	dx11_context->OMSetDepthStencilState(NULL, 0);
 }
 
+void Render_Pipeline::reset_render_target()
+{
+	dx11_context->OMSetRenderTargets(0, nullptr, nullptr);
+}
+
 void Render_Pipeline::set_render_target(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view)
 {
 	u32 render_target_count = 0;
@@ -837,6 +869,11 @@ void Render_Pipeline::draw(u32 vertex_count)
 void Render_Pipeline::draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset)
 {
 	dx11_context->DrawIndexed(index_count, index_offset, vertex_offset);
+}
+
+void Render_Pipeline::dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z)
+{
+	dx11_context->Dispatch(thread_group_count_x, thread_group_count_y, thread_group_count_z);
 }
 
 Gpu_Buffer_Desc make_index_buffer_desc(u32 data_count, void *data, Resource_Usage usage, u32 cpu_access)
@@ -1009,15 +1046,8 @@ void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_i
 	}
 }
 
-Multisample_Info get_default_multisample()
-{
-	return default_render_api_multisample;
-}
-
 void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
 {
-	multisampling = default_render_api_multisample;
-
 	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
 	swap_chain_desc.BufferDesc.Width = win32_info->window_width;
 	swap_chain_desc.BufferDesc.Height = win32_info->window_height;
@@ -1026,9 +1056,8 @@ void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
 	swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swap_chain_desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	swap_chain_desc.SampleDesc.Count = default_render_api_multisample.count;
-	swap_chain_desc.SampleDesc.Quality = default_render_api_multisample.quality;
-	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swap_chain_desc.SampleDesc = { 1, 0 };
+	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_UNORDERED_ACCESS;
 	swap_chain_desc.BufferCount = 1;
 	swap_chain_desc.OutputWindow = win32_info->window;
 	swap_chain_desc.Windowed = true;
