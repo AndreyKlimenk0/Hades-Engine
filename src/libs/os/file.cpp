@@ -154,7 +154,7 @@ void extract_file_extension(const char *file_name, String &result)
 	Array<String> buffer;
 	String str = file_name;
 	split(&str, ".", &buffer);
-	result = buffer.last_item();
+	result = buffer.get_last();
 }
 
 void extract_file_name(const char *file_name, String &result)
@@ -170,7 +170,7 @@ void extract_file_from_path(const char *path, String &result)
 	Array<String> buffer;
 	String str = path;
 	split(&str, "\\", &buffer);
-	result = buffer.last_item();
+	result = buffer.get_last();
 }
 
 static DWORD file_mode_to_win32(File_Mode file_mode)

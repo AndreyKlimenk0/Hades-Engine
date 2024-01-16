@@ -153,7 +153,7 @@ struct Render_World {
 	Array<Matrix4> light_view_matrices; // is the code necessary ? 
 	Array<Matrix4> cascaded_view_projection_matrices;
 	
-	Array<Render_Entity> forward_rendering_entities;
+	Array<Render_Entity> game_rendering_entities;
 	Array<Render_Entity> line_rendering_entities;
 	Array<Render_Entity> vertex_rendering_entities;
 	Array<Color> line_rendering_entity_colors;

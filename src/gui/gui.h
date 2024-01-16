@@ -10,7 +10,9 @@
 struct Engine;
 struct Texture2D;
 
+typedef u32 Gui_ID;
 typedef u32 Window_Style;
+
 const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_WITH_HEADER = 0x1;
 const Window_Style WINDOW_WITH_OUTLINES = 0x2;
@@ -111,6 +113,8 @@ namespace gui {
 	void set_next_window_pos(s32 x, s32 y);
 	void same_line();
 	void next_line();
+	
+	void make_tab_active(Gui_ID tab_gui_id);
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
@@ -130,5 +134,6 @@ namespace gui {
 	bool edit_field(const char *name, Vector3 *vector, const char *x = "X", const char *y = "Y", const char *z = "z");
 
 	Size_s32 get_window_size();
+	Gui_ID get_last_tab_gui_id();
 }
 #endif

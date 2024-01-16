@@ -144,7 +144,7 @@ struct Game_World {
 	void init_from_file();
 	void save_to_file();
 
-	void set_entity_AABB(Entity_Id entity_id, AABB *bounding_box);
+	void attach_AABB(Entity_Id entity_id, AABB *bounding_box);
 
 	Entity *get_entity(Entity_Id entity_id);
 	Camera *get_camera(Entity_Id entity_id);

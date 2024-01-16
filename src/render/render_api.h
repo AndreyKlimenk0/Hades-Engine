@@ -431,6 +431,7 @@ struct Render_Pipeline {
 	
 	void reset_pixel_shader_resource(u32 shader_resource_register);
 	void reset_compute_shader_resource_view(u32 shader_resource_register);
+	void reset_compute_unordered_access_view(u32 shader_resource_register);
 
 	void set_rasterizer_state(const Rasterizer_State &rasterizer_state);
 	void set_scissor(Rect_s32 *rect);

@@ -37,7 +37,7 @@ struct Vector2 : XMFLOAT2 {
 
 inline float get_length(Vector2 *vector2);
 inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2);
-inline float get_distance(Vector2 *first_vector2, Vector2 *second_vector2);
+inline float find_distance(Vector2 *first_vector2, Vector2 *second_vector2);
 inline Vector2 negate(Vector2 *vector);
 inline Vector2 normalize(Vector2 *vector);
 inline Vector2 dot(Vector2 *first_vector2, Vector2 *second_vector2);
@@ -51,6 +51,7 @@ inline Vector2 operator/(const Vector2 &first_vector, const Vector2 &second_vect
 struct Vector3 : XMFLOAT3 {
 	Vector3() {}
 	Vector3(XMVECTOR vector);
+	Vector3(const Vector2 &vec2, float z) : XMFLOAT3(vec2.x, vec2.y, z) {}
 	Vector3(const Vector3 &other);
 	Vector3(float x, float y, float z) : XMFLOAT3(x, y, z) {}
 
@@ -79,7 +80,7 @@ struct Vector3 : XMFLOAT3 {
 
 inline float get_length(Vector3 *vector3);
 inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3);
-inline float get_distance(Vector3 *first_vector3, Vector3 *second_vector3);
+inline float find_distance(Vector3 *first_vector3, Vector3 *second_vector3);
 inline Vector3 negate(Vector3 *vector);
 inline Vector3 normalize(Vector3 *vector);
 inline Vector3 dot(Vector3 *first_vector3, Vector3 *second_vector3);
@@ -117,7 +118,8 @@ struct Vector4 : XMFLOAT4 {
 
 inline float get_length(Vector4 *vector4);
 inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4);
-inline float get_distance(Vector4 *first_vector4, Vector4 *second_vector4);
+inline float find_distance(Vector4 *first_vector4, Vector4 *second_vector4);
+inline Vector3 to_vector3(const Vector4 &vector);
 inline Vector4 negate(Vector4 *vector);
 inline Vector4 normalize(Vector4 *vector);
 inline Vector4 dot(Vector4 *first_vector4, Vector4 *second_vector4);
@@ -248,7 +250,7 @@ inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2)
 	XMVECTOR second = XMLoadFloat2(second_vector2);
 	return XMVectorGetX(XMVector2AngleBetweenVectors(first, second));
 }
-inline float get_distance(Vector2 *first_vector2, Vector2 *second_vector2)
+inline float find_distance(Vector2 *first_vector2, Vector2 *second_vector2)
 {
 	XMVECTOR first = XMLoadFloat2(first_vector2);
 	XMVECTOR second = XMLoadFloat2(second_vector2);
@@ -431,7 +433,7 @@ inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3)
 	XMVECTOR second = XMLoadFloat3(second_vector3);
 	return XMVectorGetX(XMVector3AngleBetweenVectors(first, second));
 }
-inline float get_distance(Vector3 *first_vector3, Vector3 *second_vector3)
+inline float find_distance(Vector3 *first_vector3, Vector3 *second_vector3)
 {
 	XMVECTOR first = XMLoadFloat3(first_vector3);
 	XMVECTOR second = XMLoadFloat3(second_vector3);
@@ -625,12 +627,17 @@ inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4)
 	XMVECTOR second = XMLoadFloat4(second_vector4);
 	return XMVectorGetX(XMVector4AngleBetweenVectors(first, second));
 }
-inline float get_distance(Vector4 *first_vector4, Vector4 *second_vector4)
+inline float find_distance(Vector4 *first_vector4, Vector4 *second_vector4)
 {
 	XMVECTOR first = XMLoadFloat4(first_vector4);
 	XMVECTOR second = XMLoadFloat4(second_vector4);
 	XMVECTOR temp = XMVectorSubtract(first, second);
 	return XMVectorGetX(XMVector4Length(temp));
+}
+
+inline Vector3 to_vector3(const Vector4 &vector)
+{
+	return Vector3(vector.x, vector.y, vector.z);
 }
 
 inline Vector4 negate(Vector4 *vector4)
