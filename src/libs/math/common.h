@@ -1,8 +1,10 @@
 #ifndef COMMON_MATH_H
 #define COMMON_MATH_H
 
-#include <assert.h>
 #include <math.h>
+#include <assert.h>
+#include <string.h>
+
 #include "../ds/array.h"
 #include "../../win32/win_types.h"
 
@@ -78,14 +80,16 @@ namespace math {
 		return (T)::pow((double)value, 2);
 	}
 
-	inline float sqrt(float value)
+	template< typename T>
+	inline T sqrt(T value)
 	{
-		return (float)::sqrt((double)value);
+		return (T)::sqrt((double)value);
 	}
 
-	inline float ceil(float value)
+	template< typename T>
+	inline T ceil(T value)
 	{
-		return ::ceilf(value);
+		return (T)::ceil((double)value);
 	}
 };
 
@@ -124,42 +128,57 @@ typedef Pair<s32, s32> Pair_s32;
 
 template <typename T>
 struct Point_V2 {
-	Point_V2() {};
-	Point_V2(const T &x, const T &y) : x(x), y(y) {};
+	Point_V2();
+	Point_V2(const T &_x, const T &_y);
+	Point_V2(const T &_x, const T &_y, const T &_z);
+
 	T x;
 	T y;
+	T z;
 
 	T &operator[](int index);
 };
 
+template<typename T>
+inline Point_V2<T>::Point_V2()
+{
+	memset((void *)this, 0, sizeof(Point_V2<T>));
+}
+
+template<typename T>
+inline Point_V2<T>::Point_V2(const T &_x, const T &_y)
+{
+	memset((void *)this, 0, sizeof(Point_V2<T>));
+	x = _x;
+	y = _y;
+}
+
+template<typename T>
+inline Point_V2<T>::Point_V2(const T &_x, const T &_y, const T &_z)
+{
+	x = _x;
+	y = _y;
+	z = _z;
+}
+
 template <typename T>
 T &Point_V2<T>::operator[](int index)
 {
-	assert(index < 2);
+	assert(index < 3);
 	return ((T *)&x)[index];
 }
 
 template <typename T>
 Point_V2<T> operator-(const Point_V2<T> &point1, const Point_V2<T> &point2)
 {
-	return Point_V2<T>(point1.x - point2.x, point1.y - point2.y);
+	return Point_V2<T>(point1.x - point2.x, point1.y - point2.y, point1.z - point2.z);
 }
 
 template <typename T>
-float slope(const Point_V2<T> &point1, const Point_V2<T> &point2)
+T find_distance(Point_V2<T> *point1, Point_V2<T> *point2)
 {
-	T y_delta = point2.y - point1.y;
-	T x_delta = point2.x - point1.x;
-	if (x_delta == 0.0f) {
-		return 0.0f;
-	}
-	return (float)y_delta / (float)x_delta;
-}
-
-template <typename T>
-float get_distance(Point_V2<T> *point1, Point_V2<T> *point2)
-{
-	return math::sqrt((float)math::pow2(point1->x - point2->x) + (float)math::pow2(point1->y - point2->y));
+	Point_V2<T> temp = *point1 - *point2;
+	return (T)math::sqrt(math::pow2(temp.x) + math::pow2(temp.y) + math::pow2(temp.z));
 }
 
 typedef Point_V2<s32> Point_s32;

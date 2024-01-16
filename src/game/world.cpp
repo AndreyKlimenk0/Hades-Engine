@@ -24,9 +24,6 @@ Entity *Game_World::get_entity(Entity_Id entity_id)
 {
 	switch (entity_id.type) {
 		case ENTITY_TYPE_ENTITY:
-			if (entities.count <= entity_id.index) {
-				assert(false);
-			}
 			return &entities[entity_id.index];
 		case ENTITY_TYPE_LIGHT:
 			return &lights[entity_id.index];
@@ -183,15 +180,16 @@ void Game_World::save_to_file()
 	file.write(&cameras);
 }
 
-void Game_World::set_entity_AABB(Entity_Id entity_id, AABB *bounding_box)
+void Game_World::attach_AABB(Entity_Id entity_id, AABB *bounding_box)
 {
 	Entity *entity = get_entity(entity_id);
 	if (entity) {
 		entity->bounding_box_type = BOUNDING_BOX_TYPE_AABB;
-		entity->AABB_box = *bounding_box;
-		return;
+		entity->AABB_box.min = bounding_box->min + entity->position;
+		entity->AABB_box.max = bounding_box->max + entity->position;
+	} else {
+		print("Game_World::attach_AABB: Failed to set AABB for a entity. The entity was not found.");
 	}
-	print("Game_World::set_entity_AABB: Failed to set AABB for a entity. The entity was not found.");
 }
 
 Entity_Id::Entity_Id()

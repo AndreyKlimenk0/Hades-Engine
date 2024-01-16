@@ -107,7 +107,7 @@ void Shadow_Cascade_Ranges::add_range(u32 start, u32 end)
 	range.start = start;
 	range.end = end;
 	if (!ranges.is_empty()) {
-		range.previous_range_length = ranges.last_item().get_length();
+		range.previous_range_length = ranges.get_last().get_length();
 	}
 	ranges.push({ start, end });
 }
@@ -376,7 +376,7 @@ void Render_World::update()
 void Render_World::update_render_entities()
 {
 	Render_Entity *render_entity = NULL;
-	For (forward_rendering_entities, render_entity) {
+	For (game_rendering_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
@@ -417,7 +417,7 @@ void Render_World::update_lights()
 Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
 {
 	Render_Entity *render_entity = NULL;
-	For(forward_rendering_entities, render_entity) {
+	For(game_rendering_entities, render_entity) {
 		if (render_entity->entity_id == entity_id) {
 			return render_entity;
 		}
@@ -441,7 +441,7 @@ void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id en
 
 	switch (rendering_type) {
 		case RENDERING_TYPE_FORWARD_RENDERING: {
-			forward_rendering_entities.push(render_entity);
+			game_rendering_entities.push(render_entity);
 			break;
 		}
 		case RENDERING_TYPE_LINES_RENDERING: {

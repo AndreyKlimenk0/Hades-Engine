@@ -43,6 +43,6 @@ template<typename T>
 inline T & Stack<T>::top()
 {
 	assert(!is_empty());
-	return stack.last_item();
+	return stack.get_last();
 }
 #endif

@@ -27,8 +27,6 @@
 #define DRAW_WINDOW_DEBUG_RECTS 0
 #define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
 
-typedef u32 Gui_ID;
-
 const u32 BUTTON_HASH = fast_hash("button");
 const u32 IMAGE_BUTTON_HASH = fast_hash("image_button");
 const u32 RADIO_BUTTON_HASH = fast_hash("radio_button");
@@ -437,6 +435,7 @@ struct Gui_Manager {
 	
 	void place_rect_in_window(Gui_Window *window, Rect_s32 *rect);
 	void set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *editing_value_rect);
+	void make_tab_active(Gui_ID tab_gui_id);
 
 	void text(const char *some_text);
 	void image(Texture2D *texture, s32 width, s32 height);
@@ -460,6 +459,8 @@ struct Gui_Manager {
 
 	bool can_window_be_resized(Gui_Window *window);
 	bool detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side);
+
+	Gui_ID get_last_tab_gui_id();
 
 	Rect_s32 get_win32_rect();
 	Rect_s32 get_text_rect(const char *text);
@@ -631,7 +632,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 		window_parent_count++;
 	}
 
-	return &windows.last_item();
+	return &windows.get_last();
 }
 
 Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type, Window_Style window_style, Rect_s32 *rect)
@@ -658,7 +659,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 		window_parent_count++;
 	}
 
-	return &windows.last_item();
+	return &windows.get_last();
 }
 
 inline Gui_Window *Gui_Manager::get_window_by_index(Array<u32> *window_indices, u32 index)
@@ -1204,6 +1205,13 @@ void Gui_Manager::set_caret_position_on_mouse_click(Rect_s32 *rect, Rect_s32 *ed
 			}
 		}
 	}
+}
+
+void Gui_Manager::make_tab_active(Gui_ID tab_gui_id)
+{
+	active_tab = tab_gui_id;
+	active_item = tab_gui_id;
+	hot_item = tab_gui_id;
 }
 
 void Gui_Manager::text(const char *some_text)
@@ -2152,6 +2160,14 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 	return false;
 }
 
+Gui_ID Gui_Manager::get_last_tab_gui_id()
+{
+	Gui_Window *window = get_window();
+	Gui_ID next_tab_gui_id = GET_TAB_GUI_ID();
+	// Calculate current a tab Gui_ID.
+	return next_tab_gui_id - 1;
+}
+
 static Gui_Manager gui_manager;
 
 
@@ -2226,6 +2242,16 @@ Size_s32 gui::get_window_size()
 {
 	Gui_Window *window = gui_manager.get_window();
 	return window->rect.get_size();
+}
+
+Gui_ID gui::get_last_tab_gui_id()
+{
+	return gui_manager.get_last_tab_gui_id();
+}
+
+void gui::make_tab_active(Gui_ID tab_gui_id)
+{
+	return gui_manager.make_tab_active(tab_gui_id);
 }
 
 void gui::begin_frame()

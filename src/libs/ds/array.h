@@ -41,12 +41,12 @@ struct Array {
 	T &get(u32 index);
 	const T &get(u32 index) const;
 
-	T &first_item()
+	T &get_first()
 	{
 		assert(count > 0);
 		return items[0];
 	}
-	T &last_item()
+	T &get_last()
 	{
 		assert(count > 0);
 		return items[count - 1];

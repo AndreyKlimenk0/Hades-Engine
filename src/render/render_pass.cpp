@@ -138,7 +138,7 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 	Render_Entity *render_entity = NULL;
 	Forwar_Light_Pass::Pass_Data pass_data;
 
-	For(render_world->forward_rendering_entities, render_entity) {
+	For(render_world->game_rendering_entities, render_entity) {
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
@@ -248,7 +248,7 @@ void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pi
 			render_pipeline->set_viewport(&cascaded_shadow_map->viewport);
 
 			Render_Entity *render_entity = NULL;
-			For(render_world->forward_rendering_entities, render_entity) {
+			For(render_world->game_rendering_entities, render_entity) {
 				pass_data.mesh_idx = render_entity->mesh_idx;
 				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
@@ -318,7 +318,7 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 	Render_Entity *render_entity = NULL;
 	Debug_Cascade_Shadows_Pass::Pass_Data pass_data;
 
-	For(render_world->forward_rendering_entities, render_entity) {
+	For(render_world->game_rendering_entities, render_entity) {
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
@@ -395,9 +395,12 @@ void Draw_Vertices_Pass::render(Render_World *render_world, Render_Pipeline *ren
 
 void Outlining_Pass::add_render_entity_index(u32 entity_index)
 {
-	if (render_entity_indices.count < 0xff) {
-		render_entity_indices.push(entity_index);
-	}
+	render_entity_indices.push(entity_index);
+}
+
+void Outlining_Pass::reset_render_entity_indices()
+{
+	render_entity_indices.count = 0;
 }
 
 void Outlining_Pass::setup_outlining(u32 outlining_size_in_pixels, const Color &color)
@@ -460,8 +463,9 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 	Render_Entity *render_entity = NULL;
 	Render_Pass::Pass_Data pass_data;
 
-	for (u32 i = 0; i < render_world->forward_rendering_entities.count; i++) {
-		Render_Entity *render_entity = &render_world->forward_rendering_entities[i];
+	for (u32 i = 0; i < render_entity_indices.count; i++) {
+		u32 index = render_entity_indices[i];
+		Render_Entity *render_entity = &render_world->game_rendering_entities[index];
 
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
@@ -479,12 +483,14 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 	render_pipeline->update_constant_buffer(&outlining_info_cbuffer, (void *)&outlining_info);
 	render_pipeline->set_compute_shader_resource(CB_OUTLINING_INFO_REGISTER, outlining_info_cbuffer);
 	render_pipeline->set_compute_shader(outlining_compute_shader);
+	render_pipeline->set_compute_shader_resource(SCREEN_BACK_BUFFER,  screen_back_buffer->uav);
 	render_pipeline->set_compute_shader_resource(SILHOUETTE_TEXTURE_REGISTER, silhouette_back_buffer->srv);
 	render_pipeline->set_compute_shader_resource(SILHOUETTE_DEPTH_STENCIL_TEXTURE_REGISTER, silhoueete_depth_stencil_buffer->srv);
-	render_pipeline->set_compute_shader_resource(SCREEN_BACK_BUFFER,  screen_back_buffer->uav);
 	
 	render_pipeline->dispatch(thread_group_count_x, thread_group_count_y, 1);
 	
+	render_pipeline->reset_compute_unordered_access_view(SCREEN_BACK_BUFFER);
 	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_TEXTURE_REGISTER);
+	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_DEPTH_STENCIL_TEXTURE_REGISTER);
 }
 

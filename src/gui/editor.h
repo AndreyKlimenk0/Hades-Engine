@@ -62,12 +62,11 @@ struct Make_Entity_Window : Editor_Window {
 };
 
 struct Game_World_Window : Editor_Window {
-	u32 entity_index;
 	s32 window_width_delta;
 	s32 world_entities_height;
 	s32 entity_info_height;
+	Entity_Id chose_entity_id;
 	Window_Style window_style;
-	Entity_Type entity_type;
 
 	Gui_Window_Theme world_entities_window_theme;
 	Gui_Window_Theme entity_info_window_theme;
@@ -108,8 +107,11 @@ struct Editor {
 	~Editor();
 
 	bool is_draw_make_entity_window = false;
+	Render_System *render_sys = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
+
+	Gui_ID game_world_tab_gui_id;
 	
 	struct Settings {
 		float camera_speed = 5.0f;

@@ -64,6 +64,7 @@ inline Matrix4 rotate_about_z(float angle);
 inline Matrix4 rotate(Vector3 *xyz_angles);
 inline Matrix4 rotate(float x_angle, float y_angle, float z_angle);
 
+inline Matrix4 inverse(const Matrix4 &matrix);
 inline Matrix4 inverse(Matrix4 *matrix);
 inline Matrix4 transpose(Matrix4 *matrix);
 
@@ -169,6 +170,12 @@ inline Matrix4 rotate(Vector3 *xyz_angles)
 inline Matrix4 rotate(float x_angle, float y_angle, float z_angle)
 {
 	return XMMatrixRotationRollPitchYaw(x_angle, y_angle, z_angle);
+}
+
+inline Matrix4 inverse(const Matrix4 &matrix)
+{
+	XMMATRIX temp = XMLoadFloat4x4(&matrix);
+	return XMMatrixInverse(NULL, temp);
 }
 
 inline Matrix4 inverse(Matrix4 *matrix)

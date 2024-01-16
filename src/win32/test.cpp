@@ -1,4 +1,5 @@
 #include "test.h"
+#include "../libs/math/common.h"
 #include "../libs/ds/array.h"
 #include "../libs/str.h"
 
@@ -26,6 +27,11 @@ struct Parallel_Job_Manager {
 
 void test()
 {
+	Point_f32 temp;
+	Point_f32 point1 = { 22.4f, 10.0f, -19.2f };
+	Point_f32 point2 = { -10.4f, 54.1f, -0.2f };
+	float result = find_distance(&point1, &point2);
+	//print("Distance !!!!!!!!", result);
 }
 
 void update_test()

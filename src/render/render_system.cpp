@@ -153,7 +153,7 @@ void Render_Primitive_List::pop_clip_rect()
 
 void Render_Primitive_List::get_clip_rect(Rect_s32 *rect)
 {
-	*rect = clip_rects.last_item();
+	*rect = clip_rects.get_last();
 }
 
 void Render_Primitive_List::add_outlines(int x, int y, int width, int height, const Color & color, float outline_width, u32 rounding, u32 flags)
@@ -328,7 +328,7 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 	Matrix4 transform_matrix;
 	transform_matrix = rotate_about_z(angle) * make_translation_matrix(&position);
 
-	float line_width = (float)get_distance(first_point, second_point);
+	float line_width = (float)find_distance(first_point, second_point);
 	String hash = String(line_width + thickness);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);

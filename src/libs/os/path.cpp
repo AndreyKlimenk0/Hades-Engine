@@ -44,8 +44,8 @@ static void init_base_path()
 	Array<String> dir_names;
 	split(&current_path, "\\", &dir_names);
 
-	dir_names.last_item().to_lower();
-	if (dir_names.last_item() != ENGINE_NAME || dir_names.last_item() != GITHUB_ENGINE_NAME) {
+	dir_names.get_last().to_lower();
+	if (dir_names.get_last() != ENGINE_NAME || dir_names.get_last() != GITHUB_ENGINE_NAME) {
 		bool succeed = build_correct_base_path(&dir_names, &os_path.base_path);
 		if (!succeed) {
 			error("Base path can't be built correct");
