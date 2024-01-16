@@ -1,31 +1,22 @@
+#include <float.h>
+
 #include "collision.h"
 #include "../render/model.h"
-
+#include "../libs/math/common.h"
 
 AABB make_AABB(Triangle_Mesh *mesh)
 {
-	Vector3 min = { 0.0f, 0.0f, 0.0f };
-	Vector3 max = { 0.0f, 0.0f, 0.0f };
+	Vector3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
+	Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
+;
 	for (u32 i = 0; i < mesh->vertices.count; i++) {
 		Vector3 position = mesh->vertices[i].position;
-		if (position.x < min.x) {
-			min.x = position.x;
-		}
-		if (position.y < min.y) {
-			min.y = position.y;
-		}
-		if (position.z > min.z) {
-			min.z = position.z;
-		}
-		if (position.x > max.x) {
-			max.x = position.x;
-		}
-		if (position.y > max.y) {
-			max.y = position.y;
-		}
-		if (position.z < max.z) {
-			max.z = position.z;
-		}
+		min.x = math::min(min.x, position.x);
+		min.y = math::min(min.y, position.y);
+		min.z = math::min(min.z, position.z);
+		max.x = math::max(max.x, position.x);
+		max.y = math::max(max.y, position.y);
+		max.z = math::max(max.z, position.z);
 	}
 	return { min, max };
 }

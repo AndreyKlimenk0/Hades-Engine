@@ -1,6 +1,9 @@
+#include <assert.h>
+
 #include "editor.h"
 #include "../sys/engine.h"
 #include "../sys/sys_local.h"
+#include "../libs/os/input.h"
 #include "../libs/str.h"
 #include "../libs/os/event.h"
 #include "../libs/math/common.h"
@@ -74,7 +77,8 @@ void Make_Entity_Window::draw()
 			gui::edit_field("Direction", &direction);
 			gui::edit_field("Color", &color, "R", "G", "B");
 			if (gui::button("Make")) {
-				game_world->make_direction_light(direction, color);
+				Color normalized_light_color = { (s32)color.x, (s32)color.y, (s32)color.y };
+				game_world->make_direction_light(direction, to_vector3(normalized_light_color));
 			}
 		}
 
@@ -93,8 +97,7 @@ void Make_Entity_Window::draw()
 				Triangle_Mesh mesh;
 				make_box_mesh(&box, &mesh);
 				AABB aabb = make_AABB(&mesh);
-				//@Note: don't like set_entity_AABB
-				game_world->set_entity_AABB(entity_id, &aabb);
+				game_world->attach_AABB(entity_id, &aabb);
 
 				char *mesh_name = format("Box", box.width, box.height, box.depth);
 				Mesh_Idx mesh_idx;
@@ -158,6 +161,7 @@ Editor::~Editor()
 
 void Editor::init(Engine *engine)
 {
+	render_sys = &engine->render_sys;
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
@@ -170,7 +174,7 @@ void Editor::init(Engine *engine)
 		engine->render_world.set_camera_for_rendering(editor_camera_id);
 	}
 	else {
-		editor_camera_id = get_entity_id(&game_world->cameras.first_item());
+		editor_camera_id = get_entity_id(&game_world->cameras.get_first());
 		engine->render_world.set_camera_for_rendering(editor_camera_id);
 	}
 
@@ -311,6 +315,7 @@ void Editor::render()
 		if (gui::add_tab("Game World")) {
 			game_world_window.draw();
 		}
+		game_world_tab_gui_id = gui::get_last_tab_gui_id();
 
 		if (gui::add_tab("Render World")) {
 			render_world_window.draw();
@@ -322,12 +327,128 @@ void Editor::render()
 	render_world->render_passes.outlining.render(render_world, &render_world->render_sys->render_pipeline);
 }
 
+inline Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height)
+{
+	assert(screen_width > 0);
+	assert(screen_height > 0);
+
+	float ndc_x = (((float)x / (float)screen_width) * 2.0f) - 1.0f;
+	float ndc_y = 1.0f - (((float)y / (float)screen_height) * 2.0f);
+	return Vector2(ndc_x, ndc_y);
+}
+
+struct Ray {
+	Ray() {}
+	Ray(const Vector3 &origin, const Vector3 &direction) : origin(origin), direction(direction) {};
+
+	Vector3 origin;
+	Vector3 direction;
+};
+
+bool detect_collision(Ray *ray, AABB *aabb)
+{
+	float tmin = (aabb->min.x - ray->origin.x) / ray->direction.x;
+	float tmax = (aabb->max.x - ray->origin.x) / ray->direction.x;
+
+	if (tmin > tmax) swap(tmin, tmax);
+
+	float tymin = (aabb->min.y - ray->origin.y) / ray->direction.y;
+	float tymax = (aabb->max.y - ray->origin.y) / ray->direction.y;
+
+	if (tymin > tymax) swap(tymin, tymax);
+
+	if ((tmin > tymax) || (tymin > tmax))
+		return false;
+
+	if (tymin > tmin)
+		tmin = tymin;
+
+	if (tymax < tmax)
+		tmax = tymax;
+
+	float tzmin = (aabb->min.z - ray->origin.z) / ray->direction.z;
+	float tzmax = (aabb->max.z - ray->origin.z) / ray->direction.z;
+
+	if (tzmin > tzmax) swap(tzmin, tzmax);
+
+	if ((tmin > tzmax) || (tzmin > tmax))
+		return false;
+
+	if (tzmin > tmin)
+		tmin = tzmin;
+
+	if (tzmax < tmax)
+		tmax = tzmax;
+
+	return true;
+}
+
+inline Point_f32 to_point_f32(Vector3 *vector)
+{
+	return Point_f32(vector->x, vector->y, vector->z);
+}
+
 void Editor::picking()
 {
-	render_world->render_passes.outlining.render_entity_indices.clear();
+	if (!gui::were_events_handled() && was_click_by_left_mouse_button()) {
+		Vector2 xy_ndc_point = from_raster_to_screen_space(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
+		Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
 
-	for (u32 i = 0; i < render_world->forward_rendering_entities.count; i++) {
-		render_world->render_passes.outlining.add_render_entity_index(i);
+		Vector4 mouse_point_in_world = ndc_point * inverse(render_world->render_camera.debug_view_matrix * render_sys->view.perspective_matrix);
+		mouse_point_in_world /= mouse_point_in_world.w;
+
+		Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
+		Vector3 mouse_direction = camera->position - to_vector3(mouse_point_in_world);
+
+		Ray picking_ray = { camera->position, mouse_direction };
+
+		Array<Pair<Entity *, u32>> collided_entities;
+		for (u32 i = 0; i < render_world->game_rendering_entities.count; i++) {
+			Entity_Id entity_id = render_world->game_rendering_entities[i].entity_id;
+			Entity *entity = game_world->get_entity(entity_id);
+
+			if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+				if (detect_collision(&picking_ray, &entity->AABB_box)) {
+					collided_entities.push(Pair<Entity *, u32>(entity, i));
+				}
+			}
+		}
+		if (!collided_entities.is_empty()) {
+			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
+			outlining_pass->reset_render_entity_indices();
+			if (collided_entities.count > 1) {
+				u32 most_near_entity_to_camera = 0;
+				float most_small_distance = FLT_MAX;
+				Point_f32 camera_position = to_point_f32(&camera->position);
+
+				Entity *entity = NULL;
+				for (u32 i = 0; i < collided_entities.count; i++) {
+					Entity *entity = collided_entities[i].first;
+					u32 render_entity_index = collided_entities[i].second;
+
+					if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+						Point_f32 min_AABB_point = to_point_f32(&entity->AABB_box.min);
+						Point_f32 max_AABB_point = to_point_f32(&entity->AABB_box.max);
+
+						float camera_min_AABB_distance = find_distance(&camera_position, &min_AABB_point);
+						float camera_max_AABB_distance = find_distance(&camera_position, &max_AABB_point);
+
+						float most_small_distance_to_camera = math::min(camera_min_AABB_distance, camera_max_AABB_distance);
+						if (most_small_distance_to_camera < most_small_distance) {
+							most_near_entity_to_camera = render_entity_index;
+							most_small_distance = most_small_distance_to_camera;
+						}
+					}
+				}
+				gui::make_tab_active(game_world_tab_gui_id);
+				game_world_window.chose_entity_id = render_world->game_rendering_entities[most_near_entity_to_camera].entity_id;
+				outlining_pass->add_render_entity_index(most_near_entity_to_camera);
+			} else {
+				gui::make_tab_active(game_world_tab_gui_id);
+				game_world_window.chose_entity_id = get_entity_id(collided_entities.get_first().first);
+				outlining_pass->add_render_entity_index(collided_entities.get_first().second);
+			}
+		}
 	}
 }
 
@@ -335,12 +456,10 @@ void Game_World_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
 
-	entity_index = 0;
 	window_width_delta = 20;
 	world_entities_height = 200;
 	entity_info_height = 400;
 	window_style = WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES;
-	entity_type = ENTITY_TYPE_UNKNOWN;
 
 	world_entities_window_theme.background_color = Color(40, 40, 40);
 	world_entities_window_theme.header_color = Color(36, 36, 36);
@@ -374,90 +493,90 @@ void Game_World_Window::draw()
 	gui::set_next_theme(&entity_info_window_theme);
 	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
 	if (gui::begin_child("Entity info", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
-		Entity *entity = NULL;
-		if (entity_type == ENTITY_TYPE_GEOMETRY) {
-			entity = &game_world->geometry_entities[entity_index];
-			Geometry_Entity *geometry_entity = &game_world->geometry_entities[entity_index];
-			gui::edit_field("Position", &geometry_entity->position);
-			if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
-				gui::text("Geometry type: Box");
-				gui::edit_field("Width", &geometry_entity->box.width);
-				gui::edit_field("Height", &geometry_entity->box.height);
-				gui::edit_field("Depth", &geometry_entity->box.depth);
-			} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
-				gui::text("Geometry type: Sphere");
-				gui::edit_field("Radius", &geometry_entity->sphere.radius);
-				gui::edit_field("Slice Count", (s32 *)&geometry_entity->sphere.slice_count);
-				gui::edit_field("Stack Count", (s32 *)&geometry_entity->sphere.stack_count);
-			} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_GRID) {
-				gui::text("Geometry type: Grid");
-				gui::edit_field("Width", &geometry_entity->grid.width);
-				gui::edit_field("Depth", &geometry_entity->grid.depth);
-				gui::edit_field("Rows count", (s32 *)&geometry_entity->grid.rows_count);
-				gui::edit_field("Columns count", (s32 *)&geometry_entity->grid.columns_count);
-			}
-		} else if (entity_type == ENTITY_TYPE_LIGHT) {
-			Light *light = &game_world->lights[entity_index];
-			if (light->type == DIRECTIONAL_LIGHT_TYPE) {
-				gui::text("Direction Light");
-				if (gui::edit_field("Direction", &light->direction) || gui::edit_field("Color", &light->color, "R", "G", "B")) {
-					render_world->update_lights();
+		Entity *entity = game_world->get_entity(chose_entity_id);
+		if (entity) {
+			if (entity->type == ENTITY_TYPE_GEOMETRY) {
+				Geometry_Entity *geometry_entity = static_cast<Geometry_Entity *>(entity);
+				
+				gui::edit_field("Position", &geometry_entity->position);
+				if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
+					gui::text("Geometry type: Box");
+					gui::edit_field("Width", &geometry_entity->box.width);
+					gui::edit_field("Height", &geometry_entity->box.height);
+					gui::edit_field("Depth", &geometry_entity->box.depth);
+				} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
+					gui::text("Geometry type: Sphere");
+					gui::edit_field("Radius", &geometry_entity->sphere.radius);
+					gui::edit_field("Slice Count", (s32 *)&geometry_entity->sphere.slice_count);
+					gui::edit_field("Stack Count", (s32 *)&geometry_entity->sphere.stack_count);
+				} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_GRID) {
+					gui::text("Geometry type: Grid");
+					gui::edit_field("Width", &geometry_entity->grid.width);
+					gui::edit_field("Depth", &geometry_entity->grid.depth);
+					gui::edit_field("Rows count", (s32 *)&geometry_entity->grid.rows_count);
+					gui::edit_field("Columns count", (s32 *)&geometry_entity->grid.columns_count);
 				}
-			}
-		} else if (entity_type == ENTITY_TYPE_CAMERA) {
-			Camera *camera = &game_world->cameras[entity_index];
-			gui::edit_field("Position", &camera->position);
-			gui::edit_field("Target", &camera->target);
+			} else if (entity->type == ENTITY_TYPE_LIGHT) {
+				Light *light = static_cast<Light *>(entity);
 
-			if (gui::button("To origin")) {
-				camera->position = Vector3::zero;
-				camera->target = Vector3::base_z;
-			}
-			if (!draw_frustum_states.key_in_table(camera->idx)) {
-				draw_frustum_states[camera->idx] = false;
-			}
-			bool was_click = gui::radio_button("Draw frustum", &draw_frustum_states[camera->idx]);
-			Entity_Id entity_id = Entity_Id(entity_type, entity_index);
-			
-			if (was_click && draw_frustum_states[camera->idx] && !find_render_entity(&render_world->line_rendering_entities, entity_id)) {
-				char *name = format(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov);
-				String_Id string_id = fast_hash(name);
-
-				Mesh_Idx mesh_idx;
-				if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
-					Line_Mesh frustum_mesh;
-					make_frustum_mesh(render_system->view.fov, render_system->view.ratio, 1.0f, 1000.0f, &frustum_mesh);
-					render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
+				if (light->type == DIRECTIONAL_LIGHT_TYPE) {
+					gui::text("Direction Light");
+					if (gui::edit_field("Direction", &light->direction) || gui::edit_field("Color", &light->color, "R", "G", "B")) {
+						render_world->update_lights();
+					}
 				}
-				free_string(name);
+			} else if (entity->type == ENTITY_TYPE_CAMERA) {
+				Camera *camera = static_cast<Camera *>(entity);
 
-				Render_Entity_Textures render_entity_textures;
-				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
-				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				gui::edit_field("Position", &camera->position);
+				gui::edit_field("Target", &camera->target);
 
-				render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, entity_id, mesh_idx, &render_entity_textures, (void *)&Color::Red);
+				if (gui::button("To origin")) {
+					camera->position = Vector3::zero;
+					camera->target = Vector3::base_z;
+				}
+				if (!draw_frustum_states.key_in_table(camera->idx)) {
+					draw_frustum_states[camera->idx] = false;
+				}
 
-			} else if (was_click && !draw_frustum_states[camera->idx]) {
-				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				u32 render_entity_index = 0;
-				if (find_render_entity(&render_world->line_rendering_entities, entity_id, &render_entity_index)) {
-					render_world->line_rendering_entities.remove(render_entity_index);
+				bool was_click = gui::radio_button("Draw frustum", &draw_frustum_states[camera->idx]);
+				if (was_click && draw_frustum_states[camera->idx] && !find_render_entity(&render_world->line_rendering_entities, chose_entity_id)) {
+					char *name = format(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov);
+					String_Id string_id = fast_hash(name);
+
+					Mesh_Idx mesh_idx;
+					if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
+						Line_Mesh frustum_mesh;
+						make_frustum_mesh(render_system->view.fov, render_system->view.ratio, 1.0f, 1000.0f, &frustum_mesh);
+						render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
+					}
+					free_string(name);
+
+					Render_Entity_Textures render_entity_textures;
+					render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+					render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+
+					render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, chose_entity_id, mesh_idx, &render_entity_textures, (void *)&Color::Red);
+
+				} else if (was_click && !draw_frustum_states[camera->idx]) {
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					u32 render_entity_index = 0;
+					if (find_render_entity(&render_world->line_rendering_entities, chose_entity_id, &render_entity_index)) {
+						render_world->line_rendering_entities.remove(render_entity_index);
+					}
 				}
 			}
 		}
-		
-		if (entity && (entity->bounding_box_type != BOUNDING_BOX_TYPE_UNKNOWN) && (entity_type != DIRECTIONAL_LIGHT_TYPE) && (entity_type != ENTITY_TYPE_UNKNOWN)) {
+		if (entity && (entity->bounding_box_type != BOUNDING_BOX_TYPE_UNKNOWN) && (entity->type != DIRECTIONAL_LIGHT_TYPE) && (entity->type != ENTITY_TYPE_UNKNOWN)) {
 			if (!draw_AABB_states.key_in_table(entity->idx)) {
 				draw_AABB_states[entity->idx] = false;
 			}
 			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->idx]);
-			Entity_Id entity_id = Entity_Id(entity_type, entity_index);
-
 			if (was_click && draw_AABB_states[entity->idx]) {
-				Render_Entity *render_entity = render_world->find_render_entity(entity_id);
+				Render_Entity *render_entity = render_world->find_render_entity(chose_entity_id);
 
 				if (render_entity) {
 					char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
@@ -472,7 +591,7 @@ void Game_World_Window::draw()
 					free_string(name);
 
 					Render_Entity new_render_entity;
-					new_render_entity.entity_id = Entity_Id(entity_type, entity_index);
+					new_render_entity.entity_id = chose_entity_id;
 					new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
 					new_render_entity.mesh_idx = mesh_idx;
 
@@ -480,7 +599,7 @@ void Game_World_Window::draw()
 				}
 			} else if (was_click && !draw_AABB_states[entity->idx]) {
 				u32 render_entity_index = 0;
-				if (find_render_entity(&render_world->line_rendering_entities, entity_id, &render_entity_index)) {
+				if (find_render_entity(&render_world->line_rendering_entities, chose_entity_id, &render_entity_index)) {
 					render_world->line_rendering_entities.remove(render_entity_index);
 				}
 			}
@@ -493,8 +612,7 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 {
 	for (u32 i = 0; i < list_count; i++) {
 		if (gui::button(list_name)) {
-			entity_index = i;
-			entity_type = type;
+			chose_entity_id = Entity_Id(type, i);
 			return true;
 		}
 	}

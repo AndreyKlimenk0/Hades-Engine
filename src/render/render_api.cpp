@@ -763,6 +763,13 @@ void Render_Pipeline::reset_compute_shader_resource_view(u32 shader_resource_reg
 	dx11_context->CSSetShaderResources(shader_resource_register, 1, temp.GetAddressOf());
 }
 
+void Render_Pipeline::reset_compute_unordered_access_view(u32 shader_resource_register)
+{
+	u32 uav_initial_counts = -1;
+	Unordered_Access_View temp = nullptr;
+	dx11_context->CSSetUnorderedAccessViews(shader_resource_register, 1, temp.GetAddressOf(), &uav_initial_counts);
+}
+
 void Render_Pipeline::set_compute_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer)
 {
 	dx11_context->CSSetConstantBuffers(gpu_register, 1, constant_buffer.resource.GetAddressOf());

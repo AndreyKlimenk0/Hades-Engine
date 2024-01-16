@@ -86,6 +86,8 @@ struct Outlining_Pass : Render_Pass {
 	Array<u32> render_entity_indices;
 
 	void add_render_entity_index(u32 entity_index);
+	void reset_render_entity_indices();
+	
 	void setup_outlining(u32 outlining_size_in_pixels, const Color &color);
 
 	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
