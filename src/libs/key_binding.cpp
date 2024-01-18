@@ -4,7 +4,7 @@
 
 void Key_Command_Bindings::init()
 {
-	for (u32 i = 0; i < KEYBOARD_KEY_NUMBER; i++) {
+	for (u32 i = 0; i < INPUT_KEYS_NUMBER; i++) {
 		key_command_list_for_up_keys[i].key = KEY_UNKNOWN;
 		key_command_list_for_down_keys[i].key = KEY_UNKNOWN;
 	}
