@@ -19,8 +19,8 @@ enum Find_Command_Result {
 };
 
 struct Key_Command_Bindings {
-	Key_Command_Binding key_command_list_for_up_keys[KEYBOARD_KEY_NUMBER];
-	Key_Command_Binding key_command_list_for_down_keys[KEYBOARD_KEY_NUMBER];
+	Key_Command_Binding key_command_list_for_up_keys[INPUT_KEYS_NUMBER];
+	Key_Command_Binding key_command_list_for_down_keys[INPUT_KEYS_NUMBER];
 
 	void init();
 	void set(const char *command, Key key, bool key_must_be_pressed = true);

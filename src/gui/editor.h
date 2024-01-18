@@ -65,7 +65,7 @@ struct Game_World_Window : Editor_Window {
 	s32 window_width_delta;
 	s32 world_entities_height;
 	s32 entity_info_height;
-	Entity_Id chose_entity_id;
+	Entity_Id picked_entity;
 	Window_Style window_style;
 
 	Gui_Window_Theme world_entities_window_theme;
@@ -106,7 +106,12 @@ struct Editor {
 	Editor();
 	~Editor();
 
-	bool is_draw_make_entity_window = false;
+	bool moving_entity = false;
+	bool draw_drop_down_entity_window = false;
+	bool draw_make_entity_window = false;
+	
+	Point_s32 last_mouse_position;
+	
 	Render_System *render_sys = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;

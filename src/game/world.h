@@ -2,6 +2,7 @@
 #define WORLD_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
@@ -57,6 +58,11 @@ inline Entity_Id get_entity_id(Entity *entity)
 {
 	//@Note: Should entity_id field be in the Entity struct ?
 	return Entity_Id(entity->type, entity->idx);
+}
+
+inline bool is_entity_id_valid(Entity_Id entity_id)
+{
+	return ((entity_id.type == ENTITY_TYPE_UNKNOWN) && (entity_id.index == UINT32_MAX)) ? false : true;
 }
 
 enum Geometry_Type {
@@ -147,6 +153,8 @@ struct Game_World {
 	void save_to_file();
 
 	void attach_AABB(Entity_Id entity_id, AABB *bounding_box);
+	void move_entity(Entity *entity, const Vector3 &displacement);
+	void place_entity(Entity *entity, const Vector3 &position);
 
 	Entity *get_entity(Entity_Id entity_id);
 	Camera *get_camera(Entity_Id entity_id);

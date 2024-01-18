@@ -33,9 +33,11 @@ void push_event(Event_Type type, int first_value, int second_value);
 void run_event_loop();
 void clear_event_queue();
 
+bool was_click(Key key);
 bool is_left_mouse_button_down();
 bool was_click_by_left_mouse_button();
 bool was_left_mouse_button_just_pressed();
+bool were_pushed_key_events();
 
 Queue<Event> *get_event_queue();
 

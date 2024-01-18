@@ -9,10 +9,10 @@ s32 Mouse_State::last_x = 0;
 s32 Mouse_State::last_y = 0;
 
 bool Keys_State::was_char_key_input;
-bool Keys_State::keys[KEYBOARD_KEY_NUMBER];
+bool Keys_State::keys[INPUT_KEYS_NUMBER];
 char Keys_State::inputed_char;
 
-const char *string_keys[KEYBOARD_KEY_NUMBER] = {
+const char *string_keys[INPUT_KEYS_NUMBER] = {
 	"KEY_UNKNOWN",
 	"KEY_LMOUSE",
 	"KEY_RMOUSE",
@@ -138,7 +138,7 @@ s32 Mouse_State::y_delta()
 
 void Keys_State::setup()
 {
-	for (int i = 0; i < KEYBOARD_KEY_NUMBER; i++) {
+	for (int i = 0; i < INPUT_KEYS_NUMBER; i++) {
 		keys[i] = false;
 	}
 }
@@ -155,7 +155,7 @@ void Keys_State::key_up(int key)
 
 bool Keys_State::is_key_down(int key)
 {
-	if (key < KEYBOARD_KEY_NUMBER) {
+	if (key < INPUT_KEYS_NUMBER) {
 		return keys[key];
 	}
 	return false;

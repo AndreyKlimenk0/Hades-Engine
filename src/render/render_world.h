@@ -120,6 +120,10 @@ struct Render_Camera {
 	Entity_Id camera_id;
 	Entity_Id camera_info_id;
 	Matrix4 view_matrix;
+	Matrix4 inverse_view_matrix;
+	Matrix4 view_pespective_matrix;
+	Matrix4 inverse_view_pespective_matrix;
+	
 	Matrix4 debug_view_matrix;
 
 	void update(Camera *camera, Camera *camera_info);
