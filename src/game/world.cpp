@@ -192,9 +192,30 @@ void Game_World::attach_AABB(Entity_Id entity_id, AABB *bounding_box)
 	}
 }
 
+void Game_World::move_entity(Entity *entity, const Vector3 &displacement)
+{
+	entity->position += displacement;
+	if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+		entity->AABB_box.min += displacement;
+		entity->AABB_box.max += displacement;
+	}
+}
+
+void Game_World::place_entity(Entity *entity, const Vector3 &position)
+{
+	if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+		entity->AABB_box.min -= entity->position;
+		entity->AABB_box.max -= entity->position;
+		entity->position = position;
+		entity->AABB_box.min += position;
+		entity->AABB_box.max += position;
+	}
+}
+
 Entity_Id::Entity_Id()
 {
 	type = ENTITY_TYPE_UNKNOWN;
+	index = UINT32_MAX;
 }
 
 Entity_Id::Entity_Id(Entity_Type type, u32 index) : type(type), index(index)

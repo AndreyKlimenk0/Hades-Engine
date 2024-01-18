@@ -316,7 +316,7 @@ char *to_string(Vector4 *vector)
 
 char *to_string(Matrix4 *matrix)
 {
-	return format("Matrix4({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} {}, {}, {}, {})",
+	return format("Matrix4(\n\t{}, {}, {}, {},\n\t{}, {}, {}, {},\n\t{}, {}, {}, {}\n\t{}, {}, {}, {})",
 		matrix->_11, matrix->_12, matrix->_13, matrix->_14,
 		matrix->_21, matrix->_22, matrix->_23, matrix->_24,
 		matrix->_31, matrix->_32, matrix->_33, matrix->_34,

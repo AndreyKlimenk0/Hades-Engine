@@ -4,7 +4,7 @@
 #include "../str.h"
 #include "../../win32/win_types.h"
 
-const u32 KEYBOARD_KEY_NUMBER = 255 + 1; // The engine has KEY_UNKNOWN in the key enum
+const u32 INPUT_KEYS_NUMBER = 255 + 1; // The engine has KEY_UNKNOWN in the key enum
 const u32 ENGLISH_ALPHABET_KEYS_OFFSET = 230;
 
 enum Key_State {
@@ -87,7 +87,7 @@ struct Mouse_State {
 
 struct Keys_State {
 	static bool was_char_key_input;
-	static bool keys[KEYBOARD_KEY_NUMBER];
+	static bool keys[INPUT_KEYS_NUMBER];
 	static char inputed_char;
 	
 	static void setup();

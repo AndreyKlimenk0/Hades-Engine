@@ -48,6 +48,10 @@ void set_cursor(Cursor_Type type)
 			cursor = LoadCursor(NULL, IDC_SIZENWSE);
 			break;
 		}
+		case CURSOR_TYPE_MOVE: {
+			cursor = LoadCursor(NULL, IDC_SIZEALL);
+			break;
+		}
 	}
 	SetCursor(cursor);
 }
