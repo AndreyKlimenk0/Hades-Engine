@@ -528,7 +528,7 @@ void Render_2D::render_frame()
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
 	render_pipeline->set_depth_stencil_state(depth_stencil_state);
-	render_pipeline->set_render_target(render_system->back_buffer.rtv, render_system->depth_back_buffer.dsv);
+	render_pipeline->set_render_target(render_system->multisampling_back_buffer_texture.rtv, nullptr);
 
 	CB_Render_2d_Info cb_render_info;
 
@@ -595,27 +595,46 @@ void Render_System::init(Engine *engine)
 	print("  Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
 	print("  FOV {} degrees.", 60);
 	print("  Render API based on Directx 11.");
+
+	Multisample_Info temp;
+	temp.count = 8;
+	temp.quality = 0;
+	get_max_multisampling_level(&gpu_device, &temp, DXGI_FORMAT_R32_UINT);
+	int i = 0;
 }
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
 {	
-	swap_chain.get_back_buffer_as_texture(&back_buffer);
-	gpu_device.create_render_target_view(&back_buffer);
+	swap_chain.get_back_buffer_as_texture(&back_buffer_texture);
 	
 	Texture2D_Desc back_buffer_texture_desc;
-	back_buffer.get_desc(&back_buffer_texture_desc);
+	back_buffer_texture.get_desc(&back_buffer_texture_desc);
+	
+	gpu_device.create_render_target_view(&back_buffer_texture);
+	gpu_device.create_unordered_access_view(&back_buffer_texture_desc, &back_buffer_texture);
 
-	gpu_device.create_unordered_access_view(&back_buffer_texture_desc, &back_buffer);
+	u32 temp = 8;
+	Texture2D_Desc multisampling_back_buffer_texture_desc;
+	multisampling_back_buffer_texture_desc.width = window_width;
+	multisampling_back_buffer_texture_desc.height = window_height;
+	multisampling_back_buffer_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	multisampling_back_buffer_texture_desc.mip_levels = 1;
+	multisampling_back_buffer_texture_desc.bind = BIND_RENDER_TARGET;
+	multisampling_back_buffer_texture_desc.multisampling = { temp, 0 };
 
-	Texture2D_Desc depth_texture_desc;
-	depth_texture_desc.width = window_width;
-	depth_texture_desc.height = window_height;
-	depth_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depth_texture_desc.mip_levels = 1;
-	depth_texture_desc.bind = BIND_DEPTH_STENCIL;
+	gpu_device.create_texture_2d(&multisampling_back_buffer_texture_desc, &multisampling_back_buffer_texture);
+	gpu_device.create_render_target_view(&multisampling_back_buffer_texture);
 
-	gpu_device.create_texture_2d(&depth_texture_desc, &depth_back_buffer);
-	gpu_device.create_depth_stencil_view(&depth_texture_desc, &depth_back_buffer);
+	Texture2D_Desc multisampling_depth_stencil_buffer_texture_desc;
+	multisampling_depth_stencil_buffer_texture_desc.width = window_width;
+	multisampling_depth_stencil_buffer_texture_desc.height = window_height;
+	multisampling_depth_stencil_buffer_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	multisampling_depth_stencil_buffer_texture_desc.mip_levels = 1;
+	multisampling_depth_stencil_buffer_texture_desc.bind = BIND_DEPTH_STENCIL;
+	multisampling_depth_stencil_buffer_texture_desc.multisampling = { temp, 0 };
+
+	gpu_device.create_texture_2d(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
+	gpu_device.create_depth_stencil_view(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
 
 	Texture2D_Desc silhouette_texture_desc;
 	silhouette_texture_desc.width = window_width;
@@ -667,8 +686,10 @@ void Render_System::resize(u32 window_width, u32 window_height)
 
 void Render_System::new_frame()
 {
-	render_pipeline.clear_render_target_view(back_buffer.rtv, Color::LightSteelBlue);
-	render_pipeline.clear_depth_stencil_view(depth_back_buffer.dsv);
+	render_pipeline.clear_render_target_view(back_buffer_texture.rtv, Color::LightSteelBlue);
+
+	render_pipeline.clear_render_target_view(multisampling_back_buffer_texture.rtv, Color::LightSteelBlue);
+	render_pipeline.clear_depth_stencil_view(multisampling_depth_stencil_texture.dsv);
 	
 	render_pipeline.clear_depth_stencil_view(silhouette_depth_stencil_buffer.dsv);
 	render_pipeline.clear_render_target_view(silhouette_buffer.rtv, Color(0.0f, 0.0f, 0.0f, 0.0f));
@@ -679,6 +700,11 @@ void Render_System::new_frame()
 void Render_System::end_frame()
 {
 	render_2d.render_frame();
+	
+	render_pipeline.resolve_subresource(&back_buffer_texture, &multisampling_back_buffer_texture, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
+
 	HR(swap_chain.dxgi_swap_chain->Present(0, 0));
 
 #ifdef REPORT_LIVE_OBJECTS
