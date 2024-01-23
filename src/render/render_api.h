@@ -386,6 +386,8 @@ struct Render_Pipeline {
 	template <typename T>
 	void copy_subresource(const Gpu_Resource<T> &dst, u32 dst_x, u32 dst_y, const Gpu_Resource<T> &src);
 
+	void resolve_subresource(Texture2D *dst_texture, Texture2D *src_texture, DXGI_FORMAT format);
+
 	void apply(Render_Pipeline_State *render_pipeline_state);
 	
 	template <typename T>
@@ -501,6 +503,7 @@ inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 ds
 u32 get_dxgi_format_size(DXGI_FORMAT format);
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
+void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multisample_info, DXGI_FORMAT format);
 
 #endif
 

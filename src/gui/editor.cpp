@@ -323,8 +323,6 @@ void Editor::render()
 		gui::end_window();
 	}
 	gui::end_frame();
-
-	render_world->render_passes.outlining.render(render_world, &render_world->render_sys->render_pipeline);
 }
 
 inline Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height)
@@ -345,7 +343,7 @@ struct Ray {
 	Vector3 direction;
 };
 
-bool detect_collision(Ray *ray, AABB *aabb)
+bool detect_collision(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
 {
 	float tmin = (aabb->min.x - ray->origin.x) / ray->direction.x;
 	float tmax = (aabb->max.x - ray->origin.x) / ray->direction.x;
@@ -380,13 +378,16 @@ bool detect_collision(Ray *ray, AABB *aabb)
 	if (tzmax < tmax)
 		tmax = tzmax;
 
+	if (intersection_point) {
+		*intersection_point = ray->origin + (Vector3)(normalize(&ray->direction) * tmin);
+	}
 	return true;
 }
 
-inline Point_f32 to_point_f32(Vector3 *vector)
-{
-	return Point_f32(vector->x, vector->y, vector->z);
-}
+struct Ray_AABB_Intersection_Info {
+	u32 render_entity_index;
+	Vector3 intersection_point;
+};
 
 void Editor::picking()
 {
@@ -398,56 +399,46 @@ void Editor::picking()
 		mouse_point_in_world /= mouse_point_in_world.w;
 
 		Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
-		Vector3 mouse_direction = camera->position - to_vector3(mouse_point_in_world);
+		Vector3 mouse_direction = to_vector3(mouse_point_in_world) - camera->position;
 
 		Ray picking_ray = { camera->position, mouse_direction };
 
-		Array<Pair<Entity *, u32>> collided_entities;
+		Array<Ray_AABB_Intersection_Info> collided_entities;
 		for (u32 i = 0; i < render_world->game_rendering_entities.count; i++) {
 			Entity_Id entity_id = render_world->game_rendering_entities[i].entity_id;
 			Entity *entity = game_world->get_entity(entity_id);
-
+			
 			if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-				if (detect_collision(&picking_ray, &entity->AABB_box)) {
-					collided_entities.push(Pair<Entity *, u32>(entity, i));
+				Ray_AABB_Intersection_Info intersection_info;
+				if (detect_collision(&picking_ray, &entity->AABB_box, &intersection_info.intersection_point)) {
+					intersection_info.render_entity_index = i;
+					collided_entities.push(intersection_info);
 				}
 			}
 		}
+		Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
+		outlining_pass->reset_render_entity_indices();
 		if (!collided_entities.is_empty()) {
-			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-			outlining_pass->reset_render_entity_indices();
+			u32 render_entity_index;
 			if (collided_entities.count > 1) {
 				u32 most_near_entity_to_camera = 0;
 				float most_small_distance = FLT_MAX;
-				Point_f32 camera_position = to_point_f32(&camera->position);
-
-				Entity *entity = NULL;
 				for (u32 i = 0; i < collided_entities.count; i++) {
-					Entity *entity = collided_entities[i].first;
-					u32 render_entity_index = collided_entities[i].second;
-
-					if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-						Point_f32 min_AABB_point = to_point_f32(&entity->AABB_box.min);
-						Point_f32 max_AABB_point = to_point_f32(&entity->AABB_box.max);
-
-						float camera_min_AABB_distance = find_distance(&camera_position, &min_AABB_point);
-						float camera_max_AABB_distance = find_distance(&camera_position, &max_AABB_point);
-
-						float most_small_distance_to_camera = math::min(camera_min_AABB_distance, camera_max_AABB_distance);
-						if (most_small_distance_to_camera < most_small_distance) {
-							most_near_entity_to_camera = render_entity_index;
-							most_small_distance = most_small_distance_to_camera;
-						}
+					float intersection_point_camera_distance = find_distance(&camera->position, &collided_entities[i].intersection_point);
+					if (intersection_point_camera_distance < most_small_distance) {
+						most_near_entity_to_camera = collided_entities[i].render_entity_index;
+						most_small_distance = intersection_point_camera_distance;
 					}
 				}
-				gui::make_tab_active(game_world_tab_gui_id);
-				game_world_window.chose_entity_id = render_world->game_rendering_entities[most_near_entity_to_camera].entity_id;
-				outlining_pass->add_render_entity_index(most_near_entity_to_camera);
+				render_entity_index = most_near_entity_to_camera;
 			} else {
-				gui::make_tab_active(game_world_tab_gui_id);
-				game_world_window.chose_entity_id = get_entity_id(collided_entities.get_first().first);
-				outlining_pass->add_render_entity_index(collided_entities.get_first().second);
+				render_entity_index = collided_entities.get_first().render_entity_index;
 			}
+			gui::make_tab_active(game_world_tab_gui_id);
+			game_world_window.chose_entity_id = render_world->game_rendering_entities[render_entity_index].entity_id;
+			outlining_pass->add_render_entity_index(render_entity_index);
+		} else {
+			game_world_window.chose_entity_id.reset();
 		}
 	}
 }
