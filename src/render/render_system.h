@@ -192,8 +192,10 @@ struct Render_System {
 
 	Texture2D silhouette_buffer;
 	Texture2D silhouette_depth_stencil_buffer;
-	Texture2D back_buffer;
-	Texture2D depth_back_buffer;
+	Texture2D back_buffer_texture;
+
+	Texture2D multisampling_back_buffer_texture;
+	Texture2D multisampling_depth_stencil_texture;
 
 	Swap_Chain swap_chain;
 	Gpu_Device gpu_device;

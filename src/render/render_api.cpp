@@ -585,6 +585,14 @@ void Gpu_Device::create_shader(u8 *byte_code, u32 byte_code_size, Pixel_Shader &
 	HR(dx11_device->CreatePixelShader((void *)byte_code, byte_code_size, NULL, shader.ReleaseAndGetAddressOf()));
 }
 
+void Render_Pipeline::resolve_subresource(Texture2D *dst_texture, Texture2D *src_texture, DXGI_FORMAT format)
+{
+	assert(dst_texture);
+	assert(src_texture);
+
+	dx11_context->ResolveSubresource(dst_texture->get(), 0, src_texture->get(), 0, format);
+}
+
 void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 {
 	set_primitive(render_pipeline_state->primitive_type);
@@ -1050,6 +1058,52 @@ void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_i
 	} else {
 		multisample_info->quality -= 1;
 		default_render_api_multisample = *multisample_info;
+	}
+}
+
+void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multisample_info, DXGI_FORMAT format)
+{
+	assert(gpu_device);
+	assert(multisample_info);
+
+
+	HRESULT result = gpu_device->dx11_device->CheckMultisampleQualityLevels(format, multisample_info->count, &multisample_info->quality);
+	if (FAILED(result) || (multisample_info->quality == 0)) {
+		u32 quality_levels = 0;
+		u32 multisampling_count = 0;
+		Multisample_Info available_multisamplings[128];
+		for (u32 sample_count = 1; sample_count <= D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT; sample_count *= 2) {
+			HRESULT result = gpu_device->dx11_device->CheckMultisampleQualityLevels(format, sample_count, &quality_levels);
+			if (FAILED(result) || (quality_levels == 0)) {
+				continue;
+			}
+			quality_levels = quality_levels > 0 ? quality_levels - 1 : 0;
+			available_multisamplings[multisampling_count++] = { sample_count, quality_levels };
+			print("get_max_multisampling_level: An adapter supports multisample sample count {} and quality levels {} for DXGI FORMAT.", sample_count);
+		}
+
+		if (multisampling_count == 0) {
+			multisample_info->quality = 0;
+			print("There is no available multisample quality levels on an adapter.");
+		}
+
+		if (multisampling_count == 1) {
+			multisample_info->count = available_multisamplings[1].count;
+			multisample_info->quality = available_multisamplings[1].quality;
+		}
+
+		u32 index = 1;
+		for (; index < multisampling_count; index++) {
+			if (available_multisamplings[index].count > multisample_info->count) {
+				multisample_info->count = available_multisamplings[index - 1].count;
+				multisample_info->quality = available_multisamplings[index - 1].quality;
+				return;
+			}
+		}
+		multisample_info->count = available_multisamplings[index - 1].count;
+		multisample_info->quality = available_multisamplings[index - 1].quality;
+	} else {
+		multisample_info->quality -= 1;
 	}
 }
 

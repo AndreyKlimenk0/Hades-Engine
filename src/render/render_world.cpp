@@ -321,13 +321,13 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	viewport.height = Render_System::screen_height;
 
 	render_passes.shadows.setup_render_pipeline(shader_manager, shadow_atlas.dsv);
-	render_passes.draw_lines.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
-	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
-	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
-	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->depth_back_buffer.dsv, render_sys->back_buffer.rtv, &viewport);
+	render_passes.draw_lines.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
+	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
+	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
+	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
 	
 	render_passes.outlining.setup_outlining(2, Color(245, 176, 66));
-	render_passes.outlining.setup_render_pipeline(shader_manager, &render_sys->silhouette_buffer, &render_sys->silhouette_depth_stencil_buffer, &render_sys->back_buffer, &viewport);
+	render_passes.outlining.setup_render_pipeline(shader_manager, &render_sys->silhouette_buffer, &render_sys->silhouette_depth_stencil_buffer, &render_sys->back_buffer_texture, &viewport);
 
 	Array<Render_Pass *> temp;
 	temp.push(&render_passes.shadows);

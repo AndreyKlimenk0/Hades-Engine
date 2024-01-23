@@ -34,6 +34,8 @@ struct Entity_Id {
 		}
 		return false;
 	}
+
+	void reset();
 };
 
 struct Entity {

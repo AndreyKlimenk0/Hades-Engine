@@ -201,6 +201,11 @@ Entity_Id::Entity_Id(Entity_Type type, u32 index) : type(type), index(index)
 {
 }
 
+void Entity_Id::reset()
+{
+	type = ENTITY_TYPE_UNKNOWN;
+}
+
 void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
 {
 	Entity_Command *entity_command = NULL;
