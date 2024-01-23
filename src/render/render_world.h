@@ -16,6 +16,7 @@
 struct Render_Pass;
 typedef u32 Mesh_Idx;
 typedef u32 Texture_Idx;
+typedef u32 Render_Entity_Idx;
 
 const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_SIZE = 8192;
