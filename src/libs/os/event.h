@@ -37,7 +37,10 @@ bool was_click(Key key);
 bool is_left_mouse_button_down();
 bool was_click_by_left_mouse_button();
 bool was_left_mouse_button_just_pressed();
-bool were_pushed_key_events();
+bool were_key_events();
+
+bool was_key_just_pressed(Key key);
+bool was_key_just_released(Key key);
 
 Queue<Event> *get_event_queue();
 

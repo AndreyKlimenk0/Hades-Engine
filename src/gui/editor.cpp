@@ -7,6 +7,8 @@
 #include "../libs/os/event.h"
 #include "../libs/str.h"
 #include "../libs/math/common.h"
+#include "../libs/math/vector.h"
+#include "../libs/math/vector.h"
 #include "../libs/geometry_helper.h"
 #include "../render/render_api.h"
 #include "../render/render_system.h"
@@ -280,7 +282,7 @@ void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> 
 
 void Editor::handle_events()
 {
-	if (!gui::were_events_handled() && !moving_entity) {
+	if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
 		//@Note: In the future here better to use linear allocator.
 		Array<Editor_Command> editor_commands;
 		Array<Entity_Command *> entity_commands;
@@ -297,7 +299,7 @@ void Editor::handle_events()
 
 void Editor::update()
 {
-	if (!gui::were_events_handled() && were_pushed_key_events()) {
+	if (!gui::were_events_handled() && were_key_events()) {
 		if (draw_drop_down_entity_window) {
 			draw_drop_down_entity_window = false;
 		}
@@ -325,9 +327,9 @@ void Editor::render()
 		if (gui::add_tab("Render World")) {
 			render_world_window.draw();
 		}
+
 		gui::end_window();
 	}
-	
 	if (draw_drop_down_entity_window) {
 		gui::set_next_window_size(220, 150);
 		gui::set_next_window_pos(last_mouse_position.x, last_mouse_position.y);
@@ -338,9 +340,10 @@ void Editor::render()
 			gui::set_theme(&var);
 			gui::button("Scale");
 			gui::button("Rotate");
-			if (gui::button("Transform")) {
+			if (gui::button("Move")) {
+				set_cursor(CURSOR_TYPE_MOVE);
 				draw_drop_down_entity_window = false;
-				moving_entity = true;
+				editor_mode = EDITOR_MODE_MOVE_ENTITY;
 			}
 			gui::button("Copy");
 			gui::button("Delete");
@@ -349,37 +352,6 @@ void Editor::render()
 		}
 	}
 	gui::end_frame();
-
-	//if (was_click(KEY_BACKSPACE)) {
-	//	moveing_entity = false;
-	//	set_cursor(CURSOR_TYPE_ARROW);
-	//}
-	//static s32 x = 0;
-	//static s32 y = 0;
-
-	//if (moveing_entity && Keys_State::is_key_down(KEY_LMOUSE)) {
-	//	Entity *moving_entity = game_world->get_entity(game_world_window.picked_entity);
-	//	Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
-
-	//	float distance = find_distance(&moving_entity->position, &camera->position);
-	//	float normalized_distance = distance / (10000.0f - 1.0f);
-
-	//	float height = math::tan(render_sys->view.fov * 0.5f) * distance;
-	//	float width = render_sys->view.ratio * distance;
-
-	//	float pixel_height = height / Render_System::screen_height;
-	//	float pixel_width = width / Render_System::screen_width;
-
-	//	Vector4 result = Vector4(pixel_width * (Mouse_State::x - x), -1.0f * pixel_height * (Mouse_State::y - y), 0.0f, 0.0f);
-	//	result = result * inverse(render_world->render_camera.debug_view_matrix);
-
-	//	game_world->move_entity(moving_entity, to_vector3(result));
-	//}
-
-	//x = Mouse_State::x;
-	//y = Mouse_State::y;
-
-	render_world->render_passes.outlining.render(render_world, &render_world->render_sys->render_pipeline);
 }
 
 inline Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height)
@@ -394,7 +366,7 @@ inline Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 s
 
 struct Ray {
 	Ray() {}
-	Ray(const Vector3 &origin, const Vector3 &direction) : origin(origin), direction(direction) {};
+	Ray(const Vector3 &origin, const Vector3 &direction) : origin(origin), direction(direction) {}
 
 	Vector3 origin;
 	Vector3 direction;
@@ -402,13 +374,15 @@ struct Ray {
 
 bool detect_collision(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
 {
-	float tmin = (aabb->min.x - ray->origin.x) / ray->direction.x;
-	float tmax = (aabb->max.x - ray->origin.x) / ray->direction.x;
+	Vector3 normalize_ray_direction = normalize(ray->direction);
+
+	float tmin = (aabb->min.x - ray->origin.x) / normalize_ray_direction.x;
+	float tmax = (aabb->max.x - ray->origin.x) / normalize_ray_direction.x;
 
 	if (tmin > tmax) swap(tmin, tmax);
 
-	float tymin = (aabb->min.y - ray->origin.y) / ray->direction.y;
-	float tymax = (aabb->max.y - ray->origin.y) / ray->direction.y;
+	float tymin = (aabb->min.y - ray->origin.y) / normalize_ray_direction.y;
+	float tymax = (aabb->max.y - ray->origin.y) / normalize_ray_direction.y;
 
 	if (tymin > tymax) swap(tymin, tymax);
 
@@ -421,8 +395,8 @@ bool detect_collision(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
 	if (tymax < tmax)
 		tmax = tymax;
 
-	float tzmin = (aabb->min.z - ray->origin.z) / ray->direction.z;
-	float tzmax = (aabb->max.z - ray->origin.z) / ray->direction.z;
+	float tzmin = (aabb->min.z - ray->origin.z) / normalize_ray_direction.z;
+	float tzmax = (aabb->max.z - ray->origin.z) / normalize_ray_direction.z;
 
 	if (tzmin > tzmax) swap(tzmin, tzmax);
 
@@ -436,15 +410,10 @@ bool detect_collision(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
 		tmax = tzmax;
 
 	if (intersection_point) {
-		*intersection_point = ray->origin + (Vector3)(normalize(&ray->direction) * tmin);
+		*intersection_point = ray->origin + (Vector3)(normalize_ray_direction * tmin);
 	}
 	return true;
 }
-
-struct Ray_AABB_Intersection_Info {
-	u32 render_entity_index;
-	Vector3 intersection_point;
-};
 
 inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix, Matrix4 &perspective_matrix, Ray *ray)
 {
@@ -455,121 +424,125 @@ inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix
 	mouse_point_in_world /= mouse_point_in_world.w;
 
 	ray->origin = camera_position;
-	ray->direction = camera_position - to_vector3(mouse_point_in_world);
+	ray->direction = to_vector3(mouse_point_in_world) - camera_position;
 }
-void Editor::picking()
+
+struct Ray_Entity_Intersection {
+	struct Result {
+		Entity_Id entity_id;
+		Render_Entity_Idx render_entity_idx;
+		Vector3 intersection_point;
+	};
+	static bool detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result);
+};
+
+bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result)
 {
-	if (!gui::were_events_handled() && was_click(KEY_RMOUSE) && is_entity_id_valid(game_world_window.picked_entity)) {
-		Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
+	Array<Result> intersected_entities;
+	for (u32 i = 0; i < render_world->game_rendering_entities.count; i++) {
+		Entity_Id entity_id = render_world->game_rendering_entities[i].entity_id;
+		Entity *entity = game_world->get_entity(entity_id);
 
-		Ray picking_ray;
-		calculate_picking_ray(camera->position, render_world->render_camera.debug_view_matrix, render_sys->view.perspective_matrix, &picking_ray);
-
-		//Entity *entity = game_world->get_entity(game_world_window.picked_entity);
-		//if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-		//	if (detect_collision(&picking_ray, &entity->AABB_box)) {
-		//		draw_drop_down_entity_window = true;
-		//		print("Draw drop down entity window");
-		//	}
-		//}
-
-		Array<Entity *> collided_entities;
-		for (u32 i = 0; i < render_world->game_rendering_entities.count; i++) {
-			Entity_Id entity_id = render_world->game_rendering_entities[i].entity_id;
-			Entity *entity = game_world->get_entity(entity_id);
-
-			if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-				if (detect_collision(&picking_ray, &entity->AABB_box)) {
-					collided_entities.push(entity);
-				}
+		if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+			Result intersection_result;
+			if (detect_collision(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
+				intersection_result.entity_id = entity_id;
+				intersection_result.render_entity_idx = i;
+				intersected_entities.push(intersection_result);
 			}
 		}
-		if (!collided_entities.is_empty()) {
-			if (collided_entities.count > 1) {
-				float most_small_distance = FLT_MAX;
-				Point_f32 camera_position = to_point_f32(&camera->position);
-				
-				Entity *collided_entity = NULL;
-				Entity *entity = NULL;
-				for (u32 i = 0; i < collided_entities.count; i++) {
-					Entity *entity = collided_entities[i];
-
-					if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-						Point_f32 min_AABB_point = to_point_f32(&entity->AABB_box.min);
-						Point_f32 max_AABB_point = to_point_f32(&entity->AABB_box.max);
-
-						float camera_min_AABB_distance = find_distance(&camera_position, &min_AABB_point);
-						float camera_max_AABB_distance = find_distance(&camera_position, &max_AABB_point);
-
-						float most_small_distance_to_camera = math::min(camera_min_AABB_distance, camera_max_AABB_distance);
-						if (most_small_distance_to_camera < most_small_distance) {
-							most_small_distance = most_small_distance_to_camera;
-							collided_entity = entity;
-						}
-					}
+	}
+	if (!intersected_entities.is_empty()) {
+		if (intersected_entities.count > 1) {
+			u32 most_near_entity_to_camera = 0;
+			float most_small_distance = FLT_MAX;
+			for (u32 i = 0; i < intersected_entities.count; i++) {
+				// A ray origin equals to a camera position.
+				float intersection_point_camera_distance = find_distance(&picking_ray->origin, &intersected_entities[i].intersection_point);
+				if (intersection_point_camera_distance < most_small_distance) {
+					most_near_entity_to_camera = i;
+					most_small_distance = intersection_point_camera_distance;
 				}
-				if (game_world_window.picked_entity == get_entity_id(collided_entity)) {
-					print("Draw drop down entity window");
-					draw_drop_down_entity_window = true;
-					last_mouse_position = { Mouse_State::x, Mouse_State::y };
-				}
+			}
+			*result = intersected_entities[most_near_entity_to_camera];
+		} else {
+			*result = intersected_entities.get_first();
+		}
+		return true;
+	}
+	return false;
+}
+
+struct Ray_AABB_Intersection_Info {
+	u32 render_entity_index;
+	Vector3 intersection_point;
+};
+
+struct Moving_Entity {
+	bool moving_entity = false;
+	float distance; // A distance between a editor camera and an moving entity
+	Vector3 ray_entity_intersection_point;
+};
+
+void Editor::picking()
+{
+	Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
+	Ray picking_ray;
+	calculate_picking_ray(camera->position, render_world->render_camera.debug_view_matrix, render_sys->view.perspective_matrix, &picking_ray);
+
+	static Moving_Entity moving_entity_info;
+
+	if (was_key_just_pressed(KEY_LMOUSE) && (editor_mode == EDITOR_MODE_MOVE_ENTITY)) {
+		Ray_Entity_Intersection::Result intersection_result;
+		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+			if (game_world_window.picked_entity == intersection_result.entity_id) {
+				moving_entity_info.moving_entity = true;
+				moving_entity_info.distance = find_distance(&camera->position, &intersection_result.intersection_point);
+				moving_entity_info.ray_entity_intersection_point = intersection_result.intersection_point;
 			} else {
-				if (game_world_window.picked_entity == get_entity_id(collided_entities.get_first())) {
-					print("Draw drop down entity window");
-					draw_drop_down_entity_window = true;
-					last_mouse_position = { Mouse_State::x, Mouse_State::y };
-				}
+				editor_mode = EDITOR_MODE_COMMON;
+				set_cursor(CURSOR_TYPE_ARROW);
+			}
+		} else {
+			editor_mode = EDITOR_MODE_COMMON;
+			set_cursor(CURSOR_TYPE_ARROW);
+		}
+	}
+
+	if (moving_entity_info.moving_entity) {
+		Vector3 moved_picking_ray_point = picking_ray.origin + (Vector3)(normalize(picking_ray.direction) * moving_entity_info.distance);
+		Vector3 difference = moved_picking_ray_point - moving_entity_info.ray_entity_intersection_point;
+		
+		Entity *entity = game_world->get_entity(game_world_window.picked_entity);
+		game_world->move_entity(entity, difference);
+		
+		moving_entity_info.ray_entity_intersection_point += difference;
+	}
+	
+	if (was_key_just_released(KEY_LMOUSE) && moving_entity_info.moving_entity) {
+		moving_entity_info.moving_entity = false;
+	}
+
+	if (!gui::were_events_handled() && was_click(KEY_RMOUSE) && is_entity_id_valid(game_world_window.picked_entity)) {
+		Ray_Entity_Intersection::Result intersection_result;
+		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+			if (game_world_window.picked_entity == intersection_result.entity_id) {
+				draw_drop_down_entity_window = true;
+				last_mouse_position = { Mouse_State::x, Mouse_State::y };
 			}
 		}
 	}
 	if (!gui::were_events_handled() && was_click_by_left_mouse_button()) {
-		Vector2 xy_ndc_point = from_raster_to_screen_space(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
-		Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
-
-		Vector4 mouse_point_in_world = ndc_point * inverse(render_world->render_camera.debug_view_matrix * render_sys->view.perspective_matrix);
-		mouse_point_in_world /= mouse_point_in_world.w;
-
-		Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
-		Vector3 mouse_direction = to_vector3(mouse_point_in_world) - camera->position;
-
-		Ray picking_ray = { camera->position, mouse_direction };
-
-		Array<Ray_AABB_Intersection_Info> collided_entities;
-		for (u32 i = 0; i < render_world->game_rendering_entities.count; i++) {
-			Entity_Id entity_id = render_world->game_rendering_entities[i].entity_id;
-			Entity *entity = game_world->get_entity(entity_id);
-			
-			if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-				Ray_AABB_Intersection_Info intersection_info;
-				if (detect_collision(&picking_ray, &entity->AABB_box, &intersection_info.intersection_point)) {
-					intersection_info.render_entity_index = i;
-					collided_entities.push(intersection_info);
-				}
-			}
-		}
 		Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
 		outlining_pass->reset_render_entity_indices();
-		if (!collided_entities.is_empty()) {
-			u32 render_entity_index;
-			if (collided_entities.count > 1) {
-				u32 most_near_entity_to_camera = 0;
-				float most_small_distance = FLT_MAX;
-				for (u32 i = 0; i < collided_entities.count; i++) {
-					float intersection_point_camera_distance = find_distance(&camera->position, &collided_entities[i].intersection_point);
-					if (intersection_point_camera_distance < most_small_distance) {
-						most_near_entity_to_camera = collided_entities[i].render_entity_index;
-						most_small_distance = intersection_point_camera_distance;
-					}
-				}
-				render_entity_index = most_near_entity_to_camera;
-			} else {
-				render_entity_index = collided_entities.get_first().render_entity_index;
-			}
+
+		Ray_Entity_Intersection::Result intersection_result;
+		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 			gui::make_tab_active(game_world_tab_gui_id);
-			game_world_window.chose_entity_id = render_world->game_rendering_entities[render_entity_index].entity_id;
-			outlining_pass->add_render_entity_index(render_entity_index);
+			game_world_window.picked_entity = intersection_result.entity_id;
+			outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
 		} else {
-			game_world_window.chose_entity_id.reset();
+			game_world_window.picked_entity.reset();
 		}
 	}
 }

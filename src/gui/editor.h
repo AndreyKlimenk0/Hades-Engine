@@ -102,13 +102,20 @@ struct Editor_Command {
 	String command;
 };
 
+enum Editor_Mode_Type {
+	EDITOR_MODE_COMMON,
+	EDITOR_MODE_MOVE_ENTITY,
+	EDITOR_MODE_ROTATE_ENTITY,
+	EDITOR_MODE_SCALE_ENTITY,
+};
+
 struct Editor {
 	Editor();
 	~Editor();
 
-	bool moving_entity = false;
 	bool draw_drop_down_entity_window = false;
 	bool draw_make_entity_window = false;
+	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;
 	
 	Point_s32 last_mouse_position;
 	

@@ -83,6 +83,7 @@ inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3);
 inline float find_distance(Vector3 *first_vector3, Vector3 *second_vector3);
 inline Vector3 negate(Vector3 *vector);
 inline Vector3 normalize(Vector3 *vector);
+inline Vector3 normalize(const Vector3 &vector);
 inline Vector3 dot(Vector3 *first_vector3, Vector3 *second_vector3);
 inline Vector3 cross(Vector3 *first_vector3, Vector3 *second_vector3);
 
@@ -450,6 +451,12 @@ inline Vector3 negate(Vector3 *vector3)
 inline Vector3 normalize(Vector3 *vector3)
 {
 	XMVECTOR vector = XMLoadFloat3(vector3);
+	return XMVector3Normalize(vector);
+}
+
+inline Vector3 normalize(const Vector3 &vector3)
+{
+	XMVECTOR vector = XMLoadFloat3(&vector3);
 	return XMVector3Normalize(vector);
 }
 
