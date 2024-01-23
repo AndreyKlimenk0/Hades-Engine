@@ -225,6 +225,7 @@ Entity_Id::Entity_Id(Entity_Type type, u32 index) : type(type), index(index)
 void Entity_Id::reset()
 {
 	type = ENTITY_TYPE_UNKNOWN;
+	index = UINT32_MAX;
 }
 
 void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
@@ -281,4 +282,20 @@ void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
 			}
 		}
 	}
+}
+
+bool operator==(const Entity_Id &first, const Entity_Id &second)
+{
+	if ((first.type == second.type) && (first.index == second.index)) {
+		return true;
+	}
+	return false;
+}
+
+bool operator!=(const Entity_Id &first, const Entity_Id &second)
+{
+	if ((first.type != second.type) && (first.index != second.index)) {
+		return true;
+	}
+	return false;
 }

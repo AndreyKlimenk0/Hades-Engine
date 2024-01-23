@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
@@ -10,6 +11,9 @@ static Queue<Event> event_queue;
 
 static bool click_key_states[INPUT_KEYS_NUMBER];
 static bool down_key_states[INPUT_KEYS_NUMBER];
+
+static bool just_pressed_keys[INPUT_KEYS_NUMBER];
+static bool just_released_keys[INPUT_KEYS_NUMBER];
 
 static bool at_least_one_key_event_pushed = false;
 static bool click_by_left_mouse_button = false;
@@ -54,6 +58,24 @@ static void update_click_key_states(Event *event)
 	}
 }
 
+static void update_just_pressed_keys(Event *event)
+{
+	assert(event->type == EVENT_TYPE_KEY);
+	
+	if ((event->key_info.key_state == KEY_DOWN) && !just_pressed_keys[event->key_info.key]) {
+		just_pressed_keys[event->key_info.key] = true;
+	}
+}
+
+static void update_just_released_keys(Event *event)
+{
+	assert(event->type == EVENT_TYPE_KEY);
+
+	if ((event->key_info.key_state == KEY_UP) && !just_released_keys[event->key_info.key]) {
+		just_released_keys[event->key_info.key] = true;
+	}
+}
+
 void pump_events()
 {
 	at_least_one_key_event_pushed = false;
@@ -61,6 +83,8 @@ void pump_events()
 	if (left_mouse_button_just_pressed) {
 		left_mouse_button_just_pressed = false;
 	}
+	memset((void *)just_pressed_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
+	memset((void *)just_released_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
 	memset((void *)click_key_states, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
 
 	MSG msg = { };
@@ -76,7 +100,6 @@ void push_event(Event_Type type, int first_value, int second_value)
 		print("push_event: Failed to convers a virtual key code to an engine key. An event will be skiped.");
 		return;
 	}
-
 	Event event;
 	event.type = type;
 
@@ -117,6 +140,8 @@ void run_event_loop()
 				Keys_State::key_up(event.key_info.key);
 			}
 			update_click_key_states(&event);
+			update_just_pressed_keys(&event);
+			update_just_released_keys(&event);
 		} else if (event.type == EVENT_TYPE_MOUSE) {
 			Mouse_State::last_x = Mouse_State::x;
 			Mouse_State::last_y = Mouse_State::y;
@@ -156,9 +181,19 @@ bool was_left_mouse_button_just_pressed()
 	return left_mouse_button_just_pressed;
 }
 
-bool were_pushed_key_events()
+bool were_key_events()
 {
 	return at_least_one_key_event_pushed;
+}
+
+bool was_key_just_pressed(Key key)
+{
+	return just_pressed_keys[key];
+}
+
+bool was_key_just_released(Key key)
+{
+	return just_released_keys[key];
 }
 
 bool Event::is_key_up(Key key)

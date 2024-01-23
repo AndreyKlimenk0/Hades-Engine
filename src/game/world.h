@@ -28,16 +28,11 @@ struct Entity_Id {
 	Entity_Type type;
 	u32 index;
 
-	bool operator==(const Entity_Id &other)
-	{
-		if ((type == other.type) && (index == other.index)) {
-			return true;
-		}
-		return false;
-	}
-
 	void reset();
 };
+
+bool operator==(const Entity_Id &first, const Entity_Id &second);
+bool operator!=(const Entity_Id &first, const Entity_Id &second);
 
 struct Entity {
 	Entity() { type = ENTITY_TYPE_ENTITY; bounding_box_type = BOUNDING_BOX_TYPE_UNKNOWN; }
