@@ -372,7 +372,7 @@ struct Ray {
 	Vector3 direction;
 };
 
-bool detect_collision(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
+bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
 {
 	Vector3 normalize_ray_direction = normalize(ray->direction);
 
@@ -445,7 +445,7 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 
 		if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
 			Result intersection_result;
-			if (detect_collision(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
+			if (::detect_intersection(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
 				intersection_result.entity_id = entity_id;
 				intersection_result.render_entity_idx = i;
 				intersected_entities.push(intersection_result);
@@ -473,10 +473,6 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 	return false;
 }
 
-struct Ray_AABB_Intersection_Info {
-	u32 render_entity_index;
-	Vector3 intersection_point;
-};
 
 struct Moving_Entity {
 	bool moving_entity = false;
@@ -494,15 +490,10 @@ void Editor::picking()
 
 	if (was_key_just_pressed(KEY_LMOUSE) && (editor_mode == EDITOR_MODE_MOVE_ENTITY)) {
 		Ray_Entity_Intersection::Result intersection_result;
-		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-			if (game_world_window.picked_entity == intersection_result.entity_id) {
-				moving_entity_info.moving_entity = true;
-				moving_entity_info.distance = find_distance(&camera->position, &intersection_result.intersection_point);
-				moving_entity_info.ray_entity_intersection_point = intersection_result.intersection_point;
-			} else {
-				editor_mode = EDITOR_MODE_COMMON;
-				set_cursor(CURSOR_TYPE_ARROW);
-			}
+		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result) && (game_world_window.picked_entity == intersection_result.entity_id)) {
+			moving_entity_info.moving_entity = true;
+			moving_entity_info.distance = find_distance(&camera->position, &intersection_result.intersection_point);
+			moving_entity_info.ray_entity_intersection_point = intersection_result.intersection_point;
 		} else {
 			editor_mode = EDITOR_MODE_COMMON;
 			set_cursor(CURSOR_TYPE_ARROW);
@@ -532,7 +523,7 @@ void Editor::picking()
 			}
 		}
 	}
-	if (!gui::were_events_handled() && was_click_by_left_mouse_button()) {
+	if (!gui::were_events_handled() && was_click(KEY_LMOUSE)) {
 		Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
 		outlining_pass->reset_render_entity_indices();
 

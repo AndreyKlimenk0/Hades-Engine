@@ -241,7 +241,7 @@ void Render_World::init_meshes()
 
 
 	Render_Entity_Textures render_entity_textures;
-	render_entity_textures.ambient_texture_idx = render_entity_texture_storage.black_texture_idx;
+	render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
 	render_entity_textures.normal_texture_idx = render_entity_texture_storage.green_texture_idx;
 	render_entity_textures.diffuse_texture_idx = render_entity_texture_storage.default_texture_idx;
 	render_entity_textures.specular_texture_idx = render_entity_texture_storage.white_texture_idx;
