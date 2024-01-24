@@ -79,7 +79,7 @@ inline void reverse_state(bool *state)
 	}
 }
 
-inline bool detect_collision(Rect_s32 *rect)
+inline bool detect_intersection(Rect_s32 *rect)
 {
 	if ((Mouse_State::x > rect->x) && (Mouse_State::x < (rect->x + rect->width)) && (Mouse_State::y > rect->y) && (Mouse_State::y < (rect->y + rect->height))) {
 		return true;
@@ -87,7 +87,7 @@ inline bool detect_collision(Rect_s32 *rect)
 	return false;
 }
 
-inline bool detect_collision(Rect_s32 *first_rect, Rect_s32 *second_rect)
+inline bool detect_intersection(Rect_s32 *first_rect, Rect_s32 *second_rect)
 {
 	if ((first_rect->x < second_rect->right()) && (first_rect->right() > second_rect->x) && (first_rect->y < second_rect->bottom()) && (first_rect->bottom() > second_rect->y)) {
 		return true;
@@ -96,7 +96,7 @@ inline bool detect_collision(Rect_s32 *first_rect, Rect_s32 *second_rect)
 }
 
 template <typename T>
-inline bool detect_collision(Triangle<T> *triangle, Point_V2<T> *point)
+inline bool detect_intersection(Triangle<T> *triangle, Point_V2<T> *point)
 {
 	T triangle_area = triangle->get_area();
 
@@ -670,9 +670,9 @@ inline Gui_Window *Gui_Manager::get_window_by_index(Array<u32> *window_indices, 
 
 void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
 {
-	if (detect_collision(rect)) {
+	if (detect_intersection(rect)) {
 		hot_item = gui_id;
-		if (was_left_mouse_button_just_pressed()) {
+		if (was_key_just_pressed(KEY_LMOUSE)) {
 			active_item = gui_id;
 		}
 	}
@@ -729,7 +729,7 @@ Rect_s32 calculate_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
 
 bool Gui_Manager::radio_button(const char *name, bool *state)
 {
-	bool was_click = false;
+	bool was_click_by_mouse_key = false;
 	Rect_s32 rect = radio_button_theme.rect;
 	Rect_s32 radio_rect = radio_button_theme.radio_rect;
 	Rect_s32 check_texture_rect = radio_button_theme.check_texture_rect;
@@ -749,8 +749,8 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 		Gui_ID radio_button_gui_id = GET_RADIO_BUTTON_GUI_ID();
 		update_active_and_hot_state(window, radio_button_gui_id, &radio_rect);
 
-		if ((hot_item == radio_button_gui_id) && (was_click_by_left_mouse_button())) {
-			was_click = true;
+		if ((hot_item == radio_button_gui_id) && was_click(KEY_LMOUSE)) {
+			was_click_by_mouse_key = true;
 			if (*state) {
 				*state = false;
 			} else {
@@ -770,7 +770,7 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 		render_list->pop_clip_rect();
 	}
 	radio_button_count++;
-	return was_click;
+	return was_click_by_mouse_key;
 }
 
 bool Gui_Manager::image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect)
@@ -796,7 +796,7 @@ bool Gui_Manager::image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *win
 		render_list->pop_clip_rect();
 	}
 	image_button_count++;
-	return ((hot_item == image_button_gui_id) && was_click_by_left_mouse_button());
+	return ((hot_item == image_button_gui_id) && was_click(KEY_LMOUSE));
 }
 static bool is_symbol_int_valid(char symbol)
 {
@@ -1070,7 +1070,7 @@ bool Gui_Manager::update_edit_field(Edit_Field_Instance *edit_field_instance)
 	Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
 	update_active_and_hot_state(window, edit_field_gui_id, &edit_field_instance->edit_field_rect);
 
-	if (was_click_by_left_mouse_button()) {
+	if (was_click(KEY_LMOUSE)) {
 		if (hot_item == edit_field_gui_id) {
 			active_edit_field = edit_field_gui_id;
 			edit_field_state = make_edit_field_state(&edit_field_instance->caret_rect, edit_field_instance->editing_value, edit_field_instance->max_chars_number, edit_field_instance->symbol_validation);
@@ -1103,7 +1103,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
 		Event *event = &node->item;
 		if (event->type == EVENT_TYPE_KEY) {
-			if (was_click_by_left_mouse_button()) {
+			if (was_click(KEY_LMOUSE)) {
 				set_caret_position_on_mouse_click(rect, editing_value_rect);
 			}
 			if (event->is_key_down(KEY_BACKSPACE)) {
@@ -1328,7 +1328,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		}
 		drop_window_rect.set_size(list_box_rect.width, window_box_height);
 
-		if (was_click_by_left_mouse_button()) {
+		if (was_click(KEY_LMOUSE)) {
 			if (hot_item == list_box_gui_id) {
 				if (active_list_box != active_item) {
 					active_list_box = active_item;
@@ -1336,7 +1336,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 					active_list_box = 0;
 				}
 			} else {
-				if ((active_list_box == list_box_gui_id) && !detect_collision(&drop_window_rect)) {
+				if ((active_list_box == list_box_gui_id) && !detect_intersection(&drop_window_rect)) {
 					active_list_box = 0;
 				}
 			}
@@ -1410,7 +1410,7 @@ bool Gui_Manager::button(const char *name, bool *state)
 		u32 button_gui_id = GET_BUTTON_GUI_ID();
 		update_active_and_hot_state(window, button_gui_id, &button_rect);
 
-		if ((state != NULL) && (hot_item == button_gui_id) && (was_click_by_left_mouse_button())) {
+		if ((state != NULL) && (hot_item == button_gui_id) && (was_click(KEY_LMOUSE))) {
 			reverse_state(state);
 		}
 
@@ -1435,7 +1435,7 @@ bool Gui_Manager::button(const char *name, bool *state)
 		render_list->pop_clip_rect();
 	}
 	button_count++;
-	return (was_click_by_left_mouse_button() && mouse_hover);
+	return (was_click(KEY_LMOUSE) && mouse_hover);
 }
 
 bool Gui_Manager::can_window_be_resized(Gui_Window *window)
@@ -1443,7 +1443,7 @@ bool Gui_Manager::can_window_be_resized(Gui_Window *window)
 	bool can_resize = true;
 	Gui_Window *collided_window = NULL;
 	For(window->collided_windows, collided_window) {
-		if ((collided_window->index_in_windows_order > window->index_in_windows_order) && detect_collision(&collided_window->rect)) {
+		if ((collided_window->index_in_windows_order > window->index_in_windows_order) && detect_intersection(&collided_window->rect)) {
 			return false;
 		}
 	}
@@ -1637,7 +1637,7 @@ void Gui_Manager::new_frame()
 
 			for (u32 j = 0; j < windows_order.count; j++) {
 				Gui_Window *checked_window = get_window_by_index(&windows_order, j);
-				if ((checking_window->gui_id != checked_window->gui_id) && detect_collision(&checking_window->rect, &checked_window->rect)) {
+				if ((checking_window->gui_id != checked_window->gui_id) && detect_intersection(&checking_window->rect, &checked_window->rect)) {
 					checking_window->collided_windows.push(checked_window);
 				}
 			}
@@ -1650,7 +1650,7 @@ void Gui_Manager::new_frame()
 	Gui_ID first_drawing_window_id;
 	for (u32 i = 0; i < windows_order.count; i++) {
 		Gui_Window *window = get_window_by_index(&windows_order, i);
-		if (detect_collision(&window->rect)) {
+		if (detect_intersection(&window->rect)) {
 			if (window->index_in_windows_order > (s32)max_windows_order_index) {
 				max_windows_order_index = window->index_in_windows_order;
 				first_drawing_window_id = window->gui_id;
@@ -1672,7 +1672,7 @@ void Gui_Manager::new_frame()
 
 void Gui_Manager::end_frame()
 {
-	if (!is_left_mouse_button_down()) {
+	if (Keys_State::is_key_down(KEY_LMOUSE)) {
 		active_item = 0;
 		resizing_window = 0;
 	}
@@ -1738,14 +1738,14 @@ bool Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 	Rect_s32  *rect = &window->rect;
 	update_active_and_hot_state(window, window->gui_id, &window->rect);
 
-	if ((hot_item == window->gui_id) && was_left_mouse_button_just_pressed() && (focused_window != window->gui_id)) {
+	if ((hot_item == window->gui_id) && was_key_just_pressed(KEY_LMOUSE) && (focused_window != window->gui_id)) {
 		became_just_focused = window->gui_id;
 		if (window->type != WINDOW_TYPE_CHILD) {
 			focused_window = window->gui_id;
 		}
 	}
 
-	if ((active_item == window->gui_id) && is_left_mouse_button_down() && !was_left_mouse_button_just_pressed()) {
+	if ((active_item == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE) && !was_key_just_pressed(KEY_LMOUSE)) {
 		s32 min_window_position = 0;
 		if (window->style & WINDOW_WITH_OUTLINES) {
 			min_window_position = (s32)window_theme.outlines_width;
@@ -1770,7 +1770,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 			set_cursor(CURSOR_TYPE_RESIZE_TOP_RIGHT);
 		}
 
-		if (was_left_mouse_button_just_pressed()) {
+		if (was_key_just_pressed(KEY_LMOUSE)) {
 			resizing_window = window->gui_id;
 		}
 	} else {
@@ -1780,7 +1780,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Type window_type, Window
 		}
 	}
 
-	if ((resizing_window == window->gui_id) && is_left_mouse_button_down()) {
+	if ((resizing_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
 
 		if ((rect_side == RECT_SIDE_LEFT) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
 			if ((mouse_x >= 0) && ((rect->width - mouse_x_delta) > MIN_WINDOW_WIDTH)) {
@@ -2088,7 +2088,7 @@ void Gui_Manager::scroll_bar(Gui_Window *window, Axis axis, Rect_s32 *scroll_bar
 
 	s32 mouse_delta = 0;
 	bool update_scroll_position = false;
-	if ((active_item == scroll_bar_gui_id) && is_left_mouse_button_down()) {
+	if ((active_item == scroll_bar_gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
 		mouse_delta = (axis == Y_AXIS) ? mouse_y_delta : mouse_x_delta;
 		update_scroll_position = true;
 		//@TODO: This is hard code ?
@@ -2138,10 +2138,10 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 	Triangle<s32> left_triangle = Triangle<s32>(Point_s32(rect->x, rect->bottom()), Point_s32(rect->x, rect->bottom() - tri_size), Point_s32(rect->x + tri_size, rect->bottom()));
 	Triangle<s32> right_triangle = Triangle<s32>(Point_s32(rect->right() - tri_size, rect->bottom()), Point_s32(rect->right(), rect->bottom() - tri_size), Point_s32(rect->right(), rect->bottom()));
 
-	if (detect_collision(&left_triangle, &mouse)) {
+	if (detect_intersection(&left_triangle, &mouse)) {
 		*rect_side = RECT_SIDE_LEFT_BOTTOM;
 		return true;
-	} else if (detect_collision(&right_triangle, &mouse)) {
+	} else if (detect_intersection(&right_triangle, &mouse)) {
 		*rect_side = RECT_SIDE_RIGHT_BOTTOM;
 		return true;
 	} else if ((mouse_x >= (rect->x - offset_from_border)) && (mouse_x <= rect->x) && ((mouse_y >= rect->y) && (mouse_y <= rect->bottom()))) {
@@ -2343,7 +2343,7 @@ bool gui::were_events_handled()
 {
 	for (u32 i = 0; i < gui_manager.windows_order.count; i++) {
 		Gui_Window * window = gui_manager.get_window_by_index(&gui_manager.windows_order, i);
-		if (detect_collision(&window->rect)) {
+		if (detect_intersection(&window->rect)) {
 			return true;
 		}
 	}

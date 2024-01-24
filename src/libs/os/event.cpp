@@ -7,7 +7,7 @@
 #include "event.h"
 #include "../../sys/sys_local.h"
 
-static Queue<Event> event_queue;
+static bool at_least_one_key_event_pushed = false;
 
 static bool click_key_states[INPUT_KEYS_NUMBER];
 static bool down_key_states[INPUT_KEYS_NUMBER];
@@ -15,38 +15,9 @@ static bool down_key_states[INPUT_KEYS_NUMBER];
 static bool just_pressed_keys[INPUT_KEYS_NUMBER];
 static bool just_released_keys[INPUT_KEYS_NUMBER];
 
-static bool at_least_one_key_event_pushed = false;
-static bool click_by_left_mouse_button = false;
-static bool left_mouse_button_state = false;
-static bool left_mouse_button_just_pressed = false;
+static Queue<Event> event_queue;
 
-static void update_just_pressed_left_mouse_button(Event *event)
-{
-	if (event->type == EVENT_TYPE_KEY) {
-		if (event->is_key_down(KEY_LMOUSE) && !left_mouse_button_just_pressed) {
-			left_mouse_button_just_pressed = true;
-		}
-	}
-}
-
-static void update_left_mouse_button_state(Event *event)
-{
-	static bool key_is_down = false;
-	
-	if (event->is_key_down(KEY_LMOUSE)) {
-		key_is_down = true;
-		left_mouse_button_state = true;
-	} else {
-		left_mouse_button_state = false;
-		if (key_is_down) {
-			key_is_down = false;
-			click_by_left_mouse_button = true;
-			return;
-		}
-	}
-}
-
-static void update_click_key_states(Event *event)
+inline void update_click_key_states(Event *event)
 {
 	if (event->key_info.key_state == KEY_DOWN) {
 		down_key_states[(u8)event->key_info.key] = true;
@@ -58,7 +29,7 @@ static void update_click_key_states(Event *event)
 	}
 }
 
-static void update_just_pressed_keys(Event *event)
+inline void update_just_pressed_keys(Event *event)
 {
 	assert(event->type == EVENT_TYPE_KEY);
 	
@@ -67,7 +38,7 @@ static void update_just_pressed_keys(Event *event)
 	}
 }
 
-static void update_just_released_keys(Event *event)
+inline void update_just_released_keys(Event *event)
 {
 	assert(event->type == EVENT_TYPE_KEY);
 
@@ -78,15 +49,6 @@ static void update_just_released_keys(Event *event)
 
 void pump_events()
 {
-	at_least_one_key_event_pushed = false;
-	click_by_left_mouse_button = false;
-	if (left_mouse_button_just_pressed) {
-		left_mouse_button_just_pressed = false;
-	}
-	memset((void *)just_pressed_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
-	memset((void *)just_released_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
-	memset((void *)click_key_states, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
-
 	MSG msg = { };
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 		TranslateMessage(&msg);
@@ -100,15 +62,13 @@ void push_event(Event_Type type, int first_value, int second_value)
 		print("push_event: Failed to convers a virtual key code to an engine key. An event will be skiped.");
 		return;
 	}
+	
 	Event event;
 	event.type = type;
-
 	switch (type) {
 		case EVENT_TYPE_KEY: {
 			event.key_info.key = win32_key_to_engine_key(first_value);
 			event.key_info.key_state = second_value > 0 ? KEY_DOWN : KEY_UP;
-			update_left_mouse_button_state(&event);
-			at_least_one_key_event_pushed = true;
 			break;
 		}
 		case EVENT_TYPE_MOUSE: {
@@ -124,12 +84,16 @@ void push_event(Event_Type type, int first_value, int second_value)
 			break;
 		}
 	}
-	update_just_pressed_left_mouse_button(&event);
 	event_queue.push(event);
 }
 
 void run_event_loop()
 {
+	at_least_one_key_event_pushed = false;
+	memset((void *)just_pressed_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
+	memset((void *)just_released_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
+	memset((void *)click_key_states, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
+
 	for (Queue_Node<Event> *node = event_queue.first; node != NULL; node = node->next) {
 		Event event = node->item;
 
@@ -139,9 +103,11 @@ void run_event_loop()
 			} else {
 				Keys_State::key_up(event.key_info.key);
 			}
+			at_least_one_key_event_pushed = true;
 			update_click_key_states(&event);
 			update_just_pressed_keys(&event);
 			update_just_released_keys(&event);
+		
 		} else if (event.type == EVENT_TYPE_MOUSE) {
 			Mouse_State::last_x = Mouse_State::x;
 			Mouse_State::last_y = Mouse_State::y;
@@ -161,24 +127,9 @@ Queue<Event>* get_event_queue()
 	return &event_queue;
 }
 
-bool was_click_by_left_mouse_button()
-{
-	return click_by_left_mouse_button;
-}
-
 bool was_click(Key key)
 {
 	return click_key_states[(u8)key];
-}
-
-bool is_left_mouse_button_down()
-{
-	return left_mouse_button_state;
-}
-
-bool was_left_mouse_button_just_pressed()
-{
-	return left_mouse_button_just_pressed;
 }
 
 bool were_key_events()
