@@ -12,6 +12,17 @@ struct Texture2D;
 
 typedef u32 Gui_ID;
 typedef u32 Window_Style;
+typedef u32 Element_Alignment;
+
+const Element_Alignment HORIZONTALLY_ALIGNMENT = 0x01;
+const Element_Alignment VERTICALLY_ALIGNMENT = 0x02;
+const Element_Alignment RIGHT_ALIGNMENT = 0x04;
+const Element_Alignment LEFT_ALIGNMENT = 0x08;
+const Element_Alignment GO_TO_NEW_LINE = 0x10;
+const Element_Alignment HORIZONTALLY_ALIGNMENT_JUST_SET = 0x20;
+const Element_Alignment HORIZONTALLY_ALIGNMENT_ALREADY_SET = 0x40;
+const Element_Alignment VERTICALLY_ALIGNMENT_JUST_SET = 0x80;
+const Element_Alignment VERTICALLY_ALIGNMENT_WAS_USED = 0x100;
 
 const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_WITH_HEADER = 0x1;
