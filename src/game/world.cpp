@@ -180,6 +180,45 @@ void Game_World::save_to_file()
 	file.write(&cameras);
 }
 
+template <typename T>
+inline void update_entity_indices(u32 start_index, Array<T> &entity_list)
+{
+	for (u32 i = start_index; i < entity_list.count; i++) {
+		Entity *entity = &entity_list[i];
+		assert(entity->idx > 0);
+		entity->idx--;
+	}
+}
+
+void Game_World::delete_entity(Entity_Id entity_id)
+{
+	switch (entity_id.type) {
+		case ENTITY_TYPE_ENTITY: {
+			entities.remove(entity_id.index);
+			update_entity_indices(entity_id.index, entities);
+			break;
+		}
+		case ENTITY_TYPE_LIGHT: {
+			lights.remove(entity_id.index);
+			update_entity_indices(entity_id.index, lights);
+			break;
+		}
+		case ENTITY_TYPE_GEOMETRY: {
+			geometry_entities.remove(entity_id.index);
+			update_entity_indices(entity_id.index, geometry_entities);
+			break;
+		}
+		case ENTITY_TYPE_CAMERA: {
+			cameras.remove(entity_id.index);
+			update_entity_indices(entity_id.index, cameras);
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+}
+
 void Game_World::attach_AABB(Entity_Id entity_id, AABB *bounding_box)
 {
 	Entity *entity = get_entity(entity_id);

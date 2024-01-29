@@ -376,17 +376,17 @@ void Render_World::update()
 void Render_World::update_render_entities()
 {
 	Render_Entity *render_entity = NULL;
-	For (game_rendering_entities, render_entity) {
+	For (game_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
 
-	For (line_rendering_entities, render_entity) {
+	For (line_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
 
-	For (vertex_rendering_entities, render_entity) {
+	For (vertex_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
@@ -414,17 +414,6 @@ void Render_World::update_lights()
 	lights_struct_buffer.update(&shader_lights);
 }
 
-Render_Entity *Render_World::find_render_entity(Entity_Id entity_id)
-{
-	Render_Entity *render_entity = NULL;
-	For(game_rendering_entities, render_entity) {
-		if (render_entity->entity_id == entity_id) {
-			return render_entity;
-		}
-	}
-	return NULL;
-}
-
 void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, Render_Entity_Textures *render_entity_textures, void *args)
 {
 	assert(render_entity_textures);
@@ -441,19 +430,19 @@ void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id en
 
 	switch (rendering_type) {
 		case RENDERING_TYPE_FORWARD_RENDERING: {
-			game_rendering_entities.push(render_entity);
+			game_render_entities.push(render_entity);
 			break;
 		}
 		case RENDERING_TYPE_LINES_RENDERING: {
 			assert(args);
-			line_rendering_entities.push(render_entity);
-			line_rendering_entity_colors.push(*((Color *)args));
+			line_render_entities.push(render_entity);
+			line_render_entity_colors.push(*((Color *)args));
 			break;
 		}
 		case RENDERING_TYPE_VERTICES_RENDERING: {
 			assert(args);
-			vertex_rendering_entities.push(render_entity);
-			vertex_rendering_entity_colors.push(*((Color *)args));
+			vertex_render_entities.push(render_entity);
+			vertex_render_entity_colors.push(*((Color *)args));
 			break;
 		}
 		default: {
@@ -461,6 +450,21 @@ void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id en
 			break;
 		}
 	}
+}
+
+u32 Render_World::delete_render_entity(Entity_Id entity_id)
+{
+	u32 render_entity_index;
+	find_render_entity(&game_render_entities, entity_id, &render_entity_index);
+	game_render_entities.remove(render_entity_index);
+
+	for (u32 i = 0; i < game_render_entities.count; i++) {
+		Render_Entity *render_entity = &game_render_entities[i];
+		if (render_entity->entity_id.index > entity_id.index) {
+			render_entity->entity_id.index -= 1;
+		}
+	}
+	return render_entity_index;
 }
 
 bool Render_World::add_shadow(Light *light)

@@ -65,7 +65,6 @@ struct Game_World_Window : Editor_Window {
 	s32 window_width_delta;
 	s32 world_entities_height;
 	s32 entity_info_height;
-	Entity_Id picked_entity;
 	Window_Style window_style;
 
 	Gui_Window_Theme world_entities_window_theme;
@@ -97,6 +96,17 @@ struct Render_World_Window : Editor_Window {
 	void draw();
 };
 
+struct Drop_Down_Entity_Window : Editor_Window {
+	Size_u32 window_size;
+	Point_s32 mouse_position; // When happens the right button mouse click by a picked entity, the variable stores current mouse position.
+	
+	Gui_Window_Theme window_theme;
+	Gui_Text_Button_Theme buttons_theme;
+
+	void init(Engine *engine);
+	void draw();
+};
+
 struct Editor_Command {
 	void *additional_info = NULL;
 	String command;
@@ -116,8 +126,9 @@ struct Editor {
 	bool draw_drop_down_entity_window = false;
 	bool draw_make_entity_window = false;
 	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;
-	
-	Point_s32 last_mouse_position;
+
+	Entity_Id picked_entity;
+	Entity_Id editor_camera_id;
 	
 	Render_System *render_sys = NULL;
 	Game_World *game_world = NULL;
@@ -131,11 +142,11 @@ struct Editor {
 	} editor_settings;
 
 	Key_Command_Bindings key_command_bindings;
-	Entity_Id editor_camera_id;
 
 	Make_Entity_Window make_entity_window;
 	Game_World_Window game_world_window;
 	Render_World_Window render_world_window;
+	Drop_Down_Entity_Window drop_down_entity_window;
 
 	void init(Engine *engine);
 	void handle_events();

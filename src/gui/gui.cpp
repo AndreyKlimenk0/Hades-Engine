@@ -47,17 +47,6 @@ const u32 VECTOR3_EDIT_FIELD_NUMBER = 3;
 
 #define GET_RENDER_LIST() (&window->render_list)
 
-typedef u32 Element_Alignment;
-const Element_Alignment HORIZONTALLY_ALIGNMENT = 0x01;
-const Element_Alignment VERTICALLY_ALIGNMENT = 0x02;
-const Element_Alignment RIGHT_ALIGNMENT = 0x04;
-const Element_Alignment LEFT_ALIGNMENT = 0x08;
-const Element_Alignment GO_TO_NEW_LINE = 0x10;
-const Element_Alignment HORIZONTALLY_ALIGNMENT_JUST_SET = 0x20;
-const Element_Alignment HORIZONTALLY_ALIGNMENT_ALREADY_SET = 0x40;
-const Element_Alignment VERTICALLY_ALIGNMENT_JUST_SET = 0x80;
-const Element_Alignment VERTICALLY_ALIGNMENT_WAS_USED = 0x100;
-
 const s32 MIN_WINDOW_WIDTH = 20;
 const s32 MIN_WINDOW_HEIGHT = 40;
 const u32 GUI_FLOAT_PRECISION = 2;
@@ -1672,7 +1661,7 @@ void Gui_Manager::new_frame()
 
 void Gui_Manager::end_frame()
 {
-	if (Keys_State::is_key_down(KEY_LMOUSE)) {
+	if (!Keys_State::is_key_down(KEY_LMOUSE)) {
 		active_item = 0;
 		resizing_window = 0;
 	}

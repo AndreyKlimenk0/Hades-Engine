@@ -158,11 +158,11 @@ struct Render_World {
 	Array<Matrix4> light_view_matrices; // is the code necessary ? 
 	Array<Matrix4> cascaded_view_projection_matrices;
 	
-	Array<Render_Entity> game_rendering_entities;
-	Array<Render_Entity> line_rendering_entities;
-	Array<Render_Entity> vertex_rendering_entities;
-	Array<Color> line_rendering_entity_colors;
-	Array<Color> vertex_rendering_entity_colors;
+	Array<Render_Entity> game_render_entities;
+	Array<Render_Entity> line_render_entities;
+	Array<Render_Entity> vertex_render_entities;
+	Array<Color> line_render_entity_colors;
+	Array<Color> vertex_render_entity_colors;
 	
 	Array<Cascaded_Shadows> cascaded_shadows_list;
 	Array<Cascaded_Shadows_Info> cascaded_shadows_info_list;
@@ -207,6 +207,7 @@ struct Render_World {
 	void update_render_entities();
 
 	void add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, Render_Entity_Textures *render_entity_textures, void *args = NULL);
+	u32 delete_render_entity(Entity_Id entity_id);
 	bool add_shadow(Light *light);
 
 	void render();
@@ -218,7 +219,6 @@ struct Render_World {
 	bool add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Idx *mesh_idx);
 	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx);
 	
-	Render_Entity *find_render_entity(Entity_Id entity_id);
 	Vector3 get_light_position(Vector3 light_direction);
 };
 #endif

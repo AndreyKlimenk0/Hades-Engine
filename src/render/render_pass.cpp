@@ -138,7 +138,7 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 	Render_Entity *render_entity = NULL;
 	Forwar_Light_Pass::Pass_Data pass_data;
 
-	For(render_world->game_rendering_entities, render_entity) {
+	For(render_world->game_render_entities, render_entity) {
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
@@ -193,7 +193,7 @@ void Draw_Lines_Pass::render(Render_World *render_world, Render_Pipeline *render
 	Render_Entity *render_entity = NULL;
 	Forwar_Light_Pass::Pass_Data pass_data;
 
-	For(render_world->line_rendering_entities, render_entity) {
+	For(render_world->line_render_entities, render_entity) {
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
@@ -248,7 +248,7 @@ void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pi
 			render_pipeline->set_viewport(&cascaded_shadow_map->viewport);
 
 			Render_Entity *render_entity = NULL;
-			For(render_world->game_rendering_entities, render_entity) {
+			For(render_world->game_render_entities, render_entity) {
 				pass_data.mesh_idx = render_entity->mesh_idx;
 				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
@@ -318,7 +318,7 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 	Render_Entity *render_entity = NULL;
 	Debug_Cascade_Shadows_Pass::Pass_Data pass_data;
 
-	For(render_world->game_rendering_entities, render_entity) {
+	For(render_world->game_render_entities, render_entity) {
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
@@ -376,9 +376,9 @@ void Draw_Vertices_Pass::render(Render_World *render_world, Render_Pipeline *ren
 	Render_Entity *render_entity = NULL;
 	Render_Pass::Pass_Data pass_data;
 
-	for (u32 i = 0; i < render_world->vertex_rendering_entities.count; i++) {
-		Color mesh_color = render_world->vertex_rendering_entity_colors[i];
-		Render_Entity *render_entity = &render_world->vertex_rendering_entities[i];
+	for (u32 i = 0; i < render_world->vertex_render_entities.count; i++) {
+		Color mesh_color = render_world->vertex_render_entity_colors[i];
+		Render_Entity *render_entity = &render_world->vertex_render_entities[i];
 
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
@@ -396,6 +396,15 @@ void Draw_Vertices_Pass::render(Render_World *render_world, Render_Pipeline *ren
 void Outlining_Pass::add_render_entity_index(u32 entity_index)
 {
 	render_entity_indices.push(entity_index);
+}
+
+void Outlining_Pass::delete_render_entity_index(u32 entity_index)
+{
+	for (u32 i = 0; i < render_entity_indices.count; i++) {
+		if (render_entity_indices[i] == entity_index) {
+			render_entity_indices.remove(i);
+		}
+	}
 }
 
 void Outlining_Pass::reset_render_entity_indices()
@@ -465,7 +474,7 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 
 	for (u32 i = 0; i < render_entity_indices.count; i++) {
 		u32 index = render_entity_indices[i];
-		Render_Entity *render_entity = &render_world->game_rendering_entities[index];
+		Render_Entity *render_entity = &render_world->game_render_entities[index];
 
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
