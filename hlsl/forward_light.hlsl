@@ -46,58 +46,30 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 
 StructuredBuffer<Light> lights : register(t7);
 
-float2 parallax_mapping(float2 uv, float3 camera_direction, float3x3 TBN_matrix)
-{ 
-    // number of depth layers
-    const float minLayers = 8;
-    const float maxLayers = 32;
-    float numLayers = lerp(maxLayers, minLayers, abs(dot(float3(0.0, 0.0, 1.0), camera_direction)));  
-    // calculate the size of each layer
-    float layerDepth = 1.0 / numLayers;
-    // depth of current layer
-    float currentLayerDepth = 0.0;
-    // the amount to shift the texture coordinates per layer (from vector P)
-    float heightScale = 0.1f;
-    float2 P = camera_direction.xy / camera_direction.z * heightScale; 
-    float2 deltaTexCoords = P / numLayers;
-  
-    // get initial values
-    float2  currentTexCoords     = uv;
-    float currentDepthMapValue = displacement_texture.SampleLevel(linear_sampling, currentTexCoords, 0).r;
-      
-    while(currentLayerDepth < currentDepthMapValue)
-    {
-        // shift texture coordinates along direction of P
-        currentTexCoords -= deltaTexCoords;
-        // get depthmap value at current texture coordinates
-        currentDepthMapValue = displacement_texture.SampleLevel(linear_sampling, currentTexCoords, 0).r;  
-        // get depth of next layer
-        currentLayerDepth += layerDepth;  
-    }
+float2 quadtree_displacement_mapping(Texture2D displacement_texture, float2 uv, float3 camera_direction)
+{
+    float2 offset = camera_direction.xy / camera_direction.z * 0.1f;
+
+    uint2 texture_size;
+    displacement_texture.GetDimensions(texture_size.x, texture_size.y);
     
-    // get texture coordinates before collision (reverse operations)
-    float2 prevTexCoords = currentTexCoords + deltaTexCoords;
-
-    // get depth after and before collision for linear interpolation
-    float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = displacement_texture.SampleLevel(linear_sampling, prevTexCoords, 0).r - currentLayerDepth + layerDepth;
- 
-    // interpolation of texture coordinates
-    float weight = afterDepth / (afterDepth - beforeDepth);
-    float2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
-
-    return finalTexCoords;
+    uint max_texture_size = max(texture_size.x texture_size.y);
+    uint max_mip_map_level = (uint)floor(log2(max_texture_size));
+    uint mip_map_number = max_mip_map_level;
+    
+    uint mip_map_level = max_mip_map_level;
+    while (mip_map_level >= 0) {
+        
+        float depth = displacement_texture.Sample(point_sampling, uv + offset, mip_map_level);
+        
+        mip_map_level -= 1;
+    }
 }
+
 float4 ps_main(Vertex_Out vertex_out) : SV_Target
 {
-    float3x3 t = get_TBN_matrix(vertex_out.tangent, vertex_out.normal);
-    //float3 dir = normalize(camera_direction - camera_position);
-    float3 p = mul(camera_position, transpose(t));
-    float3 p1 = mul(vertex_out.world_position, transpose(t));
-    float3 dir = normalize(p - p1);
-    //dir = mul(dir, transpose(t));
-    //dir = normalize(dir);
-    vertex_out.uv = parallax_mapping(vertex_out.uv, dir, t);
+    float3x3 TBN_matrix = get_TBN_matrix(vertex_out.tangent, vertex_out.normal);
+    float3 tanget_space_camera_direction = normalize(camera_direction * transpose(TBN_matrix));
     
     Material material;
     material.ambient = ambient_texture.Sample(linear_sampling, vertex_out.uv).rgb;

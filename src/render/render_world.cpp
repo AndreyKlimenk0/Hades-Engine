@@ -719,6 +719,9 @@ Texture_Idx Render_Entity_Texture_Storage::add_texture(const char *name, u32 wid
 	render_pipeline->update_subresource(&texture, data, width * 4);
 	render_pipeline->generate_mips(texture.srv);
 
+	Texture2D_Desc desc;
+	texture.get_desc(&desc);
+
 	texture_idx = textures.push(texture);
 	texture_table.set(name, texture_idx);
 
