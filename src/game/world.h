@@ -55,7 +55,7 @@ inline Entity_Id get_entity_id(Entity *entity)
 	return Entity_Id(entity->type, entity->idx);
 }
 
-inline bool is_entity_id_valid(Entity_Id entity_id)
+inline bool valid_entity_id(Entity_Id entity_id)
 {
 	return ((entity_id.type == ENTITY_TYPE_UNKNOWN) && (entity_id.index == UINT32_MAX)) ? false : true;
 }
@@ -146,6 +146,8 @@ struct Game_World {
 	void shutdown();
 	void init_from_file();
 	void save_to_file();
+
+	void delete_entity(Entity_Id entity_id);
 
 	void attach_AABB(Entity_Id entity_id, AABB *bounding_box);
 	void move_entity(Entity *entity, const Vector3 &displacement);
