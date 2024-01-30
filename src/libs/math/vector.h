@@ -1,7 +1,6 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include "../math/common.h"
 #include <assert.h>
 #include <DirectXMath.h>
 

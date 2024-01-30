@@ -6,11 +6,11 @@
 #include "render_pass.h"
 #include "render_system.h"
 #include "render_helpers.h"
+#include "../libs/color.h"
 #include "../libs/ds/array.h"
-#include "../libs/math/common.h"
+#include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
 #include "../game/world.h"
-#include "../libs/color.h"
 
 
 struct Render_Pass;

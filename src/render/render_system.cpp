@@ -10,13 +10,13 @@
 #include "../sys/engine.h"
 #include "../sys/sys_local.h"
 #include "../win32/win_local.h"
-#include "../libs/math/common.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "../libs/math/functions.h"
+#include "../libs/math/structures.h"
 
 u32 Render_System::screen_width = 0;
 u32 Render_System::screen_height = 0;
-
 
 inline void from_win32_screen_space(u32 screen_width, u32 screen_height, Point_s32 *win32_point, Point_s32 *normal_point)
 {
@@ -31,9 +31,9 @@ inline void to_win32_screen_space(Point_s32 *point, u32 screen_width, u32 screen
 }
 
 template< typename T >
-inline Vector2 make_vector2(Point_V2<T> *first_point, Point_V2<T> *second_point)
+inline Vector2 make_vector2(Pointv2<T> *first_point, Pointv2<T> *second_point)
 {
-	Point_V2<T> result = *first_point - *second_point;
+	Pointv2<T> result = *first_point - *second_point;
 	return Vector2((float)result.x, (float)result.y);
 }
 
@@ -51,6 +51,41 @@ static int compare_rects_u32(const void *first_rect, const void *second_rect)
 	const Rect_u32 *second = static_cast<const Rect_u32 *>(second_rect);
 
 	return first->height > second->height;
+}
+
+inline void pack_rects_in_rect(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
+{
+	assert(main_rect);
+
+	qsort(rects.items, rects.count, sizeof(rects[0]), compare_rects_u32);
+
+	u32 x_pos = 0;
+	u32 y_pos = 0;
+	u32 large = 0;
+
+	Rect_u32 *rect = NULL;
+	For(rects, rect)
+	{
+
+		if ((rect->width + x_pos) > main_rect->width) {
+			y_pos += large;
+			x_pos = 0;
+			large = 0;
+		}
+
+		if ((y_pos + rect->height) > main_rect->height) {
+			break;
+		}
+
+		rect->x = x_pos;
+		rect->y = y_pos;
+
+		x_pos += rect->width;
+
+		if (rect->height > large) {
+			large = rect->height;
+		}
+	}
 }
 
 void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)

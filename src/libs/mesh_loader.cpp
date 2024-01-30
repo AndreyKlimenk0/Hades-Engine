@@ -1,11 +1,11 @@
 #include <assert.h>
 #include <fbxsdk.h>
 
-#include "math/common.h"
 #include "mesh_loader.h"
 #include "os/file.h"
 #include "../sys/sys_local.h"
 #include "../win32/win_time.h"
+#include "../libs/math/functions.h"
 
 static const s32 UP_AXIS_SIGN = 1;
 static const s32 TRIANGLE_POLYGON = 3;

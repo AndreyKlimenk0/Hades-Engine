@@ -13,7 +13,7 @@
 #include "../libs/color.h"
 #include "../libs/ds/array.h"
 #include "../libs/math/matrix.h"
-#include "../libs/math/common.h"
+#include "../libs/math/vector.h"
 #include "../libs/ds/hash_table.h"
 #include "../libs/ds/linked_list.h"
 

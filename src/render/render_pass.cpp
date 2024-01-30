@@ -3,7 +3,8 @@
 #include "hlsl.h"
 #include "render_pass.h"
 #include "render_world.h"
-#include "../libs/math/common.h"
+#include "../libs/math/matrix.h"
+#include "../libs/math/functions.h"
 
 const u32 SKIP_RENDER_TARGET_VIEW_VALIDATION = 0x1;
 const u32 SKIP_VIEWPORT_VALIDATION           = 0x2;

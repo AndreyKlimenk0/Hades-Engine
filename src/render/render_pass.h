@@ -5,7 +5,6 @@
 #include "../libs/str.h"
 #include "../libs/color.h"
 #include "../libs/ds/array.h"
-#include "../libs/math/matrix.h"
 #include "../libs/math/vector.h"
 #include "../win32/win_types.h"
 
