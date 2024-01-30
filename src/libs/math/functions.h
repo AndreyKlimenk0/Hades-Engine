@@ -7,6 +7,8 @@
 #include "../../win32/win_types.h"
 
 struct Vector2;
+struct Vector3;
+struct Matrix4;
 
 #ifdef max
 	#undef max
@@ -90,5 +92,6 @@ inline float degrees_to_radians(float degrees)
 }
 
 Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height);
+Matrix4 make_rotation_matrix(Vector3 *direction, Vector3 *up_direction = NULL);
 
 #endif
