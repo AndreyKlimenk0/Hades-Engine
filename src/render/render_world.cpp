@@ -7,6 +7,8 @@
 #include "../sys/engine.h"
 #include "../collision/collision.h"
 #include "../libs/mesh_loader.h"
+#include "../libs/math/functions.h"
+#include "../libs/math/structures.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 

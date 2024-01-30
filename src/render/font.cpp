@@ -3,10 +3,11 @@
 #include <shlobj_core.h>
 
 #include "font.h"
-#include "../libs/os/file.h"
-#include "../win32/win_types.h"
 #include "render_helpers.h"
 #include "../sys/engine.h"
+#include "../win32/win_types.h"
+#include "../libs/os/file.h"
+#include "../libs/math/functions.h"
 
 const char *DEFAULT_PATH_TO_FONT_DIR = "C:/Windows/Fonts/";
 

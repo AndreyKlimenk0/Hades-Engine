@@ -2,11 +2,11 @@
 #define STRING_H
 
 #include "ds/array.h"
-#include "../libs/math/common.h"
+#include "../win32/win_types.h"
+#include "../win32/win_local.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
-#include "../win32/win_local.h"
-#include "../win32/win_types.h"
+#include "../libs/math/structures.h"
 
 struct Vector2;
 struct Vector3;

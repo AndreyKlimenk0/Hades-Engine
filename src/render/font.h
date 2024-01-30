@@ -6,10 +6,9 @@
 #include FT_FREETYPE_H
 
 #include "../sys/sys_local.h"
-#include "../libs/math/vector.h"
-#include "../libs/ds/hash_table.h"
 #include "../win32/win_types.h"
-#include "../libs/math/common.h"
+#include "../libs/math/structures.h"
+#include "../libs/ds/hash_table.h"
 
 const u32 MAX_CHARACTERS = 128;
 const u32 CONTORL_CHARACTERS = 32;
