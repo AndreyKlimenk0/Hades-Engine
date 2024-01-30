@@ -2,7 +2,7 @@
 
 #include "collision.h"
 #include "../render/model.h"
-#include "../libs/math/common.h"
+#include "../libs/math/functions.h"
 
 AABB make_AABB(Triangle_Mesh *mesh)
 {

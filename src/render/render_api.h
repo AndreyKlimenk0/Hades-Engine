@@ -5,7 +5,7 @@
 #include <d3d11.h>
 
 #include "../libs/color.h"
-#include "../libs/math/common.h"
+#include "../libs/math/structures.h"
 #include "../sys/sys_local.h"
 #include "../win32/win_types.h"
 #include "../win32/win_local.h"

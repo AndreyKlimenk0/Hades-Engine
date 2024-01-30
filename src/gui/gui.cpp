@@ -85,7 +85,7 @@ inline bool detect_intersection(Rect_s32 *first_rect, Rect_s32 *second_rect)
 }
 
 template <typename T>
-inline bool detect_intersection(Triangle<T> *triangle, Point_V2<T> *point)
+inline bool detect_intersection(Triangle<T> *triangle, Pointv2<T> *point)
 {
 	T triangle_area = triangle->get_area();
 

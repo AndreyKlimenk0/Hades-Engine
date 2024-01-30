@@ -6,7 +6,6 @@
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/str.h"
-#include "../libs/math/common.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/vector.h"
 #include "../libs/geometry_helper.h"
@@ -196,7 +195,6 @@ void Drop_Down_Entity_Window::draw()
 			editor->picked_entity.reset();
 			editor->draw_drop_down_entity_window = false;
 		}
-		
 		gui::reset_button_theme();
 		gui::end_window();
 	}
@@ -385,24 +383,6 @@ void Editor::render()
 	}
 	gui::end_frame();
 }
-
-inline Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height)
-{
-	assert(screen_width > 0);
-	assert(screen_height > 0);
-
-	float ndc_x = (((float)x / (float)screen_width) * 2.0f) - 1.0f;
-	float ndc_y = 1.0f - (((float)y / (float)screen_height) * 2.0f);
-	return Vector2(ndc_x, ndc_y);
-}
-
-struct Ray {
-	Ray() {}
-	Ray(const Vector3 &origin, const Vector3 &direction) : origin(origin), direction(direction) {}
-
-	Vector3 origin;
-	Vector3 direction;
-};
 
 bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL)
 {

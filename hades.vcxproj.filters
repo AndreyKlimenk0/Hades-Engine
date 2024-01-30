@@ -78,9 +78,6 @@
     <ClCompile Include="src\libs\ds\hash_table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\libs\math\common.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\libs\math\vector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -127,6 +124,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\render\shader_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\math\structures.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\math\functions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -209,9 +212,6 @@
     <ClInclude Include="src\libs\ds\stack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\libs\math\common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\libs\math\matrix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -264,6 +264,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\shader_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\math\constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\math\functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\math\structures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

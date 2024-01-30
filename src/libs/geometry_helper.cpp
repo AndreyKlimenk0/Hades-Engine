@@ -1,4 +1,5 @@
-#include "math/common.h"
+#include <math.h>
+
 #include "math/vector.h"
 #include "geometry_helper.h"
 #include "../render/vertex.h"

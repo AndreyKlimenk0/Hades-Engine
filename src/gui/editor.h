@@ -2,12 +2,13 @@
 #define EDITOR_H
 
 #include "gui.h"
+#include "../game/world.h"
 #include "../libs/str.h"
 #include "../libs/os/input.h"
 #include "../libs/ds/array.h"
 #include "../libs/enum_helper.h"
 #include "../libs/key_binding.h"
-#include "../game/world.h"
+#include "../libs/math/structures.h"
 #include "../render/render_world.h"
 
 struct Editor;

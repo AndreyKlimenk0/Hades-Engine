@@ -5,7 +5,6 @@
 #include <ctype.h>
 
 #include "str.h"
-#include "math/common.h"
 #include "math/vector.h"
 #include "math/matrix.h"
 #include "../sys/sys_local.h"
