@@ -9,6 +9,7 @@ desktop.ini
 desktop
 x64/
 Debug/
+mipmaps.rdc
 
 # User-specific files
 *.suo

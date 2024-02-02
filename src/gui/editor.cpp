@@ -23,6 +23,18 @@
 
 #include "../collision/collision.h"
 
+
+static const u32 STR_ENTITY_TYPES_COUNT = 5;
+static const char *str_entity_types[STR_ENTITY_TYPES_COUNT] = {
+	"Unknown",
+	"Entity",
+	"Light",
+	"Geometry",
+	"Camera"
+};
+
+static_assert(STR_ENTITY_TYPES_COUNT == ENTITY_TYPES_COUNT, "assert_failed");
+
 inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render_passes, u32 *index)
 {
 	assert(name);
@@ -58,41 +70,138 @@ struct Ray_Entity_Intersection {
 	static bool detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result);
 };
 
-bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result)
-{
-	Array<Result> intersected_entities;
-	for (u32 i = 0; i < render_world->game_render_entities.count; i++) {
-		Entity_Id entity_id = render_world->game_render_entities[i].entity_id;
-		Entity *entity = game_world->get_entity(entity_id);
+#include "../libs/math/structures.h"
 
-		if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-			Result intersection_result;
-			if (::detect_intersection(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
-				intersection_result.entity_id = entity_id;
-				intersection_result.render_entity_idx = i;
-				intersected_entities.push(intersection_result);
-			}
-		}
-	}
-	if (!intersected_entities.is_empty()) {
-		if (intersected_entities.count > 1) {
-			u32 most_near_entity_to_camera = 0;
-			float most_small_distance = FLT_MAX;
-			for (u32 i = 0; i < intersected_entities.count; i++) {
-				// A ray origin equals to a camera position.
-				float intersection_point_camera_distance = find_distance(&picking_ray->origin, &intersected_entities[i].intersection_point);
-				if (intersection_point_camera_distance < most_small_distance) {
-					most_near_entity_to_camera = i;
-					most_small_distance = intersection_point_camera_distance;
-				}
-			}
-			*result = intersected_entities[most_near_entity_to_camera];
-		} else {
-			*result = intersected_entities.first();
-		}
+inline float find_triangle_area(const Vector3 &a, const Vector3 &b, const Vector3 &c)
+{
+	Vector3 area = cross(b - a, c - a); //  The magnitude of the cross-product can be interpreted as the area of the parallelogram
+	return length(area) * 0.5f;
+}
+
+bool is_in_range(float start, float end, float value)
+{
+	if ((start <= value) && (value <= end)) {
 		return true;
 	}
 	return false;
+}
+
+bool detect_intersection(Ray *picking_ray, Vertex_PNTUV *vertices, u32 vertex_count, u32 *indices, u32 index_count)
+{
+	assert(picking_ray);
+	assert(vertices);
+	assert(indices);
+	assert(index_count % 3 == 0);
+
+	bool result = false;
+	for (u32 j = 0; j < (index_count / 3); j += 3) {
+		u32 i0 = indices[j];
+		u32 i1 = indices[j + 1];
+		u32 i2 = indices[j + 2];
+		Vector3 a = vertices[i0].position;
+		Vector3 b = vertices[i1].position;
+		Vector3 c = vertices[i2].position;
+
+		Vector3 plane_normal = normalize(vertices[i0].normal);
+
+		Vector3 dir_ray = normalize(picking_ray->direction);
+		float result = dot(dir_ray, plane_normal);
+		if (result >= 0.0f) {
+			continue;
+		}
+		Vector3 center = (a + b + c) / 3.0f;
+		float ray_length = dot(center - picking_ray->origin, plane_normal) / result;
+		if (ray_length < 0.0f) {
+			continue;
+		}
+
+		Vector3 p = picking_ray->origin + Vector3(normalize(picking_ray->direction) * ray_length);
+		print("[{}, {}, {}] P {}", j, j + 1, j + 2, &p);
+		float triangle_area = find_triangle_area(a, b, c);
+
+		float u = find_triangle_area(c, a, p) / triangle_area;
+		//if (!is_in_range(0.0f, 1.1f, u)) {
+		//	continue;
+		//}
+		float v = find_triangle_area(a, b, p) / triangle_area;
+		//if (!is_in_range(0.0f, 1.1f, v)) {
+		//	continue;
+		//}
+		float w = find_triangle_area(b, c, p) / triangle_area;
+		//if (!is_in_range(0.0f, 1.1f, w)) {
+		//	continue;
+		//}
+		print("u {} v {} w {}", u, v, w);
+		if (is_in_range(0.0f, 1.1f, u + v + w)) {
+			print("Intersection");
+		//	return true;
+		}
+	}
+	print("-----------------------------");
+	return result;
+}
+
+bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result)
+{
+	//Array<Result> intersected_entities;
+	//for (u32 i = 0; i < render_world->game_render_entities.count; i++) {
+	//	Entity_Id entity_id = render_world->game_render_entities[i].entity_id;
+	//	Entity *entity = game_world->get_entity(entity_id);
+
+	//	if (entity->bounding_box_type == BOUNDING_BOX_TYPE_UNKNOWN) {
+	//		print("Ray_Entity_Intersection::detect_intersection: Ray entity intersection can't be made. An entity Entity_Id({}, {}) doesn't has an attached bounding box.", str_entity_types[entity->type], entity->idx);
+	//		continue;
+	//	}
+	//	if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+	//	//if ((entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) && (entity->type == ENTITY_TYPE_ENTITY)) {
+
+	//		if (!::detect_intersection(picking_ray, &entity->AABB_box)) {
+	//			continue;
+	//		} else {
+	//			//print("Entity AABB intersection");
+	//		}
+
+	//		auto mesh_idx = render_world->game_render_entities[i].mesh_idx;
+	//		Unified_Mesh_Storate<Vertex_PNTUV>::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_idx];
+	//		
+	//		Vertex_PNTUV *vertices = &render_world->triangle_meshes.unified_vertices[mesh_instance.vertex_offset];
+	//		u32 *indices = &render_world->triangle_meshes.unified_indices[mesh_instance.index_offset];
+
+	//		if (::detect_intersection(picking_ray, vertices, mesh_instance.vertex_count, indices, mesh_instance.index_count)) {
+	//			//print("Entity ray intersection");
+	//		} else {
+	//			//print("There is no entity ray intersection");
+	//		}
+	//		continue;
+	//	}
+	//	//if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
+	//	//	Result intersection_result;
+	//	//	if (::detect_intersection(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
+	//	//		intersection_result.entity_id = entity_id;
+	//	//		intersection_result.render_entity_idx = i;
+	//	//		intersected_entities.push(intersection_result);
+	//	//	}
+	//	//}
+	//}
+	//if (!intersected_entities.is_empty()) {
+	//	if (intersected_entities.count > 1) {
+	//		u32 most_near_entity_to_camera = 0;
+	//		float most_small_distance = FLT_MAX;
+	//		for (u32 i = 0; i < intersected_entities.count; i++) {
+	//			// A ray origin equals to a camera position.
+	//			float intersection_point_camera_distance = find_distance(&picking_ray->origin, &intersected_entities[i].intersection_point);
+	//			if (intersection_point_camera_distance < most_small_distance) {
+	//				most_near_entity_to_camera = i;
+	//				most_small_distance = intersection_point_camera_distance;
+	//			}
+	//		}
+	//		*result = intersected_entities[most_near_entity_to_camera];
+	//	} else {
+	//		*result = intersected_entities.first();
+	//	}
+	//	return true;
+	//}
+	//return false;
 }
 
 void Editor_Window::init(Engine *engine)
@@ -630,26 +739,28 @@ void Editor::picking()
 		moving_entity_info.moving_entity = false;
 	}
 
-	if (!gui::were_events_handled() && was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
-		Ray_Entity_Intersection::Result intersection_result;
-		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-			if (picked_entity == intersection_result.entity_id) {
-				draw_drop_down_entity_window = true;
-				drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
+	if (!gui::were_events_handled()) {
+		if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
+			Ray_Entity_Intersection::Result intersection_result;
+			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+				if (picked_entity == intersection_result.entity_id) {
+					draw_drop_down_entity_window = true;
+					drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
+				}
 			}
 		}
-	}
-	if (!gui::were_events_handled() && was_click(KEY_LMOUSE)) {
-		Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-		outlining_pass->reset_render_entity_indices();
+		if (was_click(KEY_LMOUSE)) {
+			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
+			outlining_pass->reset_render_entity_indices();
 
-		Ray_Entity_Intersection::Result intersection_result;
-		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-			gui::make_tab_active(game_world_tab_gui_id);
-			picked_entity = intersection_result.entity_id;
-			outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
-		} else {
-			picked_entity.reset();
+			Ray_Entity_Intersection::Result intersection_result;
+			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+				gui::make_tab_active(game_world_tab_gui_id);
+				picked_entity = intersection_result.entity_id;
+				outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
+			} else {
+				picked_entity.reset();
+			}
 		}
 	}
 }

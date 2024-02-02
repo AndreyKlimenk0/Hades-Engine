@@ -34,13 +34,13 @@ struct Vector2 : XMFLOAT2 {
 	operator XMVECTOR();
 };
 
-inline float get_length(Vector2 *vector2);
+inline float dot(const Vector2 &first_vector, const Vector2 &second_vector);
+inline float length(const Vector2 &vector);
 inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2);
 inline float find_distance(Vector2 *first_vector2, Vector2 *second_vector2);
 inline Vector2 negate(Vector2 *vector);
 inline Vector2 normalize(Vector2 *vector);
-inline Vector2 dot(Vector2 *first_vector2, Vector2 *second_vector2);
-inline Vector2 cross(Vector2 *first_vector2, Vector2 *second_vector2);
+inline Vector2 cross(const Vector2 &first_vector, const Vector2 &second_vector);
 
 inline Vector2 operator+(const Vector2 &first_vector, const Vector2 &second_vector);
 inline Vector2 operator-(const Vector2 &first_vector, const Vector2 &second_vector);
@@ -77,14 +77,14 @@ struct Vector3 : XMFLOAT3 {
 	operator XMVECTOR();
 };
 
-inline float get_length(Vector3 *vector3);
+inline float dot(const Vector3 &first_vector, const Vector3 &second_vector);
+inline float length(const Vector3 &vector);
 inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3);
 inline float find_distance(Vector3 *first_vector3, Vector3 *second_vector3);
 inline Vector3 negate(Vector3 *vector);
 inline Vector3 normalize(Vector3 *vector);
 inline Vector3 normalize(const Vector3 &vector);
-inline Vector3 dot(Vector3 *first_vector3, Vector3 *second_vector3);
-inline Vector3 cross(Vector3 *first_vector3, Vector3 *second_vector3);
+inline Vector3 cross(const Vector3 &first_vector, const Vector3 &second_vector);
 
 inline Vector3 operator+(const Vector3 &first_vector, const Vector3 &second_vector);
 inline Vector3 operator-(const Vector3 &first_vector, const Vector3 &second_vector);
@@ -116,14 +116,15 @@ struct Vector4 : XMFLOAT4 {
 	operator XMVECTOR();
 };
 
-inline float get_length(Vector4 *vector4);
+inline float dot(const Vector4 &first_vector, const Vector4 &second_vector);
+inline float length(const Vector4 &vector);
 inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4);
 inline float find_distance(Vector4 *first_vector4, Vector4 *second_vector4);
+
 inline Vector3 to_vector3(const Vector4 &vector);
 inline Vector4 negate(Vector4 *vector);
 inline Vector4 normalize(Vector4 *vector);
-inline Vector4 dot(Vector4 *first_vector4, Vector4 *second_vector4);
-inline Vector4 cross(Vector4 *first_vector4, Vector4 *second_vector4, Vector4 *third_vector4);
+inline Vector4 cross(const Vector4 &first_vector, const Vector4 &second_vector, const Vector4 &third_vector);
 
 inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector);
 inline Vector4 operator-(const Vector4 &first_vector, const Vector4 &second_vector);
@@ -238,10 +239,10 @@ inline Vector2::operator XMVECTOR()
 	return XMVectorSet(x, y, 0.0f, 0.0f);
 }
 
-inline float get_length(Vector2 *vector2)
+inline float length(const Vector2 &vector)
 {
-	XMVECTOR vector = XMLoadFloat2(vector2);
-	return XMVectorGetX(XMVector2Length(vector));
+	XMVECTOR temp = XMLoadFloat2(&vector);
+	return XMVectorGetX(XMVector2Length(temp));
 }
 
 inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2)
@@ -270,16 +271,16 @@ inline Vector2 normalize(Vector2 *vector2)
 	return XMVector2Normalize(vector);
 }
 
-inline Vector2 dot(Vector2 *first_vector2, Vector2 *second_vector2)
+inline float dot(const Vector2 &first_vector, const Vector2 &second_vector)
 {
-	XMVECTOR first = XMLoadFloat2(first_vector2);
-	XMVECTOR second = XMLoadFloat2(second_vector2);
-	return XMVector2Dot(first, second);
+	XMVECTOR first = XMLoadFloat2(&first_vector);
+	XMVECTOR second = XMLoadFloat2(&second_vector);
+	return XMVectorGetX(XMVector2Dot(first, second));
 }
-inline Vector2 cross(Vector2 *first_vector2, Vector2 *second_vector2)
+inline Vector2 cross(const Vector2 &first_vector, const Vector2 &second_vector)
 {
-	XMVECTOR first = XMLoadFloat2(first_vector2);
-	XMVECTOR second = XMLoadFloat2(second_vector2);
+	XMVECTOR first = XMLoadFloat2(&first_vector);
+	XMVECTOR second = XMLoadFloat2(&second_vector);
 	return XMVector2Cross(first, second);
 }
 
@@ -421,10 +422,10 @@ inline Vector3::operator XMVECTOR()
 	return XMVectorSet(x, y, z, 0.0f);
 }
 
-inline float get_length(Vector3 *vector3)
+inline float length(const Vector3 &vector)
 {
-	XMVECTOR vector = XMLoadFloat3(vector3);
-	return XMVectorGetX(XMVector3Length(vector));
+	XMVECTOR temp = XMLoadFloat3(&vector);
+	return XMVectorGetX(XMVector3Length(temp));
 }
 
 inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3)
@@ -459,16 +460,17 @@ inline Vector3 normalize(const Vector3 &vector3)
 	return XMVector3Normalize(vector);
 }
 
-inline Vector3 dot(Vector3 *first_vector3, Vector3 *second_vector3)
+inline float dot(const Vector3 &first_vector, const Vector3 &second_vector)
 {
-	XMVECTOR first = XMLoadFloat3(first_vector3);
-	XMVECTOR second = XMLoadFloat3(second_vector3);
-	return XMVector3Dot(first, second);
+	XMVECTOR first = XMLoadFloat3(&first_vector);
+	XMVECTOR second = XMLoadFloat3(&second_vector);
+	return XMVectorGetX(XMVector3Dot(first, second));
 }
-inline Vector3 cross(Vector3 *first_vector3, Vector3 *second_vector3)
+
+inline Vector3 cross(const Vector3 &first_vector, const Vector3 &second_vector)
 {
-	XMVECTOR first = XMLoadFloat3(first_vector3);
-	XMVECTOR second = XMLoadFloat3(second_vector3);
+	XMVECTOR first = XMLoadFloat3(&first_vector);
+	XMVECTOR second = XMLoadFloat3(&second_vector);
 	return XMVector3Cross(first, second);
 }
 
@@ -621,10 +623,10 @@ inline Vector4::operator XMVECTOR()
 	return XMVectorSet(x, y, z, w);
 }
 
-inline float get_length(Vector4 *vector4)
+inline float length(const Vector4 &vector)
 {
-	XMVECTOR vector = XMLoadFloat4(vector4);
-	return XMVectorGetX(XMVector4Length(vector));
+	XMVECTOR temp = XMLoadFloat4(&vector);
+	return XMVectorGetX(XMVector4Length(temp));
 }
 
 inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4)
@@ -658,17 +660,18 @@ inline Vector4 normalize(Vector4 *vector4)
 	return XMVector4Normalize(vector);
 }
 
-inline Vector4 dot(Vector4 *first_vector4, Vector4 *second_vector4)
+inline float dot(const Vector4 &first_vector, const Vector4 &second_vector)
 {
-	XMVECTOR first = XMLoadFloat4(first_vector4);
-	XMVECTOR second = XMLoadFloat4(second_vector4);
-	return XMVector4Dot(first, second);
+	XMVECTOR first = XMLoadFloat4(&first_vector);
+	XMVECTOR second = XMLoadFloat4(&second_vector);
+	return XMVectorGetX(XMVector4Dot(first, second));
 }
-inline Vector4 cross(Vector4 *first_vector4, Vector4 *second_vector4, Vector4 *third_vector4)
+
+inline Vector4 cross(const Vector4 &first_vector, const Vector4 &second_vector, const Vector4 &third_vector)
 {
-	XMVECTOR first = XMLoadFloat4(first_vector4);
-	XMVECTOR second = XMLoadFloat4(second_vector4);
-	XMVECTOR third = XMLoadFloat4(third_vector4);
+	XMVECTOR first = XMLoadFloat4(&first_vector);
+	XMVECTOR second = XMLoadFloat4(&second_vector);
+	XMVECTOR third = XMLoadFloat4(&third_vector);
 	return XMVector4Cross(first, second, third);
 }
 
