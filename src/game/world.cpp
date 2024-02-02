@@ -157,10 +157,10 @@ void Game_World::init_from_file()
 	}
 
 	file.read(&light_hash);
-	file.read(&entities);
-	file.read(&lights);
-	file.read(&geometry_entities);
-	file.read(&cameras);
+	//read_array_from_file(&file, &entities);
+	read_array_from_file(&file, &lights);
+	read_array_from_file(&file, &geometry_entities);
+	read_array_from_file(&file, &cameras);
 }
 
 void Game_World::save_to_file()
@@ -174,10 +174,10 @@ void Game_World::save_to_file()
 		return;
 	}
 	file.write(&light_hash);
-	file.write(&entities);
-	file.write(&lights);
-	file.write(&geometry_entities);
-	file.write(&cameras);
+	//write_array_to_file(&file, &entities);
+	write_array_to_file(&file, &lights);
+	write_array_to_file(&file, &geometry_entities);
+	write_array_to_file(&file, &cameras);
 }
 
 template <typename T>

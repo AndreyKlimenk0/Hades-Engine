@@ -23,8 +23,8 @@ Matrix4 make_rotation_matrix_v2(Vector3 *direction, Vector3 *up_direction)
 	if (up_direction) {
 		up = *up_direction;
 	}
-	Vector3 x_axis = normalize(&cross(&up, &z_axis));
-	Vector3 y_axis = normalize(&cross(&z_axis, &x_axis));
+	Vector3 x_axis = normalize(cross(up, z_axis));
+	Vector3 y_axis = normalize(cross(z_axis, x_axis));
 
 	Matrix4 rotation_matrix = make_identity_matrix();
 	rotation_matrix.set_row_0(Vector4(x_axis, 0.0f));

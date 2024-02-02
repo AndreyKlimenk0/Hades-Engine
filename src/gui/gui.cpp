@@ -87,11 +87,11 @@ inline bool detect_intersection(Rect_s32 *first_rect, Rect_s32 *second_rect)
 template <typename T>
 inline bool detect_intersection(Triangle<T> *triangle, Pointv2<T> *point)
 {
-	T triangle_area = triangle->get_area();
+	T triangle_area = triangle->find_area();
 
-	T area1 = Triangle<T>(triangle->a, triangle->b, *point).get_area();
-	T area2 = Triangle<T>(*point, triangle->b, triangle->c).get_area();
-	T area3 = Triangle<T>(triangle->a, *point, triangle->c).get_area();
+	T area1 = Triangle<T>(triangle->a, triangle->b, *point).find_area();
+	T area2 = Triangle<T>(*point, triangle->b, triangle->c).find_area();
+	T area3 = Triangle<T>(triangle->a, *point, triangle->c).find_area();
 
 	if (area1 + area2 + area3 == triangle_area) {
 		return true;

@@ -13,12 +13,14 @@
 #include "../libs/os/file.h"
 
 
-enum Entity_Type {
-	ENTITY_TYPE_UNKNOWN,
+enum Entity_Type : u32 {
+	ENTITY_TYPE_UNKNOWN = 0,
 	ENTITY_TYPE_ENTITY,
 	ENTITY_TYPE_LIGHT,
 	ENTITY_TYPE_GEOMETRY,
-	ENTITY_TYPE_CAMERA
+	ENTITY_TYPE_CAMERA,
+
+	ENTITY_TYPES_COUNT
 };
 
 struct Entity_Id {
@@ -47,7 +49,6 @@ struct Entity {
 	Boudning_Box_Type bounding_box_type;
 	AABB AABB_box;
 };
-
 
 inline Entity_Id get_entity_id(Entity *entity)
 {

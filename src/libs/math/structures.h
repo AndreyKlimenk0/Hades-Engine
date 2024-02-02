@@ -59,6 +59,7 @@ struct Pointv2 {
 	T z;
 
 	T &operator[](int index);
+	T &operator=(const Vector3 &vector);
 };
 
 template<typename T>
@@ -90,6 +91,16 @@ inline T &Pointv2<T>::operator[](int index)
 	return ((T *)&x)[index];
 }
 
+template<typename T>
+inline T &Pointv2<T>::operator=(const Vector3 &vector)
+{
+	x = vector.x;
+	y = vector.y;
+	z = vector.z;
+
+	return *this;
+}
+
 template <typename T>
 inline Pointv2<T> operator-(const Pointv2<T> &point1, const Pointv2<T> &point2)
 {
@@ -112,7 +123,7 @@ struct Triangle {
 	Pointv2<T> b;
 	Pointv2<T> c;
 
-	T get_area();
+	T find_area();
 };
 
 template <typename T>
@@ -126,9 +137,12 @@ Triangle<T>::Triangle(Pointv2<T> a, Pointv2<T> b, Pointv2<T> c) : a(a), b(b), c(
 }
 
 template <typename T>
-inline T Triangle<T>::get_area()
+inline T Triangle<T>::find_area()
 {
-	return math::abs((b - a).x * (c - a).y - (c - a).x * (b - a).y);
+	Vector3 v1 = Vector3((float)b.x, (float)b.y, (float)b.z) - Vector3((float)a.x, (float)a.y, (float)a.z);
+	Vector3 v2 = Vector3((float)c.x, (float)c.y, (float)c.z) - Vector3((float)a.x, (float)a.y, (float)a.z);
+	float parallelogram_area = length(cross(v1, v2));
+	return (T)(parallelogram_area * 0.5f);
 }
 
 enum Rect_Side {

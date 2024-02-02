@@ -64,13 +64,9 @@ struct File {
 
 	template< typename T>
 	void read(T *data);
-	template< typename T>
-	void read(Array<T> *array);
-	
+
 	template< typename T>
 	void write(T *data);
-	template< typename T>
-	void write(Array<T> *array);
 };
 
 template<typename T>
@@ -86,21 +82,21 @@ inline void File::write(T *data)
 }
 
 template<typename T>
-inline void File::read(Array<T> *array)
+inline void read_array_from_file(File *file, Array<T> *array)
 {
 	u32 count = 0;
-	read(&count);
+	file->read(&count);
 	if (count > 0) {
 		array->reserve(count);
-		read((void *)array->items, array->get_size());
+		file->read((void *)array->items, array->get_size());
 	}
 }
 
 template<typename T>
-inline void File::write(Array<T> *array)
+inline void write_array_to_file(File *file, Array<T> *array)
 {
-	write(&array->count);
-	write((void *)array->items, array->get_size());
+	file->write(&array->count);
+	file->write((void *)array->items, array->get_size());
 }
 
 #endif

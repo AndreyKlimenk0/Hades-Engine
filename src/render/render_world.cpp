@@ -232,11 +232,12 @@ void Render_World::init_meshes()
 	u32 entity_index = 0;
 	Array<Import_Mesh> meshes;
 	String path;
-	build_full_path_to_model_file("mutant.fbx", path);
+	//build_full_path_to_model_file("mutant.fbx", path);
+	//build_full_path_to_model_file("box.fbx", path);
 	//build_full_path_to_model_file("walls.fbx", path);
 	//build_full_path_to_model_file("scene_demo_unreal.fbx", path);
 	//build_full_path_to_model_file("camera.fbx", path);
-	load_fbx_mesh(path, &meshes);
+	//load_fbx_mesh(path, &meshes);
 	print("Start make render entities");
 	Import_Mesh *imported_mesh = NULL;
 	print("Mesh count = ", meshes.count);
@@ -256,15 +257,20 @@ void Render_World::init_meshes()
 				for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
 					Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
 					Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
+					AABB aabb = make_AABB(&imported_mesh->mesh);
+					game_world->attach_AABB(entity_id, &aabb);
 					add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 				}
 			} else {
+				AABB aabb = make_AABB(&imported_mesh->mesh);
 				Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
+				game_world->attach_AABB(entity_id, &aabb);
 				add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 			}
 		}
 	}
 }
+
 void Render_World::init_shadow_rendering()
 {	
 	Texture2D_Desc depth_stencil_desc;
