@@ -12,7 +12,7 @@
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
-static Matrix4 get_world_matrix(Entity *entity)
+Matrix4 get_world_matrix(Entity *entity) 
 {
 	if (entity->type == ENTITY_TYPE_CAMERA) {
 		Camera *camera = static_cast<Camera *>(entity);
