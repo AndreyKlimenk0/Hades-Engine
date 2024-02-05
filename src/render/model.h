@@ -16,4 +16,5 @@ struct Mesh {
 
 typedef Mesh<Vertex_PNTUV> Triangle_Mesh;
 typedef Mesh<Vector3> Line_Mesh;
+
 #endif 

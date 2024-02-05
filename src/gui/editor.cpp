@@ -49,8 +49,7 @@ inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix
 	Vector4 mouse_point_in_world = ndc_point * inverse(view_matrix * perspective_matrix);
 	mouse_point_in_world /= mouse_point_in_world.w;
 
-	ray->origin = camera_position;
-	ray->direction = to_vector3(mouse_point_in_world) - camera_position;
+	*ray = Ray(camera_position, to_vector3(mouse_point_in_world) - camera_position);
 }
 
 struct Ray_Entity_Intersection {
@@ -78,59 +77,85 @@ bool is_in_range(float start, float end, float value)
 	return false;
 }
 
-bool detect_intersection(Ray *picking_ray, Vertex_PNTUV *vertices, u32 vertex_count, u32 *indices, u32 index_count)
+void draw_triangles(Mesh<Vertex_PNTUV> *triangle_mesh)
+{
+	Render_World *render_world = Engine::get_render_world();
+	Mesh_Idx mesh_idx;
+
+	Vector3 v = Vector3::zero;
+	for (u32 i = 0; i < triangle_mesh->vertices.count; i++) {
+		v += triangle_mesh->vertices[i].position;
+	}
+	char *str = to_string(&v);
+	render_world->add_mesh(str, triangle_mesh, &mesh_idx);
+	free_string(str);
+
+	Game_World *game_world = Engine::get_game_world();
+	Entity_Id entity_id = game_world->make_entity(Vector3::zero);
+
+	Render_Entity_Texture_Storage &render_entity_texture_storage = render_world->render_entity_texture_storage;
+
+	Render_Entity_Textures render_entity_textures;
+	render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
+	render_entity_textures.normal_texture_idx = render_entity_texture_storage.green_texture_idx;
+	render_entity_textures.diffuse_texture_idx = render_entity_texture_storage.default_texture_idx;
+	render_entity_textures.specular_texture_idx = render_entity_texture_storage.white_texture_idx;
+	render_entity_textures.displacement_texture_idx = render_entity_texture_storage.white_texture_idx;
+
+	Color color = Color::Red;
+	render_world->add_render_entity(RENDERING_TYPE_VERTICES_RENDERING, entity_id, mesh_idx, &render_entity_textures, (void *)&color);
+}
+
+struct Ray_Trinagle_Intersection_Result {
+	Vector3 a;
+	Vector3 b;
+	Vector3 c;
+	Vector3 intersection_point;
+};
+
+bool detect_intersection(Matrix4 &entity_world_matrix, Ray *picking_ray, Vertex_PNTUV *vertices, u32 vertex_count, u32 *indices, u32 index_count, Ray_Trinagle_Intersection_Result *intersection_result = NULL)
 {
 	assert(picking_ray);
 	assert(vertices);
 	assert(indices);
 	assert(index_count % 3 == 0);
+	
+	for (u32 index = 0, i = 0; i < (index_count / 3); index += 3, i++) {	
+		Vector3 a = vertices[indices[index + 0]].position * entity_world_matrix;
+		Vector3 b = vertices[indices[index + 1]].position * entity_world_matrix;
+		Vector3 c = vertices[indices[index + 2]].position * entity_world_matrix;
+		Vector3 plane_normal = normalize(vertices[indices[index]].normal * entity_world_matrix.to_matrix3());
 
-	bool result = false;
-	for (u32 j = 0; j < (index_count / 3); j += 3) {
-		u32 i0 = indices[j];
-		u32 i1 = indices[j + 1];
-		u32 i2 = indices[j + 2];
-		Vector3 a = vertices[i0].position;
-		Vector3 b = vertices[i1].position;
-		Vector3 c = vertices[i2].position;
-
-		Vector3 plane_normal = normalize(vertices[i0].normal);
-
-		Vector3 dir_ray = normalize(picking_ray->direction);
-		float result = dot(dir_ray, plane_normal);
-		if (result >= 0.0f) {
-			continue;
-		}
-		Vector3 center = (a + b + c) / 3.0f;
-		float ray_length = dot(center - picking_ray->origin, plane_normal) / result;
-		if (ray_length < 0.0f) {
-			continue;
-		}
-
-		Vector3 p = picking_ray->origin + Vector3(normalize(picking_ray->direction) * ray_length);
-		print("[{}, {}, {}] P {}", j, j + 1, j + 2, &p);
-		float triangle_area = find_triangle_area(a, b, c);
-
-		float u = find_triangle_area(c, a, p) / triangle_area;
-		//if (!is_in_range(0.0f, 1.1f, u)) {
-		//	continue;
-		//}
-		float v = find_triangle_area(a, b, p) / triangle_area;
-		//if (!is_in_range(0.0f, 1.1f, v)) {
-		//	continue;
-		//}
-		float w = find_triangle_area(b, c, p) / triangle_area;
-		//if (!is_in_range(0.0f, 1.1f, w)) {
-		//	continue;
-		//}
-		print("u {} v {} w {}", u, v, w);
-		if (is_in_range(0.0f, 1.1f, u + v + w)) {
-			print("Intersection");
-		//	return true;
+		float result = dot(picking_ray->direction, plane_normal);
+		if (result < 0.0f) {
+			Vector3 plane_origin = (a + b + c) / 3.0f;
+			float ray_length = dot(plane_origin - picking_ray->origin, plane_normal) / result;
+			if (ray_length > 0.0f) {
+				Vector3 ray_plane_intersection_point = picking_ray->origin + Vector3(picking_ray->direction * ray_length);
+				
+				float triangle_area = find_triangle_area(a, b, c);
+				float u = find_triangle_area(c, a, ray_plane_intersection_point) / triangle_area;
+				float v = find_triangle_area(a, b, ray_plane_intersection_point) / triangle_area;
+				float w = find_triangle_area(b, c, ray_plane_intersection_point) / triangle_area;
+				
+				if (is_in_range(0.0f, 1.1f, u + v + w)) {
+					if (result) {
+						intersection_result->a = a;
+						intersection_result->b = b;
+						intersection_result->c = c;
+						intersection_result->intersection_point = ray_plane_intersection_point;
+					}
+					return true;
+				}
+			}
 		}
 	}
-	print("-----------------------------");
-	return result;
+	return false;
+}
+
+inline Vector3 to_vector3(Point_f32 *point)
+{
+	return { point->x, point->y, point->z };
 }
 
 bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result)
@@ -144,37 +169,38 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 			print("Ray_Entity_Intersection::detect_intersection: Ray entity intersection can't be made. An entity Entity_Id({}, {}) doesn't has an attached bounding box.", str_entity_types[entity->type], entity->idx);
 			continue;
 		}
+
 		if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-		//if ((entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) && (entity->type == ENTITY_TYPE_ENTITY)) {
+			Result intersection_result;
+			if (::detect_intersection(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
+				if (entity->type == ENTITY_TYPE_GEOMETRY) {
+					Geometry_Entity *geometry_entity = static_cast<Geometry_Entity *>(entity);
+					if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
+						intersection_result.entity_id = entity_id;
+						intersection_result.render_entity_idx = i;
+						intersected_entities.push(intersection_result);
+					}
+				} else {
+					Mesh_Idx mesh_idx = render_world->game_render_entities[i].mesh_idx;
+					Unified_Mesh_Storate<Vertex_PNTUV>::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_idx];
 
-			if (!::detect_intersection(picking_ray, &entity->AABB_box)) {
-				continue;
-			} else {
-				//print("Entity AABB intersection");
+					Vertex_PNTUV *vertices = &render_world->triangle_meshes.unified_vertices[mesh_instance.vertex_offset];
+					u32 *indices = &render_world->triangle_meshes.unified_indices[mesh_instance.index_offset];
+
+					Matrix4 entity_world_matrix = get_world_matrix(entity);
+
+					Ray_Trinagle_Intersection_Result ray_mesh_intersection_result;
+					if (::detect_intersection(entity_world_matrix, picking_ray, vertices, mesh_instance.vertex_count, indices, mesh_instance.index_count, &ray_mesh_intersection_result)) {
+						intersection_result.entity_id = entity_id;
+						intersection_result.render_entity_idx = i;
+						intersection_result.intersection_point = ray_mesh_intersection_result.intersection_point;
+						intersected_entities.push(intersection_result);
+					}
+				}
 			}
-
-			auto mesh_idx = render_world->game_render_entities[i].mesh_idx;
-			Unified_Mesh_Storate<Vertex_PNTUV>::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_idx];
-			
-			Vertex_PNTUV *vertices = &render_world->triangle_meshes.unified_vertices[mesh_instance.vertex_offset];
-			u32 *indices = &render_world->triangle_meshes.unified_indices[mesh_instance.index_offset];
-
-			if (::detect_intersection(picking_ray, vertices, mesh_instance.vertex_count, indices, mesh_instance.index_count)) {
-				//print("Entity ray intersection");
-			} else {
-				//print("There is no entity ray intersection");
-			}
-			continue;
 		}
-		//if (entity->bounding_box_type == BOUNDING_BOX_TYPE_AABB) {
-		//	Result intersection_result;
-		//	if (::detect_intersection(picking_ray, &entity->AABB_box, &intersection_result.intersection_point)) {
-		//		intersection_result.entity_id = entity_id;
-		//		intersection_result.render_entity_idx = i;
-		//		intersected_entities.push(intersection_result);
-		//	}
-		//}
 	}
+	
 	if (!intersected_entities.is_empty()) {
 		if (intersected_entities.count > 1) {
 			u32 most_near_entity_to_camera = 0;
@@ -369,6 +395,7 @@ void Game_World_Window::draw()
 		draw_entity_list("Camera", game_world->cameras.count, ENTITY_TYPE_CAMERA);
 		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
 		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
+		draw_entity_list("Entity", game_world->lights.count, ENTITY_TYPE_ENTITY);
 
 		gui::reset_button_theme();
 		gui::end_child();
@@ -828,7 +855,7 @@ void Editor::picking()
 	}
 
 	if (moving_entity_info.moving_entity) {
-		Vector3 moved_picking_ray_point = picking_ray.origin + (Vector3)(normalize(picking_ray.direction) * moving_entity_info.distance);
+		Vector3 moved_picking_ray_point = picking_ray.origin + (Vector3)(picking_ray.direction * moving_entity_info.distance);
 		Vector3 difference = moved_picking_ray_point - moving_entity_info.ray_entity_intersection_point;
 
 		Entity *entity = game_world->get_entity(picked_entity);
@@ -850,8 +877,7 @@ void Editor::picking()
 					drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
 				}
 			}
-		}
-		if (was_click(KEY_LMOUSE)) {
+		} else if (was_click(KEY_LMOUSE)) {
 			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
 			outlining_pass->reset_render_entity_indices();
 

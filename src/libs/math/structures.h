@@ -10,8 +10,9 @@
 
 struct Ray {
 	Ray() {}
-	Ray(const Vector3 &origin, const Vector3 &direction);
+	Ray(const Vector3 &_origin, const Vector3 &_direction);
 
+	float len;
 	Vector3 origin;
 	Vector3 direction;
 };
@@ -59,7 +60,7 @@ struct Pointv2 {
 	T z;
 
 	T &operator[](int index);
-	T &operator=(const Vector3 &vector);
+	Pointv2<T> &operator=(const Vector3 &vector);
 };
 
 template<typename T>
@@ -92,7 +93,7 @@ inline T &Pointv2<T>::operator[](int index)
 }
 
 template<typename T>
-inline T &Pointv2<T>::operator=(const Vector3 &vector)
+inline Pointv2<T> &Pointv2<T>::operator=(const Vector3 &vector)
 {
 	x = vector.x;
 	y = vector.y;

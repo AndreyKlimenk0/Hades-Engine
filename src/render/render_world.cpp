@@ -12,7 +12,7 @@
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
-static Matrix4 get_world_matrix(Entity *entity) 
+Matrix4 get_world_matrix(Entity *entity) 
 {
 	if (entity->type == ENTITY_TYPE_CAMERA) {
 		Camera *camera = static_cast<Camera *>(entity);
@@ -232,12 +232,12 @@ void Render_World::init_meshes()
 	u32 entity_index = 0;
 	Array<Import_Mesh> meshes;
 	String path;
-	//build_full_path_to_model_file("mutant.fbx", path);
+	build_full_path_to_model_file("mutant.fbx", path);
 	//build_full_path_to_model_file("box.fbx", path);
 	//build_full_path_to_model_file("walls.fbx", path);
 	//build_full_path_to_model_file("scene_demo_unreal.fbx", path);
 	//build_full_path_to_model_file("camera.fbx", path);
-	//load_fbx_mesh(path, &meshes);
+	load_fbx_mesh(path, &meshes);
 	print("Start make render entities");
 	Import_Mesh *imported_mesh = NULL;
 	print("Mesh count = ", meshes.count);
