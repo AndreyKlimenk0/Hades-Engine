@@ -31,6 +31,12 @@ struct Matrix3 : XMFLOAT3X3 {
 	void set_row_2(const Vector3 &vector);
 };
 
+inline Vector2 operator*(const Vector2 &vector, const Matrix3 &matrix);
+inline Vector3 operator*(const Vector3 &vector, const Matrix3 &matrix);
+
+inline Vector2 &operator*=(Vector2 &vector, const Matrix3 &matrix);
+inline Vector3 &operator*=(Vector3 &vector, const Matrix3 &matrix);
+
 struct Matrix4 : XMFLOAT4X4 {
 	Matrix4() : XMFLOAT4X4(0.0f, 0.0f, 0.0f, 0.0f,
 						   0.0f, 0.0f, 0.0f, 0.0f,
@@ -91,9 +97,14 @@ inline Matrix4 make_orthographic_matrix(float width, float height, float near_pl
 
 inline Matrix4 operator*(const Matrix3 &first_matrix, const Matrix4 second_matrix);
 inline Matrix4 operator*(const Matrix4 &first_matrix, const Matrix4 &second_matrix);
-inline Vector2 operator*(const Vector2 &vector, const Matrix4 &second_matrix);
-inline Vector3 operator*(const Vector3 &vector, const Matrix4 &second_matrix);
-inline Vector4 operator*(const Vector4 &vector, const Matrix4 &second_matrix);
+
+inline Vector2 operator*(const Vector2 &vector, const Matrix4 &matrix);
+inline Vector3 operator*(const Vector3 &vector, const Matrix4 &matrix);
+inline Vector4 operator*(const Vector4 &vector, const Matrix4 &matrix);
+
+inline Vector2 &operator*=(Vector2 &vector, const Matrix4 &matrix);
+inline Vector3 &operator*=(Vector3 &vector, const Matrix4 &matrix);
+inline Vector4 &operator*=(Vector4 &vector, const Matrix4 &matrix);
 
 inline void Matrix3::set_row_0(const Vector3 &vector)
 {
@@ -114,6 +125,36 @@ inline void Matrix3::set_row_2(const Vector3 &vector)
 	m[2][0] = vector.x;
 	m[2][1] = vector.y;
 	m[2][2] = vector.z;
+}
+
+inline Vector2 operator*(const Vector2 &vector, const Matrix3 &matrix)
+{
+	XMVECTOR v = XMLoadFloat2(&vector);
+	XMMATRIX m = XMLoadFloat3x3(&matrix);
+	return XMVector2Transform(v, m);
+}
+
+inline Vector3 operator*(const Vector3 &vector, const Matrix3 &matrix)
+{
+	XMVECTOR v = XMLoadFloat3(&vector);
+	XMMATRIX m = XMLoadFloat3x3(&matrix);
+	return XMVector3Transform(v, m);
+}
+
+inline Vector2 &operator*=(Vector2 &vector, const Matrix3 &matrix)
+{
+	XMVECTOR v = XMLoadFloat2(&vector);
+	XMMATRIX m = XMLoadFloat3x3(&matrix);
+	vector = XMVector2Transform(v, m);
+	return vector;
+}
+
+inline Vector3 &operator*=(Vector3 &vector, const Matrix3 &matrix)
+{
+	XMVECTOR v = XMLoadFloat3(&vector);
+	XMMATRIX m = XMLoadFloat3x3(&matrix);
+	vector = XMVector3Transform(v, m);
+	return vector;
 }
 
 inline Matrix3 Matrix4::to_matrix3()
@@ -268,25 +309,49 @@ inline Matrix4 operator*(const Matrix4 &first_matrix, const Matrix4 &second_matr
 	return XMMatrixMultiply(first, second);
 }
 
-inline Vector2 operator*(const Vector2 &vector, const Matrix4 &second_matrix)
+inline Vector2 operator*(const Vector2 &vector, const Matrix4 &matrix)
 {
 	XMVECTOR v = XMLoadFloat2(&vector);
-	XMMATRIX m = XMLoadFloat4x4(&second_matrix);
+	XMMATRIX m = XMLoadFloat4x4(&matrix);
 	return XMVector2Transform(v, m);
 }
 
-inline Vector3 operator*(const Vector3 &vector, const Matrix4 &second_matrix)
+inline Vector3 operator*(const Vector3 &vector, const Matrix4 &matrix)
 {
 	XMVECTOR v = XMLoadFloat3(&vector);
-	XMMATRIX m = XMLoadFloat4x4(&second_matrix);
+	XMMATRIX m = XMLoadFloat4x4(&matrix);
 	return XMVector3Transform(v, m);
 }
 
-inline Vector4 operator*(const Vector4 &vector, const Matrix4 &second_matrix)
+inline Vector4 operator*(const Vector4 &vector, const Matrix4 &matrix)
 {
 	XMVECTOR v = XMLoadFloat4(&vector);
-	XMMATRIX m = XMLoadFloat4x4(&second_matrix);
+	XMMATRIX m = XMLoadFloat4x4(&matrix);
 	return XMVector4Transform(v, m);
+}
+
+inline Vector2 &operator*=(Vector2 &vector, const Matrix4 &matrix)
+{
+	XMVECTOR v = XMLoadFloat2(&vector);
+	XMMATRIX m = XMLoadFloat4x4(&matrix);
+	vector = XMVector2Transform(v, m);
+	return vector;
+}
+
+inline Vector3 &operator*=(Vector3 &vector, const Matrix4 &matrix)
+{
+	XMVECTOR v = XMLoadFloat3(&vector);
+	XMMATRIX m = XMLoadFloat4x4(&matrix);
+	vector = XMVector3Transform(v, m);
+	return vector;
+}
+
+inline Vector4 &operator*=(Vector4 &vector, const Matrix4 &matrix)
+{
+	XMVECTOR v = XMLoadFloat4(&vector);
+	XMMATRIX m = XMLoadFloat4x4(&matrix);
+	vector = XMVector4Transform(v, m);
+	return vector;
 }
 
 inline Vector2 transform(Vector2 *vector, Matrix4 *transform_matrix)
