@@ -5,10 +5,16 @@ import subprocess
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join("data", "shaders")
+PDB_FILES_DIR = os.path.join("build", "shader", "debug");
 HLSH_DIR = "hlsl"
 
 
  # fxc /E vs_main /Od /Zi /T vs_5_0 /Fo PixelShader1.fxc demo.hlsl
+ 
+class Compilation_Mode(enum.Enum):
+    DEBUG = 0;
+    RELEASE = 1;
+    
 
 class Shader_Type(enum.Enum):
     VERTEX_SHADER = 1
@@ -86,85 +92,60 @@ def find_shader_file_in_list(shader_name : str):
     return None
 
 
-def compile_hlsl_shaders():
-    compiled_shaders : str = []
-    
-    for shader_file in shader_files:
+def build_fxc_command_line_params(shader_name: str, profile : str, entry_point : str, full_path_to_output_file : str, full_path_to_shader : str, compilation_mode = Compilation_Mode.DEBUG) -> (bool, str):
+    if compilation_mode == Compilation_Mode.DEBUG:
+        path_to_shader_pdb_file = os.path.join(PROJECT_DIR, PDB_FILES_DIR, shader_name.replace("hlsl", "pdb"))
+        
+        skip_optimization = "/Od"
+        row_major_oder_matrices = "/Zpr"
+        enable_debugging_information = "/Zi"
+        strip_reflection = "/Qstrip_reflect"
+        shader_debug_file = f'/Fd "{path_to_shader_pdb_file}"'
+        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {skip_optimization} {row_major_oder_matrices} {enable_debugging_information} {strip_reflection} {shader_debug_file}'
+        return (True, command_line_params)
+    else:
+        return (False, "")
+
+
+def compile_hlsl_shaders(shader_list : list[str] | list[Shader_File]):
+    for shader in shader_list:
+        if isinstance(shader, str):
+            shader_file = find_shader_file_in_list(shader)
+        else:
+            shader_file = shader
+
+        if shader_file is None:
+            print(f"Error: shader with name {shader_file_name} was not found in file shader list.")
+            continue
         
         if len(shader_file.shader_types) == 0:
             print("[tool.py] Warning: Type of shader file with name {} was not specified", shader_file.name)
             continue
 
         full_path_to_shader = os.path.join(PROJECT_DIR, HLSH_DIR, shader_file.name)
-
-        for shader_type in shader_file.shader_types:
-
-            if shader_type == Shader_Type.HEADER_FILE:
-                continue
-            
-            profile = get_profile(shader_type)
-            entiry_point = get_entry_point(shader_type)
-            output_shader_file_name = get_output_file_name(shader_file.name, shader_type)
-            
-            full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
-
-            result = subprocess.run(f'fxc /E {entiry_point} /Od /Zi /Zpr /T {profile} /Fo "{full_path_to_output_file}" "{full_path_to_shader}"', shell=True, stdout=subprocess.PIPE)
-            
-            if result.returncode != 0:
-                print(f"Shader: {shader_file.name}")
-                exit()
-            
-            print(f"Shader: {shader_file.name} Type: {str(shader_type)} was succeeded compiled.")
-
-        compiled_shaders.append(shader_file.name)
-
-    
-    all_shader_files = [file for file in os.listdir(os.path.join(PROJECT_DIR, HLSH_DIR)) if os.path.isfile(os.path.join(PROJECT_DIR, HLSH_DIR, file))]
-    
-    not_compiled_shaders = set(all_shader_files) - set(compiled_shaders)
-
-    if len(not_compiled_shaders) > 0:
-        print("\n")
-        
-        for not_compiled_shader in not_compiled_shaders:
-            print(f"Shader: {not_compiled_shader} was not compiled.")
-
-
-def compile_specific_shaders(shader_list : list[str]):
-
-    for shader_file_name in shader_list:
-
-        shader_file = find_shader_file_in_list(shader_file_name)
-
-        if shader_file is None:
-            print(f"Error: shader with name {shader_file_name} was not found in file shader list.")
-            continue
-
-        full_path_to_shader = os.path.join(PROJECT_DIR, HLSH_DIR, shader_file.name)
         
         for shader_type in shader_file.shader_types:
-
             if shader_type == Shader_Type.HEADER_FILE:
                 continue
                     
             profile = get_profile(shader_type)
             entiry_point = get_entry_point(shader_type)
-            output_shader_file_name = get_output_file_name(shader_file.name, shader_type)
-                    
+            output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     
             full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
-
-            result = subprocess.run(f'fxc /E {entiry_point} /Od /Zi /Zpr /T {profile} /Fo "{full_path_to_output_file}" "{full_path_to_shader}"', shell=True, stdout=subprocess.PIPE)
-                    
-            if result.returncode != 0:
-                print(f"Shader: {shader_file.name}")
-                exit()
-                    
-            print(f"Shader: {shader_file.name} Type: {str(shader_type)} was succeeded compiled.")
+            
+            result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader)
+            if result:
+                result = subprocess.run(f'fxc {command_line_params}', shell=True, stdout=subprocess.PIPE)  
+                if result.returncode != 0:
+                    print(f"Shader: {shader_file.name} Type: {str(shader_type)} was not compiled.")
+                else:
+                    print(f"Shader: {shader_file.name} Type: {str(shader_type)} was succeeded compiled.")
+            else:
+                print(f"[Shader: {shader_file.name} Type: {str(shader_type)}] Failed to build command line params for fxc.exe.")
 
 
 if __name__ == "__main__":
-    
     if (len(sys.argv) > 1):
-        compile_specific_shaders(sys.argv[1:])
+        compile_hlsl_shaders(sys.argv[1:])
     else:
-        compile_hlsl_shaders()
+        compile_hlsl_shaders(shader_files)
