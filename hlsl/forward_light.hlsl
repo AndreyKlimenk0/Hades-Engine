@@ -46,6 +46,7 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 
 StructuredBuffer<Light> lights : register(t7);
 
+<<<<<<< HEAD
 float2 parallax_mapping(float2 uv, float3 camera_direction, float3x3 TBN_matrix)
 { 
     // number of depth layers
@@ -87,11 +88,34 @@ float2 parallax_mapping(float2 uv, float3 camera_direction, float3x3 TBN_matrix)
     float2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 
     return finalTexCoords;
+=======
+float2 quadtree_displacement_mapping(float2 uv, float3 camera_direction)
+{
+    uint texture_width;
+    uint texture_height;
+    displacement_texture.GetDimensions(texture_width, texture_height);
+    
+    uint max_texture_size = max(texture_width, texture_height);
+    uint max_mip_map_level = (uint)floor(log2(max_texture_size));
+    int mip_map_level = (int)max_mip_map_level;
+    int mip_map_count = max_mip_map_level + 1;
+    
+    while (mip_map_level >= 0) {        
+        float depth = displacement_texture.SampleLevel(point_sampling, displacement_uv, (uint)mip_map_level).r;
+        if (depth > ray_depth) {
+            ray_depth = depth;
+        } else {
+            mip_map_level -= 1;
+        }
+    }
+    return displacement_uv;
+>>>>>>> 89262d6 (Making quadtree displacement mapping)
 }
 
 
 float4 ps_main(Vertex_Out vertex_out) : SV_Target
 {
+<<<<<<< HEAD
     float3x3 TBN_matrix = get_TBN_matrix(vertex_out.tangent, vertex_out.normal);
     float3 tanget_space_camera_direction = normalize(mul(camera_direction, transpose(TBN_matrix)));
     
@@ -103,14 +127,26 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
     //dir = mul(dir, transpose(t));
     //dir = normalize(dir);
     //vertex_out.uv = parallax_mapping(vertex_out.uv, dir, TBN_matrix);
+=======
+    //float3x3 TBN_matrix = get_TBN_matrix(vertex_out.tangent, vertex_out.normal);
+    //float3 tanget_space_camera_direction = normalize(mul(camera_direction, transpose(TBN_matrix)));
+    
+    float3x3 t = get_TBN_matrix(vertex_out.tangent, vertex_out.normal);
+    float3 p = mul(camera_position, transpose(t));
+    float3 p1 = mul(vertex_out.world_position, transpose(t));
+    float3 tanget_space_camera_direction = normalize(p - p1);
+    
+    float2 displacement_uv = quadtree_displacement_mapping(vertex_out.uv, tanget_space_camera_direction);
+    //temp *= 0.0f;
+
+    float3 normal_sample = normal_texture.Sample(linear_sampling, displacement_uv).rgb;
+    float3 normal = normal_mapping(normal_sample, vertex_out.normal, vertex_out.tangent);
+>>>>>>> 89262d6 (Making quadtree displacement mapping)
     
     Material material;
-    material.ambient = ambient_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    material.diffuse = diffuse_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    material.specular = specular_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    
-    float3 normal_sample = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    float3 normal = normal_mapping(normal_sample, vertex_out.normal, vertex_out.tangent);
+    material.ambient = ambient_texture.Sample(linear_sampling, displacement_uv).rgb;
+    material.diffuse = diffuse_texture.Sample(linear_sampling, displacement_uv).rgb;
+    material.specular = specular_texture.Sample(linear_sampling, displacement_uv).rgb;
 
     //@Note: hard code
 	if (light_count == 0) {
