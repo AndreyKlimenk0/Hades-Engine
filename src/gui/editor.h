@@ -108,6 +108,15 @@ struct Drop_Down_Entity_Window : Editor_Window {
 	void draw();
 };
 
+struct Command_Window : Editor_Window {
+	String text;
+	Rect_s32 window_rect;
+	Gui_Window_Theme window_theme;
+
+	void init(Engine *engine);
+	void draw();
+};
+
 struct Editor_Command {
 	void *additional_info = NULL;
 	String command;
@@ -124,8 +133,9 @@ struct Editor {
 	Editor();
 	~Editor();
 
-	bool draw_drop_down_entity_window = false;
+	bool draw_command_window = true;
 	bool draw_make_entity_window = false;
+	bool draw_drop_down_entity_window = false;
 	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;
 
 	Entity_Id picked_entity;
@@ -142,8 +152,10 @@ struct Editor {
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 
+	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
 
+	Command_Window command_window;
 	Make_Entity_Window make_entity_window;
 	Game_World_Window game_world_window;
 	Render_World_Window render_world_window;

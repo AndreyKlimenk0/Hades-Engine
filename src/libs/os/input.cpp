@@ -8,6 +8,12 @@ s32 Mouse_State::y = 0;
 s32 Mouse_State::last_x = 0;
 s32 Mouse_State::last_y = 0;
 
+s32 Async_Input::mouse_x = 0;
+s32 Async_Input::mouse_y = 0;
+s32 Async_Input::last_mouse_x = 0;
+s32 Async_Input::last_mouse_y = 0;
+static Array<s32> mouse_wheels;
+
 bool Keys_State::was_char_key_input;
 bool Keys_State::keys[INPUT_KEYS_NUMBER];
 char Keys_State::inputed_char;
@@ -159,4 +165,33 @@ bool Keys_State::is_key_down(int key)
 		return keys[key];
 	}
 	return false;
+}
+
+void Async_Input::new_frame()
+{
+	mouse_wheels.count = 0;
+}
+
+void Async_Input::add_mouse_wheel(s32 wheel_delta)
+{
+	mouse_wheels.push(wheel_delta);
+}
+
+void Async_Input::update_key_state(Key key, Key_State key_state)
+{
+}
+
+bool Async_Input::is_key_up(Key key)
+{
+	return false;
+}
+
+bool Async_Input::is_key_down(Key key)
+{
+	return false;
+}
+
+Array<s32> *Async_Input::get_mouse_wheels()
+{
+	return &mouse_wheels;
 }

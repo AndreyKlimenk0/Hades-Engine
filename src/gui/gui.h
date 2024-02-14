@@ -13,30 +13,24 @@ typedef u32 Gui_ID;
 typedef u32 Window_Style;
 typedef u32 Element_Alignment;
 
-const Element_Alignment HORIZONTALLY_ALIGNMENT = 0x01;
-const Element_Alignment VERTICALLY_ALIGNMENT = 0x02;
-const Element_Alignment RIGHT_ALIGNMENT = 0x04;
-const Element_Alignment LEFT_ALIGNMENT = 0x08;
-const Element_Alignment GO_TO_NEW_LINE = 0x10;
-const Element_Alignment HORIZONTALLY_ALIGNMENT_JUST_SET = 0x20;
-const Element_Alignment HORIZONTALLY_ALIGNMENT_ALREADY_SET = 0x40;
-const Element_Alignment VERTICALLY_ALIGNMENT_JUST_SET = 0x80;
-const Element_Alignment VERTICALLY_ALIGNMENT_WAS_USED = 0x100;
+const Element_Alignment RIGHT_ALIGNMENT = 0x01;
+const Element_Alignment LEFT_ALIGNMENT = 0x02;
 
 const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_WITH_HEADER = 0x1;
 const Window_Style WINDOW_WITH_OUTLINES = 0x2;
 const Window_Style WINDOW_WITH_SCROLL_BAR = 0x4;
-const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES | WINDOW_WITH_SCROLL_BAR;
+const Window_Style WINDOW_RESIZABLE = 0x8;
+const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES | WINDOW_WITH_SCROLL_BAR | WINDOW_RESIZABLE;
 
 struct Gui_Edit_Field_Theme {
+	bool draw_label = true;
 	u32 float_precision = 2;
 	s32 text_shift = 5;
 	s32 rounded_border = 5;
 	s32 caret_blink_time = 3000;
+	Rect_s32 rect = { 0, 0, 125, 20 };
 	Rect_s32 caret_rect{ 0, 0, 1, 14 };
-	Rect_s32 edit_field_rect = { 0, 0, 125, 20 };
-	Rect_s32 rect = { 0, 0, 220, 20 };
 	Color color = Color(50, 50, 50);
 	Color x_edit_field_color = Color(140, 0, 0);
 	Color y_edit_field_color = Color(0, 140, 0);
@@ -83,15 +77,26 @@ struct Gui_Text_Button_Theme {
 
 struct Gui_Window_Theme {
 	s32 header_height = 18;
-	s32 mouse_wheel_spped = 30;
 	s32 rounded_border = 6;
-	s32 place_between_elements = 12;
-	s32 shift_element_from_window_side = 20;
-	s32 scroll_bar_width = 15;
+	s32 scroll_size = 8;
+	s32 scroll_bar_size = 8;
+	s32 min_scroll_size = 10;
+	s32 mouse_wheel_spped = 30;
+	s32 place_between_rects = 12;
+	s32 vertical_offset_from_sides = 10;
+	s32 horizontal_offset_from_sides = 15;
 	float outlines_width = 1.0f;
 	Color header_color = Color(16, 16, 16);
 	Color background_color = Color(30, 30, 30);
 	Color outlines_color = Color(92, 100, 107);
+	Color scroll_bar_color = Color(48, 50, 54);
+	Color scroll_color = Color(107, 114, 120);
+};
+
+struct Gui_List_Item_State {
+	bool selected = false;
+	bool left_mouse_click = false;
+	bool right_mouse_click = false;
 };
 
 namespace gui {
@@ -114,10 +119,12 @@ namespace gui {
 
 	void set_theme(Gui_Window_Theme *gui_window_theme);
 	void set_theme(Gui_Text_Button_Theme *gui_window_theme);
+	void set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme);
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
 	
 	void reset_window_theme();
 	void reset_button_theme();
+	void reset_edit_field_theme();
 	
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_pos(s32 x, s32 y);
@@ -140,8 +147,12 @@ namespace gui {
 
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
-	void edit_field(const char *name, String *value);
+	void edit_field(const char *name, String *string);
 	bool edit_field(const char *name, Vector3 *vector, const char *x = "X", const char *y = "Y", const char *z = "z");
+
+	void begin_list(const char *name);
+	bool list_item(const char *item_name, Gui_List_Item_State *list_item_state);
+	void end_list();
 
 	Size_s32 get_window_size();
 	Gui_ID get_last_tab_gui_id();
