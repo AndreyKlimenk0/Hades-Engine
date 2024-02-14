@@ -24,7 +24,7 @@
 
 
 #define PRINT_GUI_INFO 0
-#define DRAW_WINDOW_DEBUG_RECTS 1
+#define DRAW_WINDOW_DEBUG_RECTS 0
 #define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
 
 const Element_Alignment HORIZONTALLY_ALIGNMENT = 0x04;
@@ -1091,10 +1091,7 @@ void Gui_Manager::end_list()
 		window_theme.vertical_offset_from_sides = 0;
 		gui::set_theme(&window_theme);
 
-		Size_s32 size = get_window_size();
-		set_next_window_size(size.width - 20, 200);
-
-		Rect_s32 rect = { 0, 0, size.width - 20, 20 };
+		set_next_window_size(200, 200);
 
 		begin_child(current_list_name, window_style);
 		for (u32 i = 0; i < list_items.count; i++) {
@@ -1105,7 +1102,7 @@ void Gui_Manager::end_list()
 			//render_list->add_rect(&rect, Color::Green);
 			//render_list->pop_clip_rect();
 			Gui_Text_Button_Theme theme;
-			theme.rect.width = size.width - 20;
+			theme.rect.width =  200;
 			theme.rounded_border = 0;
 			gui::set_theme(&theme);
 
@@ -1896,7 +1893,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	Rect_s32 *rect = &window->rect;
 
 	bool mouse_was_moved = (mouse_x_delta != 0) || (mouse_y_delta != 0);
-	if (mouse_was_moved && (resizing_window == 0) && (active_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
+	if (mouse_was_moved && !active_scrolling && (resizing_window == 0) && (active_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
 		s32 min_window_position = 0;
 		if (window->style & WINDOW_WITH_OUTLINES) {
 			min_window_position = (s32)window_theme.outlines_width;
@@ -2584,28 +2581,28 @@ void gui::draw_test_gui()
 		edit_field("Value5", &value5);
 		edit_field("Value6", &value6);
 		
-		//begin_list("List of items");
-		//Array<Gui_List_Item_State> states;
-		//states.reserve(10);
-		//list_item("List item", &states[0]);
-		//list_item("List item1", &states[1]);
-		//list_item("List item2", &states[2]);
-		//list_item("List item3", &states[3]);
-		//list_item("List item4", &states[4]);
-		//end_list();
+		begin_list("List of items");
+		Array<Gui_List_Item_State> states;
+		states.reserve(10);
+		list_item("List item", &states[0]);
+		list_item("List item1", &states[1]);
+		list_item("List item2", &states[2]);
+		list_item("List item3", &states[3]);
+		list_item("List item4", &states[4]);
+		end_list();
 
-		button("Button1");
-		button("Button2");
-		button("Button3");
-		button("Button4");
-		button("Button5");
-		button("Button6");
-		button("Button7");
-		button("Button8");
-		button("Button9");
-		button("Button10");
-		button("Button11");
-		button("Button12");
+		//button("Button1");
+		//button("Button2");
+		//button("Button3");
+		//button("Button4");
+		//button("Button5");
+		//button("Button6");
+		//button("Button7");
+		//button("Button8");
+		//button("Button9");
+		//button("Button10");
+		//button("Button11");
+		//button("Button12");
 		//same_line();
 		//button("Button13");
 		//button("Button14");
