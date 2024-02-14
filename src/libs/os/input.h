@@ -2,6 +2,7 @@
 #define INPUT_H
 
 #include "../str.h"
+#include "../ds/array.h"
 #include "../../win32/win_types.h"
 
 const u32 INPUT_KEYS_NUMBER = 255 + 1; // The engine has KEY_UNKNOWN in the key enum
@@ -94,6 +95,20 @@ struct Keys_State {
 	static void key_down(int key);
 	static void key_up(int key);
 	static bool is_key_down(int key);
+};
+
+struct Async_Input {
+	static s32 mouse_x;
+	static s32 mouse_y;
+	static s32 last_mouse_x;
+	static s32 last_mouse_y;
+
+	static void new_frame();
+	static void add_mouse_wheel(s32 wheel_delta);
+	static void update_key_state(Key key, Key_State key_state);
+	static bool is_key_up(Key key);
+	static bool is_key_down(Key key);
+	static Array<s32> *get_mouse_wheels();
 };
 
 #endif

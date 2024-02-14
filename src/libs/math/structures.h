@@ -59,6 +59,8 @@ struct Pointv2 {
 	T z;
 
 	T &operator[](int index);
+	
+	void move(const T &delta_x, const T &delta_y);
 };
 
 template<typename T>
@@ -88,6 +90,13 @@ inline T &Pointv2<T>::operator[](int index)
 {
 	assert(index < 3);
 	return ((T *)&x)[index];
+}
+
+template<typename T>
+inline void Pointv2<T>::move(const T & delta_x, const T & delta_y)
+{
+	x += delta_x;
+	y += delta_y;
 }
 
 template <typename T>
@@ -145,7 +154,6 @@ enum Rect_Side {
 template <typename T>
 struct Rect {
 	Rect();
-	Rect(T _width, T _height);
 	Rect(T _x, T _y, T _width, T _height);
 	Rect(Size<T> &size);
 
@@ -158,6 +166,7 @@ struct Rect {
 
 	void set(Size<T> &size);
 	void set(T _x, T _y);
+	void move(T x_delta, T y_delta);
 	void offset_y(T _y);
 	void offset_x(T _x);
 	void set_size(T _width, T _height);
@@ -171,15 +180,6 @@ template<typename T>
 inline Rect<T>::Rect()
 {
 	memset((void *)this, 0, sizeof(Rect<T>));
-}
-
-template<typename T>
-inline Rect<T>::Rect(T _width, T _height)
-{
-	memset((void *)this, 0, sizeof(Rect<T>));
-	
-	width = _width;
-	height = _height;
 }
 
 template<typename T>
@@ -218,6 +218,12 @@ inline void Rect<T>::set(T _x, T _y)
 {
 	x = _x;
 	y = _y;
+}
+template<typename T>
+inline void Rect<T>::move(T x_delta, T y_delta)
+{
+	x += x_delta;
+	y += y_delta;
 }
 template<typename T>
 inline void Rect<T>::offset_y(T _y)

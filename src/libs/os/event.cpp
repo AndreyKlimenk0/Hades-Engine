@@ -89,6 +89,8 @@ void push_event(Event_Type type, int first_value, int second_value)
 
 void run_event_loop()
 {
+	Async_Input::new_frame();
+
 	at_least_one_key_event_pushed = false;
 	memset((void *)just_pressed_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
 	memset((void *)just_released_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
@@ -113,6 +115,8 @@ void run_event_loop()
 			Mouse_State::last_y = Mouse_State::y;
 			Mouse_State::x = event.mouse_info.x;
 			Mouse_State::y = event.mouse_info.y;
+		} else if (event.type == EVENT_TYPE_MOUSE_WHEEL) {
+			Async_Input::add_mouse_wheel(event.mouse_wheel_delta);
 		}
 	}
 }

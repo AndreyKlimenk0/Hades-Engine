@@ -10,7 +10,7 @@
 //@Note: Probably it is temporary decision
 #include "../libs/png_image.h"
 
-#define DRAW_TEST_GUI 0
+#define DRAW_TEST_GUI 1
 
 static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
