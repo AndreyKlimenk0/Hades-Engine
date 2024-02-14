@@ -129,6 +129,12 @@ struct Gui_Window_Theme {
 	Color scroll_color = Color(87, 92, 97);
 };
 
+struct Gui_List_Item_State {
+	bool selected = false;
+	bool left_mouse_click = false;
+	bool right_mouse_click = false;
+};
+
 namespace gui {
 	void init_gui(Engine *engine, const char *font_name, u32 font_size);
 	void handle_events();
