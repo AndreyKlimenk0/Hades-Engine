@@ -15,6 +15,8 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
+#define TRUN_ON_RECT_CLIPPING 1
+
 u32 Render_System::screen_width = 0;
 u32 Render_System::screen_height = 0;
 
@@ -176,14 +178,18 @@ Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d, Font *font, R
 
 void Render_Primitive_List::push_clip_rect(Rect_s32 *rect)
 {
+#if TRUN_ON_RECT_CLIPPING
 	clip_rects.push(*rect);
+#endif
 }
 
 void Render_Primitive_List::pop_clip_rect()
 {
+#if TRUN_ON_RECT_CLIPPING
 	if (clip_rects.count > 0) {
 		clip_rects.pop();
 	}
+#endif
 }
 
 void Render_Primitive_List::get_clip_rect(Rect_s32 *rect)
@@ -800,7 +806,9 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 		rect_pointers.push(&rects[c]);
 	}
 
-	Rect_u32 atlas_rect = Rect_u32(texture_atlas_desc.width, texture_atlas_desc.height);
+	Rect_u32 atlas_rect;
+	atlas_rect.set_size(texture_atlas_desc.width, texture_atlas_desc.height);
+
 	pack_rects_in_rect(&atlas_rect, rect_pointers);
 
 	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {		
