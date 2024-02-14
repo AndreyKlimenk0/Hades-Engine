@@ -671,6 +671,8 @@ bool String::is_empty()
 {
 	if ((data == NULL) && (len == 0)) {
 		return true;
+	} else if ((data && (data[0] == '\0')) && (len == 0)) {
+		return true;
 	}
 	return false;
 }
