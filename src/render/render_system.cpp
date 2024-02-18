@@ -367,7 +367,7 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 
 	Vector2 position = { (float)first_point->x, (float)first_point->y };
 	Matrix4 transform_matrix;
-	transform_matrix = rotate_about_z(angle) * make_translation_matrix(&position);
+	transform_matrix = rotate_about_z(-angle) * make_translation_matrix(&position);
 
 	float line_width = (float)find_distance(first_point, second_point);
 	String hash = String(line_width + thickness);

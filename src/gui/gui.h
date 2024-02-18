@@ -17,11 +17,18 @@ const Element_Alignment RIGHT_ALIGNMENT = 0x01;
 const Element_Alignment LEFT_ALIGNMENT = 0x02;
 
 const Window_Style NO_WINDOW_STYLE = 0x0;
-const Window_Style WINDOW_WITH_HEADER = 0x1;
-const Window_Style WINDOW_WITH_OUTLINES = 0x2;
-const Window_Style WINDOW_WITH_SCROLL_BAR = 0x4;
+const Window_Style WINDOW_HEADER = 0x1;
+const Window_Style WINDOW_OUTLINES = 0x2;
+const Window_Style WINDOW_SCROLL_BAR = 0x4;
 const Window_Style WINDOW_RESIZABLE = 0x8;
-const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_WITH_HEADER | WINDOW_WITH_OUTLINES | WINDOW_WITH_SCROLL_BAR | WINDOW_RESIZABLE;
+const Window_Style WINDOW_CLOSE_BUTTON = 0x10;
+const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON;
+
+enum Alignment {
+	RECT_CENTER_ALIGNMENT,
+	RECT_LEFT_ALIGNMENT,
+	RECT_RIGHT_ALIGNMENT
+};
 
 struct Gui_Edit_Field_Theme {
 	bool draw_label = true;
@@ -93,7 +100,19 @@ struct Gui_Window_Theme {
 	Color scroll_color = Color(107, 114, 120);
 };
 
-struct Gui_List_Item_State {
+enum Gui_List_Sorting {
+	NO_LIST_SORTING,
+	SORTING_LIST_UP,
+	SORTING_LIST_DOWN,
+};
+
+struct Gui_List_Column {
+	const char *name = NULL;
+	u32 size_in_percents = 0;
+	Gui_List_Sorting list_sorting = NO_LIST_SORTING;
+};
+
+struct Gui_Line_State {
 	bool selected = false;
 	bool left_mouse_click = false;
 	bool right_mouse_click = false;
@@ -150,9 +169,18 @@ namespace gui {
 	void edit_field(const char *name, String *string);
 	bool edit_field(const char *name, Vector3 *vector, const char *x = "X", const char *y = "Y", const char *z = "z");
 
-	void begin_list(const char *name);
-	bool list_item(const char *item_name, Gui_List_Item_State *list_item_state);
+	bool begin_list(const char *name, Gui_List_Column filters[], u32 filter_count);
 	void end_list();
+	
+	bool begin_line(Gui_Line_State *list_line);
+	void end_line();
+	
+	bool begin_column(const char *column_name);
+	void end_column();
+
+	void add_text(const char *text, Alignment alignment);
+	void add_image(Texture2D *texture, Alignment alignment);
+	void add_imge_button(Texture2D *texture, Alignment alignment);
 
 	Size_s32 get_window_size();
 	Gui_ID get_last_tab_gui_id();

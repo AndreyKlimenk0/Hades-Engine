@@ -2,6 +2,7 @@
 #include "../libs/math/matrix.h"
 #include "../libs/ds/array.h"
 #include "../libs/str.h"
+#include "../render/render_api.h"
 
 typedef void (*Job_Function)(void *data);
 
@@ -25,26 +26,41 @@ struct Parallel_Job_Manager {
 	void init();
 };
 
+
+struct Gui_Line_State {
+	enum Data_Type {
+		LIST_ITEM_DATA_TYPE_UNKNOWN,
+		LIST_ITEM_DATA_TYPE_TEXT,
+		LIST_ITEM_DATA_TYPE_IMAGE,
+		LIST_ITEM_DATA_TYPE_IMAGE_BUTTON,
+	};
+
+	struct Item_Data {
+		Data_Type type;
+		union {
+			const char *filter_name = NULL;
+			const char *text;
+			Texture2D texture;
+		};
+		u32 alignment_type;
+	};
+	Array<Item_Data> filter_data_list;
+	struct State {
+		bool selected;
+		bool left_mouse_click;
+		bool right_mouse_click;
+	};
+
+	void add_text(u32 alignment, const char *text, const char *filter_name = NULL);
+	void add_image(u32 alignment, Texture2D *texture2d, const char *filter_name = NULL);
+	void add_image_button(u32 alignment, Texture2D *texture2d, const char *filter_name = NULL);
+};
+
+
 void test()
 {
-	//float r = XMConvertToRadians(90.0f);
-	//double x = cos(1.5708);
-	//print("COCCCCCCCCCCCS", x);
-	//Matrix3 temp = { math::cos(r), 0.0f, math::sin(r),
-	//				0.0f, 1.0f, 0.0f,
-	//				-math::sin(r), 0.0f, math::cos(r) };
-	Vector4 z1 = Vector4(Vector3::base_x, 0.0f);
-	Vector4 z2 = Vector4(Vector3::base_x, 0.0f);
-	Matrix4 camera = rotate_about_y(XMConvertToRadians(-90.0f));
-	Matrix4 invcamera = inverse(rotate_about_y(XMConvertToRadians(-90.0f)));
-	z1 = z1 * camera;
-	z2 = z2 * invcamera;
-	print("Z1", &z1);
-	print("Z2", &z2);
-	int break_point = 0;
 }
 
 void update_test()
 {
 }
-
