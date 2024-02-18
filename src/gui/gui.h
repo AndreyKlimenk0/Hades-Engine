@@ -129,7 +129,19 @@ struct Gui_Window_Theme {
 	Color scroll_color = Color(87, 92, 97);
 };
 
-struct Gui_List_Item_State {
+enum Gui_List_Sorting {
+	NO_LIST_SORTING,
+	SORTING_LIST_UP,
+	SORTING_LIST_DOWN,
+};
+
+struct Gui_List_Column {
+	const char *name = NULL;
+	u32 size_in_percents = 0;
+	Gui_List_Sorting list_sorting = NO_LIST_SORTING;
+};
+
+struct Gui_Line_State {
 	bool selected = false;
 	bool left_mouse_click = false;
 	bool right_mouse_click = false;
