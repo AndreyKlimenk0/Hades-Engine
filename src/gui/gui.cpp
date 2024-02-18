@@ -619,10 +619,6 @@ void Gui_Manager::place_rect_on_window_top(s32 height, Rect_s32 *_placed_rect)
 void Gui_Manager::place_rect_in_window(Gui_Window *window, Rect_s32 *rect, s32 place_between_rects, s32 horizontal_offset_from_sides, s32 vertical_offset_from_sides)
 {
 	assert(!((window->alignment & VERTICALLY_ALIGNMENT) && (window->alignment & HORIZONTALLY_ALIGNMENT)));
-	
-	s32 place_between_rects = window_theme.place_between_rects;
-	s32 horizontal_offset_from_sides = window_theme.horizontal_offset_from_sides;
-	s32 vertical_offset_from_sides = window_theme.vertical_offset_from_sides;
 
 	if (window->alignment & PLACE_FIRST_RECT) {
 		window->alignment &= ~PLACE_FIRST_RECT;
