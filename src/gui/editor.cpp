@@ -236,7 +236,7 @@ void Game_World_Window::init(Engine *engine)
 	window_width_delta = 20;
 	world_entities_height = 200;
 	entity_info_height = 400;
-	window_style = WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES;
+	window_style = WINDOW_STYLE_DEFAULT & ~WINDOW_OUTLINES;
 
 	world_entities_window_theme.background_color = Color(40, 40, 40);
 	world_entities_window_theme.header_color = Color(36, 36, 36);
@@ -255,7 +255,7 @@ void Game_World_Window::draw()
 	Size_s32 window_size = gui::get_window_size();
 	gui::set_next_window_size(window_size.width - window_width_delta, world_entities_height);
 	gui::set_next_theme(&world_entities_window_theme);
-	if (gui::begin_child("World entities", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
+	if (gui::begin_child("World entities", (WINDOW_STYLE_DEFAULT & ~WINDOW_OUTLINES))) {
 		buttons_theme.rect.width = window_size.width - window_width_delta;
 		gui::set_theme(&buttons_theme);
 
@@ -269,7 +269,7 @@ void Game_World_Window::draw()
 	
 	gui::set_next_theme(&entity_info_window_theme);
 	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
-	if (gui::begin_child("Entity info", (WINDOW_STYLE_DEFAULT & ~WINDOW_WITH_OUTLINES))) {
+	if (gui::begin_child("Entity info", (WINDOW_STYLE_DEFAULT & ~WINDOW_OUTLINES))) {
 		Entity *entity = game_world->get_entity(editor->picked_entity);
 		if (entity) {
 			if (entity->type == ENTITY_TYPE_GEOMETRY) {
@@ -803,7 +803,7 @@ void Command_Window::draw()
 	gui::set_next_window_pos(window_rect.x, window_rect.y);
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 
-	if (gui::begin_window("Command window", WINDOW_WITH_OUTLINES)) {
+	if (gui::begin_window("Command window", WINDOW_OUTLINES)) {
 		gui::set_theme(&theme);
 		gui::edit_field("Command field", &text);
 		gui::reset_edit_field_theme();
