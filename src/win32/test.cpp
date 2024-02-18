@@ -2,6 +2,7 @@
 #include "../libs/math/matrix.h"
 #include "../libs/ds/array.h"
 #include "../libs/str.h"
+#include "../render/render_api.h"
 #include "../libs/os/file.h"
 
 typedef void (*Job_Function)(void *data);
@@ -26,6 +27,37 @@ struct Parallel_Job_Manager {
 	void init();
 };
 
+
+struct Gui_Line_State {
+	enum Data_Type {
+		LIST_ITEM_DATA_TYPE_UNKNOWN,
+		LIST_ITEM_DATA_TYPE_TEXT,
+		LIST_ITEM_DATA_TYPE_IMAGE,
+		LIST_ITEM_DATA_TYPE_IMAGE_BUTTON,
+	};
+
+	struct Item_Data {
+		Data_Type type;
+		union {
+			const char *filter_name = NULL;
+			const char *text;
+			Texture2D texture;
+		};
+		u32 alignment_type;
+	};
+	Array<Item_Data> filter_data_list;
+	struct State {
+		bool selected;
+		bool left_mouse_click;
+		bool right_mouse_click;
+	};
+
+	void add_text(u32 alignment, const char *text, const char *filter_name = NULL);
+	void add_image(u32 alignment, Texture2D *texture2d, const char *filter_name = NULL);
+	void add_image_button(u32 alignment, Texture2D *texture2d, const char *filter_name = NULL);
+};
+
+
 void test()
 {
 }
@@ -33,4 +65,3 @@ void test()
 void update_test()
 {
 }
-
