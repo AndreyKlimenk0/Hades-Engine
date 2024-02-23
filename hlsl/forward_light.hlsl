@@ -46,6 +46,8 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 
 StructuredBuffer<Light> lights : register(t7);
 
+static const int max_iter = 64;
+
 float2 quadtree_displacement_mapping(float2 uv, float3 camera_direction)
 {
     uint texture_width;
@@ -53,19 +55,46 @@ float2 quadtree_displacement_mapping(float2 uv, float3 camera_direction)
     displacement_texture.GetDimensions(texture_width, texture_height);
     
     uint max_texture_size = max(texture_width, texture_height);
+    
+    float depth_scale = 0.1f;
+    
+    float delta = (1.0f / (float)max_texture_size / 2.0f) * depth_scale;
+    
     uint max_mip_map_level = (uint)floor(log2(max_texture_size));
     int mip_map_level = (int)max_mip_map_level;
     int mip_map_count = max_mip_map_level + 1;
     
-    while (mip_map_level >= 0) {        
-        float depth = displacement_texture.SampleLevel(point_sampling, displacement_uv, (uint)mip_map_level).r;
-        if (depth > ray_depth) {
-            ray_depth = depth;
-        } else {
-            mip_map_level -= 1;
+    float3 p = float3(uv, 0.0f);
+    float3 p2 = p;
+
+    float3 view_dir = -camera_direction;
+    view_dir.z = abs(view_dir.z);
+    view_dir.xy *= depth_scale;
+    view_dir /= view_dir.z;
+
+    int count = 0;
+    while ((mip_map_level >= 0) && (count < max_iter)) {        
+        float depth = displacement_texture.SampleLevel(linear_sampling, p2.xy, (uint)mip_map_level).r;
+        if (depth > p2.z) {
+            float3 temp = p + view_dir * depth;
+            int node_count = pow(2, (max_mip_map_level - mip_map_level));
+            float2 new_node_id = floor(node_count * temp.xy);
+            float2 curr_node_id = floor(node_count * p2.xy);
+            if ((new_node_id.x != curr_node_id.x) || (new_node_id.y != curr_node_id.y)) {
+                float2 a = (p2.xy - p.xy);
+                float2 p3 = (curr_node_id + ((sign(view_dir.xy) + 1.0f) * 0.5f)) / node_count;
+                float2 b = p3 - p.xy;
+                float2 dNC = (b.xy * p2.z) / a.xy;
+                depth = min(dNC.x, dNC.y) + delta;
+                
+                mip_map_level += 1;
+            }
+            p2 = p + view_dir * depth;
         }
+        mip_map_level -= 1;
+        count++;
     }
-    return displacement_uv;
+    return p2.xy;
 }
 
 float4 ps_main(Vertex_Out vertex_out) : SV_Target
