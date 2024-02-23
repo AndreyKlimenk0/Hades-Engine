@@ -12,6 +12,7 @@ struct Texture2D;
 typedef u32 Gui_ID;
 typedef u32 Window_Style;
 typedef u32 Element_Alignment;
+typedef u32 Gui_List_Line_State;
 
 const Element_Alignment RIGHT_ALIGNMENT = 0x01;
 const Element_Alignment LEFT_ALIGNMENT = 0x02;
@@ -28,6 +29,14 @@ enum Alignment {
 	RECT_CENTER_ALIGNMENT,
 	RECT_LEFT_ALIGNMENT,
 	RECT_RIGHT_ALIGNMENT
+};
+
+enum Gui_List_Column_State : u32;
+
+struct Gui_List_Column {
+	const char *name = NULL;
+	u32 size_in_percents = 0;
+	Gui_List_Column_State state = (Gui_List_Column_State)0;
 };
 
 struct Gui_Edit_Field_Theme {
@@ -82,6 +91,22 @@ struct Gui_Text_Button_Theme {
 	Rect_s32 rect{ 0, 0, 125, 20 };
 };
 
+struct Gui_List_Theme {
+	s32 line_height = 20;
+	s32 line_text_offset = 10;
+	s32 split_line_size = 18;
+	s32 filter_button_size = 12;
+	s32 filter_text_offset = 10;
+	s32 filter_button_offset = 7;
+	s32 filter_rect_height = 20;
+	float split_line_thickness = 1.0f;
+	Color filter_rect_color = Color(36, 36, 36);
+	Color split_lines_color = Color(46, 46, 46);
+	Color line_color = Color(40, 40, 40);
+	Color hover_line_color = Color(0, 90, 255);
+	Size_s32 window_size = Size_s32(500, 300);
+};
+
 struct Gui_Window_Theme {
 	s32 header_height = 18;
 	s32 rounded_border = 6;
@@ -97,25 +122,7 @@ struct Gui_Window_Theme {
 	Color background_color = Color(30, 30, 30);
 	Color outlines_color = Color(92, 100, 107);
 	Color scroll_bar_color = Color(48, 50, 54);
-	Color scroll_color = Color(107, 114, 120);
-};
-
-enum Gui_List_Sorting {
-	NO_LIST_SORTING,
-	SORTING_LIST_UP,
-	SORTING_LIST_DOWN,
-};
-
-struct Gui_List_Column {
-	const char *name = NULL;
-	u32 size_in_percents = 0;
-	Gui_List_Sorting list_sorting = NO_LIST_SORTING;
-};
-
-struct Gui_Line_State {
-	bool selected = false;
-	bool left_mouse_click = false;
-	bool right_mouse_click = false;
+	Color scroll_color = Color(87, 92, 97);
 };
 
 namespace gui {
@@ -172,15 +179,19 @@ namespace gui {
 	bool begin_list(const char *name, Gui_List_Column filters[], u32 filter_count);
 	void end_list();
 	
-	bool begin_line(Gui_Line_State *list_line);
+	bool begin_line(Gui_List_Line_State *list_line);
 	void end_line();
+
+	bool selected(Gui_List_Line_State list_line_state);
+	bool left_mouse_click(Gui_List_Line_State list_line_state);
+	bool right_mouse_click(Gui_List_Line_State list_line_state);
 	
 	bool begin_column(const char *column_name);
 	void end_column();
 
 	void add_text(const char *text, Alignment alignment);
 	void add_image(Texture2D *texture, Alignment alignment);
-	void add_imge_button(Texture2D *texture, Alignment alignment);
+	void add_image_button(Texture2D *texture, Alignment alignment);
 
 	Size_s32 get_window_size();
 	Gui_ID get_last_tab_gui_id();
