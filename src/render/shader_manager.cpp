@@ -383,6 +383,25 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 		}
 	}
 }
+//#include <windows.h>
+//
+//inline wchar_t *to_wstring(const char *string)
+//{
+//	assert(string);
+//
+//	u32 str_len = (u32)strlen(string) + 1;
+//
+//	size_t converted_characters = 0;
+//	size_t sizeInWords = sizeof(u16) * str_len;
+//
+//	wchar_t *wstr_buffer = new wchar_t[str_len];
+//	size_t count = str_len - 1;
+//
+//	errno_t result = mbstowcs_s(&converted_characters, wstr_buffer, sizeInWords, string, count);
+//
+//}
+//
+//#include <d3dcompiler.h>
 
 void Shader_Manager::reload(void *arg)
 {
