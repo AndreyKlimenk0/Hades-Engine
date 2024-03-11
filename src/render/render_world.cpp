@@ -10,6 +10,9 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
+//@Note: Probably it is temporary decision
+#include "../libs/png_image.h"
+
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
 static Matrix4 get_world_matrix(Entity *entity) 
@@ -223,6 +226,72 @@ void Render_World::init(Engine *engine)
 	}
 }
 
+
+static inline Texture_Idx add_texture(const char *name)
+{
+	u32 width;
+	u32 height;
+	u8 *data = NULL;
+	String path;
+	build_full_path_to_texture_file(name, path);
+	load_png_file(path, &data, &width, &height);
+
+	Texture_Idx index = Engine::get_render_world()->render_entity_texture_storage.add_texture(name, width, height, (void *)data);
+	DELETE_PTR(data);
+	return index;
+}
+
+Texture_Idx load_texture(const char *texture_name, Render_World *render_world)
+{
+	u32 width;
+	u32 height;
+	u8 *data = NULL;
+	String path;
+	build_full_path_to_texture_file(texture_name, path);
+	load_png_file(path, &data, &width, &height);
+
+	Texture_Idx index = render_world->render_entity_texture_storage.add_texture(texture_name, width, height, (void *)data);
+	
+	return index;
+}
+
+Texture_Idx load_normal_texture(String &file_name, Render_World *render_world)
+{
+	if (file_name.is_empty()) {
+		return render_world->render_entity_texture_storage.green_texture_idx;
+	} else {
+		return load_texture(file_name, render_world);
+	}
+}
+
+Texture_Idx load_diffuse_texture(String &file_name, Render_World *render_world)
+{
+	if (file_name.is_empty()) {
+		return render_world->render_entity_texture_storage.default_texture_idx;
+	} else {
+		return load_texture(file_name, render_world);
+	}
+}
+
+Texture_Idx load_specular_texture(String &file_name, Render_World *render_world)
+{
+	if (file_name.is_empty()) {
+		return render_world->render_entity_texture_storage.default_specular_texture_idx;
+	} else {
+		return load_texture(file_name, render_world);
+	}
+}
+
+
+Texture_Idx load_displacenet_texture(String &file_name, Render_World *render_world)
+{
+	if (file_name.is_empty()) {
+		return render_world->render_entity_texture_storage.black_texture_idx;
+	} else {
+		return load_texture(file_name, render_world);
+	}
+}
+
 void Render_World::init_meshes()
 {
 	if (!render_camera.is_entity_camera_set()) {
@@ -232,26 +301,35 @@ void Render_World::init_meshes()
 	u32 entity_index = 0;
 	Array<Import_Mesh> meshes;
 	String path;
-	build_full_path_to_model_file("mutant.fbx", path);
+	//build_full_path_to_model_file("NewSponza_Curtains_FBX.fbx", path);
+	//build_full_path_to_model_file("Sponza.fbx", path);
+	build_full_path_to_model_file("vampire.fbx", path);
+	//build_full_path_to_model_file("displacement3.fbx", path);
+
+	//build_full_path_to_model_file("catwalk3.fbx", path);
+	//build_full_path_to_model_file("NewSponza_Curtains_FBX_YUp.fbx", path);
+	//build_full_path_to_model_file("mutant.fbx", path);
 	//build_full_path_to_model_file("walls.fbx", path);
 	//build_full_path_to_model_file("scene_demo_unreal.fbx", path);
 	//build_full_path_to_model_file("camera.fbx", path);
-	load_fbx_mesh(path, &meshes);
-	print("Start make render entities");
+	//print("Start make render entities");
+	//print("Mesh count = ", meshes.count);
+
+	Mesh_Loader mesh_loader;
+	mesh_loader.load(path, meshes, false, false);
+
+	print("Get started to create entities");
 	Import_Mesh *imported_mesh = NULL;
-	print("Mesh count = ", meshes.count);
-
-
-	Render_Entity_Textures render_entity_textures;
-	render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
-	render_entity_textures.normal_texture_idx = render_entity_texture_storage.green_texture_idx;
-	render_entity_textures.diffuse_texture_idx = render_entity_texture_storage.default_texture_idx;
-	render_entity_textures.specular_texture_idx = render_entity_texture_storage.white_texture_idx;
-	render_entity_textures.displacement_texture_idx = render_entity_texture_storage.white_texture_idx;
-
 	For(meshes, imported_mesh) {
 		Mesh_Idx mesh_idx;
 		if (add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
+			Render_Entity_Textures render_entity_textures;
+			render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
+			render_entity_textures.normal_texture_idx = load_normal_texture(imported_mesh->normal_texture, this);
+			render_entity_textures.diffuse_texture_idx = load_diffuse_texture(imported_mesh->diffuse_texture, this);
+			render_entity_textures.specular_texture_idx = load_specular_texture(imported_mesh->specular_texture, this);
+			render_entity_textures.displacement_texture_idx = load_displacenet_texture(imported_mesh->displacement_texture, this);
+
 			if (imported_mesh->mesh_instances.count > 0) {
 				for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
 					Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
@@ -264,7 +342,9 @@ void Render_World::init_meshes()
 			}
 		}
 	}
+	print("Finish of creating entities");
 }
+
 void Render_World::init_shadow_rendering()
 {	
 	Texture2D_Desc depth_stencil_desc;
