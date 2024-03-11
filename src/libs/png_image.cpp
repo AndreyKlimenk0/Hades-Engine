@@ -11,7 +11,7 @@ bool load_png_file(const char *path_to_file, u8 **png_image_buffer, u32 *width, 
 	FILE *png_file = fopen(path_to_file, "rb");
 	if (!png_file) {
 		String file_name;
-		extract_file_name(path_to_file, file_name);
+		extract_base_file_name(path_to_file, file_name);
 		print("Can not open PNG file with name {}", file_name);
 		return false;
 	}
