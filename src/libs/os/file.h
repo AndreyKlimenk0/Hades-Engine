@@ -9,9 +9,9 @@
 #include "../ds/array.h"
 
 
-void extract_file_name(const char *file_name, String &result);
-void extract_file_extension(const char *file_name, String &result);
-void extract_file_from_path(const char *path, String &result);
+void extract_base_file_name(const char *file_name, String &base_file_name);
+void extract_file_extension(const char *file_name, String &file_extension);
+void extract_file_name(const char *path_to_file, String &file_name);
 
 u32 get_file_count_in_dir(const char *full_path);
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names);

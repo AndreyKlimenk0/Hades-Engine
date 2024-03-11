@@ -6,7 +6,7 @@
 #include "vertex.hlsl"
 #include "globals.hlsl"
 
-static const float BIAS = 0.0005f;
+static const float BIAS = 0.005f;
 
 struct Cascaded_Shadows_Info {
     float3 light_direction;
