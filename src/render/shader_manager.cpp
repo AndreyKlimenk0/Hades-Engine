@@ -91,7 +91,7 @@ inline bool get_shader_type_from_file_name(const char *file_name, Shader_Type *s
 		return false;
 	}
 
-	extract_file_name(file_name, name);
+	extract_base_file_name(file_name, name);
 
 	Array<String> strings;
 	bool result = split(&name, "_", &strings);
@@ -242,11 +242,35 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 		}
 	}
 }
+//#include <windows.h>
+//
+//inline wchar_t *to_wstring(const char *string)
+//{
+//	assert(string);
+//
+//	u32 str_len = (u32)strlen(string) + 1;
+//
+//	size_t converted_characters = 0;
+//	size_t sizeInWords = sizeof(u16) * str_len;
+//
+//	wchar_t *wstr_buffer = new wchar_t[str_len];
+//	size_t count = str_len - 1;
+//
+//	errno_t result = mbstowcs_s(&converted_characters, wstr_buffer, sizeInWords, string, count);
+//
+//}
+//
+//#include <d3dcompiler.h>
 
 void Shader_Manager::reload(void *arg)
 {
-	const char *shader_file_name = (const char *)arg;
-	print("Recompile and reload", shader_file_name);
+	//const char *shader_file_name = (const char *)arg;
+	//print("Recompile and reload", shader_file_name);
+
+	//String path_to_shader;
+	//build_full_path_to_shader_file(shader_file_name, path_to_shader);
+
+	//D3DCompileFromFile(path_to_shader.c_str(), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, );
 }
 
 void Shader_Manager::shutdown()

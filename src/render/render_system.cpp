@@ -863,9 +863,9 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	D3D11_SAMPLER_DESC point_sampling_desc;
 	ZeroMemory(&point_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
 	point_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	point_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	point_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	point_sampling_desc.AddressW =D3D11_TEXTURE_ADDRESS_CLAMP;
+	point_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	point_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	point_sampling_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	point_sampling_desc.MinLOD = -FLT_MAX;
 	point_sampling_desc.MaxLOD = FLT_MAX;
 	point_sampling_desc.MipLODBias = 0.0f;
@@ -881,9 +881,9 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	D3D11_SAMPLER_DESC linear_sampling_desc;
 	ZeroMemory(&linear_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
 	linear_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	linear_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	linear_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	linear_sampling_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	linear_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	linear_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	linear_sampling_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	linear_sampling_desc.MinLOD = -FLT_MAX;
 	linear_sampling_desc.MaxLOD = FLT_MAX;
 	linear_sampling_desc.MipLODBias = 0.0f;

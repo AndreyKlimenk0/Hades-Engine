@@ -7,7 +7,7 @@
 #include "../libs/os/event.h"
 #include "../libs/mesh_loader.h"
 
-//@Note: Temp code
+//@Note: Probably it is temporary decision
 #include "../libs/png_image.h"
 
 #define DRAW_TEST_GUI 1
@@ -21,7 +21,6 @@ void Engine::init(Win32_Info *_win32_info)
 	
 	win32_info = *_win32_info;
 	init_os_path();
-	init_fbx_lib();
 
 	editor.init(this);
 
@@ -160,7 +159,6 @@ void Engine::shutdown()
 {
 	gui::shutdown();
 	save_to_file();
-	shutdown_fbx_lib();
 }
 
 bool Engine::initialized()

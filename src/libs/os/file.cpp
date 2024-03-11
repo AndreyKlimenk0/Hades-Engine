@@ -149,28 +149,31 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 	return buffer;
 }
 
-void extract_file_extension(const char *file_name, String &result)
+void extract_file_extension(const char *file_name, String &file_extension)
 {
 	Array<String> buffer;
-	String str = file_name;
-	split(&str, ".", &buffer);
-	result = buffer.get_last();
+	String temp = file_name;
+	bool result = split(&temp, ".", &buffer);
+	file_extension = result ? buffer.get_last() : temp;
 }
 
-void extract_file_name(const char *file_name, String &result)
+void extract_base_file_name(const char *file_name, String &base_file_name)
 {
 	Array<String> buffer;
-	String str = file_name;
-	split(&str, ".", &buffer);
-	result = buffer.items[0];
+	String temp = file_name;
+	bool result = split(&temp, ".", &buffer);
+	base_file_name = result ? buffer.get_first() : temp;
 }
 
-void extract_file_from_path(const char *path, String &result)
+void extract_file_name(const char *path_to_file, String &file_name)
 {
 	Array<String> buffer;
-	String str = path;
-	split(&str, "\\", &buffer);
-	result = buffer.get_last();
+	String temp = path_to_file;
+	bool result = split(&temp, "\\", &buffer);
+	if (!result) {
+		result = split(&temp, "/", &buffer);
+	}
+	file_name = result ? buffer.get_last() : temp;
 }
 
 static DWORD file_mode_to_win32(File_Mode file_mode)
@@ -212,7 +215,7 @@ File::~File()
 
 bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_creation)
 {
-	extract_file_from_path(path_to_file, file_name);
+	extract_file_name(path_to_file, file_name);
 
 	file_handle = CreateFile(path_to_file, file_mode_to_win32(mode), 0, NULL, file_creation_to_win32(file_creation), FILE_ATTRIBUTE_NORMAL, NULL);
 	
