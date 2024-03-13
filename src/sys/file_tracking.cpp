@@ -3,6 +3,9 @@
 #include "file_tracking.h"
 #include "../libs/os/file.h"
 #include "../libs/os/path.h"
+#include "../win32/win_time.h"
+
+static const s64 TIME_BETWEEN_FILE_MODIFICATIONS = 1000; //milliseconds
 
 static inline void join_pahts(const String &first_path, const String &second_path, String &result)
 {
@@ -120,7 +123,9 @@ void File_Tracking_System::update()
 				if (received_bytes > 0) {
 					FILE_NOTIFY_INFORMATION *file_notify_info = directory->file_notify_array.items;
 					for (u32 i = 0; i < directory->file_notify_array.count; i++) {
-						if (file_notify_info->Action == FILE_ACTION_MODIFIED) {
+						s64 delta = milliseconds_counter() - directory->modifying_time;
+						if ((file_notify_info->Action == FILE_ACTION_MODIFIED) && ((directory->modifying_time == 0) || (delta > TIME_BETWEEN_FILE_MODIFICATIONS))) {
+							directory->modifying_time = milliseconds_counter();
 							char *file_name = to_string(file_notify_info->FileName, file_notify_info->FileNameLength);
 							print("File_Tracking_System::update: {} was modified.", file_name);
 							directory->callback->call((void *)file_name);
@@ -136,13 +141,17 @@ void File_Tracking_System::update()
 					DWORD error_code = GetLastError();
 					if (error_code != ERROR_IO_PENDING) {
 						char *error_message = get_error_message_from_error_code(error_code);
-						loop_print("File_Tracking_System::update: A new async call for reading directory changes was not queued. {}", error_message);
+						loop_print("File_Tracking_System::update: A new async call for reading changes in files was not queued. {}", error_message);
 						free_string(error_message);
 					}
 				}
 			} else {
 				assert(ERROR_IO_INCOMPLETE == GetLastError());
 			}
+		}
+		s64 delta = milliseconds_counter() - directory->modifying_time;
+		if ((directory->modifying_time != 0) && (delta > TIME_BETWEEN_FILE_MODIFICATIONS)) {
+			directory->modifying_time = 0;
 		}
 	}
 }
