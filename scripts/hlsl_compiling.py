@@ -22,7 +22,6 @@ class Shader_Type(enum.Enum):
     DOMAIN_SHADER = 3
     GEOMETRY_SHADER = 4
     PIXEL_SHADER = 5
-    HEADER_FILE = 6
 
 
 def get_entry_point(shader_type: Shader_Type) -> str:
@@ -32,7 +31,6 @@ def get_entry_point(shader_type: Shader_Type) -> str:
         Shader_Type.DOMAIN_SHADER : "ds_main",
         Shader_Type.GEOMETRY_SHADER : "gs_main",
         Shader_Type.PIXEL_SHADER : "ps_main",
-        Shader_Type.HEADER_FILE : ""
     }
 
     return shader_entry_points[shader_type]
@@ -44,7 +42,6 @@ def get_profile(shader_type: Shader_Type) -> str:
         Shader_Type.DOMAIN_SHADER : "ds_5_0",
         Shader_Type.GEOMETRY_SHADER : "gs_5_0",
         Shader_Type.PIXEL_SHADER : "ps_5_0",
-        Shader_Type.HEADER_FILE : "hs_5_0"
     }
 
     return shader_entry_points[shader_type]
@@ -57,7 +54,6 @@ def get_output_file_name(shader_name: str, shader_type : Shader_Type) -> str:
         Shader_Type.DOMAIN_SHADER : "_ds",
         Shader_Type.GEOMETRY_SHADER : "_gs",
         Shader_Type.PIXEL_SHADER : "_ps",
-        Shader_Type.HEADER_FILE : "_hs"
     }
     name = shader_name.split(".")[0]
     return name + file_prefix[shader_type] + ".cso"
@@ -69,11 +65,7 @@ class Shader_File:
         self.shader_types: [Shader_Type] = [item for item in args if isinstance(item, Shader_Type)]
 
 
-
 shader_files = [
-    Shader_File("globals.hlsl", Shader_Type.HEADER_FILE),
-    Shader_File("vertex.hlsl", Shader_Type.HEADER_FILE),
-    Shader_File("utils.hlsl", Shader_Type.HEADER_FILE),
     Shader_File("render_2d.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("draw_lines.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
@@ -125,9 +117,6 @@ def compile_hlsl_shaders(shader_list : list[str] | list[Shader_File]):
         full_path_to_shader = os.path.join(PROJECT_DIR, HLSH_DIR, shader_file.name)
         
         for shader_type in shader_file.shader_types:
-            if shader_type == Shader_Type.HEADER_FILE:
-                continue
-                    
             profile = get_profile(shader_type)
             entiry_point = get_entry_point(shader_type)
             output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     

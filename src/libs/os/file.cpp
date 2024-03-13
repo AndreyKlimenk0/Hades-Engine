@@ -165,6 +165,33 @@ void extract_base_file_name(const char *file_name, String &base_file_name)
 	base_file_name = result ? buffer.get_first() : temp;
 }
 
+bool extract_base_file_name_and_extension(const char *file_name, String &base_file_name, String &file_extension)
+{
+	assert(file_name);
+
+	Array<String> buffer;
+	String temp = file_name;
+	bool result = split(&temp, ".", &buffer);
+	if (result && (buffer.count >= 2)) {
+		if (buffer.count > 2) {
+			if (file_name[0] == '.') {
+				base_file_name.append(".");
+			}
+			base_file_name.append(buffer[0]);
+			for (u32 i = 1; i < (buffer.count - 1); i++) {
+				base_file_name.append(".");
+				base_file_name.append(buffer[i]);
+			}
+			file_extension = buffer.get_last();
+		} else {
+			base_file_name = buffer.get_first();
+			file_extension = buffer.get_last();
+		}
+		return true;
+	}
+	return false;
+}
+
 void extract_file_name(const char *path_to_file, String &file_name)
 {
 	Array<String> buffer;
