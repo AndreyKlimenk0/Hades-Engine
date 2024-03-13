@@ -117,9 +117,6 @@ def compile_hlsl_shaders(shader_list : list[str] | list[Shader_File]):
         full_path_to_shader = os.path.join(PROJECT_DIR, HLSH_DIR, shader_file.name)
         
         for shader_type in shader_file.shader_types:
-            if shader_type == Shader_Type.HEADER_FILE:
-                continue
-                    
             profile = get_profile(shader_type)
             entiry_point = get_entry_point(shader_type)
             output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     
