@@ -49,12 +49,12 @@ inline bool validate_render_pipeline(String *render_pass_name, Render_Pipeline_S
 		Extend_Shader *shader = (Extend_Shader *)render_pipeline_state->shader;
 		if (validation_flags & SKIP_PIXEL_SHADER_VALIDATION) {
 			if (!is_valid(shader, VALIDATE_RENDERING_SHADER)) {
-				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", render_pass_name, shader->name);
+				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", render_pass_name, shader->file_name);
 				result = false;
 			}
 		} else {
 			if (!is_valid(shader, VALIDATE_VERTEX_SHADER)) {
-				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", render_pass_name, shader->name);
+				print("validate_render_pass: Render Pass '{}' is not valid. {} was not initialized correctly.", render_pass_name, shader->file_name);
 				result = false;
 			}
 		}

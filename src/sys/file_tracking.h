@@ -16,6 +16,7 @@ struct File_Tracking_System {
 		u32 file_count = 0;
 		Callback *callback = NULL;
 		HANDLE backup_file_handler = INVALID_HANDLE_VALUE;
+		s64 modifying_time = 0;
 		String path_to_dir;
 		OVERLAPPED overlapped;
 		Array<FILE_NOTIFY_INFORMATION> file_notify_array;

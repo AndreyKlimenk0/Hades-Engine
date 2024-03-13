@@ -115,7 +115,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc141-mt.lib;d3d11.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc141-mt.lib;d3d11.lib;d3dcompiler.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <ShaderType>Effect</ShaderType>
@@ -157,7 +157,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>assimp-vc141-mt.lib;d3d11.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc141-mt.lib;d3d11.lib;d3dcompiler.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -173,7 +173,6 @@
     <ClCompile Include="src\libs\ds\dict.cpp" />
     <ClCompile Include="src\libs\ds\hash_table.cpp" />
     <ClCompile Include="src\libs\geometry_helper.cpp" />
-    <ClCompile Include="src\libs\glft_loader.cpp" />
     <ClCompile Include="src\libs\key_binding.cpp" />
     <ClCompile Include="src\libs\math\functions.cpp" />
     <ClCompile Include="src\libs\math\structures.cpp" />
@@ -217,7 +216,6 @@
     <ClInclude Include="src\libs\ds\stack.h" />
     <ClInclude Include="src\libs\enum_helper.h" />
     <ClInclude Include="src\libs\geometry_helper.h" />
-    <ClInclude Include="src\libs\glft_loader.h" />
     <ClInclude Include="src\libs\key_binding.h" />
     <ClInclude Include="src\libs\math\constants.h" />
     <ClInclude Include="src\libs\math\functions.h" />

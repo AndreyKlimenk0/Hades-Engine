@@ -1,12 +1,16 @@
 #include <assert.h>
 #include <string.h>
+#include <windows.h>
+#include <d3dcompiler.h>
+#include <wrl/client.h>
 
 #include "shader_manager.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../sys/sys_local.h"
 #include "../render/render_api.h"
-#include "../libs/str.h"
+
+using Microsoft::WRL::ComPtr;
 
 const u32 COMPILE_AS_VERTEX_SHADER   = 0x1;
 const u32 COMPILE_AS_GEOMETRY_SHADER = 0x2;
@@ -15,14 +19,34 @@ const u32 COMPILE_AS_HULL_SHADER     = 0x8;
 const u32 COMPILE_AS_DOMAIN_SHADER   = 0x10;
 const u32 COMPILE_AS_PIXEL_SHADER    = 0x20;
 
-enum Shader_Type {
-	VERTEX_SHADER,
-	GEOMETRY_SHADER,
-	COMPUTE_SHADER,
-	HULL_SHADER,
-	DOMAIN_SHADER,
-	PIXEL_SHADER,
+struct Shader_Table_Entiry {
+	const char *name = NULL;
+	Extend_Shader *shader = NULL;
 };
+
+static const String HLSL_FILE_EXTENSION = "cso";
+static const u32 SHADERS_COUNT = sizeof(Shader_Manager::Shader_List) / sizeof(Extend_Shader);
+static Shader_Table_Entiry shader_table[SHADERS_COUNT];
+
+inline wchar_t *to_wstring(const char *string)
+{
+	assert(string);
+
+	size_t converted_characters = 0;
+	size_t str_len = strlen(string);
+	wchar_t *wstr_buffer = new wchar_t[str_len + 1];
+
+	errno_t result = mbstowcs_s(&converted_characters, wstr_buffer, str_len + 1, string, str_len);
+	assert(result == 0);
+	assert(converted_characters == (str_len + 1));
+
+	return wstr_buffer;
+}
+
+void free_string(const wchar_t *string)
+{
+	delete[] string;
+}
 
 bool is_valid(Shader *shader, u32 flags)
 {
@@ -53,16 +77,35 @@ bool is_valid(Shader *shader, u32 flags)
 	return true;
 }
 
-struct Shader_Table_Entiry {
-	const char *name = NULL;
-	Extend_Shader *shader = NULL;
-};
+inline Extend_Shader *find_shader_in_shader_table(const char *shader_name)
+{
+	for (u32 i = 0; i < SHADERS_COUNT; i++) {
+		if ((shader_table[i].name == NULL) || (shader_table[i].shader == NULL)) {
+			continue;
+		}
+		if (!strcmp(shader_table[i].name, shader_name)) {
+			return shader_table[i].shader;
+		}
+	}
+	return NULL;
+}
 
-static const String HLSL_FILE_EXTENSION = "cso";
-static const u32 SHADER_COUNT = sizeof(Shader_Manager::Shader_List) / sizeof(Extend_Shader);
-static Shader_Table_Entiry shader_table[SHADER_COUNT];
+inline bool include_shader(const char *shader_file_name)
+{
+	assert(shader_file_name);
 
-inline  void get_shader_name_from_file(const char *file_name, String &name)
+	const u32 COUNT = 5;
+	String include_shaders[COUNT] = { "light.hlsl", "utils.hlsl", "vertex.hlsl", "globals.hlsl", "cascaded_shadow.hlsl" };
+
+	for (u32 i = 0; i < COUNT; i++) {
+		if (include_shaders[i] == shader_file_name) {
+			return true;
+		}
+	}
+	return false;
+}
+
+inline void get_shader_name_from_file(const char *file_name, String &name)
 {
 	assert(name.is_empty());
 
@@ -121,6 +164,153 @@ inline bool get_shader_type_from_file_name(const char *file_name, Shader_Type *s
 	return true;
 }
 
+inline void make_output_shader_file_name(const char *shader_base_file_name, Shader_Type shader_type, String &output_shader_file_name)
+{
+	String compiled_shader_file_prefix;
+	switch (shader_type) {
+		case VERTEX_SHADER: {
+			compiled_shader_file_prefix = "_vs";
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			compiled_shader_file_prefix = "_gs";
+			break;
+		} 
+		case COMPUTE_SHADER: {
+			compiled_shader_file_prefix = "_cs";
+			break;
+		}
+		case HULL_SHADER: {
+			compiled_shader_file_prefix = "_hs";
+			break;
+		}
+		case DOMAIN_SHADER: {
+			compiled_shader_file_prefix = "_ds";
+			break;
+		}
+		case PIXEL_SHADER: {
+			compiled_shader_file_prefix = "_ps";
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+	output_shader_file_name = String(shader_base_file_name) + compiled_shader_file_prefix + ".cso";
+}
+
+inline void create_shader(Shader_Type shader_type, u8 *bytecode, u32 bytecode_size, Extend_Shader *shader, Gpu_Device *gpu_device, bool copy_bytecode = false)
+{
+	assert(shader);
+	assert(bytecode);
+	assert(gpu_device);
+
+	switch (shader_type) {
+		case VERTEX_SHADER: {
+			gpu_device->create_shader(bytecode, bytecode_size, shader->vertex_shader);
+			//@Note: Save vertex shader byte code for creating directx input layouts.
+			if ((bytecode_size > 0) && (shader->bytecode == NULL)) {
+				if (copy_bytecode) {
+					DELETE_PTR(shader->bytecode);
+					shader->bytecode = new u8[bytecode_size];
+
+					shader->bytecode_size = bytecode_size;
+					memcpy((void *)shader->bytecode, (void *)bytecode, bytecode_size);
+				} else {
+					shader->bytecode = bytecode;
+					shader->bytecode_size = bytecode_size;
+				}
+			}
+			shader->types.push(VERTEX_SHADER);
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			gpu_device->create_shader(bytecode, bytecode_size, shader->geometry_shader);
+			shader->types.push(GEOMETRY_SHADER);
+			break;
+		}
+		case COMPUTE_SHADER: {
+			gpu_device->create_shader(bytecode, bytecode_size, shader->compute_shader);
+			shader->types.push(COMPUTE_SHADER);
+			break;
+		}
+		case HULL_SHADER: {
+			gpu_device->create_shader(bytecode, bytecode_size, shader->hull_shader);
+			shader->types.push(HULL_SHADER);
+			break;
+		}
+		case DOMAIN_SHADER: {
+			gpu_device->create_shader(bytecode, bytecode_size, shader->domain_shader);
+			shader->types.push(DOMAIN_SHADER);
+			break;
+		}
+		case PIXEL_SHADER: {
+			gpu_device->create_shader(bytecode, bytecode_size, shader->pixel_shader);
+			shader->types.push(PIXEL_SHADER);
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+}
+
+inline bool compile_shader(const char *path_to_shader, Shader_Type shader_type, ID3DBlob **shader_bytecode)
+{
+	String profile;
+	String entry_point;
+	u32 complation_flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
+	switch (shader_type) {
+		case VERTEX_SHADER: {
+			entry_point = "vs_main";
+			profile = "vs_5_0";
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			entry_point = "gs_main";
+			profile = "gs_5_0";
+			break;
+		}
+		case COMPUTE_SHADER: {
+			entry_point = "cs_main";
+			profile = "cs_5_0";
+			break;
+		}
+		case HULL_SHADER: {
+			entry_point = "hs_main";
+			profile = "hs_5_0";
+			break;
+		}
+		case DOMAIN_SHADER: {
+			entry_point = "ds_main";
+			profile = "ds_5_0";
+			break;
+		}
+		case PIXEL_SHADER: {
+			entry_point = "ps_main";
+			profile = "ps_5_0";
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+	ComPtr<ID3DBlob> error_message;
+	wchar_t *temp_path_to_shader = to_wstring(path_to_shader);
+	defer(free_string(temp_path_to_shader));
+
+	bool result = SUCCEEDED(D3DCompileFromFile(temp_path_to_shader, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, entry_point, profile, complation_flags, 0, shader_bytecode, error_message.ReleaseAndGetAddressOf()));
+
+	if (!result && (error_message->GetBufferSize() > 0)) {
+		const char *str_error_message = (const char *)error_message->GetBufferPointer();
+		// Get rid of the new line character.
+		String temp = String(str_error_message, 0, (u32)strlen(str_error_message) - 1);
+		print("compile_shader:", temp);
+	}
+
+	return result;
+}
+
 Shader_Manager::Shader_Manager()
 {
 }
@@ -130,19 +320,6 @@ Shader_Manager::~Shader_Manager()
 	shutdown();
 }
 
-inline Extend_Shader *find_shader_in_shader_table(const char *shader_name)
-{
-	for (u32 i = 0; i < SHADER_COUNT; i++) {
-		if ((shader_table[i].name == NULL) || (shader_table[i].shader == NULL)) {
-			continue;
-		}
-		if (!strcmp(shader_table[i].name, shader_name)) {
-			return shader_table[i].shader;
-		}
-	}
-	return NULL;
-}
-
 void Shader_Manager::init(Gpu_Device *_gpu_device)
 {
 	assert(_gpu_device);
@@ -150,7 +327,6 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 	gpu_device = _gpu_device;
 
 	u32 shader_count = 0;
-	shader_table[shader_count++] = { "cascaded_shadow.hlsl", &shaders.cascaded_shadow };
 	shader_table[shader_count++] = { "debug_cascaded_shadows.hlsl", &shaders.debug_cascaded_shadows };
 	shader_table[shader_count++] = { "depth_map.hlsl", &shaders.depth_map };
 	shader_table[shader_count++] = { "draw_lines.hlsl", &shaders.draw_lines };
@@ -161,10 +337,10 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 	shader_table[shader_count++] = { "silhouette.hlsl", &shaders.silhouette };
 
 	for (u32 i = 0; i < shader_count; i++) {
-		shader_table[i].shader->name = shader_table[i].name;
+		shader_table[i].shader->file_name = shader_table[i].name;
 	}
 
-	if ((SHADER_COUNT - 1) > shader_count) {
+	if ((SHADERS_COUNT - 1) > shader_count) {
 		print("Shader_Manager::init: Number of shaders in Shader_List struct is more than number of shader entries in the shader table. Maybe some shader was not added to the shader table.");
 	}
 
@@ -188,95 +364,94 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 
 		Extend_Shader *shader = find_shader_in_shader_table(shader_name);
 		if (shader) {
-			u8 *byte_code = NULL;
-			s32 byte_code_size = 0;
-			if ((shader->byte_code == NULL) && (shader->byte_code_size == 0)) {
-				byte_code = (u8 *)read_entire_file(path_to_shader_file, "rb", &byte_code_size);
-				if (!byte_code) {
-					print("Shader_Manager::init: Failed to read shader byte code from {}.", &path_to_shader_file);
-					continue;
-				}
+			u8 *bytecode = NULL;
+			s32 bytecode_size = 0;
+			bytecode = (u8 *)read_entire_file(path_to_shader_file, "rb", &bytecode_size);
+			if (!bytecode || (bytecode_size == 0)) {
+				print("Shader_Manager::init: Failed to read shader byte code from {}.", &path_to_shader_file);
+				continue;
 			}
 			Shader_Type shader_type;
 			if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
 				print("Shader_Manager::init: The shader manager can get a shader type from {}.", file_names[i].c_str());
 				continue;
 			}
+			create_shader(shader_type, bytecode, bytecode_size, shader, gpu_device);
 			loop_print("  {} was loaded.", shader_name);
-			switch (shader_type) {
-				case VERTEX_SHADER: {
-					gpu_device->create_shader(byte_code, byte_code_size, shader->vertex_shader);
-					if ((shader->byte_code_size == 0) && (shader->byte_code == NULL)) {
-						//@Note: Save vertex shader byte code for creating directx input layouts.
-						shader->byte_code = byte_code;
-						shader->byte_code_size = byte_code_size;
-					}
-					break;
-				}
-				case GEOMETRY_SHADER: {
-					gpu_device->create_shader(byte_code, byte_code_size, shader->geometry_shader);
-					break;
-				}
-				case COMPUTE_SHADER: {
-					gpu_device->create_shader(byte_code, byte_code_size, shader->compute_shader);
-					break;
-				}
-				case HULL_SHADER: {
-					gpu_device->create_shader(byte_code, byte_code_size, shader->hull_shader);
-					break;
-				}
-				case DOMAIN_SHADER: {
-					gpu_device->create_shader(byte_code, byte_code_size, shader->domain_shader);
-					break;
-				}
-				case PIXEL_SHADER: {
-					gpu_device->create_shader(byte_code, byte_code_size, shader->pixel_shader);
-					break;
-				}
-				default: {
-					assert(false);
-				}
-			}
 		} else {
 			print("Shader_Manager::init: The shader table doesn't have a shader entiry with name {}.", &shader_name);
 		}
 	}
 }
-//#include <windows.h>
-//
-//inline wchar_t *to_wstring(const char *string)
-//{
-//	assert(string);
-//
-//	u32 str_len = (u32)strlen(string) + 1;
-//
-//	size_t converted_characters = 0;
-//	size_t sizeInWords = sizeof(u16) * str_len;
-//
-//	wchar_t *wstr_buffer = new wchar_t[str_len];
-//	size_t count = str_len - 1;
-//
-//	errno_t result = mbstowcs_s(&converted_characters, wstr_buffer, sizeInWords, string, count);
-//
-//}
-//
-//#include <d3dcompiler.h>
 
 void Shader_Manager::reload(void *arg)
 {
-	//const char *shader_file_name = (const char *)arg;
-	//print("Recompile and reload", shader_file_name);
+	const char *shader_file_name = (const char *)arg;
 
-	//String path_to_shader;
-	//build_full_path_to_shader_file(shader_file_name, path_to_shader);
+	Array<Extend_Shader *> shaders;
+	if (include_shader(shader_file_name)) {
+		for (u32 i = 0; i < SHADERS_COUNT; i++) {
+			shaders.push(shader_table[i].shader);
+		}
+	} else {
+		Extend_Shader *shader = find_shader_in_shader_table(shader_file_name);
+		if (shader) {
+			shaders.push(shader);
+		} else {
+			print("Shader_Manager::reload: {} was not found in the shader table. The shader can't be compiled and reloaded.", shader_file_name);
+		}
+	}
+	recompile_and_reload_shaders(shaders);
+}
 
-	//D3DCompileFromFile(path_to_shader.c_str(), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, );
+void Shader_Manager::recompile_and_reload_shaders(Array<Extend_Shader *> &shaders)
+{
+	for (u32 shader_index = 0; shader_index < shaders.count; shader_index++) {
+		Extend_Shader *shader = shaders[shader_index];
+
+		String full_path_to_source_shader;
+		build_full_path_to_source_shader_file(shader->file_name, full_path_to_source_shader);
+
+		Array<ComPtr<ID3DBlob>> compiled_shaders;
+		for (u32 i = 0; i < shader->types.count; i++) {
+			ComPtr<ID3DBlob> shader_bytecode;
+			if (!compile_shader(full_path_to_source_shader.c_str(), shader->types[i], shader_bytecode.ReleaseAndGetAddressOf())) {
+				break;
+			}
+			compiled_shaders.push(shader_bytecode);
+		}
+
+		if ((!shader->types.is_empty() && !compiled_shaders.is_empty()) && (shader->types.count == compiled_shaders.count)) {
+			Array<Shader_Type> shader_types = shader->types;
+			String shader_file_name = shader->file_name;
+			shader->free();
+			shader->file_name = shader_file_name;
+
+			String base_file_name;
+			extract_base_file_name(shader->file_name, base_file_name);
+
+			for (u32 i = 0; i < shader_types.count; i++) {
+				create_shader(shader_types[i], (u8 *)compiled_shaders[i]->GetBufferPointer(), (u32)compiled_shaders[i]->GetBufferSize(), shader, gpu_device, true);
+
+				String output_shader_file_name;
+				make_output_shader_file_name(base_file_name.c_str(), shader_types[i], output_shader_file_name);
+
+				String full_path_to_shader_file;
+				build_full_path_to_shader_file(output_shader_file_name, full_path_to_shader_file);
+
+				File shader_file;
+				shader_file.open(full_path_to_shader_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS);
+				shader_file.write(compiled_shaders[i]->GetBufferPointer(), (u32)compiled_shaders[i]->GetBufferSize());
+			}
+			print("Shader_Manager::recompile_and_reload_shaders: {} was successfully recompiled and reloaded.", shader->file_name);
+		}
+	}
 }
 
 void Shader_Manager::shutdown()
 {
 	Extend_Shader *shader = (Extend_Shader *)&shaders;
-	for (u32 i = 0; i < SHADER_COUNT; i++) {
+	for (u32 i = 0; i < SHADERS_COUNT; i++) {
 		shader->free();
 		shader++;
 	}
@@ -294,7 +469,8 @@ Extend_Shader::~Extend_Shader()
 void Extend_Shader::free()
 {
 	Shader::free();
-	DELETE_PTR(byte_code);
-	byte_code_size = 0;
-	name.free();
+	DELETE_PTR(bytecode);
+	bytecode_size = 0;
+	file_name.free();
+	types.clear();
 }
