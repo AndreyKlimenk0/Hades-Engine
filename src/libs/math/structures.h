@@ -270,4 +270,29 @@ typedef Rect<u32> Rect_u32;
 typedef Rect<s32> Rect_s32;
 typedef Rect<float> Rect_f32;
 
+template <typename T, typename U>
+struct Pair {
+	Pair();
+	~Pair();
+	Pair(const T &first, const U &seoncd);
+	
+	T first;
+	U second;
+};
+
+template<typename T, typename U>
+inline Pair<T, U>::Pair()
+{
+}
+
+template<typename T, typename U>
+inline Pair<T, U>::~Pair()
+{
+}
+
+template<typename T, typename U>
+inline Pair<T, U>::Pair(const T & first, const U & seoncd) : first(first), second(second)
+{
+}
+
 #endif

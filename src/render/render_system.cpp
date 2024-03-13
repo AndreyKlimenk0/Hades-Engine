@@ -430,7 +430,7 @@ void Render_2D::init(Engine *engine)
 	Shader_Manager *shader_manager = &engine->shader_manager;
 	render_2d = GET_SHADER(shader_manager, render_2d);
 	if (!is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
-		print("Render_2D::init: Failed to initialize Render_2D. {} is not valid.", render_2d->name);
+		print("Render_2D::init: Failed to initialize Render_2D. {} is not valid.", render_2d->file_name);
 		return;
 	}
 	
@@ -709,7 +709,7 @@ void Render_System::init_shader_input_layout(Shader_Manager *shader_manager)
 
 	Extend_Shader *render_2d = GET_SHADER(shader_manager, render_2d);
 	if (is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
-		HR(gpu_device.dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)render_2d->byte_code, render_2d->byte_code_size, vertex_xuv.ReleaseAndGetAddressOf()));
+		HR(gpu_device.dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)render_2d->bytecode, render_2d->bytecode_size, vertex_xuv.ReleaseAndGetAddressOf()));
 	}
 }
 

@@ -5,19 +5,29 @@
 
 #include "render_api.h"
 #include "../libs/str.h"
+#include "../libs/ds/array.h"
 #include "../win32/win_types.h"
 
 #define GET_SHADER(shader_manager, shader_name) ((Extend_Shader *)&shader_manager->shaders.shader_name)
 
-//@Note: I think it is better in the future to split the struct on Render_Shader(it shader holds vertex shader and shader), Computer_Shader, Geometry_Shader and Tessellation_Shader
+enum Shader_Type {
+	VERTEX_SHADER,
+	GEOMETRY_SHADER,
+	COMPUTE_SHADER,
+	HULL_SHADER,
+	DOMAIN_SHADER,
+	PIXEL_SHADER,
+};
+
+//@Note: I think it is better in the future to split the struct on Render_Shader(it shader holds vertex and pixel shaders), Computer_Shader, Geometry_Shader and Tessellation_Shader.
 struct Extend_Shader : Shader {
 	Extend_Shader();
 	~Extend_Shader();
 
-	u8 *byte_code = NULL;
-	u32 byte_code_size = 0;
-	u32 compiling_flags = 0;
-	String name;
+	u8 *bytecode = NULL;
+	u32 bytecode_size = 0;
+	String file_name;
+	Array<Shader_Type> types;
 
 	void free();
 };
@@ -37,7 +47,6 @@ struct Shader_Manager {
 	~Shader_Manager();
 
 	struct Shader_List {
-		Extend_Shader cascaded_shadow;
 		Extend_Shader debug_cascaded_shadows;
 		Extend_Shader depth_map;
 		Extend_Shader draw_lines;
@@ -52,6 +61,7 @@ struct Shader_Manager {
 
 	void init(Gpu_Device *gpu_device);
 	void reload(void *arg);
+	void recompile_and_reload_shaders(Array<Extend_Shader *> &shaders);
 	void shutdown();
 };
 #endif

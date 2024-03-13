@@ -48,7 +48,9 @@ bool split(String *string, const char *symbols, Array<String> *array)
 	u32	len = (u32)strlen(symbols);
 
 	while ((curr_pos = string->find_text(symbols, curr_pos)) != -1) {
-		array->push(String(string->data, prev_pos, curr_pos));
+		if (prev_pos != curr_pos) {
+			array->push(String(string->data, prev_pos, curr_pos));
+		}
 		prev_pos = curr_pos + len;
 		curr_pos += len;
 	}
