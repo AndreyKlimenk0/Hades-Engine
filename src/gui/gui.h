@@ -92,6 +92,7 @@ struct Gui_Text_Button_Theme {
 };
 
 struct Gui_List_Theme {
+	bool column_filter = true;
 	s32 line_height = 20;
 	s32 line_text_offset = 10;
 	s32 split_line_size = 18;
@@ -110,6 +111,7 @@ struct Gui_List_Theme {
 struct Gui_Window_Theme {
 	s32 header_height = 18;
 	s32 rounded_border = 6;
+	s32 rounded_scrolling = 6;
 	s32 scroll_size = 8;
 	s32 scroll_bar_size = 8;
 	s32 min_scroll_size = 10;
@@ -146,11 +148,13 @@ namespace gui {
 	void set_theme(Gui_Window_Theme *gui_window_theme);
 	void set_theme(Gui_Text_Button_Theme *gui_window_theme);
 	void set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme);
+	void set_theme(Gui_List_Theme *gui_list_theme);
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
 	
 	void reset_window_theme();
 	void reset_button_theme();
 	void reset_edit_field_theme();
+	void reset_list_theme();
 	
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_pos(s32 x, s32 y);
