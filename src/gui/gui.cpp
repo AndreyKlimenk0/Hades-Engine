@@ -475,6 +475,7 @@ struct Gui_Manager {
 	Array<Gui_Window> windows;
 
 	Gui_List_Theme list_theme;
+	Gui_List_Theme backup_list_theme;
 	Gui_Tab_Theme tab_theme;
 	Gui_Window_Theme window_theme;
 	Gui_List_Box_Theme list_box_theme;
@@ -1221,17 +1222,25 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 	window_theme.place_between_rects = 0;
 	window_theme.horizontal_offset_from_sides = 0;
 	window_theme.vertical_offset_from_sides = 0;
+	window_theme.rounded_border = 0;
+	window_theme.rounded_scrolling = 0;
+
 	gui::set_theme(&window_theme);
 
 	Size_s32 window_list_size = list_theme.window_size;
 	set_next_window_size(window_list_size.width, window_list_size.height);
 
 	Rect_s32 column_top_rect;
-	place_rect_on_window_top(list_theme.filter_rect_height, &column_top_rect);
+	if (list_theme.column_filter) {
+		place_rect_on_window_top(list_theme.filter_rect_height, &column_top_rect);
+	}
 
 	u32 window_style = WINDOW_SCROLL_BAR;
 	if (begin_child(name, window_style)) {
 		line_list.count = 0;
+		if (!list_theme.column_filter) {
+			return true;
+		}
 
 		u32 picked_column_index = UINT32_MAX;
 		for (u32 i = 0; i < columns_count; i++) {
@@ -1241,6 +1250,7 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 				break;
 			}
 		}
+
 		if (picked_column_index == UINT32_MAX) {
 			picked_column_index = 0;
 			columns[0].state = GUI_LIST_COLUMN_STATE_SORTING_DOWN;
@@ -1305,19 +1315,29 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 					render_list->add_texture(&button_rect, &down_texture);
 				}
 			}
-			if (offset_in_persents < 100) {
+			if ((offset_in_persents < 100) && (i < (columns_count - 1))) {
 				Point_s32 first_point = { window->rect.x + calculate(window_list_size.width, offset_in_persents), window->rect.y + half_difference };
 				Point_s32 second_point = { window->rect.x + calculate(window_list_size.width, offset_in_persents), window->rect.y + list_theme.filter_rect_height - half_difference };
 				render_list->add_line(&first_point, &second_point, list_theme.split_lines_color, list_theme.split_line_thickness);
 			}
 			prev_offset_in_persents += columns[i].size_in_percents;
-
 		}
 		render_list->pop_clip_rect();
 		return true;
 	}
 	gui::reset_window_theme();
 	return false;
+}
+
+inline void update_list_line_state(Gui_List_Line_State *list_line_state, Rect_s32 *line_rect, Gui_List_Line_State clicked_mouse_button)
+{
+	if (detect_intersection(line_rect)) {
+		*list_line_state = GUI_LIST_LINE_RESET_STATE;
+		*list_line_state |= GUI_LIST_LINE_SELECTED;
+		*list_line_state |= clicked_mouse_button;
+	} else {
+		*list_line_state = GUI_LIST_LINE_RESET_STATE;
+	}
 }
 
 void Gui_Manager::end_list()
@@ -1338,18 +1358,21 @@ void Gui_Manager::end_list()
 			if (*gui_list_line->state > 0x8) {
 				*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
 			}
+			
 			if (*gui_list_line->state & GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE) {
 				*gui_list_line->state &= ~GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
 			}
+			
+			if (*gui_list_line->state & GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE) {
+				*gui_list_line->state &= ~GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE;
+			}
 
 			if (was_click(KEY_LMOUSE) && !Keys_State::is_key_down(KEY_CTRL)) {
-				if (detect_intersection(&line_rect)) {
-					*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
-					*gui_list_line->state |= GUI_LIST_LINE_SELECTED;
-					*gui_list_line->state |= GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
-				} else {
-					*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
-				}
+				update_list_line_state(gui_list_line->state, &line_rect, GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE);
+			
+			} else if (was_click(KEY_RMOUSE) && !Keys_State::is_key_down(KEY_CTRL)) {
+				update_list_line_state(gui_list_line->state, &line_rect, GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE);
+			
 			} else if (detect_intersection(&line_rect) && (key_bindings.was_binding_triggered(KEY_CTRL, KEY_LMOUSE))) {
 				*gui_list_line->state |= GUI_LIST_LINE_SELECTED;
 				*gui_list_line->state |= GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
@@ -2621,7 +2644,7 @@ void Gui_Manager::scrolling(Gui_Window *window, Axis axis)
 		} else if ((active_window == window->gui_id) && (axis == Y_AXIS)) {
 			Array<s32> *mouse_wheels = Async_Input::get_mouse_wheels();
 			for (u32 i = 0; i < mouse_wheels->count; i++) {
-				mouse_delta += (mouse_wheels->get(i) > 0) ? -window_theme.mouse_wheel_spped : window_theme.mouse_wheel_spped;
+				mouse_delta += (mouse_wheels->get(i) > 0) ? -window_theme.mouse_wheel_spped / 2.0f : window_theme.mouse_wheel_spped / 2.0f;
 				update_scroll_position = true;
 			}
 		} 
@@ -2640,7 +2663,9 @@ void Gui_Manager::scrolling(Gui_Window *window, Axis axis)
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		Rect_s32 clip_rect = (window->type == WINDOW_TYPE_PARENT) ? window->rect : calculate_clip_rect(&window->parent_window->rect, &window->rect);
 		render_list->push_clip_rect(&clip_rect);
-		render_list->add_rect(&scroll_rect, window_theme.scroll_color, scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
+		//render_list->add_rect(&scroll_rect, window_theme.scroll_color, scroll_rect.get_size()[math::abs((int)axis - 1)] / 2);
+		render_list->add_rect(&scroll_rect, window_theme.scroll_color, window_theme.rounded_scrolling);
+		//render_list->add_rect(&scroll_rect, window_theme.scroll_color, 0);
 		render_list->pop_clip_rect();
 
 		window->scroll[axis] = scroll_rect[axis];
@@ -2783,12 +2808,12 @@ bool gui::selected(Gui_List_Line_State list_line_state)
 
 bool gui::left_mouse_click(Gui_List_Line_State list_line_state)
 {
-	return false;
+	return list_line_state & GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
 }
 
 bool gui::right_mouse_click(Gui_List_Line_State list_line_state)
 {
-	return false;
+	return list_line_state & GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE;
 }
 
 bool gui::begin_column(const char *filter_name)
@@ -2883,6 +2908,12 @@ void gui::set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme)
 	gui_manager.edit_field_theme = *gui_edit_field_theme;
 }
 
+void gui::set_theme(Gui_List_Theme *gui_list_theme)
+{
+	gui_manager.backup_list_theme = gui_manager.list_theme;
+	gui_manager.list_theme = *gui_list_theme;
+}
+
 void gui::reset_window_theme()
 {
 	gui_manager.window_theme = gui_manager.backup_window_theme;
@@ -2896,6 +2927,11 @@ void gui::reset_button_theme()
 void gui::reset_edit_field_theme()
 {
 	gui_manager.edit_field_theme = gui_manager.backup_edit_field_theme;
+}
+
+void gui::reset_list_theme()
+{
+	gui_manager.list_theme = gui_manager.backup_list_theme;
 }
 
 void gui::set_next_window_size(s32 width, s32 height)
@@ -3023,24 +3059,70 @@ void gui::draw_test_gui()
 			end_list();
 		}
 
-		//button("Button1");
-		//button("Button2");
-		//button("Button3");
-		//button("Button4");
-		//button("Button5");
-		//button("Button6");
-		//button("Button7");
-		//button("Button8");
-		//button("Button9");
-		//button("Button10");
-		//button("Button11");
-		//button("Button12");
-		//same_line();
-		//button("Button13");
-		//button("Button14");
-		//button("Button15");
-		//button("Button16");
-		//button("Button17");
+		static bool init_list = false;
+		static Array<Gui_List_Line_State> list_line_states;
+		static Array<String> file_names2;
+		static Array<String> file_types2;
+		if (!init_list) {
+			init_list = true;
+			list_line_states.reserve(20);
+
+			for (u32 i = 0; i < 20; i++) {
+				list_line_states[i] = 0;
+			}
+
+			for (u32 i = 0; i < 10; i++) {
+				char *file_name = format("rect{}.cpp", i);
+				file_names2.push(file_name);
+				file_types2.push("cpp");
+				
+				free_string(file_name);
+			}
+			for (u32 i = 10; i < 20; i++) {
+				char *file_name = format("draw_rect{}.hlsl", i);
+
+				file_names2.push(file_name);
+				file_types2.push("hlsl");
+
+				free_string(file_name);
+			}
+		}
+
+		Gui_List_Theme list_theme;
+		list_theme.column_filter = false;
+
+		set_theme(&list_theme);
+		static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 25} };
+		if (begin_list("Cpp file list", file_filter, 2)) {
+			for (u32 i = 0; i < 20; i++) {
+				begin_line(&list_line_states[i]);
+
+				if (right_mouse_click(list_line_states[i])) {
+					print("Was right mouse click. index", i);
+				}
+
+				if (left_mouse_click(list_line_states[i])) {
+					print("Was left mouse click. index", i);
+				}
+
+				if (selected(list_line_states[i])) {
+					//print("Selected", i);
+				}
+
+				begin_column("File name");
+				add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
+				end_column();
+
+				begin_column("File Type");
+				add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
+				end_column();
+
+				end_line();
+			}
+			end_list();
+		}
+		reset_list_theme();
+
 
 		if (begin_child("Temp child window")) {
 			button("Button1");
@@ -3054,67 +3136,5 @@ void gui::draw_test_gui()
 		end_window();
 	}
 
-	//if (begin_window("Test window  2")) {
-	//	//static Vector3 position = Vector3::zero;
-	//	//set_theme(&theme);
-	//	//edit_field("Position", &position);
-	//	//reset_window_theme();
-	//	static float value1;
-	//	static float value2;
-	//	static float value3;
-	//	static float value4;
-	//	static float value5;
-	//	static float value6;
-	//	edit_field("Value1", &value1);
-	//	edit_field("Value2", &value2);
-	//	edit_field("Value3", &value3);
-	//	edit_field("Value4", &value4);
-	//	edit_field("Value5", &value5);
-	//	edit_field("Value6", &value6);
-
-	//	u8 *image_data = NULL;
-	//	u32 width = 0;
-	//	u32 height = 0;
-	//	String full_path;
-	//	build_full_path_to_editor_file("search.png", full_path);
-	//	if (load_png_file(full_path, &image_data, &width, &height)) {
-	//		Texture2D texture;
-	//		Texture2D_Desc texture_desc;
-	//		texture_desc.mip_levels = 1;
-	//		texture_desc.width = width;
-	//		texture_desc.height = height;
-	//		texture_desc.data = (void *)image_data;
-	//		Engine::get_render_system()->gpu_device.create_texture_2d(&texture_desc, &texture);
-	//		Engine::get_render_system()->gpu_device.create_shader_resource_view(&texture_desc, &texture);
-	//		DELETE_PTR(image_data);
-	//		image_button(width, height, &texture);
-	//	} else {
-	//	}
-
-	//	end_window();
-	//}
-
-	//if (begin_window("Temp window 33")) {
-	//	//same_line();
-	//	button("sameline1");
-	//	button("sameline2");
-	//	button("sameline3");
-	//	button("sameline4");
-	//	//next_line();
-	//	Array<String> temp;
-	//	temp.push("AAAA");
-	//	temp.push("AAAAB");
-	//	temp.push("AAAAC");
-	//	static u32 index = 0;
-	//	list_box(&temp, &index);
-	//	
-	//	same_line();
-	//	button("Sameline1");
-	//	button("Sameline2");
-	//	button("Sameline3");
-	//	button("Sameline4");
-	//	end_window();
-	//}
-	
 	end_frame();
 }
