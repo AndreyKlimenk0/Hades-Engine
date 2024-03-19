@@ -23,6 +23,7 @@ const Window_Style WINDOW_OUTLINES = 0x2;
 const Window_Style WINDOW_SCROLL_BAR = 0x4;
 const Window_Style WINDOW_RESIZABLE = 0x8;
 const Window_Style WINDOW_CLOSE_BUTTON = 0x10;
+const Window_Style WINDOW_TAB_BAR = 0x20;
 const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON;
 
 enum Alignment {
@@ -109,6 +110,7 @@ struct Gui_List_Theme {
 };
 
 struct Gui_Window_Theme {
+	s32 tab_bar_height = 20;
 	s32 header_height = 18;
 	s32 rounded_border = 6;
 	s32 rounded_scrolling = 6;

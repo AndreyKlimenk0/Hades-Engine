@@ -234,7 +234,6 @@ struct Gui_Window {
 	bool display_vertical_scrollbar = false;
 	bool display_horizontal_scrollbar = false;
 	Gui_ID gui_id = 0;
-	s32 tab_offset = 0;
 	u32 edit_field_count = 0;
 	u32 max_edit_field_number = 0;
 	s32 index_in_windows_array = -1;
@@ -252,12 +251,14 @@ struct Gui_Window {
 	Window_Style style;
 
 	String name;
+	Point_s32 scroll;
+	Point_s32 last_tab_position;
 	Rect_s32 rect;
 	Rect_s32 view_rect;
 	Rect_s32 clip_rect;
 	Rect_s32 content_rect;
-	Point_s32 scroll;
 	Rect_s32 last_placed_rect;
+	Rect_s32 tab_bar_rect;
 	
 	Array<Gui_Window *> child_windows;
 	Array<Gui_Window *> collided_windows;
@@ -1731,14 +1732,7 @@ bool Gui_Manager::add_tab(const char *tab_name)
 	Gui_Window *window = get_window();
 
 	Rect_s32 name_rect = get_text_rect(tab_name);
-	Rect_s32 tab_rect = { 0, 0, name_rect.width + tab_theme.additional_space_in_tab, tab_theme.tab_height };
-	Rect_s32 tab_bar_rect = { window->view_rect.x, window->view_rect.y, window->rect.width, tab_theme.tab_bar_height };
-
-	if (!window->tab_was_drawn) {
-		window->place_rect_over_window(&tab_bar_rect);
-	}
-	tab_rect.set(window->tab_offset, window->view_rect.y - TAB_HEIGHT);
-	window->tab_offset += tab_rect.width;
+	Rect_s32 tab_rect = { window->last_tab_position.x, window->last_tab_position.y, name_rect.width + tab_theme.additional_space_in_tab, tab_theme.tab_height };
 
 	Gui_ID tab_gui_id = GET_TAB_GUI_ID();
 	update_active_and_hot_state(window, tab_gui_id, &tab_rect);
@@ -1750,21 +1744,18 @@ bool Gui_Manager::add_tab(const char *tab_name)
 	if (must_rect_be_drawn(&window->clip_rect, &tab_rect)) {
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		
-		if (!window->tab_was_drawn) {
-			window->tab_was_drawn = true;
-			render_list->add_rect(&tab_bar_rect, tab_theme.tab_bar_color);
-		}
 		place_in_middle(&tab_rect, &name_rect, BOTH_AXIS);
 
-		render_list->push_clip_rect(&window->clip_rect);
+		Rect_s32 clip_rect = calculate_clip_rect(&window->clip_rect, &window->tab_bar_rect);
 
+		//render_list->push_clip_rect(&clip_rect);
 		if (active_tab != tab_gui_id) {
 			render_list->add_rect(&tab_rect, tab_theme.tab_color);
 		} else {
 			render_list->add_rect(&tab_rect, tab_theme.active_tab_color, ROUND_TOP_RECT);
 		}
 		render_list->add_text(&name_rect, tab_name);
-		render_list->pop_clip_rect();
+		//render_list->pop_clip_rect();
 	}
 	tab_count++;
 	return (active_tab == tab_gui_id);
@@ -2446,6 +2437,15 @@ void Gui_Manager::render_window(Gui_Window *window)
 		}
 		render_list->pop_clip_rect();
 	}
+
+	if (window->style & WINDOW_TAB_BAR) {
+		window->last_tab_position = { window->view_rect.x, window->view_rect.y };
+		Rect_s32 tab_bar_rect = { window->view_rect.x, window->view_rect.y, window->view_rect.width, window_theme.tab_bar_height };
+		window->tab_bar_rect = tab_bar_rect;
+		window->place_rect_over_window(&tab_bar_rect);
+		render_list->add_rect(&tab_bar_rect, Color(40, 40, 40));
+	}
+
 	if (window->display_vertical_scrollbar) {
 		Rect_s32 scroll_bar_rect = window->get_scrollbar_rect(Y_AXIS);
 		window->place_rect_over_window(&scroll_bar_rect);
@@ -2983,160 +2983,179 @@ bool gui::were_events_handled()
 void gui::draw_test_gui()
 {
 	begin_frame();
-	if (begin_window("Test window")) {
-		//begin_list("World Entities");
-		//for (int i = 0; i < 10; i++) {
-		//	item_list("Entity");
+
+	if (begin_window("Test tab window", WINDOW_STYLE_DEFAULT | WINDOW_TAB_BAR)) {
+		if (add_tab("First tab")) {
+			button("b1");
+			button("b2");
+			button("b4");
+			button("b234");
+			button("b234");
+		}
+		//if (add_tab("Second tab")) {
+		//	button("S1");
+		//	button("Secondb2");
+		//	button("Secondb4");
+		//	button("Seoncb234");
+		//	button("b234");
 		//}
-		//end_list();
-		static bool state;
-		radio_button("Turn on shadows", &state);
-		static u32 index = 0;
-		Array<String> array;
-		array.push("String 1");
-		array.push("String 2");
-		array.push("String 3");
-		list_box(&array, &index);
-		static Vector3 position1 = Vector3::zero;
-		static Vector3 position2 = Vector3::zero;
-		static Vector3 position3 = Vector3::zero;
-		//set_theme(&theme);
-		//edit_field("Position", &position1);
-		//reset_window_theme();
-		static float value1;
-		static float value2;
-		static float value3;
-		static float value4;
-		static float value5;
-		static float value6;
-		edit_field("Value1", &value1);
-		edit_field("Value2", &value2);
-		edit_field("Value3", &value3);
-		edit_field("Position", &position2);
-		edit_field("Position", &position3);
-		edit_field("Value4", &value4);
-		edit_field("Value5", &value5);
-		edit_field("Value6", &value6);
-
-		static bool init = false;
-		static Array<Gui_List_Line_State> list_line;
-		static Array<String> file_names;
-		static Array<String> file_types;
-		static Array<String> file_sizes;
-		if (!init) {
-			init = true;
-			list_line.reserve(20);
-			for (int i = 0; i < 20; i++) {
-				char *file_name = format("file_name_{}", i);
-				file_names.push(file_name);
-				char *file_type = format("hlsl_{}", i);
-				file_types.push(file_type);
-				file_sizes.push("12034A");
-				free_string(file_name);
-				free_string(file_type);
-			}
-			
-		}
-		
-		static Gui_List_Column filters[] = { {"File Name", 50}, {"File Type", 25}, {"File Size", 25} };
-		if (begin_list("File list", filters, 3)) {
-			for (u32 i = 0; i < list_line.count; i++) {
-
-				begin_line(&list_line[i]);
-				
-				begin_column("File Name");
-				add_text(file_names[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
-
-				begin_column("File Type");
-				add_text(file_types[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
-
-				begin_column("File Size");
-				add_text(file_sizes[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
-				
-				end_line();
-			}
-			end_list();
-		}
-
-		static bool init_list = false;
-		static Array<Gui_List_Line_State> list_line_states;
-		static Array<String> file_names2;
-		static Array<String> file_types2;
-		if (!init_list) {
-			init_list = true;
-			list_line_states.reserve(20);
-
-			for (u32 i = 0; i < 20; i++) {
-				list_line_states[i] = 0;
-			}
-
-			for (u32 i = 0; i < 10; i++) {
-				char *file_name = format("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArect{}.cpp", i);
-				file_names2.push(file_name);
-				file_types2.push("cpp");
-				
-				free_string(file_name);
-			}
-			for (u32 i = 10; i < 20; i++) {
-				char *file_name = format("draw_rect{}.hlsl", i);
-
-				file_names2.push(file_name);
-				file_types2.push("hlsl");
-
-				free_string(file_name);
-			}
-		}
-
-		Gui_List_Theme list_theme;
-		list_theme.column_filter = false;
-
-		set_theme(&list_theme);
-		static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 25} };
-		if (begin_list("Cpp file list", file_filter, 2)) {
-			for (u32 i = 0; i < 20; i++) {
-				begin_line(&list_line_states[i]);
-
-				if (right_mouse_click(list_line_states[i])) {
-					print("Was right mouse click. index", i);
-				}
-
-				if (left_mouse_click(list_line_states[i])) {
-					print("Was left mouse click. index", i);
-				}
-
-				if (selected(list_line_states[i])) {
-					//print("Selected", i);
-				}
-
-				begin_column("File name");
-				add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
-
-				begin_column("File Type");
-				add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
-
-				end_line();
-			}
-			end_list();
-		}
-		reset_list_theme();
-
-
-		if (begin_child("Temp child window")) {
-			button("Button1");
-			button("Button2");
-			button("Button3");
-			button("Button4");
-			button("Button5");
-			end_child();
-		}
-		button("Button2345");
 		end_window();
 	}
+
+	//if (begin_window("Test window")) {
+	//	//begin_list("World Entities");
+	//	//for (int i = 0; i < 10; i++) {
+	//	//	item_list("Entity");
+	//	//}
+	//	//end_list();
+	//	static bool state;
+	//	radio_button("Turn on shadows", &state);
+	//	static u32 index = 0;
+	//	Array<String> array;
+	//	array.push("String 1");
+	//	array.push("String 2");
+	//	array.push("String 3");
+	//	list_box(&array, &index);
+	//	static Vector3 position1 = Vector3::zero;
+	//	static Vector3 position2 = Vector3::zero;
+	//	static Vector3 position3 = Vector3::zero;
+	//	//set_theme(&theme);
+	//	//edit_field("Position", &position1);
+	//	//reset_window_theme();
+	//	static float value1;
+	//	static float value2;
+	//	static float value3;
+	//	static float value4;
+	//	static float value5;
+	//	static float value6;
+	//	edit_field("Value1", &value1);
+	//	edit_field("Value2", &value2);
+	//	edit_field("Value3", &value3);
+	//	edit_field("Position", &position2);
+	//	edit_field("Position", &position3);
+	//	edit_field("Value4", &value4);
+	//	edit_field("Value5", &value5);
+	//	edit_field("Value6", &value6);
+
+	//	static bool init = false;
+	//	static Array<Gui_List_Line_State> list_line;
+	//	static Array<String> file_names;
+	//	static Array<String> file_types;
+	//	static Array<String> file_sizes;
+	//	if (!init) {
+	//		init = true;
+	//		list_line.reserve(20);
+	//		for (int i = 0; i < 20; i++) {
+	//			char *file_name = format("file_name_{}", i);
+	//			file_names.push(file_name);
+	//			char *file_type = format("hlsl_{}", i);
+	//			file_types.push(file_type);
+	//			file_sizes.push("12034A");
+	//			free_string(file_name);
+	//			free_string(file_type);
+	//		}
+	//		
+	//	}
+	//	
+	//	static Gui_List_Column filters[] = { {"File Name", 50}, {"File Type", 25}, {"File Size", 25} };
+	//	if (begin_list("File list", filters, 3)) {
+	//		for (u32 i = 0; i < list_line.count; i++) {
+
+	//			begin_line(&list_line[i]);
+	//			
+	//			begin_column("File Name");
+	//			add_text(file_names[i].c_str(), RECT_LEFT_ALIGNMENT);
+	//			end_column();
+
+	//			begin_column("File Type");
+	//			add_text(file_types[i].c_str(), RECT_LEFT_ALIGNMENT);
+	//			end_column();
+
+	//			begin_column("File Size");
+	//			add_text(file_sizes[i].c_str(), RECT_LEFT_ALIGNMENT);
+	//			end_column();
+	//			
+	//			end_line();
+	//		}
+	//		end_list();
+	//	}
+
+	//	static bool init_list = false;
+	//	static Array<Gui_List_Line_State> list_line_states;
+	//	static Array<String> file_names2;
+	//	static Array<String> file_types2;
+	//	if (!init_list) {
+	//		init_list = true;
+	//		list_line_states.reserve(20);
+
+	//		for (u32 i = 0; i < 20; i++) {
+	//			list_line_states[i] = 0;
+	//		}
+
+	//		for (u32 i = 0; i < 10; i++) {
+	//			char *file_name = format("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArect{}.cpp", i);
+	//			file_names2.push(file_name);
+	//			file_types2.push("cpp");
+	//			
+	//			free_string(file_name);
+	//		}
+	//		for (u32 i = 10; i < 20; i++) {
+	//			char *file_name = format("draw_rect{}.hlsl", i);
+
+	//			file_names2.push(file_name);
+	//			file_types2.push("hlsl");
+
+	//			free_string(file_name);
+	//		}
+	//	}
+
+	//	Gui_List_Theme list_theme;
+	//	list_theme.column_filter = false;
+
+	//	set_theme(&list_theme);
+	//	static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 25} };
+	//	if (begin_list("Cpp file list", file_filter, 2)) {
+	//		for (u32 i = 0; i < 20; i++) {
+	//			begin_line(&list_line_states[i]);
+
+	//			if (right_mouse_click(list_line_states[i])) {
+	//				print("Was right mouse click. index", i);
+	//			}
+
+	//			if (left_mouse_click(list_line_states[i])) {
+	//				print("Was left mouse click. index", i);
+	//			}
+
+	//			if (selected(list_line_states[i])) {
+	//				//print("Selected", i);
+	//			}
+
+	//			begin_column("File name");
+	//			add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
+	//			end_column();
+
+	//			begin_column("File Type");
+	//			add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
+	//			end_column();
+
+	//			end_line();
+	//		}
+	//		end_list();
+	//	}
+	//	reset_list_theme();
+
+
+	//	if (begin_child("Temp child window")) {
+	//		button("Button1");
+	//		button("Button2");
+	//		button("Button3");
+	//		button("Button4");
+	//		button("Button5");
+	//		end_child();
+	//	}
+	//	button("Button2345");
+	//	end_window();
+	//}
 
 	end_frame();
 }
