@@ -9,6 +9,7 @@
 
 //@Note: Probably it is temporary decision
 #include "../libs/png_image.h"
+#include "../gui/test_gui.h"
 
 #define DRAW_TEST_GUI 1
 
@@ -22,7 +23,6 @@ void Engine::init(Win32_Info *_win32_info)
 	win32_info = *_win32_info;
 	init_os_path();
 
-	editor.init(this);
 
 	font_manager.init();
 
@@ -32,7 +32,11 @@ void Engine::init(Win32_Info *_win32_info)
 	//@Note: It will be nice to get rid of input layouts in the future.
 	render_sys.init_shader_input_layout(&shader_manager);
 	
+	
+	//gui::init_gui(this, "FiraCode-Regular", 13);
 	gui::init_gui(this, "consola", FONT_SIZE);
+	
+	editor.init(this);
 
 	performance_displayer.init(this);
 
@@ -136,7 +140,7 @@ void Engine::frame()
 	render_world.render();
 
 #if DRAW_TEST_GUI
-	gui::draw_test_gui();
+	draw_test_gui();
 #else
 	editor.render();
 #endif
@@ -223,9 +227,9 @@ void Engine::Performance_Displayer::display()
 	u32 text_width = font->get_text_width(test2);
 
 	s32 x = engine->win32_info.window_width - text_width - 10;
-
 	render_list.add_text(x, 5, test);
 	render_list.add_text(x, 20, test2);
+	
 	free_string(test);
 	free_string(test2);
 

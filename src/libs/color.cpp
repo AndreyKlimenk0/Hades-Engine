@@ -11,6 +11,10 @@ Color Color::Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
 Color Color::Silver = { 0.75f, 0.75f, 0.75f, 1.0f };
 Color Color::LightSteelBlue = { 0.69f, 0.77f, 0.87f, 1.0f };
 
+Color::Color(s32 color) : Color(color, color, color)
+{
+}
+
 Color::Color(int r, int g, int b, int a)
 {
 	assert(r <= 255 && r >= 0);

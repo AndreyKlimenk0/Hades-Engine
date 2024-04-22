@@ -61,7 +61,9 @@ struct Render_Primitive_List {
 	//@Note: default construcor should be deleted. 
 	Render_Primitive_List() {}
 	Render_Primitive_List(Render_2D *render, Font *font, Render_Font *render_font);
-	
+#ifdef _DEBUG
+	String name;
+#endif
 	Render_2D *render_2d = NULL;
 	Font *font = NULL;
 	Render_Font *render_font = NULL;
@@ -75,8 +77,8 @@ struct Render_Primitive_List {
 
 	void add_outlines(int x, int y, int width, int height, const Color &color, float outline_width = 1.0f, u32 rounding = 0, u32 flags = ROUND_RECT);
 
-	void add_text(Rect_s32 *rect, const char *text);
-	void add_text(int x, int y, const char *text);
+	void add_text(Rect_s32 *rect, const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
+	void add_text(int x, int y, const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
 	
 	void add_rect(Rect_s32 *rect, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);

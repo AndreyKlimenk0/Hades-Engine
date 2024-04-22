@@ -111,8 +111,10 @@ struct Drop_Down_Entity_Window : Editor_Window {
 struct Command_Window : Editor_Window {
 	String text;
 	Rect_s32 window_rect;
+	Array<String> commands;
+	Array<Gui_List_Line_State> command_list_state;
 	Gui_Window_Theme window_theme;
-
+	Texture2D cmd_icon_texture;
 	void init(Engine *engine);
 	void draw();
 };
