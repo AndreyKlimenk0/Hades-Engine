@@ -21,6 +21,7 @@ struct Color {
 	Color() {};
 	Color(int r, int g, int b, int a = 255);
 	Color(float r, float g, float b, float a = 1.0f) : value(r, g, b, a) {}
+	explicit Color(s32 color);
 
 	operator Vector4();
 

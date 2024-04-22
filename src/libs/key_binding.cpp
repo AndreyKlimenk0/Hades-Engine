@@ -24,7 +24,7 @@ void Key_Command_Bindings::set(const char *command, Key key, bool key_must_be_pr
 Find_Command_Result Key_Command_Bindings::find_command(Key key, Key_State key_state, String *command)
 {
 	if ((key_command_list_for_up_keys[key].key == KEY_UNKNOWN) && (key_command_list_for_down_keys[key].key == KEY_UNKNOWN)) {
-		print("Key_Binding::get_command: There is no any binding for the key {}.", to_string(key));
+		//print("Key_Binding::get_command: There is no any binding for the key {}.", to_string(key));
 		return COMMAND_NOT_FOUND;
 	}
 

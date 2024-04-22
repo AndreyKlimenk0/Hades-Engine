@@ -5,11 +5,11 @@
 #include "font.h"
 #include "render_helpers.h"
 #include "../sys/engine.h"
-#include "../win32/win_types.h"
 #include "../libs/os/file.h"
 #include "../libs/math/functions.h"
+#include "../win32/win_types.h"
 
-const char *DEFAULT_PATH_TO_FONT_DIR = "C:/Windows/Fonts/";
+static const char *DEFAULT_PATH_TO_FONT_DIR = "C:/Windows/Fonts/";
 
 Font::Font()
 {
@@ -27,28 +27,42 @@ u32 Font::get_text_width(const char *text)
 	return size.width;
 }
 
-Size_u32 Font::get_text_size(const char *text)
+Size_u32 Font::get_text_size(const char *text, Text_Alignment text_alignment)
 {
 	assert(text);
 	
 	u32 len = (u32)strlen(text);
 	u32 mines_one_len = len - 1;
-	Size_u32 result = { 0, 0 };
+	Size_u32 text_size = { 0, 0 };
 	if (len == 0) {
-		return result;
+		return text_size;
 	}
 
 	Font_Char *font_char = NULL;
 	for (u32 index = 0; index < mines_one_len; index++) {
 		font_char = get_font_char(text[index]);
-		result.width += (font_char->advance);
-		result.height = math::max(result.height, font_char->size.height);
+		text_size.width += (font_char->advance);
+		text_size.height = math::max(text_size.height, font_char->size.height);
 	}
 	font_char = get_font_char(text[mines_one_len]);
-	result.width += font_char->bearing.width + font_char->size.width;
-	result.height = math::max(result.height, font_char->size.height);
-	
-	return result;
+	text_size.width += font_char->bearing.width + font_char->size.width;
+	text_size.height = math::max(text_size.height, font_char->size.height);
+
+	switch (text_alignment) {
+		case ALIGN_TEXT_BY_MAX_NUMBER: {
+			text_size.height = max_number_height;
+			break;
+		}
+		case ALIGN_TEXT_BY_MAX_ALPHABET: {
+			text_size.height = max_alphabet_height;
+			break;
+		}
+		case ALIGN_TEXT_BY_MAX_SYMBOL: {
+			text_size.height = max_symbol_height;
+			break;
+		}
+	}
+	return text_size;
 }
 
 Font_Char *Font::get_font_char(u8 character)
@@ -92,8 +106,7 @@ void Font_Manager::init()
 {
 	CHAR path[MAX_PATH];
 
-	if (FAILED(SHGetFolderPath(NULL, CSIDL_FONTS, NULL, 0, path)))
-	{
+	if (FAILED(SHGetFolderPath(NULL, CSIDL_FONTS, NULL, 0, path))) {
 		if (!file_exists(DEFAULT_PATH_TO_FONT_DIR)) {
 			print("Font_Manager::init: Faield to init Font Manager. The manager can not get path to a font directory");
 		} else {
@@ -145,20 +158,17 @@ bool Font_Manager::load_font(const char *name, u32 font_size)
 
 		u32 *data = r8_to_rgba32((u8 *)face->glyph->bitmap.buffer, face->glyph->bitmap.width, face->glyph->bitmap.rows);
 		font_char.bitmap = data;
-
-		if (font_char.size.width > font.max_width) {
-			font.max_width = font_char.size.width;
-		}
-
-		if (font_char.size.height > font.max_height) {
-			font.max_height = font_char.size.height;
-		}
-
-		if (isalpha(c) && (font_char.size.height > font.max_alphabet_height)) {
-			font.max_alphabet_height = font_char.size.height;
-		}
-
+		
 		font.characters[font_char.get_index()] = font_char;
+
+		font.max_symbol_height = math::max(font.max_symbol_height, font_char.size.height);
+
+		if (isalpha(c)) {
+			font.max_alphabet_height = math::max(font.max_alphabet_height, font_char.size.height);
+		}
+		if (isdigit(c)) {
+			font.max_number_height = math::max(font.max_alphabet_height, font_char.size.height);
+		}
 	}
 	font_table.set(font_name, font);
 	free_string(font_name);

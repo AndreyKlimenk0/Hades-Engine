@@ -1,5 +1,6 @@
 #include "test.h"
 #include "../libs/math/matrix.h"
+#include "../libs/math/vector.h"
 #include "../libs/ds/array.h"
 #include "../libs/str.h"
 #include "../render/render_api.h"
@@ -26,57 +27,47 @@ struct Parallel_Job_Manager {
 	void init();
 };
 
+float calculate_s(float a, float b, float c)
+{
+	return (a + b + c) / 2.0f;
+}
 
-//struct Gui_Line_State {
-//	enum Data_Type {
-//		LIST_ITEM_DATA_TYPE_UNKNOWN,
-//		LIST_ITEM_DATA_TYPE_TEXT,
-//		LIST_ITEM_DATA_TYPE_IMAGE,
-//		LIST_ITEM_DATA_TYPE_IMAGE_BUTTON,
-//	};
-//
-//	struct Item_Data {
-//		Data_Type type;
-//		union {
-//			const char *filter_name = NULL;
-//			const char *text;
-//			Texture2D texture;
-//		};
-//		u32 alignment_type;
-//	};
-//	Array<Item_Data> filter_data_list;
-//	struct State {
-//		bool selected;
-//		bool left_mouse_click;
-//		bool right_mouse_click;
-//	};
-//
-//	void add_text(u32 alignment, const char *text, const char *filter_name = NULL);
-//	void add_image(u32 alignment, Texture2D *texture2d, const char *filter_name = NULL);
-//	void add_image_button(u32 alignment, Texture2D *texture2d, const char *filter_name = NULL);
-//};
+float calculate_a(float a, float b, float c, float s)
+{
+	return math::sqrt(s * (s - a) * (s - b) * (s - c));
+}
 
-enum String_Priority_Type {
+float calculate_h(float a, float base)
+{
+	return (a * 2.0f) / base;
+}
 
-};
+bool intersection_test(float radius, const Vector2 &start_point, const Vector2 &end_point, const Vector2 &point)
+{
+	if ((start_point.x > point.x) || (point.x > end_point.x)) {
+		return false;
+	}
+
+	auto A = start_point;
+	auto B = end_point;
+	auto C = point;
+
+	auto a = get_length(&(A - B));
+	auto b = get_length(&(C - B));
+	auto c = get_length(&(A - C));
+
+	auto base = math::max(a, math::max(b, c));
+
+	auto s = calculate_s(a, b, c);
+
+	auto area = calculate_a(a, b, c, s);
+	auto h = calculate_h(area, base);
+
+	return h <= radius;
+}
 
 void test()
 {
-	////const char *str1 = "test10";
-	////const char *str2 = "test2";
-	//const char *str1 = "test10test";
-	//const char *str2 = "test11tes";
-	////const char *str1 = "1235A";
-	////const char *str2 = "1234";
-	//int result = compare_strings_priority(str1, str2);
-	//if (result > 0) {
-	//	print("First string has more priority");
-	//} else if (result < 0) {
-	//	print("Second string has more priority");
-	//} else {
-	//	print("String equal");
-	//}
-
 }
 
 void update_test()

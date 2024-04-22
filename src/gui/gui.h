@@ -24,7 +24,7 @@ const Window_Style WINDOW_SCROLL_BAR = 0x4;
 const Window_Style WINDOW_RESIZABLE = 0x8;
 const Window_Style WINDOW_CLOSE_BUTTON = 0x10;
 const Window_Style WINDOW_TAB_BAR = 0x20;
-const Window_Style WINDOW_STYLE_DEFAULT = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON;
+const Window_Style WINDOW_DEFAULT_STYLE = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON;
 
 enum Alignment {
 	RECT_CENTER_ALIGNMENT,
@@ -105,12 +105,13 @@ struct Gui_List_Theme {
 	Color filter_rect_color = Color(36, 36, 36);
 	Color split_lines_color = Color(46, 46, 46);
 	Color line_color = Color(40, 40, 40);
-	Color hover_line_color = Color(0, 90, 255);
+	Color background_color = Color(40, 40, 40);
+	Color hover_line_color = Color(0, 89, 254, 170);
+	Color picked_line_color = Color(0, 89, 254, 235);
 	Size_s32 window_size = Size_s32(500, 300);
 };
 
 struct Gui_Window_Theme {
-	s32 tab_bar_height = 20;
 	s32 header_height = 18;
 	s32 rounded_border = 6;
 	s32 rounded_scrolling = 6;
@@ -152,29 +153,30 @@ namespace gui {
 	void handle_events();
 	void shutdown();
 	void set_font(const char *font_name, u32 font_size);
-	void draw_test_gui();
 
 	bool were_events_handled();
 
 	void begin_frame();
 	void end_frame();
 
-	bool begin_window(const char *name, Window_Style window_style = WINDOW_STYLE_DEFAULT);
+	bool begin_window(const char *name, Window_Style window_style = WINDOW_DEFAULT_STYLE);
 	void end_window();
 
-	bool begin_child(const char *name, Window_Style window_style = WINDOW_STYLE_DEFAULT);
+	bool begin_child(const char *name, Window_Style window_style = WINDOW_DEFAULT_STYLE);
 	void end_child();
 
+	void set_theme(Gui_Tab_Theme *gui_tab_theme);
+	void set_theme(Gui_List_Theme *gui_list_theme);
 	void set_theme(Gui_Window_Theme *gui_window_theme);
 	void set_theme(Gui_Text_Button_Theme *gui_window_theme);
 	void set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme);
-	void set_theme(Gui_List_Theme *gui_list_theme);
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
 	
+	void reset_tab_theme();
+	void reset_list_theme();
 	void reset_window_theme();
 	void reset_button_theme();
 	void reset_edit_field_theme();
-	void reset_list_theme();
 	
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_pos(s32 x, s32 y);
@@ -182,6 +184,7 @@ namespace gui {
 	void next_line();
 	
 	void make_tab_active(Gui_ID tab_gui_id);
+	void make_next_list_active();
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
