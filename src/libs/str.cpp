@@ -47,7 +47,7 @@ bool split(String *string, const char *symbols, Array<String> *array)
 	u32 prev_pos = 0;
 	u32	len = (u32)strlen(symbols);
 
-	while ((curr_pos = string->find_text(symbols, curr_pos)) != -1) {
+	while ((curr_pos = string->find(symbols, curr_pos)) != -1) {
 		if (prev_pos != curr_pos) {
 			array->push(String(string->data, prev_pos, curr_pos));
 		}
@@ -626,27 +626,31 @@ void String::place_end_char()
 	}
 }
 
-u32 String::find_text(const char *text, u32 start)
+static s32 keep_char(s32 c)
 {
-	assert(text);
+	return c;
+}
 
-	u32 result = -1;
-	u32 l = (u32)strlen(text);
-	u32 i = start > 0 ? start : 0;
-
-	for (; i < len; i++) {
-		if (data[i] == text[0]) {
-			result = i;
-			for (u32 j = ++i, k = 1; k < l && j < len; j++, k++) {
-				if (data[j] != text[k]) {
+s32 String::find(const char *substring, u32 start_index, bool case_sensetive)
+{
+	assert(substring);
+	
+	s32 result = -1;
+	s32 substring_len = (s32)strlen(substring);
+	if ((substring_len <= 0) && (start_index <= len) && !is_empty()) {
+		return result;
+	}
+	int(*convert)(int c) = case_sensetive ? &keep_char : tolower;
+	for (s32 i = start_index; i < (s32)len; i++) {
+		if (convert(data[i]) == convert(substring[0])) {
+			result = i++;
+			for (s32 j = 1; (i < (s32)len) && (j < substring_len); j++, i++) {
+				if (convert(data[i]) != convert(substring[j])) {
 					result = -1;
 					break;
 				}
 			}
-
-			if (result >= 0) {
-				return result;
-			}
+			break;
 		}
 	}
 	return result;

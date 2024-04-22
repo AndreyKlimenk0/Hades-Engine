@@ -223,12 +223,12 @@ void Render_Primitive_List::add_outlines(int x, int y, int width, int height, co
 	render_2d->add_primitive(primitive);
 }
 
-void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text)
+void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text, Text_Alignment text_alignmnet)
 {
-	add_text((int)rect->x, (int)rect->y, text);
+	add_text((int)rect->x, (int)rect->y, text, text_alignmnet);
 }
 
-void Render_Primitive_List::add_text(int x, int y, const char *text)
+void Render_Primitive_List::add_text(int x, int y, const char *text, Text_Alignment text_alignment)
 {
 	assert(text);
 	
@@ -236,7 +236,8 @@ void Render_Primitive_List::add_text(int x, int y, const char *text)
 	if (len == 0) {
 		return;
 	}
-	u32 max_height = font->get_text_size(text).height;
+
+	u32 max_height = font->get_text_size(text, text_alignment).height;
 	Font_Char *font_char = font->get_font_char(text[0]);
 	Vector2 position = { (float)x, (float)(y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height)) };
 

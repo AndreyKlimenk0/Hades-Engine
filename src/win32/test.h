@@ -7,7 +7,6 @@
 #include "../libs/ds/array.h"
 #include <stdlib.h>
 
-
 void test();
 void update_test();
 
