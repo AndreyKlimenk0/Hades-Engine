@@ -29,15 +29,21 @@ struct Font_Char {
 	u32 get_index();
 };
 
+enum Text_Alignment {
+	ALIGN_TEXT_BY_MAX_NUMBER,
+	ALIGN_TEXT_BY_MAX_ALPHABET,
+	ALIGN_TEXT_BY_MAX_SYMBOL,
+	ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT
+};
+
 struct Font {
 	Font();
-
 	String name;
 	u32 font_size;
 
-	u32 max_height = 0;
-	u32 max_width  = 0;
+	u32 max_symbol_height = 0;
 	u32 max_alphabet_height = 0;
+	u32 max_number_height = 0;
 
 	u32 bitmaps_width = 0;
 	u32 bitmaps_height = 0;
@@ -46,7 +52,7 @@ struct Font {
 
 	u32 get_char_advance(char c);
 	u32 get_text_width(const char *text);
-	Size_u32 get_text_size(const char *text);
+	Size_u32 get_text_size(const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
 	Font_Char *get_font_char(u8 character);
 };
 

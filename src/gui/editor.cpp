@@ -4,12 +4,14 @@
 #include "../sys/engine.h"
 #include "../sys/sys_local.h"
 
+#include "../libs/str.h"
+#include "../libs/png_image.h"
+#include "../libs/geometry_helper.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
-#include "../libs/str.h"
+#include "../libs/os/path.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/vector.h"
-#include "../libs/geometry_helper.h"
 
 #include "../render/render_api.h"
 #include "../render/render_system.h"
@@ -236,14 +238,16 @@ void Game_World_Window::init(Engine *engine)
 	window_width_delta = 20;
 	world_entities_height = 200;
 	entity_info_height = 400;
-	window_style = WINDOW_STYLE_DEFAULT & ~WINDOW_OUTLINES;
+	window_style = WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES;
 
-	world_entities_window_theme.background_color = Color(40, 40, 40);
-	world_entities_window_theme.header_color = Color(36, 36, 36);
+	world_entities_window_theme.background_color = Color(38);
+	world_entities_window_theme.header_color = Color(36);
 	world_entities_window_theme.place_between_rects = 0;
+	world_entities_window_theme.horizontal_offset_from_sides = 0;
+	world_entities_window_theme.vertical_offset_from_sides = 0;
 
-	entity_info_window_theme.background_color = Color(40, 40, 40);
-	entity_info_window_theme.header_color = Color(36, 36, 36);
+	entity_info_window_theme.background_color = Color(38);
+	entity_info_window_theme.header_color = Color(36);
 	entity_info_window_theme.place_between_rects = 8;
 
 	buttons_theme.color = world_entities_window_theme.background_color;
@@ -252,24 +256,25 @@ void Game_World_Window::init(Engine *engine)
 
 void Game_World_Window::draw()
 {
-	Size_s32 window_size = gui::get_window_size();
-	gui::set_next_window_size(window_size.width - window_width_delta, world_entities_height);
-	gui::set_next_theme(&world_entities_window_theme);
-	if (gui::begin_child("World entities", (WINDOW_STYLE_DEFAULT & ~WINDOW_OUTLINES))) {
-		buttons_theme.rect.width = window_size.width - window_width_delta;
+	Size_s32 editor_window_size = gui::get_window_size();
+	gui::set_next_window_size(editor_window_size.width, world_entities_height);
+	gui::set_theme(&world_entities_window_theme);
+	if (gui::begin_child("World entities", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
+		buttons_theme.rect.width = gui::get_window_size().width;
 		gui::set_theme(&buttons_theme);
-
+		
 		draw_entity_list("Camera", game_world->cameras.count, ENTITY_TYPE_CAMERA);
 		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
 		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
-
+		
 		gui::reset_button_theme();
 		gui::end_child();
 	}
+	gui::reset_window_theme();
 	
-	gui::set_next_theme(&entity_info_window_theme);
-	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
-	if (gui::begin_child("Entity info", (WINDOW_STYLE_DEFAULT & ~WINDOW_OUTLINES))) {
+	gui::set_theme(&entity_info_window_theme);
+	gui::set_next_window_size(editor_window_size.width, entity_info_height);
+	if (gui::begin_child("Entity info", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
 		Entity *entity = game_world->get_entity(editor->picked_entity);
 		if (entity) {
 			if (entity->type == ENTITY_TYPE_GEOMETRY) {
@@ -388,6 +393,7 @@ void Game_World_Window::draw()
 		}
 		gui::end_child();
 	}
+	gui::reset_window_theme();
 }
 
 bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, Entity_Type type)
@@ -651,13 +657,13 @@ void Editor::update()
 		}
 	}
 	render_world_window.update();
-	//picking();
+	picking();
 }
 
 void Editor::render()
 {
 	gui::begin_frame();
-	if (gui::begin_window("Editor")) {
+	if (gui::begin_window("Editor", WINDOW_DEFAULT_STYLE | WINDOW_TAB_BAR)) {
 
 		if (gui::add_tab("Make Entity")) {
 			make_entity_window.draw();
@@ -666,7 +672,6 @@ void Editor::render()
 		if (gui::add_tab("Game World")) {
 			game_world_window.draw();
 		}
-		game_world_tab_gui_id = gui::get_last_tab_gui_id();
 
 		if (gui::add_tab("Render World")) {
 			render_world_window.draw();
@@ -786,28 +791,119 @@ void Command_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
 
+	String path_to_cmd_icon_image;
+	build_full_path_to_editor_file("command-icon.png", path_to_cmd_icon_image);
+
+	u32 width;
+	u32 height;
+	u8 *data = NULL;
+	if (load_png_file(path_to_cmd_icon_image, &data, &width, &height)) {
+		Texture2D_Desc texture_desc;
+		texture_desc.width = width;
+		texture_desc.height = height;
+		texture_desc.data = data;
+		texture_desc.mip_levels = 1;
+		render_system->gpu_device.create_texture_2d(&texture_desc, &cmd_icon_texture);
+		render_system->gpu_device.create_shader_resource_view(&texture_desc, &cmd_icon_texture);
+		
+		DELETE_PTR(data);
+	}
+
 	Rect_s32 display;
 	display.set_size(Render_System::screen_width, Render_System::screen_height);
-	window_rect.set_size(600, 100);
+	window_rect.set_size(600, 500);
 	place_in_middle(&display, &window_rect);
 	
 	window_rect.y = 200;
+
+	commands.push("Load map");
+	commands.push("Load mesh");
+	commands.push("Delete map");
+
+	command_list_state.reserve(commands.count);
+	if (!command_list_state.is_empty()) {
+		command_list_state[0] = 0x1;
+	}
 }
 
 void Command_Window::draw()
 {
-	Gui_Edit_Field_Theme theme;
-	theme.rect.set_size(580, 30);
-	theme.draw_label = false;
-
+	//gui::set_font("FiraCode-Regular", 13);
 	gui::set_next_window_pos(window_rect.x, window_rect.y);
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 
-	if (gui::begin_window("Command window", WINDOW_OUTLINES)) {
+	Gui_Window_Theme window_theme;
+	window_theme.background_color = Color(20);
+	gui::set_theme(&window_theme);
+	if (gui::begin_window("Command window", 0)) {
+
+
+		Gui_Edit_Field_Theme theme;
+		theme.rect.set_size(gui::get_window_size().width, 30);
+		theme.draw_label = false;
+		theme.color = Color(30);
+
 		gui::set_theme(&theme);
 		gui::edit_field("Command field", &text);
 		gui::reset_edit_field_theme();
-		
+
+		s32 temp = window_theme.horizontal_offset_from_sides + theme.text_shift;
+		Gui_Window_Theme window_theme;
+		window_theme.horizontal_offset_from_sides = 0;
+		gui::set_theme(&window_theme);
+
+		Gui_List_Theme list_theme;
+		list_theme.line_height = 30;
+		list_theme.column_filter = false;
+		list_theme.line_text_offset = temp;
+		list_theme.window_size.width = gui::get_window_size().width;
+		//list_theme.background_color = window_theme.background_color;
+		list_theme.background_color = Color(20);
+		list_theme.line_color = Color(20);
+		//list_theme.hover_line_color = window_theme.background_color;
+		//list_theme.background_color = Color(30);
+		//list_theme.line_color = Color(30);
+
+		Array<String> found_commands;
+		if (!text.is_empty()) {
+			for (u32 i = 0; i < commands.count; i++) {
+				if (commands[i].find(text.c_str(), 0, false) != -1) {
+					found_commands.push(commands[i]);
+				}
+			}
+		} else {
+			found_commands = commands;
+		}
+
+		gui::set_theme(&list_theme);
+
+		gui::make_next_list_active();
+
+		Gui_List_Column columns[] = { {"Command", 75 }, { "Key-Binding", 25 } };
+		if (gui::begin_list("Commands", columns, 2)) {
+			for (u32 i = 0; i < found_commands.count; i++) {
+				if (gui::begin_line(&command_list_state[i])) {
+
+					gui::begin_column("Command");
+					gui::add_image(&cmd_icon_texture, RECT_LEFT_ALIGNMENT);
+					gui::add_text(found_commands[i].c_str(), RECT_LEFT_ALIGNMENT);
+					gui::end_column();
+
+					gui::begin_column("Key-Binding");
+					gui::add_text("Ctr + L + M", RECT_LEFT_ALIGNMENT);
+					gui::end_column();
+
+					gui::end_line();
+				}
+			}
+			gui::end_list();
+		}
+
+		gui::reset_window_theme();
+
+		gui::reset_list_theme();
 		gui::end_window();
 	}
+	gui::reset_window_theme();
+	//gui::set_font("consola", 11);
 }

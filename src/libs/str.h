@@ -113,8 +113,8 @@ struct String {
 	void copy(const String &string, u32 start, u32 end);
 
 	bool is_empty();
-	
-	u32 find_text(const char *text, u32 start = 0);
+
+	s32 find(const char *substring, u32 start_index = 0, bool case_sensitive = true);
 
 	const char *c_str() { return data; }
 	
