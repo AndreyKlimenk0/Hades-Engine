@@ -345,7 +345,7 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 	}
 
 	String path_to_shader_dir;
-	get_path_to_data_dir("shaders", path_to_shader_dir);
+	build_full_path_to_data_directory("shaders", path_to_shader_dir);
 
 	Array<String> file_names;
 	get_file_names_from_dir(path_to_shader_dir, &file_names);

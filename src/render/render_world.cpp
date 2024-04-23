@@ -195,127 +195,6 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 	view_projection_matrix = make_identity_matrix();
 }
 
-#include <vector>
-
-class Octree {
-public:
-	Octree() = default;
-	~Octree() = default;
-
-	void Build(const AABB &boundingBox, double minSize);
-
-	struct Node {
-		Node() = default;
-		~Node() = default;
-		Node(const AABB &boundingBox);
-		//Node(const Node &other);
-		//Node &operator=(const Node &other);
-
-		bool hasChilds = false;
-		AABB boundingBox;
-		Node *childNodes[8];
-	};
-
-	void Subdivide(Node& node);
-
-	int nodesCount = 0;
-	double minSize;
-	Node rootNode;
-};
-
-Octree::Node::Node(const AABB &boundingBox) : boundingBox(boundingBox)
-{
-}
-
-//Octree::Node::Node(const Node &other)
-//{
-//	*this = other;
-//}
-//
-//Octree::Node &Octree::Node::operator=(const Node &other)
-//{
-//	boundingBox.min = other.boundingBox.min;
-//	boundingBox.max = other.boundingBox.max;
-//	for (int i = 0; i < 8; i++) {
-//		childNodes[i] = other.childNodes[i];
-//	}
-//	return *this;
-//}
-
-void Octree::Build(const AABB &boundingBox, double minSize)
-{
-	this->minSize = minSize;
-	rootNode.boundingBox = boundingBox;
-	nodesCount++;
-	Subdivide(rootNode);
-}
-
-void Octree::Subdivide(Node &node)
-{
-	float boundingBoxLength = get_length(&(node.boundingBox.max - node.boundingBox.min));
-	if (boundingBoxLength <= minSize) {
-		return;
-	}
-	node.hasChilds = true;
-	Vector3 boundingBoxCenter = (node.boundingBox.min + node.boundingBox.max) / 2.0f;
-
-	int childNodeIndex = 0;
-	for (int x = 0; x < 2; x++) {
-		for (int y = 0; y < 2; y++) {
-			for (int z = 0; z < 2; z++) {
-				float minx = x == 0 ? node.boundingBox.min[0] : boundingBoxCenter[0];
-				float miny = y == 0 ? node.boundingBox.min[1] : boundingBoxCenter[1];
-				float minz = z == 0 ? node.boundingBox.min[2] : boundingBoxCenter[2];
-
-				float maxx = x == 0 ? boundingBoxCenter[0] : node.boundingBox.max[0];
-				float maxy = y == 0 ? boundingBoxCenter[1] : node.boundingBox.max[1];
-				float maxz = z == 0 ? boundingBoxCenter[2] : node.boundingBox.max[2];
-
-				AABB subBoundingBox = { Vector3(minx, miny, minz), Vector3(maxx, maxy, maxz) };
-
-				node.childNodes[childNodeIndex++] = new Node(subBoundingBox);
-				nodesCount++;
-			}
-		}
-	}
-	for (int i = 0; i < 8; i++) {
-		Subdivide(*node.childNodes[i]);
-	}
-}
-
-void process_nodes(Octree::Node &node, Render_World *render_world, Game_World *game_world)
-{
-	static int count = 0;
-	Line_Mesh line_mesh;
-	Entity_Id entity_id = game_world->make_entity(Vector3::zero);
-	make_AABB_mesh(&node.boundingBox.min, &node.boundingBox.max, &line_mesh);
-
-	char *mesh_name = format("{}_{}_{}", node.boundingBox.min, node.boundingBox.max, count++);
-	Mesh_Idx mesh_idx;
-	render_world->add_mesh(mesh_name, &line_mesh, &mesh_idx);
-	Color color = Color::Red;
-
-	Render_Entity_Textures render_entity_textures;
-	render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-	render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-	render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-	render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-	render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-
-	render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, entity_id, mesh_idx, &render_entity_textures, &color);
-	if (node.hasChilds) {
-		for (int i = 0; i < 8; i++) {
-			process_nodes(*node.childNodes[i], render_world, game_world);
-		}
-	}
-	free_string(mesh_name);
-}
-
-void display_tree(Octree &tree, Render_World *render_world, Game_World *game_world)
-{
-	process_nodes(tree.rootNode, render_world, game_world);
-}
-
 void Render_World::init(Engine *engine)
 {	
 
@@ -342,11 +221,6 @@ void Render_World::init(Engine *engine)
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
 	render_sys->gpu_device.create_shader_resource_view(&texture_desc, &default_texture);
 	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
-
-
-	AABB aabb = { Vector3(-50.0f, -50.0f, -50.0f), Vector3(50.0f, 50.0f, 50.0f) };
-	Octree tree;
-	tree.Build(aabb, 20);
 
 	//display_tree(tree, this, game_world);
 
@@ -427,12 +301,12 @@ void Render_World::init_meshes()
 		error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 
-	u32 entity_index = 0;
-	Array<Import_Mesh> meshes;
-	String path;
+	//u32 entity_index = 0;
+	//Array<Import_Mesh> meshes;
+	//String path;
 	//build_full_path_to_model_file("NewSponza_Curtains_FBX.fbx", path);
 	//build_full_path_to_model_file("Sponza.fbx", path);
-	build_full_path_to_model_file("vampire.fbx", path);
+	//build_full_path_to_model_file("vampire.fbx", path);
 	//build_full_path_to_model_file("displacement3.fbx", path);
 
 	//build_full_path_to_model_file("catwalk3.fbx", path);
@@ -444,34 +318,34 @@ void Render_World::init_meshes()
 	//print("Start make render entities");
 	//print("Mesh count = ", meshes.count);
 
-	Mesh_Loader mesh_loader;
-	mesh_loader.load(path, meshes, false, false);
+	//Mesh_Loader mesh_loader;
+	//mesh_loader.load(path, meshes, false, false);
 
-	print("Get started to create entities");
-	Import_Mesh *imported_mesh = NULL;
-	For(meshes, imported_mesh) {
-		Mesh_Idx mesh_idx;
-		if (add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
-			Render_Entity_Textures render_entity_textures;
-			render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
-			render_entity_textures.normal_texture_idx = load_normal_texture(imported_mesh->normal_texture, this);
-			render_entity_textures.diffuse_texture_idx = load_diffuse_texture(imported_mesh->diffuse_texture, this);
-			render_entity_textures.specular_texture_idx = load_specular_texture(imported_mesh->specular_texture, this);
-			render_entity_textures.displacement_texture_idx = load_displacenet_texture(imported_mesh->displacement_texture, this);
+	//print("Get started to create entities");
+	//Import_Mesh *imported_mesh = NULL;
+	//For(meshes, imported_mesh) {
+	//	Mesh_Idx mesh_idx;
+	//	if (add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
+	//		Render_Entity_Textures render_entity_textures;
+	//		render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
+	//		render_entity_textures.normal_texture_idx = load_normal_texture(imported_mesh->normal_texture, this);
+	//		render_entity_textures.diffuse_texture_idx = load_diffuse_texture(imported_mesh->diffuse_texture, this);
+	//		render_entity_textures.specular_texture_idx = load_specular_texture(imported_mesh->specular_texture, this);
+	//		render_entity_textures.displacement_texture_idx = load_displacenet_texture(imported_mesh->displacement_texture, this);
 
-			if (imported_mesh->mesh_instances.count > 0) {
-				for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
-					Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
-					Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
-					add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-				}
-			} else {
-				Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
-				add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-			}
-		}
-	}
-	print("Finish of creating entities");
+	//		if (imported_mesh->mesh_instances.count > 0) {
+	//			for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
+	//				Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
+	//				Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
+	//				add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
+	//			}
+	//		} else {
+	//			Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
+	//			add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
+	//		}
+	//	}
+	//}
+	//print("Finish of creating entities");
 }
 
 void Render_World::init_shadow_rendering()
