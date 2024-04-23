@@ -69,7 +69,7 @@ void init_os_path()
 
 	os_path.data_dir_paths.set("texture", texture_dir);
 	os_path.data_dir_paths.set("shaders", shader_dir);
-	os_path.data_dir_paths.set("model", model_dir);
+	os_path.data_dir_paths.set("models", model_dir);
 	os_path.data_dir_paths.set("editor", editor_dir);
 	os_path.data_dir_paths.set("maps", maps_dir);
 	os_path.data_dir_paths.set("gui", gui_dir);
@@ -90,9 +90,9 @@ void shutdown_os_path()
 	os_path.data_dir_paths.clear();
 }
 
-void get_path_to_data_dir(const char *dir_name, String &full_path)
+bool build_full_path_to_data_directory(const char *directory_name, String &full_path)
 {
-	os_path.data_dir_paths.get(dir_name, full_path);
+	return os_path.data_dir_paths.get(directory_name, full_path);
 }
 
 void build_full_path_to_map_file(const char *file_name, String &full_path)
@@ -133,7 +133,7 @@ void build_full_path_to_source_shader_file(const char *file_name, String &full_p
 
 void build_full_path_to_model_file(const char * file_name, String & full_path)
 {
-	String &value = os_path.data_dir_paths["model"];
+	String &value = os_path.data_dir_paths["models"];
 	full_path = value + "\\" + file_name;
 }
 

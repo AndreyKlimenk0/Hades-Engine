@@ -6,7 +6,7 @@
 void init_os_path();
 void shutdown_os_path();
 
-void get_path_to_data_dir(const char *dir_name, String &full_path);
+bool build_full_path_to_data_directory(const char *directory_name, String &full_path);
 
 void build_full_path_to_map_file(const char *file_name, String &full_path);
 void build_full_path_to_gui_file(const char *file_name, String &full_path);

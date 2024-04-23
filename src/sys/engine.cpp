@@ -11,7 +11,7 @@
 #include "../libs/png_image.h"
 #include "../gui/test_gui.h"
 
-#define DRAW_TEST_GUI 1
+#define DRAW_TEST_GUI 0
 
 static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
@@ -22,7 +22,6 @@ void Engine::init(Win32_Info *_win32_info)
 	
 	win32_info = *_win32_info;
 	init_os_path();
-
 
 	font_manager.init();
 

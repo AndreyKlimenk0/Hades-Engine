@@ -6,12 +6,13 @@
 
 #include "../libs/str.h"
 #include "../libs/png_image.h"
-#include "../libs/geometry_helper.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/os/path.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/vector.h"
+#include "../libs/mesh_loader.h"
+#include "../libs/geometry_helper.h"
 
 #include "../render/render_api.h"
 #include "../render/render_system.h"
@@ -787,6 +788,132 @@ inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element
 	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
 }
 
+struct Command {
+	String name;
+
+	virtual bool init(const char *command_name);
+	virtual void draw_list() = 0;
+	virtual void proccess_input(const char *data) = 0;
+	virtual void execute(const char *data, void *context) = 0;
+};
+
+struct Data_Command : Command {
+	String full_path_to_data_directory;
+	String relative_path_to_data_directory;
+
+	virtual bool init(const char *command_name, const char *data_directory_name);
+	virtual void draw_list() = 0;
+	virtual void proccess_input(const char *data) = 0;
+};
+
+struct Load_Mesh_Command : Data_Command {
+	Array<Gui_List_Line_State> list_line_states;
+	
+	void draw_list();
+	void proccess_input(const char *data);
+	void execute(const char *data, void *context);
+};
+
+bool Command::init(const char *command_name)
+{
+	assert(command_name);
+	name = command_name;
+	return true;
+}
+
+bool Data_Command::init(const char *command_name, const char *data_directory_name)
+{
+	assert(command_name);
+	assert(data_directory_name);
+
+	if (Command::init(command_name)) {
+		relative_path_to_data_directory = "data/";
+		relative_path_to_data_directory.append(data_directory_name);
+		return build_full_path_to_data_directory(data_directory_name, full_path_to_data_directory) && directory_exists(full_path_to_data_directory);
+	}
+	return false;
+}
+
+void Load_Mesh_Command::draw_list()
+{
+	Array<String> model_files;
+	get_file_names_from_dir(full_path_to_data_directory, &model_files);
+	if (model_files.count > list_line_states.count) {
+		list_line_states.reserve(model_files.count);
+	}
+
+	Gui_List_Column columns[] = { {"Model", 75 }, { "Relative path", 25 } };
+	if (gui::begin_list("Engine Models", columns, 2)) {
+		for (u32 i = 0; i < model_files.count; i++) {
+			if (gui::begin_line(&list_line_states[i])) {
+
+				if (gui::left_mouse_click(list_line_states[i])) {
+					
+					execute(model_files[i], Engine::get_instance());
+				}
+
+				gui::begin_column("Model");
+				gui::add_text(model_files[i], RECT_LEFT_ALIGNMENT);
+				gui::end_column();
+
+				gui::begin_column("Relative path");
+				gui::add_text(relative_path_to_data_directory, RECT_LEFT_ALIGNMENT);
+				gui::end_column();
+
+				gui::end_line();
+			}
+		}
+		gui::end_list();
+	}
+}
+
+void Load_Mesh_Command::proccess_input(const char *data)
+{
+}
+
+void Load_Mesh_Command::execute(const char *data, void *context)
+{
+	Engine *engine = (Engine *)context;
+	Render_World *render_world = &engine->render_world;
+	Game_World *game_world = &engine->game_world;
+
+	String full_path_to_model;
+	build_full_path_to_model_file(data, full_path_to_model);
+
+	if (file_exists(full_path_to_model)) {
+		Array<Import_Mesh> meshes;
+
+		Mesh_Loader mesh_loader;
+		mesh_loader.load(full_path_to_model, meshes, false, false);
+
+		Import_Mesh *imported_mesh = NULL;
+		For(meshes, imported_mesh) {
+			Mesh_Idx mesh_idx;
+			if (render_world->add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
+				Render_Entity_Textures render_entity_textures;
+				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				render_entity_textures.normal_texture_idx = load_normal_texture(imported_mesh->normal_texture, this);
+				render_entity_textures.diffuse_texture_idx = load_diffuse_texture(imported_mesh->diffuse_texture, this);
+				render_entity_textures.specular_texture_idx = load_specular_texture(imported_mesh->specular_texture, this);
+				render_entity_textures.displacement_texture_idx = load_displacenet_texture(imported_mesh->displacement_texture, this);
+
+				if (imported_mesh->mesh_instances.count > 0) {
+					for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
+						Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
+						Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
+						render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
+					}
+				} else {
+					Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
+					render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
+				}
+			}
+		}
+		print("Finish of creating entities");
+
+	}
+}
+
 void Command_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
@@ -811,99 +938,99 @@ void Command_Window::init(Engine *engine)
 
 	Rect_s32 display;
 	display.set_size(Render_System::screen_width, Render_System::screen_height);
-	window_rect.set_size(600, 500);
-	place_in_middle(&display, &window_rect);
-	
-	window_rect.y = 200;
+	command_window_rect.set_size(600, 500);
+	place_in_middle(&display, &command_window_rect);
+	command_window_rect.y = 200;
 
-	commands.push("Load map");
-	commands.push("Load mesh");
-	commands.push("Delete map");
+
+	Load_Mesh_Command *load_mesh_command = new Load_Mesh_Command();
+	if (load_mesh_command->init("Load mesh", "models")) {
+		commands.push(load_mesh_command);
+	} else {
+		DELETE_PTR(load_mesh_command);
+	}
 
 	command_list_state.reserve(commands.count);
 	if (!command_list_state.is_empty()) {
 		command_list_state[0] = 0x1;
 	}
+
+	command_window_theme.background_color = Color(20);
+
+	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_offset_from_sides * 2, 30);
+	command_edit_field_theme.draw_label = false;
+	command_edit_field_theme.color = Color(30);
+
+	list_theme.line_height = 30;
+	list_theme.column_filter = false;
+	list_theme.line_text_offset = command_window_theme.horizontal_offset_from_sides + command_edit_field_theme.text_shift;
+	list_theme.window_size.width = command_window_rect.width;
+	list_theme.background_color = Color(20);
+	list_theme.line_color = Color(20);
 }
 
 void Command_Window::draw()
 {
-	//gui::set_font("FiraCode-Regular", 13);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-
-	Gui_Window_Theme window_theme;
-	window_theme.background_color = Color(20);
-	gui::set_theme(&window_theme);
+	gui::set_next_window_pos(command_window_rect.x, command_window_rect.y);
+	gui::set_next_window_size(command_window_rect.width, command_window_rect.height);
+	gui::set_theme(&command_window_theme);
+	
 	if (gui::begin_window("Command window", 0)) {
-
-
-		Gui_Edit_Field_Theme theme;
-		theme.rect.set_size(gui::get_window_size().width, 30);
-		theme.draw_label = false;
-		theme.color = Color(30);
-
-		gui::set_theme(&theme);
-		gui::edit_field("Command field", &text);
+		
+		gui::set_theme(&command_edit_field_theme);
+		gui::edit_field("Command field", &command_edit_filed_input_string);
 		gui::reset_edit_field_theme();
 
-		s32 temp = window_theme.horizontal_offset_from_sides + theme.text_shift;
 		Gui_Window_Theme window_theme;
 		window_theme.horizontal_offset_from_sides = 0;
 		gui::set_theme(&window_theme);
 
-		Gui_List_Theme list_theme;
-		list_theme.line_height = 30;
-		list_theme.column_filter = false;
-		list_theme.line_text_offset = temp;
-		list_theme.window_size.width = gui::get_window_size().width;
-		//list_theme.background_color = window_theme.background_color;
-		list_theme.background_color = Color(20);
-		list_theme.line_color = Color(20);
-		//list_theme.hover_line_color = window_theme.background_color;
-		//list_theme.background_color = Color(30);
-		//list_theme.line_color = Color(30);
-
-		Array<String> found_commands;
-		if (!text.is_empty()) {
-			for (u32 i = 0; i < commands.count; i++) {
-				if (commands[i].find(text.c_str(), 0, false) != -1) {
-					found_commands.push(commands[i]);
-				}
-			}
-		} else {
-			found_commands = commands;
-		}
-
 		gui::set_theme(&list_theme);
-
 		gui::make_next_list_active();
 
-		Gui_List_Column columns[] = { {"Command", 75 }, { "Key-Binding", 25 } };
-		if (gui::begin_list("Commands", columns, 2)) {
-			for (u32 i = 0; i < found_commands.count; i++) {
-				if (gui::begin_line(&command_list_state[i])) {
+		if (!command) {
+			Gui_List_Column columns[] = { {"Command", 75 }, { "Key-Binding", 25 } };
+			if (gui::begin_list("Commands", columns, 2)) {
+				for (u32 i = 0; i < commands.count; i++) {
+					if (gui::begin_line(&command_list_state[i])) {
 
-					gui::begin_column("Command");
-					gui::add_image(&cmd_icon_texture, RECT_LEFT_ALIGNMENT);
-					gui::add_text(found_commands[i].c_str(), RECT_LEFT_ALIGNMENT);
-					gui::end_column();
+						if (gui::left_mouse_click(command_list_state[i])) {
+							command = commands[i];
+						}
+						gui::begin_column("Command");
+						gui::add_image(&cmd_icon_texture, RECT_LEFT_ALIGNMENT);
+						gui::add_text(commands[i]->name, RECT_LEFT_ALIGNMENT);
+						gui::end_column();
 
-					gui::begin_column("Key-Binding");
-					gui::add_text("Ctr + L + M", RECT_LEFT_ALIGNMENT);
-					gui::end_column();
+						gui::begin_column("Key-Binding");
+						gui::add_text("Ctr + L + M", RECT_LEFT_ALIGNMENT);
+						gui::end_column();
 
-					gui::end_line();
+						gui::end_line();
+					}
 				}
+				gui::end_list();
 			}
-			gui::end_list();
+		} else {
+			command->draw_list();
 		}
-
+		
+		
 		gui::reset_window_theme();
-
 		gui::reset_list_theme();
+		
 		gui::end_window();
 	}
 	gui::reset_window_theme();
-	//gui::set_font("consola", 11);
 }
+//Array<String> found_commands;
+//if (!text.is_empty()) {
+//	for (u32 i = 0; i < commands.count; i++) {
+//		if (commands[i].find(text.c_str(), 0, false) != -1) {
+//			found_commands.push(commands[i]);
+//		}
+//	}
+//} else {
+//	found_commands = commands;
+//}
+
