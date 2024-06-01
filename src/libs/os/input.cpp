@@ -32,6 +32,7 @@ const char *string_keys[INPUT_KEYS_NUMBER] = {
 	"KEY_ARROW_RIGHT",
 	"KEY_CTRL",
 	"KEY_ALT",
+	"KEY_ESC",
 	"KEY_SHIFT",
 	"KEY_A",
 	"KEY_B",
@@ -61,7 +62,62 @@ const char *string_keys[INPUT_KEYS_NUMBER] = {
 	"KEY_Z"
 };
 
-bool is_alpha_key(Key key) 
+const char *pretty_string_keys[INPUT_KEYS_NUMBER] = {
+	"Unknown key code",
+	"Left mouse",
+	"Right mouse",
+	"Enter",
+	"Backspace",
+	"Home",
+	"End",
+	"Arrow up",
+	"Arrow down",
+	"Arrow left",
+	"Arrow right",
+	"Ctrl",
+	"Alt",
+	"Escape",
+	"Shift",
+	"A",
+	"B",
+	"C",
+	"D",
+	"E",
+	"F",
+	"G",
+	"H",
+	"I",
+	"J",
+	"K",
+	"L",
+	"M",
+	"N",
+	"O",
+	"P",
+	"Q",
+	"R",
+	"S",
+	"T",
+	"U",
+	"V",
+	"W",
+	"X",
+	"Y",
+	"Z"
+};
+
+static u32 key_code_to_index(Key key)
+{
+	u32 index = 0;
+	if (key >= KEY_A) {
+		index = ((u8)key - ENGLISH_ALPHABET_KEYS_OFFSET) + (u8)KEY_SHIFT + 1;
+	} else if ((key >= KEY_UNKNOWN) && (key <= KEY_SHIFT)) {
+		index = (u8)key;
+	}
+	return index;
+}
+
+bool is_alpha_key(Key key)
 {
 	if (((u8)key >= ENGLISH_ALPHABET_KEYS_OFFSET) && ((u8)key <= 255)) {
 		return true;
@@ -71,13 +127,12 @@ bool is_alpha_key(Key key)
 
 const char *to_string(Key key)
 {
-	u32 index = 0;
-	if (key >= KEY_A) {
-		index = ((u8)key - ENGLISH_ALPHABET_KEYS_OFFSET) + (u8)KEY_SHIFT + 1;
-	} else if ((key >= KEY_UNKNOWN) && (key <= KEY_SHIFT)) {
-		index = (u8)key;
-	}
-	return string_keys[index];
+	return string_keys[key_code_to_index(key)];
+}
+
+const char *key_to_pretty_string(Key key)
+{
+	return pretty_string_keys[key_code_to_index(key)];
 }
 
 Key win32_key_to_engine_key(s32 win32_key_code)
@@ -110,6 +165,8 @@ Key win32_key_to_engine_key(s32 win32_key_code)
 			return KEY_CTRL;
 		case VK_MENU:
 			return KEY_ALT;
+		case VK_ESCAPE:
+			return KEY_ESC;
 	}
 	return KEY_UNKNOWN;
 }

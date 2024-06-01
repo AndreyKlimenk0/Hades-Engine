@@ -1,17 +1,21 @@
+#include "../libs/str.h"
+#include "map.h"
 #include "engine.h"
 #include "sys_local.h"
+#include "commands.h"
 #include "../gui/gui.h"
 #include "../win32/test.h"
 #include "../win32/win_time.h"
 #include "../libs/os/file.h"
 #include "../libs/os/event.h"
 #include "../libs/mesh_loader.h"
+#include "../libs/os/path.h"
 
 //@Note: Probably it is temporary decision
 #include "../libs/png_image.h"
 #include "../gui/test_gui.h"
 
-#define DRAW_TEST_GUI 0
+#define DRAW_TEST_GUI 1
 
 static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
@@ -23,6 +27,8 @@ void Engine::init(Win32_Info *_win32_info)
 	win32_info = *_win32_info;
 	init_os_path();
 
+	init_commands();
+
 	font_manager.init();
 
 	render_sys.init(this);
@@ -32,8 +38,8 @@ void Engine::init(Win32_Info *_win32_info)
 	render_sys.init_shader_input_layout(&shader_manager);
 	
 	
-	//gui::init_gui(this, "FiraCode-Regular", 13);
-	gui::init_gui(this, "consola", FONT_SIZE);
+	gui::init_gui(this, "FiraCode-Regular", 12);
+	//gui::init_gui(this, "consola", FONT_SIZE);
 	
 	editor.init(this);
 
@@ -42,78 +48,16 @@ void Engine::init(Win32_Info *_win32_info)
 	game_world.init();
 	render_world.init(this);
 
-	String path;
-	build_full_path_to_map_file("temp_map.bmap", path);
-	if (file_exists(path)) {
-		init_from_map();
-	}
-	render_world.init_meshes();
-
+	current_map = "unnamed_map.hmap";
+	init_game_and_render_world_from_map("unnamed_map.hmap", &game_world, &render_world);
+	
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
 	engine->is_initialized = true;
 }
 
-static inline Texture_Idx add_texture(const char *name)
-{
-	u32 width;
-	u32 height;
-	u8 *data = NULL;
-	String path;
-	build_full_path_to_texture_file(name, path);
-	load_png_file(path, &data, &width, &height);
-
-	Texture_Idx index = Engine::get_render_world()->render_entity_texture_storage.add_texture(name, width, height, (void *)data);
-	DELETE_PTR(data);
-	return index;
-}
-
 void Engine::init_from_map()
 {
-	game_world.init_from_file();
-
-	Geometry_Entity *geometry_entity = NULL;
-	For(game_world.geometry_entities, geometry_entity) {
-		
-		char *mesh_name = NULL;
-		Mesh_Idx mesh_idx;
-		Triangle_Mesh triangle_mesh;
-		if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
-			make_box_mesh(&geometry_entity->box, &triangle_mesh);
-			mesh_name = format("Box", geometry_entity->box.width, geometry_entity->box.height, geometry_entity->box.depth);
-		
-		} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
-			make_sphere_mesh(&geometry_entity->sphere, &triangle_mesh);
-			mesh_name = format("Sphere", geometry_entity->sphere.radius, geometry_entity->sphere.slice_count, geometry_entity->sphere.stack_count);
-		
-		} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_GRID) {
-			make_grid_mesh(&geometry_entity->grid, &triangle_mesh);
-			mesh_name = format("Grid", geometry_entity->grid.width, geometry_entity->grid.depth, geometry_entity->grid.rows_count, geometry_entity->grid.columns_count);
-		
-		} else {
-			print("Engine::init_from_file: Unknown geometry type.");
-		}
-
-		//Render_Entity_Textures render_entity_textures;
-		//render_entity_textures.ambient_texture_idx = add_texture("Rock_Mosaic_AO.png");
-		//render_entity_textures.normal_texture_idx = add_texture("Rock_Mosaic_NORM.png");
-		//render_entity_textures.diffuse_texture_idx = add_texture("Rock_Mosaic_DIFF.png");
-		//render_entity_textures.specular_texture_idx = add_texture("Rock_Mosaic_SPEC.png");
-		//render_entity_textures.displacement_texture_idx = add_texture("Rock_Mosaic_DISP_alternative.png");
-
-		Render_Entity_Textures render_entity_textures;
-		render_entity_textures.ambient_texture_idx = render_world.render_entity_texture_storage.white_texture_idx;
-		render_entity_textures.normal_texture_idx = add_texture("toy_box2.png");
-		render_entity_textures.diffuse_texture_idx = add_texture("toy_box1.png");
-		//render_entity_textures.diffuse_texture_idx = render_world.render_entity_texture_storage.white_texture_idx;;
-		render_entity_textures.displacement_texture_idx = add_texture("toy_box3.png");
-		render_entity_textures.specular_texture_idx = render_world.render_entity_texture_storage.default_specular_texture_idx;
-
-		render_world.add_mesh(mesh_name, &triangle_mesh, &mesh_idx);
-		render_world.add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, get_entity_id(geometry_entity), mesh_idx, &render_entity_textures);
-		
-		free_string(mesh_name);
-	}
 }
 
 void Engine::frame()
@@ -153,15 +97,28 @@ void Engine::frame()
 	frame_time = milliseconds_counter() - start_time;
 }
 
-void Engine::save_to_file()
-{
-	game_world.save_to_file();
-}
-
 void Engine::shutdown()
 {
+	if (current_map.is_empty()) {
+		int counter = 0;
+		String map_name = "unnamed_map";
+		String map_extension = ".hmap";
+		String index = "";
+		while (true) {
+			String full_path_to_map_file;
+			build_full_path_to_map_file(map_name + index + map_extension, full_path_to_map_file);
+			if (file_exists(full_path_to_map_file.c_str())) {
+				char *str_counter = ::to_string(counter++);
+				index = str_counter;
+				free_string(str_counter);
+				continue;
+			}
+			break;
+		}
+		current_map = map_name + index + map_extension;
+	}
+	save_game_and_render_world_in_map(current_map, &game_world, &render_world);
 	gui::shutdown();
-	save_to_file();
 }
 
 bool Engine::initialized()

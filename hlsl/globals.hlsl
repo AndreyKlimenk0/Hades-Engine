@@ -43,7 +43,6 @@ Texture2D<float4> texture_map : register(t0);
 Texture2D<float> shadow_atlas : register(t1);
 Texture3D<float2> jittering_samples : register(t2);
 
-Texture2D<float4> ambient_texture : register(t10);
 Texture2D<float4> normal_texture : register(t11);
 Texture2D<float4> diffuse_texture : register(t12);
 Texture2D<float4> specular_texture : register(t13);

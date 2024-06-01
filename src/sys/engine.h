@@ -33,6 +33,7 @@ struct Engine {
 	s64 fps = 0;
 	s64 frame_time = 0;
 	Engine_Mode engine_mode;
+	String current_map;
 
 	Win32_Info win32_info;
 	Editor editor;
@@ -46,7 +47,6 @@ struct Engine {
 	void init(Win32_Info *_win32_state);
 	void init_from_map();
 	void frame();
-	void save_to_file();
 	void shutdown();
 
 	static bool initialized();

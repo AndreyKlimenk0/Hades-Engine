@@ -108,24 +108,39 @@ struct Drop_Down_Entity_Window : Editor_Window {
 	void draw();
 };
 
-struct Command;
+struct Displaying_Command {
+	String command_name;
+	String str_key_binding;
+
+	bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context) = NULL;
+};
+
+struct Displaying_Info {
+	String command_name;
+};
 
 struct Command_Window : Editor_Window {
-	String command_edit_filed_input_string;
-	Rect_s32 command_window_rect;
+	Command_Window();
+	~Command_Window();
 	
-	Command *command = NULL;
+	Displaying_Command *current_displaying_command = NULL;
 
-	Array<Command *> commands;
-	Array<Gui_List_Line_State> command_list_state;
-	
+	String command_edit_field;
+	Rect_s32 command_window_rect;
+	Rect_s32 command_window_rect_with_additional_info;
+
 	Gui_List_Theme list_theme;
 	Gui_Window_Theme command_window_theme;
 	Gui_Edit_Field_Theme command_edit_field_theme;
+	Array<Gui_List_Line_State> list_line_states;
 	
-	Texture2D cmd_icon_texture;
+	Array<Displaying_Command> displaying_commands;
+	Array<Pair<Displaying_Command *, Key_Binding>> command_key_bindings;
 	
 	void init(Engine *engine);
+	void displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context));
+	void displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context));
+	//void register_command_key_bindings(Key_Bindings *key_bindings);
 	void draw();
 };
 
@@ -145,7 +160,7 @@ struct Editor {
 	Editor();
 	~Editor();
 
-	bool draw_command_window = true;
+	bool draw_command_window = false;
 	bool draw_make_entity_window = false;
 	bool draw_drop_down_entity_window = false;
 	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;

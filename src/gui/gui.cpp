@@ -81,15 +81,6 @@ const Rect_s32 DEFAULT_WINDOW_RECT = { 50, 50, 300, 300 };
 const Gui_Window_Theme DEFAULT_WINDOW_THEME;
 const Gui_Text_Button_Theme DEFAULT_BUTTON_THEME;
 
-inline void reverse_state(bool *state)
-{
-	if (*state) {
-		*state = false;
-	} else {
-		*state = true;
-	}
-}
-
 inline bool detect_intersection(Rect_s32 *rect)
 {
 	if ((Mouse_State::x > rect->x) && (Mouse_State::x < (rect->x + rect->width)) && (Mouse_State::y > rect->y) && (Mouse_State::y < (rect->y + rect->height))) {
@@ -488,6 +479,7 @@ struct Gui_Manager {
 	bool any_window_was_moved;
 	bool handle_events_for_one_window;
 	bool next_list_active;
+	bool next_edit_field_active;
 
 	s32 mouse_x;
 	s32 mouse_y;
@@ -564,7 +556,6 @@ struct Gui_Manager {
 	Gui_Radio_Button_Theme radio_button_theme;
 	Gui_Edit_Field_Theme edit_field_theme;
 	Gui_Edit_Field_Theme backup_edit_field_theme;
-
 	Edit_Field_State edit_field_state;
 
 	Key_Bindings key_bindings;
@@ -602,6 +593,7 @@ struct Gui_Manager {
 	
 	void make_tab_active(Gui_ID tab_gui_id);
 	void make_next_list_active();
+	void make_next_edit_field_active();
 	
 	void scrolling(Gui_Window *window, Axis axis);
 	void move_window_content(Gui_Window *window, u32 distance, Moving_Direction moving_direction);
@@ -1042,7 +1034,7 @@ void Gui_Manager::edit_field(const char *name, String *string)
 			place_in_middle_and_by_left(&edit_field_instance.rect, &edit_field_instance.name_rect, edit_field_instance.edit_field_rect.width + theme->text_shift);
 		}
 		place_in_middle_and_by_left(&edit_field_instance.edit_field_rect, &edit_field_instance.value_rect, theme->text_shift);
-		place_in_middle_and_by_left(&edit_field_instance.edit_field_rect, &edit_field_instance.caret_rect, edit_field_instance.value_rect.width);
+		place_in_middle_and_by_left(&edit_field_instance.value_rect, &edit_field_instance.caret_rect, edit_field_instance.value_rect.width);
 
 		update_value = update_edit_field(&edit_field_instance);
 		Gui_ID edit_field_gui_id = GET_EDIT_FIELD_GUI_ID();
@@ -1855,6 +1847,12 @@ bool Gui_Manager::update_edit_field(Edit_Field_Instance *edit_field_instance)
 		}
 	}
 
+	if (next_edit_field_active && (active_edit_field != edit_field_gui_id)) {
+		next_edit_field_active = false;
+		active_edit_field = edit_field_gui_id;
+		edit_field_state = make_edit_field_state(&edit_field_instance->caret_rect, edit_field_instance->editing_value, edit_field_instance->max_chars_number, edit_field_instance->symbol_validation);
+	}
+
 	if (active_edit_field == edit_field_gui_id) {
 		if (update_next_time_editing_value) {
 			edit_field_state.data = edit_field_instance->editing_value;
@@ -1991,6 +1989,13 @@ void Gui_Manager::make_tab_active(Gui_ID tab_gui_id)
 void Gui_Manager::make_next_list_active()
 {
 	next_list_active = true;
+}
+
+void Gui_Manager::make_next_edit_field_active()
+{
+	if (active_edit_field == 0) {
+		next_edit_field_active = true;
+	}
 }
 
 void Gui_Manager::text(const char *some_text)
@@ -2287,6 +2292,7 @@ void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 	win32_info = &engine->win32_info;
 
 	next_list_active = false;
+	next_edit_field_active = false;
 	active_scrolling = false;
 	change_active_field = false;
 	any_window_was_moved = false;
@@ -2571,7 +2577,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	window->new_frame(window_style);
 
 	//@Note: Can I get rid of it ?
-	update_active_and_hot_state(window, window->gui_id, &window->rect);
+	//update_active_and_hot_state(window, window->gui_id, &window->rect);
 	
 	update_active_window(window);
 	
@@ -3236,6 +3242,11 @@ void gui::make_tab_active(Gui_ID tab_gui_id)
 void gui::make_next_list_active()
 {
 	return gui_manager.make_next_list_active();
+}
+
+void gui::make_next_edit_field_active()
+{
+	gui_manager.make_next_edit_field_active();
 }
 
 void gui::begin_frame()
