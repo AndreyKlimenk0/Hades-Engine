@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <string.h>
+
 #include "key_binding.h"
 #include "os/event.h"
 #include "../sys/sys_local.h"
@@ -69,6 +72,7 @@ void Key_Bindings::handle_events()
 				}
 				if (event->is_key_up(key_binding->modifier_key)) {
 					key_binding->modifier_key_state = KEY_UP;
+					key_binding->modifier_key_pressed_first = false;
 				}
 				if (event->is_key_down(key_binding->second_key)) {
 					key_binding->second_key_state = KEY_DOWN;
@@ -127,6 +131,12 @@ bool Key_Bindings::was_binding_triggered(Key modifier_key, Key second_key)
 
 Key_Binding::Key_Binding() 
 {
+	modifier_key_pressed_first = false;
+	second_key_was_just_pressed = false;
+	modifier_key = KEY_UNKNOWN;
+	second_key = KEY_UNKNOWN;
+	modifier_key_state = KEY_UP;
+	second_key_state = KEY_UP;
 }
 
 Key_Binding::Key_Binding(Key modifier_key, Key second_key) : modifier_key(modifier_key), second_key(second_key) 
@@ -139,4 +149,21 @@ Key_Binding::Key_Binding(Key modifier_key, Key second_key) : modifier_key(modifi
 
 Key_Binding::~Key_Binding() 
 {
+}
+
+bool Key_Binding::valid()
+{
+	return (modifier_key != KEY_UNKNOWN) && (second_key != KEY_UNKNOWN);
+}
+
+char *to_string(Key_Binding *key_binding)
+{
+	assert(key_binding);
+
+	String first_key = key_to_pretty_string(key_binding->modifier_key);
+	String second_key = key_to_pretty_string(key_binding->second_key);
+	String result = first_key + " + " + second_key;
+	char *buffer = new char[result.len + 1];
+	memcpy((void *)buffer, result.data, result.len + 1);
+	return buffer;
 }

@@ -14,7 +14,6 @@
 
 
 struct Render_Pass;
-typedef u32 Mesh_Idx;
 typedef u32 Texture_Idx;
 typedef u32 Render_Entity_Idx;
 
@@ -24,29 +23,28 @@ const u32 CASCADE_SIZE = 1024;
 
 const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
-struct Render_Entity_Textures {
-	Texture_Idx ambient_texture_idx;
-	Texture_Idx normal_texture_idx;
-	Texture_Idx diffuse_texture_idx;
-	Texture_Idx specular_texture_idx;
-	Texture_Idx displacement_texture_idx;
+struct Mesh_Id {
+	u32 textures_idx;
+	u32 instance_idx;
 };
 
 struct Render_Entity {
-	Entity_Id entity_id;
 	u32 world_matrix_idx;
-	Texture_Idx ambient_texture_idx;
-	Texture_Idx normal_texture_idx;
-	Texture_Idx diffuse_texture_idx;
-	Texture_Idx specular_texture_idx;
-	Texture_Idx displacement_texture_idx;
-	Mesh_Idx mesh_idx;
+	Mesh_Id mesh_id;
+	Entity_Id entity_id;
 };
 
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
 
+struct Mesh_Textures {
+	Texture_Idx normal_idx;
+	Texture_Idx diffuse_idx;
+	Texture_Idx specular_idx;
+	Texture_Idx displacement_idx;
+};
+
 template <typename T>
-struct Unified_Mesh_Storate {
+struct Mesh_Storate {
 	struct Mesh_Instance {
 		u32 vertex_count = 0;
 		u32 index_count = 0;
@@ -54,36 +52,53 @@ struct Unified_Mesh_Storate {
 		u32 index_offset = 0;
 	};
 
+	struct Default_Textures {
+		Texture_Idx normal;
+		Texture_Idx diffuse;
+		Texture_Idx specular;
+		Texture_Idx displacement;
+		Texture_Idx white;
+		Texture_Idx black;
+		Texture_Idx green;
+	};
+
+	Default_Textures default_textures;
 	Array<T> unified_vertices;
 	Array<u32> unified_indices;
+	Array<Texture2D> textures;
 	Array<Mesh_Instance> mesh_instances;
-	Hash_Table<String_Id, Mesh_Idx> mesh_table;
+	Array<Mesh_Textures> meshes_textures;
+	Array<String> loaded_meshes;
+
+	Hash_Table<String_Id, Mesh_Id> mesh_table;
+	Hash_Table<String_Id, Texture_Idx> texture_table;
 
 	Gpu_Struct_Buffer vertex_struct_buffer;
 	Gpu_Struct_Buffer index_struct_buffer;
 	Gpu_Struct_Buffer mesh_struct_buffer;
 
+	void init(Gpu_Device *gpu_device);
 	void allocate_gpu_memory();
-	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx);
-	bool update_mesh(Mesh_Idx mesh_idx, Mesh<T> *mesh);
+	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *mesh_id);
+	bool add_texture(const char *texture_name, Texture_Idx *texture_idx);
+	bool update_mesh(Mesh_Id mesh_id, Mesh<T> *mesh);
+	Texture_Idx find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture);
+
+	Mesh_Textures *get_mesh_textures(u32 index);
+	Texture2D *get_texture(Texture_Idx texture_idx);
 };
 
-struct Render_Entity_Texture_Storage {
-	Gpu_Device *gpu_device = NULL;
-	Render_Pipeline *render_pipeline = NULL;
+template<typename T>
+inline Mesh_Textures *Mesh_Storate<T>::get_mesh_textures(u32 index)
+{
+	return &meshes_textures[index];
+}
 
-	Texture_Idx default_texture_idx;
-	Texture_Idx default_specular_texture_idx;
-	Texture_Idx white_texture_idx;
-	Texture_Idx black_texture_idx;
-	Texture_Idx green_texture_idx;
-
-	Array<Texture2D> textures;
-	Hash_Table<String, Texture_Idx> texture_table;
-
-	void init(Gpu_Device *_gpu_device, Render_Pipeline *_render_pipeline);
-	Texture_Idx add_texture(const char *name, u32 width, u32 height, void *data);
-};
+template<typename T>
+inline Texture2D *Mesh_Storate<T>::get_texture(Texture_Idx texture_idx)
+{
+	return &textures[texture_idx];
+}
 
 struct Shadow_Cascade_Range {
 	u32 start = 0;
@@ -170,9 +185,8 @@ struct Render_World {
 	
 	Array<Render_Pass *> every_frame_render_passes;
 
-	Unified_Mesh_Storate<Vector3> line_meshes;
-	Unified_Mesh_Storate<Vertex_PNTUV> triangle_meshes;
-	Render_Entity_Texture_Storage render_entity_texture_storage;
+	Mesh_Storate<Vector3> line_meshes;
+	Mesh_Storate<Vertex_PNTUV> triangle_meshes;
 	
 	Texture2D default_texture;
 	Texture2D shadow_atlas;
@@ -197,7 +211,6 @@ struct Render_World {
 	} render_passes;
 
 	void init(Engine *engine);
-	void init_meshes();
 	void init_shadow_rendering();
 	void init_render_passes(Shader_Manager *shader_manager);
 
@@ -206,9 +219,10 @@ struct Render_World {
 	void update_shadows();
 	void update_render_entities();
 
-	void add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, Render_Entity_Textures *render_entity_textures, void *args = NULL);
-	u32 delete_render_entity(Entity_Id entity_id);
+	void add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Id mesh_id, void *args = NULL);
 	bool add_shadow(Light *light);
+	
+	u32 delete_render_entity(Entity_Id entity_id);
 
 	void render();
 
@@ -216,8 +230,8 @@ struct Render_World {
 	void set_camera_for_debuging(Entity_Id camera_info_id);
 	
 	bool get_shadow_atls_viewport(Viewport *viewport);
-	bool add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Idx *mesh_idx);
-	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx);
+	bool add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Id *mesh_id);
+	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Id *mesh_id);
 	
 	Vector3 get_light_position(Vector3 light_direction);
 };

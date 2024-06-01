@@ -9,6 +9,10 @@
 template <typename T>
 struct Mesh {
 	String name;
+	String normal_texture_name;
+	String diffuse_texture_name;
+	String specular_texture_name;
+	String displacement_texture_name;
 
 	Array<T> vertices;
 	Array<u32> indices;

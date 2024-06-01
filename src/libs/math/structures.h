@@ -274,7 +274,7 @@ template <typename T, typename U>
 struct Pair {
 	Pair();
 	~Pair();
-	Pair(const T &first, const U &seoncd);
+	Pair(const T &first, const U &second);
 	
 	T first;
 	U second;
@@ -291,7 +291,7 @@ inline Pair<T, U>::~Pair()
 }
 
 template<typename T, typename U>
-inline Pair<T, U>::Pair(const T & first, const U & seoncd) : first(first), second(second)
+inline Pair<T, U>::Pair(const T &first, const U &second) : first(first), second(second)
 {
 }
 

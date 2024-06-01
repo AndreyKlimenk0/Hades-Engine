@@ -194,6 +194,7 @@
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\render\render_world.cpp" />
     <ClCompile Include="src\render\shader_manager.cpp" />
+    <ClCompile Include="src\sys\commands.cpp" />
     <ClCompile Include="src\sys\engine.cpp" />
     <ClCompile Include="src\sys\file_tracking.cpp" />
     <ClCompile Include="src\sys\map.cpp" />
@@ -242,6 +243,7 @@
     <ClInclude Include="src\render\render_world.h" />
     <ClInclude Include="src\render\shader_manager.h" />
     <ClInclude Include="src\render\vertex.h" />
+    <ClInclude Include="src\sys\commands.h" />
     <ClInclude Include="src\sys\engine.h" />
     <ClInclude Include="src\sys\file_tracking.h" />
     <ClInclude Include="src\sys\map.h" />

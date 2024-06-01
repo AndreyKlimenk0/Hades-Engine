@@ -576,7 +576,9 @@ void String::append(char c)
 void String::append(const char *string)
 {
 	assert(string != NULL);
-	assert(string[0] != '\0');
+	if (string[0] == '\0') {
+		return;
+	}
 
 	if (!data) {
 		allocate_and_copy_string(string);

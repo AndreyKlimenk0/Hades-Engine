@@ -3,6 +3,7 @@
 #include "editor.h"
 #include "../sys/engine.h"
 #include "../sys/sys_local.h"
+#include "../sys/commands.h"
 
 #include "../libs/str.h"
 #include "../libs/png_image.h"
@@ -13,6 +14,7 @@
 #include "../libs/math/vector.h"
 #include "../libs/mesh_loader.h"
 #include "../libs/geometry_helper.h"
+#include "../libs/math/functions.h"
 
 #include "../render/render_api.h"
 #include "../render/render_system.h"
@@ -173,27 +175,27 @@ void Make_Entity_Window::draw()
 			gui::edit_field("Depth", &box.depth);
 
 			if (gui::button("Make")) {
-				Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
+				//Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
 
-				Triangle_Mesh mesh;
-				make_box_mesh(&box, &mesh);
-				AABB aabb = make_AABB(&mesh);
-				game_world->attach_AABB(entity_id, &aabb);
+				//Triangle_Mesh mesh;
+				//make_box_mesh(&box, &mesh);
+				//AABB aabb = make_AABB(&mesh);
+				//game_world->attach_AABB(entity_id, &aabb);
 
-				char *mesh_name = format("Box", box.width, box.height, box.depth);
-				Mesh_Idx mesh_idx;
-				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
+				//char *mesh_name = format("Box", box.width, box.height, box.depth);
+				//Mesh_Idx mesh_idx;
+				//render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				Render_Entity_Textures render_entity_textures;
-				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
-				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//Render_Entity_Textures render_entity_textures;
+				//render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				//render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
 
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
+				//render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 
-				free_string(mesh_name);
+				//free_string(mesh_name);
 			}
 		} else if (geometry_type == GEOMETRY_TYPE_SPHERE) {
 			gui::edit_field("Radious", &sphere.radius);
@@ -201,25 +203,25 @@ void Make_Entity_Window::draw()
 			gui::edit_field("Stack count", (s32 *)&sphere.stack_count);
 
 			if (gui::button("Make")) {
-				Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
+				//Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
 
-				Triangle_Mesh mesh;
-				make_sphere_mesh(&sphere, &mesh);
+				//Triangle_Mesh mesh;
+				//make_sphere_mesh(&sphere, &mesh);
 
-				char *mesh_name = format("Sphere", sphere.radius, sphere.slice_count, sphere.stack_count);
-				Mesh_Idx mesh_idx;
-				render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
+				//char *mesh_name = format("Sphere", sphere.radius, sphere.slice_count, sphere.stack_count);
+				//Mesh_Idx mesh_idx;
+				//render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
 
-				Render_Entity_Textures render_entity_textures;
-				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
-				render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//Render_Entity_Textures render_entity_textures;
+				//render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+				//render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+				//render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
 
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
+				//render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
 
-				free_string(mesh_name);
+				//free_string(mesh_name);
 			}
 		}
 	} else if (type == ENTITY_TYPE_CAMERA) {
@@ -329,25 +331,25 @@ void Game_World_Window::draw()
 
 				bool was_click = gui::radio_button("Draw frustum", &draw_frustum_states[camera->idx]);
 				if (was_click && draw_frustum_states[camera->idx] && !find_render_entity(&render_world->line_render_entities, editor->picked_entity)) {
-					char *name = format(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov);
-					String_Id string_id = fast_hash(name);
+					//char *name = format(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov);
+					//String_Id string_id = fast_hash(name);
 
-					Mesh_Idx mesh_idx;
-					if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
-						Line_Mesh frustum_mesh;
-						make_frustum_mesh(render_system->view.fov, render_system->view.ratio, 1.0f, 1000.0f, &frustum_mesh);
-						render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
-					}
-					free_string(name);
+					//Mesh_Idx mesh_idx;
+					//if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
+					//	Line_Mesh frustum_mesh;
+					//	make_frustum_mesh(render_system->view.fov, render_system->view.ratio, 1.0f, 1000.0f, &frustum_mesh);
+					//	render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
+					//}
+					//free_string(name);
 
-					Render_Entity_Textures render_entity_textures;
-					render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-					render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-					render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
-					render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-					render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					//Render_Entity_Textures render_entity_textures;
+					//render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					//render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					//render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
+					//render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
+					//render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
 
-					render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, editor->picked_entity, mesh_idx, &render_entity_textures, (void *)&Color::Red);
+					//render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, editor->picked_entity, mesh_idx, &render_entity_textures, (void *)&Color::Red);
 
 				} else if (was_click && !draw_frustum_states[camera->idx]) {
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -367,23 +369,23 @@ void Game_World_Window::draw()
 				Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, editor->picked_entity);
 
 				if (render_entity) {
-					char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
-					String_Id string_id = fast_hash(name);
+					//char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
+					//String_Id string_id = fast_hash(name);
 
-					Mesh_Idx mesh_idx;
-					if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
-						Line_Mesh AABB_mesh;
-						make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
-						render_world->add_mesh(name, &AABB_mesh, &mesh_idx);
-					}
-					free_string(name);
+					//Mesh_Idx mesh_idx;
+					//if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
+					//	Line_Mesh AABB_mesh;
+					//	make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
+					//	render_world->add_mesh(name, &AABB_mesh, &mesh_idx);
+					//}
+					//free_string(name);
 
-					Render_Entity new_render_entity;
-					new_render_entity.entity_id = editor->picked_entity;
-					new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
-					new_render_entity.mesh_idx = mesh_idx;
+					//Render_Entity new_render_entity;
+					//new_render_entity.entity_id = editor->picked_entity;
+					//new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
+					//new_render_entity.mesh_idx = mesh_idx;
 
-					render_world->line_render_entities.push(new_render_entity);
+					//render_world->line_render_entities.push(new_render_entity);
 				}
 			} else if (was_click && !draw_AABB_states[entity->idx]) {
 				u32 render_entity_index = 0;
@@ -535,6 +537,7 @@ void Editor::init(Engine *engine)
 	render_world = &engine->render_world;
 
 	command_window.init(engine);
+
 	make_entity_window.init(engine);
 	game_world_window.init(engine);
 	render_world_window.init(engine);
@@ -562,8 +565,8 @@ void Editor::init(Engine *engine)
 
 void Editor::handle_events()
 {
+	key_bindings.handle_events();
 	if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
-		key_bindings.handle_events();
 
 		//@Note: In the future here better to use linear allocator.
 		Array<Editor_Command> editor_commands;
@@ -646,12 +649,9 @@ void Editor::picking()
 void Editor::update()
 {
 	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
-		if (draw_command_window) {
-			draw_command_window = false;
-		} else {
-			draw_command_window = true;
-		}
+		invert(&draw_command_window);
 	}
+
 	if (!gui::were_events_handled() && were_key_events()) {
 		if (draw_drop_down_entity_window) {
 			draw_drop_down_entity_window = false;
@@ -665,19 +665,15 @@ void Editor::render()
 {
 	gui::begin_frame();
 	if (gui::begin_window("Editor", WINDOW_DEFAULT_STYLE | WINDOW_TAB_BAR)) {
-
 		if (gui::add_tab("Make Entity")) {
 			make_entity_window.draw();
 		}
-
 		if (gui::add_tab("Game World")) {
 			game_world_window.draw();
 		}
-
 		if (gui::add_tab("Render World")) {
 			render_world_window.draw();
 		}
-
 		gui::end_window();
 	}
 	if (draw_drop_down_entity_window) {
@@ -728,17 +724,14 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 			rotate_camera = true;
 			last_x = Mouse_State::x;
 			last_y = Mouse_State::y;
-			print("Start rotate camera");
 
 		} else if (command == "end_rotate_camera") {
 			rotate_camera = false;
-			print("End rotate camera");
 
 		} else if (command == "rotate_camera") {
 			if (!rotate_camera) {
 				continue;
 			}
-			print("Rotate camera");
 			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
 			float x_angle = degrees_to_radians((float)(mouse_info->x - last_x));
 			float y_angle = -degrees_to_radians((float)(mouse_info->y - last_y));
@@ -769,10 +762,7 @@ void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> 
 			if (result == COMMAND_FIND) {
 				editor_commands->push(editor_command);
 
-			} else if (result == COMMAND_NOT_FOUND) {
-				print("Editor::convert_user_input_events_to_edtior_commands: There is no an editor key command binding for {}.", to_string(event->key_info.key));
 			}
-
 		} else if (event->type == EVENT_TYPE_MOUSE) {
 			Editor_Command rotate_camera_command;
 			editor_command.command = "rotate_camera";
@@ -788,76 +778,92 @@ inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element
 	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
 }
 
-struct Command {
-	String name;
+//struct Asset_Command : Command, Draw_Two_Column_List {
+//	String full_path_to_data_directory;
+//	String relative_path_to_data_directory;
+//	Array<String> asset_files;
+//};
+//
+//bool Asset_Command::init(const char *command_name, const char *data_directory_name)
+//{
+//	assert(command_name);
+//	assert(data_directory_name);
+//
+//	if (Command::init(command_name)) {
+//		relative_path_to_data_directory = "data/";
+//		relative_path_to_data_directory.append(data_directory_name);
+//		return build_full_path_to_data_directory(data_directory_name, full_path_to_data_directory) && directory_exists(full_path_to_data_directory);
+//	}
+//	return false;
+//}
+//
+//void Asset_Command::draw_info()
+//{
+//	list.clear();
+//	for (u32 i = 0; i < asset_files.count; i++) {
+//		list.push({ asset_files[i], relative_path_to_data_directory });
+//	}
+//	Draw_Two_Column_List::draw();
+//}
+//
+//void Asset_Command::proccess_input(const char * user_input)
+//{
+//	if ((u32)strlen(user_input) == 0) {
+//		return;
+//	}
+//	asset_files.clear();
+//
+//	Array<String> not_matched_files;
+//	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
+//
+//	for (u32 i = 0; i < not_matched_files.count; i++) {
+//		if (not_matched_files[i].find(user_input) != -1) {
+//			asset_files.push(not_matched_files[i]);
+//		}
+//	}
+//}
 
-	virtual bool init(const char *command_name);
-	virtual void draw_list() = 0;
-	virtual void proccess_input(const char *data) = 0;
-	virtual void execute(const char *data, void *context) = 0;
-};
 
-struct Data_Command : Command {
-	String full_path_to_data_directory;
-	String relative_path_to_data_directory;
-
-	virtual bool init(const char *command_name, const char *data_directory_name);
-	virtual void draw_list() = 0;
-	virtual void proccess_input(const char *data) = 0;
-};
-
-struct Load_Mesh_Command : Data_Command {
-	Array<Gui_List_Line_State> list_line_states;
-	
-	void draw_list();
-	void proccess_input(const char *data);
-	void execute(const char *data, void *context);
-};
-
-bool Command::init(const char *command_name)
+Command_Window::Command_Window()
 {
-	assert(command_name);
-	name = command_name;
-	return true;
 }
 
-bool Data_Command::init(const char *command_name, const char *data_directory_name)
+Command_Window::~Command_Window()
 {
-	assert(command_name);
-	assert(data_directory_name);
-
-	if (Command::init(command_name)) {
-		relative_path_to_data_directory = "data/";
-		relative_path_to_data_directory.append(data_directory_name);
-		return build_full_path_to_data_directory(data_directory_name, full_path_to_data_directory) && directory_exists(full_path_to_data_directory);
-	}
-	return false;
 }
 
-void Load_Mesh_Command::draw_list()
+static bool match(const char *substring, Array<String> &strings, Array<String> &result)
 {
-	Array<String> model_files;
-	get_file_names_from_dir(full_path_to_data_directory, &model_files);
-	if (model_files.count > list_line_states.count) {
-		list_line_states.reserve(model_files.count);
+	assert(substring);
+	if (strlen(substring) == 0) {
+		return false;
 	}
+	u32 count = 0;
+	for (u32 i = 0; i < strings.count; i++) {
+		if (strings[i].find(substring) != -1) {
+			result.push(strings[i]);
+			count++;
+		}
+	}
+	return count > 0;
+}
 
-	Gui_List_Column columns[] = { {"Model", 75 }, { "Relative path", 25 } };
-	if (gui::begin_list("Engine Models", columns, 2)) {
-		for (u32 i = 0; i < model_files.count; i++) {
+static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_State> &list_line_states, Array<Pair<String, String>> &list)
+{
+	s32 line_index = -1;
+	Gui_List_Column columns[] = { {"First column", 75 }, { "Second column", 25 } };
+	if (gui::begin_list(list_name, columns, 2)) {
+		for (u32 i = 0; i < list.count; i++) {
 			if (gui::begin_line(&list_line_states[i])) {
-
 				if (gui::left_mouse_click(list_line_states[i])) {
-					
-					execute(model_files[i], Engine::get_instance());
+					line_index = i;
 				}
-
-				gui::begin_column("Model");
-				gui::add_text(model_files[i], RECT_LEFT_ALIGNMENT);
+				gui::begin_column("First column");
+				gui::add_text(list[i].first, RECT_LEFT_ALIGNMENT);
 				gui::end_column();
 
-				gui::begin_column("Relative path");
-				gui::add_text(relative_path_to_data_directory, RECT_LEFT_ALIGNMENT);
+				gui::begin_column("Second column");
+				gui::add_text(list[i].second, RECT_LEFT_ALIGNMENT);
 				gui::end_column();
 
 				gui::end_line();
@@ -865,101 +871,117 @@ void Load_Mesh_Command::draw_list()
 		}
 		gui::end_list();
 	}
+	return line_index;
 }
 
-void Load_Mesh_Command::proccess_input(const char *data)
+struct Command_Window_Gui_Info {
+	Gui_List_Theme list_theme;
+	Array<Gui_List_Line_State> list_line_states;
+	void init();
+	void reset();
+};
+
+bool display_and_get_info_for_load_mesh_command(String *edit_field, Array<String> &command_args, void *context)
 {
-}
+	assert(edit_field);
+	assert(context);
 
-void Load_Mesh_Command::execute(const char *data, void *context)
-{
-	Engine *engine = (Engine *)context;
-	Render_World *render_world = &engine->render_world;
-	Game_World *game_world = &engine->game_world;
+	String full_path_to_data_directory;
+	build_full_path_to_data_directory("models", full_path_to_data_directory);
 
-	String full_path_to_model;
-	build_full_path_to_model_file(data, full_path_to_model);
+	Array<String> not_matched_files;
+	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
 
-	if (file_exists(full_path_to_model)) {
-		Array<Import_Mesh> meshes;
-
-		Mesh_Loader mesh_loader;
-		mesh_loader.load(full_path_to_model, meshes, false, false);
-
-		Import_Mesh *imported_mesh = NULL;
-		For(meshes, imported_mesh) {
-			Mesh_Idx mesh_idx;
-			if (render_world->add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
-				Render_Entity_Textures render_entity_textures;
-				render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				render_entity_textures.normal_texture_idx = load_normal_texture(imported_mesh->normal_texture, this);
-				render_entity_textures.diffuse_texture_idx = load_diffuse_texture(imported_mesh->diffuse_texture, this);
-				render_entity_textures.specular_texture_idx = load_specular_texture(imported_mesh->specular_texture, this);
-				render_entity_textures.displacement_texture_idx = load_displacenet_texture(imported_mesh->displacement_texture, this);
-
-				if (imported_mesh->mesh_instances.count > 0) {
-					for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
-						Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
-						Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
-						render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-					}
-				} else {
-					Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
-					render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-				}
+	Array<String> matched_files;
+	if (!edit_field->is_empty()) {
+		for (u32 i = 0; i < not_matched_files.count; i++) {
+			if (not_matched_files[i].find(edit_field->c_str(), 0, false) != -1) {
+				matched_files.push(not_matched_files[i]);
 			}
 		}
-		print("Finish of creating entities");
-
+	} else {
+		matched_files = not_matched_files;
 	}
+
+	Array<Pair<String, String>> mesh_path_list;
+	for (u32 i = 0; i < matched_files.count; i++) {
+		mesh_path_list.push({ matched_files[i], "data/models" } );
+	}
+	Command_Window *command_window = (Command_Window *)context;
+
+	bool result = false;
+	gui::set_theme(&command_window->list_theme);
+	s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
+	if (line_index >= 0) {
+		command_args.push(mesh_path_list[line_index].first);
+		result = true;
+	}
+	gui::reset_list_theme();
+	return result;
 }
+
+bool display_all_commands(String *edit_field, Array<String> &command_args, void *context)
+{
+	Command_Window *command_window = (Command_Window *)context;
+
+	Array<Pair<String, String>> list;
+	if (!edit_field->is_empty()) {
+		for (u32 i = 1; i < command_window->displaying_commands.count; i++) {
+			if (command_window->displaying_commands[i].command_name.find(edit_field->c_str(), 0, false) != -1) {
+				list.push({ command_window->displaying_commands[i].command_name, command_window->displaying_commands[i].str_key_binding });
+			}
+		}
+	} else {
+		for (u32 i = 1; i < command_window->displaying_commands.count; i++) {
+			list.push({ command_window->displaying_commands[i].command_name, command_window->displaying_commands[i].str_key_binding });
+		}
+	}
+	gui::set_theme(&command_window->list_theme);
+	gui::make_next_list_active();
+	s32 line_index = draw_two_columns_list("command list", command_window->list_line_states, list);
+	if (line_index >= 0) {
+		String &command_name = list[line_index].first;
+		for (u32 i = 0; i < command_window->displaying_commands.count; i++) {
+			if (command_name == command_window->displaying_commands[i].command_name) {
+				command_window->current_displaying_command = &command_window->displaying_commands[i];
+				edit_field->free();
+				break;
+			}
+		}
+	}
+	gui::reset_list_theme();
+	return false;
+}
+
+static const char *MAIN_COMMAND_NAME = "Display all commands";
 
 void Command_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
 
-	String path_to_cmd_icon_image;
-	build_full_path_to_editor_file("command-icon.png", path_to_cmd_icon_image);
+	displaying_command(MAIN_COMMAND_NAME, display_all_commands);
+	current_displaying_command = &displaying_commands.get_last();
 
-	u32 width;
-	u32 height;
-	u8 *data = NULL;
-	if (load_png_file(path_to_cmd_icon_image, &data, &width, &height)) {
-		Texture2D_Desc texture_desc;
-		texture_desc.width = width;
-		texture_desc.height = height;
-		texture_desc.data = data;
-		texture_desc.mip_levels = 1;
-		render_system->gpu_device.create_texture_2d(&texture_desc, &cmd_icon_texture);
-		render_system->gpu_device.create_shader_resource_view(&texture_desc, &cmd_icon_texture);
-		
-		DELETE_PTR(data);
-	}
+	displaying_command("Load mesh", KEY_CTRL, KEY_L, display_and_get_info_for_load_mesh_command);
+	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
 	display.set_size(Render_System::screen_width, Render_System::screen_height);
-	command_window_rect.set_size(600, 500);
+	
+	command_window_rect.set_size(600, 100);
+	command_window_rect_with_additional_info.set_size(600, 500);
+
 	place_in_middle(&display, &command_window_rect);
 	command_window_rect.y = 200;
 
-
-	Load_Mesh_Command *load_mesh_command = new Load_Mesh_Command();
-	if (load_mesh_command->init("Load mesh", "models")) {
-		commands.push(load_mesh_command);
-	} else {
-		DELETE_PTR(load_mesh_command);
-	}
-
-	command_list_state.reserve(commands.count);
-	if (!command_list_state.is_empty()) {
-		command_list_state[0] = 0x1;
-	}
-
 	command_window_theme.background_color = Color(20);
+	command_window_theme.vertical_offset_from_sides = 20;
 
 	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_offset_from_sides * 2, 30);
 	command_edit_field_theme.draw_label = false;
 	command_edit_field_theme.color = Color(30);
+
+	command_window_rect.height = command_edit_field_theme.rect.height + command_window_theme.vertical_offset_from_sides * 2;
 
 	list_theme.line_height = 30;
 	list_theme.column_filter = false;
@@ -967,70 +989,95 @@ void Command_Window::init(Engine *engine)
 	list_theme.window_size.width = command_window_rect.width;
 	list_theme.background_color = Color(20);
 	list_theme.line_color = Color(20);
+
+	list_line_states.reserve(20);
 }
+
+void Command_Window::displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String>&command_args, void *context))
+{
+	assert(command_name);
+
+	Displaying_Command command_displaying_info;
+	command_displaying_info.command_name = command_name;
+	command_displaying_info.str_key_binding = "";
+	command_displaying_info.display_info_and_get_command_args = display_info_and_get_command_args;
+
+	displaying_commands.push(command_displaying_info);
+}
+
+void Command_Window::displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String>&command_args, void *context))
+{
+	assert(command_name);
+
+	Key_Binding key_binding = { modified_key, second_key };
+	char *str_key_binding = to_string(&key_binding);
+
+	Displaying_Command command_displaying_info;
+	command_displaying_info.command_name = command_name;
+	command_displaying_info.str_key_binding = str_key_binding;
+	command_displaying_info.display_info_and_get_command_args = display_info_and_get_command_args;
+
+	displaying_commands.push(command_displaying_info);
+	command_key_bindings.push({ &displaying_commands.get_last(), key_binding });
+
+	free_string(str_key_binding);
+}
+
+#define FIND_BY_FIELD(array, field, object, result) \
+  do {                                              \
+	auto func = [&]() -> decltype(array.items) { \
+		for (u32 i = 0; i < array.count; i++) { \
+			if (array[i].field == object) { \
+				return &array[i]; \
+			} \
+		} \
+		return NULL; \
+	}; \
+	result = func(); \
+  } while (0)
 
 void Command_Window::draw()
 {
+	assert(current_displaying_command);
+
+	if (was_click(KEY_ESC)) {
+		if (current_displaying_command->command_name != MAIN_COMMAND_NAME) {
+			current_displaying_command = &displaying_commands.get_first();
+		}
+	}
+
+	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
+	Rect_s32 window_rect = display_additional_info ? command_window_rect_with_additional_info : command_window_rect;
+
 	gui::set_next_window_pos(command_window_rect.x, command_window_rect.y);
-	gui::set_next_window_size(command_window_rect.width, command_window_rect.height);
+	gui::set_next_window_size(window_rect.width, window_rect.height);
 	gui::set_theme(&command_window_theme);
 	
 	if (gui::begin_window("Command window", 0)) {
 		
 		gui::set_theme(&command_edit_field_theme);
-		gui::edit_field("Command field", &command_edit_filed_input_string);
+		gui::make_next_edit_field_active();
+		gui::edit_field("Command field", &command_edit_field);
 		gui::reset_edit_field_theme();
 
-		Gui_Window_Theme window_theme;
-		window_theme.horizontal_offset_from_sides = 0;
-		gui::set_theme(&window_theme);
+		Array<String> command_args;
+		if (display_additional_info) {
+			Gui_Window_Theme window_theme;
+			window_theme.horizontal_offset_from_sides = 0;
+			gui::set_theme(&window_theme);
 
-		gui::set_theme(&list_theme);
-		gui::make_next_list_active();
-
-		if (!command) {
-			Gui_List_Column columns[] = { {"Command", 75 }, { "Key-Binding", 25 } };
-			if (gui::begin_list("Commands", columns, 2)) {
-				for (u32 i = 0; i < commands.count; i++) {
-					if (gui::begin_line(&command_list_state[i])) {
-
-						if (gui::left_mouse_click(command_list_state[i])) {
-							command = commands[i];
-						}
-						gui::begin_column("Command");
-						gui::add_image(&cmd_icon_texture, RECT_LEFT_ALIGNMENT);
-						gui::add_text(commands[i]->name, RECT_LEFT_ALIGNMENT);
-						gui::end_column();
-
-						gui::begin_column("Key-Binding");
-						gui::add_text("Ctr + L + M", RECT_LEFT_ALIGNMENT);
-						gui::end_column();
-
-						gui::end_line();
-					}
-				}
-				gui::end_list();
+			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
+				run_command(current_displaying_command->command_name, command_args);
 			}
+			gui::reset_window_theme();
 		} else {
-			command->draw_list();
+			if (was_click(KEY_ENTER)) {
+				command_args.push(command_edit_field);
+				run_command(current_displaying_command->command_name, command_args);
+			}
 		}
-		
-		
-		gui::reset_window_theme();
-		gui::reset_list_theme();
 		
 		gui::end_window();
 	}
 	gui::reset_window_theme();
 }
-//Array<String> found_commands;
-//if (!text.is_empty()) {
-//	for (u32 i = 0; i < commands.count; i++) {
-//		if (commands[i].find(text.c_str(), 0, false) != -1) {
-//			found_commands.push(commands[i]);
-//		}
-//	}
-//} else {
-//	found_commands = commands;
-//}
-

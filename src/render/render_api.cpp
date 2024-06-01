@@ -969,7 +969,7 @@ void Texture2D::get_desc(Texture2D_Desc *texture_desc)
 	texture_desc->data = NULL;
 }
 
-Texture2D &Texture2D::operator=(const Texture2D & other)
+Texture2D &Texture2D::operator=(const Texture2D &other)
 {
 	if (this != &other) {
 		resource = other.resource;

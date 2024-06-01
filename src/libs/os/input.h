@@ -27,6 +27,7 @@ enum Key : u8 {
 	KEY_ARROW_RIGHT,
 	KEY_CTRL,
 	KEY_ALT,
+	KEY_ESC,
 	KEY_SHIFT, // Insert a new key above KEY_SHIFT and don't forget update string_keys in the cpp file
 	KEY_A = ENGLISH_ALPHABET_KEYS_OFFSET,
 	KEY_B,
@@ -58,6 +59,7 @@ enum Key : u8 {
 
 bool is_alpha_key(Key key);
 const char *to_string(Key key);
+const char *key_to_pretty_string(Key key);
 Key win32_key_to_engine_key(s32 win32_key_code);
 
 struct Key_Info {
