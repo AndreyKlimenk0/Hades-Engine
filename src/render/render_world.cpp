@@ -117,9 +117,44 @@ void Shadow_Cascade_Ranges::add_range(u32 start, u32 end)
 	ranges.push({ start, end });
 }
 
+inline Texture2D create_color_texture(Gpu_Device *gpu_device, u32 texture_width, u32 texture_height, const Color &color)
+{
+	assert(gpu_device);
+	assert(texture_width > 0);
+	assert(texture_height > 0);
+
+	Texture2D_Desc texture_desc;
+	texture_desc.width = texture_width;
+	texture_desc.height = texture_height;
+	texture_desc.mip_levels = 1;
+
+	Texture2D texture;
+	gpu_device->create_texture_2d(&texture_desc, &texture);
+	gpu_device->create_shader_resource_view(&texture_desc, &texture);
+	fill_texture((void *)&color, &texture);
+	
+	return texture;
+}
 
 template<typename T>
-void Unified_Mesh_Storate<T>::allocate_gpu_memory()
+void Mesh_Storate<T>::init(Gpu_Device *gpu_device)
+{
+	assert(gpu_device);
+	
+	u32 width = 200;
+	u32 height = 200;
+	
+	default_textures.normal = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 1.0f)));
+	default_textures.diffuse = textures.push(create_color_texture(gpu_device, width, height, DEFAULT_MESH_COLOR));
+	default_textures.specular = textures.push(create_color_texture(gpu_device, width, height, Color(0.2f, 0.2f, 2.0f)));
+	default_textures.displacement = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 0.0f)));
+	default_textures.white = textures.push(create_color_texture(gpu_device, width, height, Color::White));
+	default_textures.black = textures.push(create_color_texture(gpu_device, width, height, Color::Black));
+	default_textures.green = textures.push(create_color_texture(gpu_device, width, height, Color(0.5f, 0.5f, 1.0f)));
+}
+
+template<typename T>
+void Mesh_Storate<T>::allocate_gpu_memory()
 {
 	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
 	index_struct_buffer.allocate<u32>(100000);
@@ -127,9 +162,62 @@ void Unified_Mesh_Storate<T>::allocate_gpu_memory()
 }
 
 template<typename T>
-bool Unified_Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Idx *_mesh_idx)
+bool Mesh_Storate<T>::add_texture(const char *texture_name, Texture_Idx *texture_idx)
+{
+	assert(texture_name);
+	assert(texture_idx);
+	
+	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
+	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
+
+	if (strlen(texture_name) == 0) {
+		return false;
+	}
+
+	String_Id string_id = fast_hash(texture_name);
+	if (!texture_table.get(string_id, texture_idx)) {
+		u32 width;
+		u32 height;
+		u8 *data = NULL;
+		String full_path_to_texture;
+		build_full_path_to_texture_file(texture_name, full_path_to_texture);
+		bool result = load_png_file(full_path_to_texture, &data, &width, &height);
+		if (result) {
+			Texture2D_Desc texture_desc;
+			texture_desc.width = width;
+			texture_desc.height = height;
+			texture_desc.data = data;
+			texture_desc.mip_levels = 0;
+
+			Texture2D texture;
+			gpu_device->create_texture_2d(&texture_desc, &texture);
+			gpu_device->create_shader_resource_view(&texture_desc, &texture);
+			render_pipeline->update_subresource(&texture, data, width * get_dxgi_format_size(texture_desc.format));
+			render_pipeline->generate_mips(texture.srv);
+
+			*texture_idx = textures.push(texture);
+			texture_table.set(string_id, *texture_idx);
+		}
+		DELETE_PTR(data);
+		return result;
+	}
+	return true;
+}
+
+template<typename T>
+bool Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *mesh_id)
 {
 	assert(mesh_name);
+	assert(mesh);
+	assert(mesh_id);
+
+	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
+	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
+
+	if (strlen(mesh_name) == 0) {
+		print("Render_World::add_mesh: A mesh name is not valid.", mesh_name);
+		return false;
+	}
 
 	if ((mesh->vertices.count == 0) || (mesh->indices.count == 0)) {
 		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.", mesh_name);
@@ -137,37 +225,39 @@ bool Unified_Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mes
 	}
 
 	String_Id string_id = fast_hash(mesh_name);
+	if (!mesh_table.get(string_id, mesh_id)) {
+		Mesh_Textures mesh_textures;
+		mesh_textures.normal_idx = find_texture_or_get_default(mesh->normal_texture_name, default_textures.normal);
+		mesh_textures.diffuse_idx = find_texture_or_get_default(mesh->diffuse_texture_name, default_textures.diffuse);
+		mesh_textures.specular_idx = find_texture_or_get_default(mesh->specular_texture_name, default_textures.specular);
+		mesh_textures.displacement_idx = find_texture_or_get_default(mesh->displacement_texture_name, default_textures.displacement);
 
-	Mesh_Idx mesh_idx;
-	if (mesh_table.get(string_id, &mesh_idx)) {
-		*_mesh_idx = mesh_idx;
-		return true;
+		mesh_id->textures_idx = meshes_textures.push(mesh_textures);
+
+		Mesh_Instance mesh_info;
+		mesh_info.vertex_count = mesh->vertices.count;
+		mesh_info.index_count = mesh->indices.count;
+		mesh_info.vertex_offset = unified_vertices.count;
+		mesh_info.index_offset = unified_indices.count;
+
+		mesh_id->instance_idx = mesh_instances.push(mesh_info);
+
+		merge(&unified_vertices, &mesh->vertices);
+		merge(&unified_indices, &mesh->indices);
+
+		mesh_struct_buffer.update(&mesh_instances);
+		vertex_struct_buffer.update(&unified_vertices);
+		index_struct_buffer.update(&unified_indices);
+
+		mesh_table.set(string_id, *mesh_id);
 	}
-
-	Mesh_Instance mesh_info;
-	mesh_info.vertex_count = mesh->vertices.count;
-	mesh_info.index_count = mesh->indices.count;
-	mesh_info.vertex_offset = unified_vertices.count;
-	mesh_info.index_offset = unified_indices.count;
-
-	mesh_idx = mesh_instances.push(mesh_info);
-	merge(&unified_vertices, &mesh->vertices);
-	merge(&unified_indices, &mesh->indices);
-
-	mesh_struct_buffer.update(&mesh_instances);
-	vertex_struct_buffer.update(&unified_vertices);
-	index_struct_buffer.update(&unified_indices);
-
-	mesh_table.set(string_id, mesh_idx);
-	
-	*_mesh_idx = mesh_idx;
 	return true;
 }
 
 template<typename T>
-bool Unified_Mesh_Storate<T>::update_mesh(Mesh_Idx mesh_idx, Mesh<T>* mesh)
+bool Mesh_Storate<T>::update_mesh(Mesh_Id mesh_id, Mesh<T>* mesh)
 {
-	Mesh_Instance mesh_instance = mesh_instances[mesh_idx];
+	Mesh_Instance mesh_instance = mesh_instances[mesh_id];
 	if ((mesh->vertices.count == mesh_instance.vertex_count) && (mesh->indices.count == mesh_instance.index_count)) {
 		u32 vertex_offset = mesh_instance.vertex_offset > 0 ? mesh_instance.vertex_offset: 0;
 		u32 index_offset = mesh_instance.index_offset > 0 ? mesh_instance.index_offset: 0;
@@ -179,6 +269,16 @@ bool Unified_Mesh_Storate<T>::update_mesh(Mesh_Idx mesh_idx, Mesh<T>* mesh)
 		return true;
 	}
 	return false;
+}
+
+template<typename T>
+Texture_Idx Mesh_Storate<T>::find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture)
+{
+	Texture_Idx texture_idx;
+	if (!texture_file_name.is_empty() && add_texture(texture_file_name, &texture_idx)) {
+		return texture_idx;
+	}
+	return default_texture;
 }
 
 void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Range *shadow_cascade_range)
@@ -197,17 +297,17 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 
 void Render_World::init(Engine *engine)
 {	
-
 	//@Note: Why don't pass just the engine pointer ?
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
+
+	triangle_meshes.init(&render_sys->gpu_device);
+	line_meshes.init(&render_sys->gpu_device);
 
 	init_shadow_rendering();
 
 	init_render_passes(&engine->shader_manager);
 
-	render_entity_texture_storage.init(&render_sys->gpu_device, &render_sys->render_pipeline);
-	
 	render_sys->gpu_device.create_constant_buffer(sizeof(CB_Frame_Info), &frame_info_cbuffer);
 
 	lights_struct_buffer.allocate<Hlsl_Light>(100);
@@ -222,130 +322,10 @@ void Render_World::init(Engine *engine)
 	render_sys->gpu_device.create_shader_resource_view(&texture_desc, &default_texture);
 	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
 
-	//display_tree(tree, this, game_world);
 
 	if (!render_camera.is_entity_camera_set()) {
 		error("Render Camera was not initialized. There is no a view for rendering.");
 	}
-}
-
-
-static inline Texture_Idx add_texture(const char *name)
-{
-	u32 width;
-	u32 height;
-	u8 *data = NULL;
-	String path;
-	build_full_path_to_texture_file(name, path);
-	load_png_file(path, &data, &width, &height);
-
-	Texture_Idx index = Engine::get_render_world()->render_entity_texture_storage.add_texture(name, width, height, (void *)data);
-	DELETE_PTR(data);
-	return index;
-}
-
-Texture_Idx load_texture(const char *texture_name, Render_World *render_world)
-{
-	u32 width;
-	u32 height;
-	u8 *data = NULL;
-	String path;
-	build_full_path_to_texture_file(texture_name, path);
-	load_png_file(path, &data, &width, &height);
-
-	Texture_Idx index = render_world->render_entity_texture_storage.add_texture(texture_name, width, height, (void *)data);
-	
-	return index;
-}
-
-Texture_Idx load_normal_texture(String &file_name, Render_World *render_world)
-{
-	if (file_name.is_empty()) {
-		return render_world->render_entity_texture_storage.green_texture_idx;
-	} else {
-		return load_texture(file_name, render_world);
-	}
-}
-
-Texture_Idx load_diffuse_texture(String &file_name, Render_World *render_world)
-{
-	if (file_name.is_empty()) {
-		return render_world->render_entity_texture_storage.default_texture_idx;
-	} else {
-		return load_texture(file_name, render_world);
-	}
-}
-
-Texture_Idx load_specular_texture(String &file_name, Render_World *render_world)
-{
-	if (file_name.is_empty()) {
-		return render_world->render_entity_texture_storage.default_specular_texture_idx;
-	} else {
-		return load_texture(file_name, render_world);
-	}
-}
-
-
-Texture_Idx load_displacenet_texture(String &file_name, Render_World *render_world)
-{
-	if (file_name.is_empty()) {
-		return render_world->render_entity_texture_storage.black_texture_idx;
-	} else {
-		return load_texture(file_name, render_world);
-	}
-}
-
-void Render_World::init_meshes()
-{
-	if (!render_camera.is_entity_camera_set()) {
-		error("Render Camera was not initialized. There is no a view for rendering.");
-	}
-
-	//u32 entity_index = 0;
-	//Array<Import_Mesh> meshes;
-	//String path;
-	//build_full_path_to_model_file("NewSponza_Curtains_FBX.fbx", path);
-	//build_full_path_to_model_file("Sponza.fbx", path);
-	//build_full_path_to_model_file("vampire.fbx", path);
-	//build_full_path_to_model_file("displacement3.fbx", path);
-
-	//build_full_path_to_model_file("catwalk3.fbx", path);
-	//build_full_path_to_model_file("NewSponza_Curtains_FBX_YUp.fbx", path);
-	//build_full_path_to_model_file("mutant.fbx", path);
-	//build_full_path_to_model_file("walls.fbx", path);
-	//build_full_path_to_model_file("scene_demo_unreal.fbx", path);
-	//build_full_path_to_model_file("camera.fbx", path);
-	//print("Start make render entities");
-	//print("Mesh count = ", meshes.count);
-
-	//Mesh_Loader mesh_loader;
-	//mesh_loader.load(path, meshes, false, false);
-
-	//print("Get started to create entities");
-	//Import_Mesh *imported_mesh = NULL;
-	//For(meshes, imported_mesh) {
-	//	Mesh_Idx mesh_idx;
-	//	if (add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_idx)) {
-	//		Render_Entity_Textures render_entity_textures;
-	//		render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
-	//		render_entity_textures.normal_texture_idx = load_normal_texture(imported_mesh->normal_texture, this);
-	//		render_entity_textures.diffuse_texture_idx = load_diffuse_texture(imported_mesh->diffuse_texture, this);
-	//		render_entity_textures.specular_texture_idx = load_specular_texture(imported_mesh->specular_texture, this);
-	//		render_entity_textures.displacement_texture_idx = load_displacenet_texture(imported_mesh->displacement_texture, this);
-
-	//		if (imported_mesh->mesh_instances.count > 0) {
-	//			for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
-	//				Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
-	//				Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
-	//				add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-	//			}
-	//		} else {
-	//			Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
-	//			add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-	//		}
-	//	}
-	//}
-	//print("Finish of creating entities");
 }
 
 void Render_World::init_shadow_rendering()
@@ -499,19 +479,12 @@ void Render_World::update_lights()
 	lights_struct_buffer.update(&shader_lights);
 }
 
-void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Idx mesh_idx, Render_Entity_Textures *render_entity_textures, void *args)
+void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Id mesh_id, void *args)
 {
-	assert(render_entity_textures);
-
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
-	render_entity.mesh_idx = mesh_idx;
+	render_entity.mesh_id = mesh_id;
 	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
-	render_entity.ambient_texture_idx = render_entity_textures->ambient_texture_idx;
-	render_entity.normal_texture_idx = render_entity_textures->normal_texture_idx;
-	render_entity.diffuse_texture_idx = render_entity_textures->diffuse_texture_idx;
-	render_entity.specular_texture_idx = render_entity_textures->specular_texture_idx;
-	render_entity.displacement_texture_idx = render_entity_textures->displacement_texture_idx;
 
 	switch (rendering_type) {
 		case RENDERING_TYPE_FORWARD_RENDERING: {
@@ -661,18 +634,18 @@ void Render_World::update_shadows()
 	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
 }
 
-bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Idx *mesh_idx)
+bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Id *mesh_id)
 {
 	Bounding_Sphere temp = make_bounding_sphere(Vector3(0.0f, 0.0f, 0.0f), mesh);
 	if (temp.radious > world_bounding_sphere.radious) {
 		world_bounding_sphere = temp;
 	}
-	return triangle_meshes.add_mesh(mesh_name, mesh, mesh_idx);
+	return triangle_meshes.add_mesh(mesh_name, mesh, mesh_id);
 }
 
-bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Idx *mesh_idx)
+bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Id *mesh_id)
 {
-	return line_meshes.add_mesh(mesh_name, mesh, mesh_idx);
+	return line_meshes.add_mesh(mesh_name, mesh, mesh_id);
 }
 
 void Render_World::set_camera_for_rendering(Entity_Id camera_id)
@@ -734,87 +707,6 @@ void Render_World::render()
 	For(every_frame_render_passes, render_pass) {
 		render_pass->render(this, &render_sys->render_pipeline);
 	}
-}
-
-void Render_Entity_Texture_Storage::init(Gpu_Device *_gpu_device, Render_Pipeline *_render_pipeline)
-{
-	assert(_gpu_device);
-	
-	gpu_device = _gpu_device;
-	render_pipeline = _render_pipeline;
-
-	Texture2D_Desc texture_desc;
-	texture_desc.width = 200;
-	texture_desc.height = 200;
-	texture_desc.mip_levels = 1;
-
-	Texture2D default_texture;
-	gpu_device->create_texture_2d(&texture_desc, &default_texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
-	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
-	
-	default_texture_idx = textures.push(default_texture);
-
-	Texture2D white_texture;
-	gpu_device->create_texture_2d(&texture_desc, &white_texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &white_texture);
-	fill_texture((void *)&Color::White, &white_texture);
-
-	white_texture_idx = textures.push(white_texture);
-
-	Texture2D black_texture;
-	gpu_device->create_texture_2d(&texture_desc, &black_texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &black_texture);
-	fill_texture((void *)&Color::Black, &black_texture);
-
-	black_texture_idx = textures.push(black_texture);
-
-	Color temp = { 0.5f, 0.5f, 1.0f };
-	Texture2D green_texture;
-	gpu_device->create_texture_2d(&texture_desc, &green_texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &green_texture);
-	fill_texture((void *)&temp, &green_texture);
-
-	green_texture_idx = textures.push(green_texture);
-
-	temp = { 0.2f, 0.2f, 0.2f };
-	Texture2D default_specular_texture;
-	gpu_device->create_texture_2d(&texture_desc, &default_specular_texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &default_specular_texture);
-	fill_texture((void *)&temp, &default_specular_texture);
-
-	default_specular_texture_idx = textures.push(default_specular_texture);
-}
-
-Texture_Idx Render_Entity_Texture_Storage::add_texture(const char *name, u32 width, u32 height, void *data)
-{
-	assert(name);
-	assert(data);
-
-	Texture_Idx texture_idx;
-	if (texture_table.get(name, &texture_idx)) {
-		return texture_idx;
-	}
-
-	Texture2D_Desc texture_desc;
-	texture_desc.width = width;
-	texture_desc.height = height;
-	texture_desc.data = data;
-	texture_desc.mip_levels = 0;
-
-	Texture2D texture;
-	gpu_device->create_texture_2d(&texture_desc, &texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &texture);
-	render_pipeline->update_subresource(&texture, data, width * 4);
-	render_pipeline->generate_mips(texture.srv);
-
-	Texture2D_Desc desc;
-	texture.get_desc(&desc);
-
-	texture_idx = textures.push(texture);
-	texture_table.set(name, texture_idx);
-
-	return texture_idx;
 }
 
 void Render_World::Render_Passes::get_all_passes(Array<Render_Pass *> *render_passes_list)

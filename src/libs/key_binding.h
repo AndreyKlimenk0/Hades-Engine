@@ -38,7 +38,11 @@ struct Key_Binding {
 	Key second_key;
 	Key_State modifier_key_state;
 	Key_State second_key_state;
+
+	bool valid();
 };
+
+char *to_string(Key_Binding *key_binding);
 
 struct Key_Bindings {
 	Array<Key_Binding> key_bindings;

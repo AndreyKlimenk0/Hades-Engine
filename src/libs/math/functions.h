@@ -1,6 +1,7 @@
 #ifndef MATH_FUNCTIONS_H
 #define MATH_FUNCTIONS_H
 
+#include <assert.h>
 #include <math.h>
 
 #include "constants.h"
@@ -89,6 +90,12 @@ inline float radians_to_degrees(float radians)
 inline float degrees_to_radians(float degrees)
 {
 	return (degrees * PI) / 180.0f;
+}
+
+inline void invert(bool *value)
+{
+	assert(value);
+	*value = *value ? false : true;
 }
 
 Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height);

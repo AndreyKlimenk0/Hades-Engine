@@ -29,10 +29,10 @@ Import_Mesh & Import_Mesh::operator=(const Import_Mesh &other)
 		mesh.vertices = other.mesh.vertices;
 		mesh.indices = other.mesh.indices;
 
-		normal_texture = other.normal_texture;
-		diffuse_texture = other.diffuse_texture;
-		specular_texture = other.specular_texture;
-		displacement_texture = other.displacement_texture;
+		mesh.normal_texture_name = other.mesh.normal_texture_name;
+		mesh.diffuse_texture_name = other.mesh.diffuse_texture_name;
+		mesh.specular_texture_name = other.mesh.specular_texture_name;
+		mesh.displacement_texture_name = other.mesh.displacement_texture_name;
 	}
 	return *this;
 }
@@ -235,10 +235,10 @@ void Mesh_Loader::process_material(aiMaterial *material, Import_Mesh *import_mes
 	material->Get(AI_MATKEY_SHININESS, shininess);
 	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
 
-	get_texture_file_name(material, aiTextureType_NORMALS, import_mesh->normal_texture);
-	get_texture_file_name(material, aiTextureType_DIFFUSE, import_mesh->diffuse_texture);
-	get_texture_file_name(material, aiTextureType_SPECULAR, import_mesh->specular_texture);
-	get_texture_file_name(material, aiTextureType_DISPLACEMENT, import_mesh->displacement_texture);
+	get_texture_file_name(material, aiTextureType_NORMALS, import_mesh->mesh.normal_texture_name);
+	get_texture_file_name(material, aiTextureType_DIFFUSE, import_mesh->mesh.diffuse_texture_name);
+	get_texture_file_name(material, aiTextureType_SPECULAR, import_mesh->mesh.specular_texture_name);
+	get_texture_file_name(material, aiTextureType_DISPLACEMENT, import_mesh->mesh.displacement_texture_name);
 }
 
 void Mesh_Loader::process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)

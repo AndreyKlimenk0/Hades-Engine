@@ -17,11 +17,6 @@ struct Import_Mesh {
 	Array<Transform_Info> mesh_instances;
 	Triangle_Mesh mesh;
 
-	String normal_texture;
-	String diffuse_texture;
-	String specular_texture;
-	String displacement_texture;
-	
 	Import_Mesh() = default;
 	Import_Mesh(const Import_Mesh &other);
 	Import_Mesh &operator=(const Import_Mesh &other);

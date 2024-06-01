@@ -135,6 +135,9 @@
     <ClCompile Include="src\gui\test_gui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\sys\commands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\collision\collision.h">
@@ -279,6 +282,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\gui\test_gui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

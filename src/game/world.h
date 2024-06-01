@@ -13,7 +13,7 @@
 #include "../libs/os/file.h"
 
 
-enum Entity_Type {
+enum Entity_Type : u32 {
 	ENTITY_TYPE_UNKNOWN,
 	ENTITY_TYPE_ENTITY,
 	ENTITY_TYPE_LIGHT,

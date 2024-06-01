@@ -5,6 +5,7 @@
 #include "../libs/str.h"
 #include "../render/render_api.h"
 #include "../libs/os/file.h"
+#include "../libs/key_binding.h"
 
 typedef void (*Job_Function)(void *data);
 
@@ -67,8 +68,34 @@ bool intersection_test(float radius, const Vector2 &start_point, const Vector2 &
 	return h <= radius;
 }
 
+//#define FIND_BY_FIELD(array, field, object, result) \
+//  do {                                              \
+//	auto func = [&]() -> decltype(array.items) { \
+//		for (u32 i = 0; i < array.count; i++) { \
+//			if (array[i].field == object) { \
+//				return &array[i]; \
+//			} \
+//		} \
+//		return NULL; \
+//	}; \
+//	result = func(); \
+//  } while (0)
+//
+//struct Person {
+//	String name;
+//	int age;
+//};
+
 void test()
 {
+	//Array<Person> temp;
+	//temp.push({ "lazel", 22 });
+	//temp.push({ "wendy", 21 });
+
+	//String x = "wendy";
+	//Person *p = NULL;
+	//FIND_BY_FIELD(temp, name, x, p);
+	//int i = 0;
 }
 
 void update_test()
