@@ -167,7 +167,7 @@ namespace gui {
 	
 	void make_tab_active(Gui_ID tab_gui_id);
 	void make_next_list_active();
-	void make_next_edit_field_active();
+	void make_next_ui_element_active();
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);

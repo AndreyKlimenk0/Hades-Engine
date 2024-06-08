@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{5D0ADB84-4AD2-4949-8DCD-C4D8050D6D79}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\collision\collision.cpp" />
+    <ClCompile Include="src\game\world.cpp" />
+    <ClCompile Include="src\gui\editor.cpp" />
+    <ClCompile Include="src\gui\gui.cpp" />
+    <ClCompile Include="src\gui\test_gui.cpp" />
+    <ClCompile Include="src\libs\color.cpp" />
+    <ClCompile Include="src\libs\ds\dict.cpp" />
+    <ClCompile Include="src\libs\ds\hash_table.cpp" />
+    <ClCompile Include="src\libs\geometry_helper.cpp" />
+    <ClCompile Include="src\libs\key_binding.cpp" />
+    <ClCompile Include="src\libs\math\functions.cpp" />
+    <ClCompile Include="src\libs\math\structures.cpp" />
+    <ClCompile Include="src\libs\math\vector.cpp" />
+    <ClCompile Include="src\libs\mesh_loader.cpp" />
+    <ClCompile Include="src\libs\os\event.cpp" />
+    <ClCompile Include="src\libs\os\file.cpp" />
+    <ClCompile Include="src\libs\os\input.cpp" />
+    <ClCompile Include="src\libs\os\path.cpp" />
+    <ClCompile Include="src\libs\png_image.cpp" />
+    <ClCompile Include="src\libs\spng.c" />
+    <ClCompile Include="src\libs\str.cpp" />
+    <ClCompile Include="src\render\font.cpp" />
+    <ClCompile Include="src\render\model.cpp" />
+    <ClCompile Include="src\render\render_api.cpp" />
+    <ClCompile Include="src\render\render_helpers.cpp" />
+    <ClCompile Include="src\render\render_pass.cpp" />
+    <ClCompile Include="src\render\render_system.cpp" />
+    <ClCompile Include="src\render\render_world.cpp" />
+    <ClCompile Include="src\render\shader_manager.cpp" />
+    <ClCompile Include="src\sys\commands.cpp" />
+    <ClCompile Include="src\sys\engine.cpp" />
+    <ClCompile Include="src\sys\file_tracking.cpp" />
+    <ClCompile Include="src\sys\map.cpp" />
+    <ClCompile Include="src\sys\sys_debug.cpp" />
+    <ClCompile Include="src\sys\sys_output_info.cpp" />
+    <ClCompile Include="src\win32\test.cpp" />
+    <ClCompile Include="src\win32\win_console.cpp" />
+    <ClCompile Include="src\win32\win_main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dependencies\include\assimp\aabb.h" />
+    <ClInclude Include="dependencies\include\assimp\ai_assert.h" />
+    <ClInclude Include="dependencies\include\assimp\anim.h" />
+    <ClInclude Include="dependencies\include\assimp\AssertHandler.h" />
+    <ClInclude Include="dependencies\include\assimp\Base64.hpp" />
+    <ClInclude Include="dependencies\include\assimp\BaseImporter.h" />
+    <ClInclude Include="dependencies\include\assimp\Bitmap.h" />
+    <ClInclude Include="dependencies\include\assimp\BlobIOSystem.h" />
+    <ClInclude Include="dependencies\include\assimp\ByteSwapper.h" />
+    <ClInclude Include="dependencies\include\assimp\camera.h" />
+    <ClInclude Include="dependencies\include\assimp\cexport.h" />
+    <ClInclude Include="dependencies\include\assimp\cfileio.h" />
+    <ClInclude Include="dependencies\include\assimp\cimport.h" />
+    <ClInclude Include="dependencies\include\assimp\ColladaMetaData.h" />
+    <ClInclude Include="dependencies\include\assimp\color4.h" />
+    <ClInclude Include="dependencies\include\assimp\commonMetaData.h" />
+    <ClInclude Include="dependencies\include\assimp\compiler\poppack1.h" />
+    <ClInclude Include="dependencies\include\assimp\compiler\pstdint.h" />
+    <ClInclude Include="dependencies\include\assimp\compiler\pushpack1.h" />
+    <ClInclude Include="dependencies\include\assimp\config.h" />
+    <ClInclude Include="dependencies\include\assimp\CreateAnimMesh.h" />
+    <ClInclude Include="dependencies\include\assimp\DefaultIOStream.h" />
+    <ClInclude Include="dependencies\include\assimp\DefaultIOSystem.h" />
+    <ClInclude Include="dependencies\include\assimp\DefaultLogger.hpp" />
+    <ClInclude Include="dependencies\include\assimp\defs.h" />
+    <ClInclude Include="dependencies\include\assimp\Exceptional.h" />
+    <ClInclude Include="dependencies\include\assimp\Exporter.hpp" />
+    <ClInclude Include="dependencies\include\assimp\fast_atof.h" />
+    <ClInclude Include="dependencies\include\assimp\GenericProperty.h" />
+    <ClInclude Include="dependencies\include\assimp\GltfMaterial.h" />
+    <ClInclude Include="dependencies\include\assimp\Hash.h" />
+    <ClInclude Include="dependencies\include\assimp\Importer.hpp" />
+    <ClInclude Include="dependencies\include\assimp\importerdesc.h" />
+    <ClInclude Include="dependencies\include\assimp\IOStream.hpp" />
+    <ClInclude Include="dependencies\include\assimp\IOStreamBuffer.h" />
+    <ClInclude Include="dependencies\include\assimp\IOSystem.hpp" />
+    <ClInclude Include="dependencies\include\assimp\light.h" />
+    <ClInclude Include="dependencies\include\assimp\LineSplitter.h" />
+    <ClInclude Include="dependencies\include\assimp\LogAux.h" />
+    <ClInclude Include="dependencies\include\assimp\Logger.hpp" />
+    <ClInclude Include="dependencies\include\assimp\LogStream.hpp" />
+    <ClInclude Include="dependencies\include\assimp\material.h" />
+    <ClInclude Include="dependencies\include\assimp\MathFunctions.h" />
+    <ClInclude Include="dependencies\include\assimp\matrix3x3.h" />
+    <ClInclude Include="dependencies\include\assimp\matrix4x4.h" />
+    <ClInclude Include="dependencies\include\assimp\MemoryIOWrapper.h" />
+    <ClInclude Include="dependencies\include\assimp\mesh.h" />
+    <ClInclude Include="dependencies\include\assimp\metadata.h" />
+    <ClInclude Include="dependencies\include\assimp\NullLogger.hpp" />
+    <ClInclude Include="dependencies\include\assimp\ObjMaterial.h" />
+    <ClInclude Include="dependencies\include\assimp\ParsingUtils.h" />
+    <ClInclude Include="dependencies\include\assimp\pbrmaterial.h" />
+    <ClInclude Include="dependencies\include\assimp\port\androidjni\AndroidJNIIOSystem.h" />
+    <ClInclude Include="dependencies\include\assimp\port\androidjni\BundledAssetIOSystem.h" />
+    <ClInclude Include="dependencies\include\assimp\postprocess.h" />
+    <ClInclude Include="dependencies\include\assimp\Profiler.h" />
+    <ClInclude Include="dependencies\include\assimp\ProgressHandler.hpp" />
+    <ClInclude Include="dependencies\include\assimp\qnan.h" />
+    <ClInclude Include="dependencies\include\assimp\quaternion.h" />
+    <ClInclude Include="dependencies\include\assimp\RemoveComments.h" />
+    <ClInclude Include="dependencies\include\assimp\scene.h" />
+    <ClInclude Include="dependencies\include\assimp\SceneCombiner.h" />
+    <ClInclude Include="dependencies\include\assimp\SGSpatialSort.h" />
+    <ClInclude Include="dependencies\include\assimp\SkeletonMeshBuilder.h" />
+    <ClInclude Include="dependencies\include\assimp\SmallVector.h" />
+    <ClInclude Include="dependencies\include\assimp\SmoothingGroups.h" />
+    <ClInclude Include="dependencies\include\assimp\SpatialSort.h" />
+    <ClInclude Include="dependencies\include\assimp\StandardShapes.h" />
+    <ClInclude Include="dependencies\include\assimp\StreamReader.h" />
+    <ClInclude Include="dependencies\include\assimp\StreamWriter.h" />
+    <ClInclude Include="dependencies\include\assimp\StringComparison.h" />
+    <ClInclude Include="dependencies\include\assimp\StringUtils.h" />
+    <ClInclude Include="dependencies\include\assimp\Subdivision.h" />
+    <ClInclude Include="dependencies\include\assimp\texture.h" />
+    <ClInclude Include="dependencies\include\assimp\TinyFormatter.h" />
+    <ClInclude Include="dependencies\include\assimp\types.h" />
+    <ClInclude Include="dependencies\include\assimp\vector2.h" />
+    <ClInclude Include="dependencies\include\assimp\vector3.h" />
+    <ClInclude Include="dependencies\include\assimp\version.h" />
+    <ClInclude Include="dependencies\include\assimp\Vertex.h" />
+    <ClInclude Include="dependencies\include\assimp\XmlParser.h" />
+    <ClInclude Include="dependencies\include\assimp\XMLTools.h" />
+    <ClInclude Include="dependencies\include\assimp\ZipArchiveIOSystem.h" />
+    <ClInclude Include="dependencies\include\D3DX11.h" />
+    <ClInclude Include="dependencies\include\D3DX11async.h" />
+    <ClInclude Include="dependencies\include\D3DX11core.h" />
+    <ClInclude Include="dependencies\include\d3dx11effect.h" />
+    <ClInclude Include="dependencies\include\D3DX11tex.h" />
+    <ClInclude Include="dependencies\include\DxErr.h" />
+    <ClInclude Include="dependencies\include\freetype\config\ftconfig.h" />
+    <ClInclude Include="dependencies\include\freetype\config\ftheader.h" />
+    <ClInclude Include="dependencies\include\freetype\config\ftmodule.h" />
+    <ClInclude Include="dependencies\include\freetype\config\ftoption.h" />
+    <ClInclude Include="dependencies\include\freetype\config\ftstdlib.h" />
+    <ClInclude Include="dependencies\include\freetype\config\integer-types.h" />
+    <ClInclude Include="dependencies\include\freetype\config\mac-support.h" />
+    <ClInclude Include="dependencies\include\freetype\config\public-macros.h" />
+    <ClInclude Include="dependencies\include\freetype\freetype.h" />
+    <ClInclude Include="dependencies\include\freetype\ftadvanc.h" />
+    <ClInclude Include="dependencies\include\freetype\ftbbox.h" />
+    <ClInclude Include="dependencies\include\freetype\ftbdf.h" />
+    <ClInclude Include="dependencies\include\freetype\ftbitmap.h" />
+    <ClInclude Include="dependencies\include\freetype\ftbzip2.h" />
+    <ClInclude Include="dependencies\include\freetype\ftcache.h" />
+    <ClInclude Include="dependencies\include\freetype\ftchapters.h" />
+    <ClInclude Include="dependencies\include\freetype\ftcid.h" />
+    <ClInclude Include="dependencies\include\freetype\ftcolor.h" />
+    <ClInclude Include="dependencies\include\freetype\ftdriver.h" />
+    <ClInclude Include="dependencies\include\freetype\fterrdef.h" />
+    <ClInclude Include="dependencies\include\freetype\fterrors.h" />
+    <ClInclude Include="dependencies\include\freetype\ftfntfmt.h" />
+    <ClInclude Include="dependencies\include\freetype\ftgasp.h" />
+    <ClInclude Include="dependencies\include\freetype\ftglyph.h" />
+    <ClInclude Include="dependencies\include\freetype\ftgxval.h" />
+    <ClInclude Include="dependencies\include\freetype\ftgzip.h" />
+    <ClInclude Include="dependencies\include\freetype\ftimage.h" />
+    <ClInclude Include="dependencies\include\freetype\ftincrem.h" />
+    <ClInclude Include="dependencies\include\freetype\ftlcdfil.h" />
+    <ClInclude Include="dependencies\include\freetype\ftlist.h" />
+    <ClInclude Include="dependencies\include\freetype\ftlzw.h" />
+    <ClInclude Include="dependencies\include\freetype\ftmac.h" />
+    <ClInclude Include="dependencies\include\freetype\ftmm.h" />
+    <ClInclude Include="dependencies\include\freetype\ftmodapi.h" />
+    <ClInclude Include="dependencies\include\freetype\ftmoderr.h" />
+    <ClInclude Include="dependencies\include\freetype\ftotval.h" />
+    <ClInclude Include="dependencies\include\freetype\ftoutln.h" />
+    <ClInclude Include="dependencies\include\freetype\ftparams.h" />
+    <ClInclude Include="dependencies\include\freetype\ftpfr.h" />
+    <ClInclude Include="dependencies\include\freetype\ftrender.h" />
+    <ClInclude Include="dependencies\include\freetype\ftsizes.h" />
+    <ClInclude Include="dependencies\include\freetype\ftsnames.h" />
+    <ClInclude Include="dependencies\include\freetype\ftstroke.h" />
+    <ClInclude Include="dependencies\include\freetype\ftsynth.h" />
+    <ClInclude Include="dependencies\include\freetype\ftsystem.h" />
+    <ClInclude Include="dependencies\include\freetype\fttrigon.h" />
+    <ClInclude Include="dependencies\include\freetype\fttypes.h" />
+    <ClInclude Include="dependencies\include\freetype\ftwinfnt.h" />
+    <ClInclude Include="dependencies\include\freetype\t1tables.h" />
+    <ClInclude Include="dependencies\include\freetype\ttnameid.h" />
+    <ClInclude Include="dependencies\include\freetype\tttables.h" />
+    <ClInclude Include="dependencies\include\freetype\tttags.h" />
+    <ClInclude Include="dependencies\include\ft2build.h" />
+    <ClInclude Include="dependencies\include\libpng12\png.h" />
+    <ClInclude Include="dependencies\include\libpng12\pngconf.h" />
+    <ClInclude Include="dependencies\include\zconf.h" />
+    <ClInclude Include="dependencies\include\zlib.h" />
+    <ClInclude Include="src\collision\collision.h" />
+    <ClInclude Include="src\game\world.h" />
+    <ClInclude Include="src\gui\editor.h" />
+    <ClInclude Include="src\gui\gui.h" />
+    <ClInclude Include="src\gui\test_gui.h" />
+    <ClInclude Include="src\libs\color.h" />
+    <ClInclude Include="src\libs\ds\array.h" />
+    <ClInclude Include="src\libs\ds\dict.h" />
+    <ClInclude Include="src\libs\ds\hash_table.h" />
+    <ClInclude Include="src\libs\ds\linked_list.h" />
+    <ClInclude Include="src\libs\ds\queue.h" />
+    <ClInclude Include="src\libs\ds\stack.h" />
+    <ClInclude Include="src\libs\enum_helper.h" />
+    <ClInclude Include="src\libs\geometry_helper.h" />
+    <ClInclude Include="src\libs\key_binding.h" />
+    <ClInclude Include="src\libs\math\constants.h" />
+    <ClInclude Include="src\libs\math\functions.h" />
+    <ClInclude Include="src\libs\math\matrix.h" />
+    <ClInclude Include="src\libs\math\structures.h" />
+    <ClInclude Include="src\libs\math\vector.h" />
+    <ClInclude Include="src\libs\mesh_loader.h" />
+    <ClInclude Include="src\libs\os\event.h" />
+    <ClInclude Include="src\libs\os\file.h" />
+    <ClInclude Include="src\libs\os\input.h" />
+    <ClInclude Include="src\libs\os\path.h" />
+    <ClInclude Include="src\libs\png_image.h" />
+    <ClInclude Include="src\libs\spng.h" />
+    <ClInclude Include="src\libs\str.h" />
+    <ClInclude Include="src\render\font.h" />
+    <ClInclude Include="src\render\hlsl.h" />
+    <ClInclude Include="src\render\model.h" />
+    <ClInclude Include="src\render\render_api.h" />
+    <ClInclude Include="src\render\render_helpers.h" />
+    <ClInclude Include="src\render\render_pass.h" />
+    <ClInclude Include="src\render\render_system.h" />
+    <ClInclude Include="src\render\render_world.h" />
+    <ClInclude Include="src\render\shader_manager.h" />
+    <ClInclude Include="src\render\vertex.h" />
+    <ClInclude Include="src\sys\commands.h" />
+    <ClInclude Include="src\sys\engine.h" />
+    <ClInclude Include="src\sys\file_tracking.h" />
+    <ClInclude Include="src\sys\map.h" />
+    <ClInclude Include="src\sys\sys_local.h" />
+    <ClInclude Include="src\win32\test.h" />
+    <ClInclude Include="src\win32\win_local.h" />
+    <ClInclude Include="src\win32\win_time.h" />
+    <ClInclude Include="src\win32\win_types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="dependencies\include\assimp\color4.inl" />
+    <None Include="dependencies\include\assimp\material.inl" />
+    <None Include="dependencies\include\assimp\matrix3x3.inl" />
+    <None Include="dependencies\include\assimp\matrix4x4.inl" />
+    <None Include="dependencies\include\assimp\quaternion.inl" />
+    <None Include="dependencies\include\assimp\SmoothingGroups.inl" />
+    <None Include="dependencies\include\assimp\vector2.inl" />
+    <None Include="dependencies\include\assimp\vector3.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

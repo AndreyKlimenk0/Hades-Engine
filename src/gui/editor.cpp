@@ -18,6 +18,7 @@
 
 #include "../render/render_api.h"
 #include "../render/render_system.h"
+#include "../render/render_world.h"
 #include "../render/render_helpers.h"
 
 #include "../collision/collision.h"
@@ -98,10 +99,10 @@ void Editor_Window::init(Engine *engine)
 {
 	assert(engine);
 
-	editor = &engine->editor;
-	game_world = &engine->game_world;
-	render_world = &engine->render_world;
-	render_system = &engine->render_sys;
+	editor = static_cast<Editor *>(&engine->editor);
+	game_world = static_cast<Game_World *>(&engine->game_world);
+	render_world = static_cast<Render_World *>(&engine->render_world);
+	render_system = static_cast<Render_System *>(& engine->render_sys);
 }
 
 Make_Entity_Window::Make_Entity_Window()
@@ -650,6 +651,9 @@ void Editor::update()
 {
 	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
 		invert(&draw_command_window);
+		if (draw_command_window) {
+			command_window.window_just_opened = true;
+		}
 	}
 
 	if (!gui::were_events_handled() && were_key_events()) {
@@ -944,6 +948,7 @@ bool display_all_commands(String *edit_field, Array<String> &command_args, void 
 		for (u32 i = 0; i < command_window->displaying_commands.count; i++) {
 			if (command_name == command_window->displaying_commands[i].command_name) {
 				command_window->current_displaying_command = &command_window->displaying_commands[i];
+				command_window->active_edit_field = true;
 				edit_field->free();
 				break;
 			}
@@ -1036,6 +1041,8 @@ void Command_Window::displaying_command(const char *command_name, Key modified_k
 	result = func(); \
   } while (0)
 
+#define IF_THEN(exp, code) if (exp) { code; };
+
 void Command_Window::draw()
 {
 	assert(current_displaying_command);
@@ -1045,7 +1052,6 @@ void Command_Window::draw()
 			current_displaying_command = &displaying_commands.get_first();
 		}
 	}
-
 	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
 	Rect_s32 window_rect = display_additional_info ? command_window_rect_with_additional_info : command_window_rect;
 
@@ -1053,10 +1059,11 @@ void Command_Window::draw()
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 	gui::set_theme(&command_window_theme);
 	
+	IF_THEN(window_just_opened, gui::make_next_ui_element_active());
 	if (gui::begin_window("Command window", 0)) {
 		
 		gui::set_theme(&command_edit_field_theme);
-		gui::make_next_edit_field_active();
+		IF_THEN(window_just_opened || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
 		gui::edit_field("Command field", &command_edit_field);
 		gui::reset_edit_field_theme();
 
@@ -1076,8 +1083,8 @@ void Command_Window::draw()
 				run_command(current_displaying_command->command_name, command_args);
 			}
 		}
-		
 		gui::end_window();
 	}
+	IF_THEN(window_just_opened, window_just_opened = false);
 	gui::reset_window_theme();
 }
