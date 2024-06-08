@@ -1,6 +1,7 @@
 #ifndef RENDER_HELPERS_H
 #define RENDER_HELPERS_H
 
+#include "../sys/engine.h"
 #include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/math/vector.h"

@@ -21,7 +21,7 @@ const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_SIZE = 8192;
 const u32 CASCADE_SIZE = 1024;
 
-const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
+//const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
 struct Mesh_Id {
 	u32 textures_idx;

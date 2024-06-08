@@ -29,7 +29,7 @@
 	static s32 list_column_debug_counter = 0;
 #endif
 
-#define PRINT_GUI_INFO 0
+#define PRINT_GUI_INFO 1
 #define DRAW_WINDOW_DEBUG_RECTS 0
 #define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
 
@@ -479,7 +479,7 @@ struct Gui_Manager {
 	bool any_window_was_moved;
 	bool handle_events_for_one_window;
 	bool next_list_active;
-	bool next_edit_field_active;
+	bool next_ui_element_active;
 
 	s32 mouse_x;
 	s32 mouse_y;
@@ -593,7 +593,6 @@ struct Gui_Manager {
 	
 	void make_tab_active(Gui_ID tab_gui_id);
 	void make_next_list_active();
-	void make_next_edit_field_active();
 	
 	void scrolling(Gui_Window *window, Axis axis);
 	void move_window_content(Gui_Window *window, u32 distance, Moving_Direction moving_direction);
@@ -627,10 +626,9 @@ struct Gui_Manager {
 	void add_image(Texture2D *texture, Alignment alignment);
 	void add_image_button(Texture2D *texture, Alignment alignment);
 
+	bool window_active(Gui_Window *window);
 	bool handle_edit_field_shortcut_event(Gui_Window *window, Rect_s32 *edit_field_rect, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index = 0);
-	
 	bool update_edit_field(Edit_Field_Instance *edit_field_instance);
-
 	bool can_window_be_resized(Gui_Window *window);
 	bool detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rect_side);
 
@@ -1744,6 +1742,26 @@ void Gui_Manager::add_image_button(Texture2D *texture, Alignment alignment)
 {
 }
 
+bool Gui_Manager::window_active(Gui_Window *window)
+{
+	assert(window);
+	if (window->gui_id == active_window) {
+		return true;
+	}
+	bool result = false;
+	if (window->type == WINDOW_TYPE_PARENT) {
+		for (u32 i = 0; i < window->child_windows.count; i++) {
+			Gui_Window *child_window = &windows[window->child_windows[i]];
+			if (child_window->gui_id == active_window) {
+				result = true;
+				break;
+			}
+		}
+	} else {
+	}
+	return result;
+}
+
 bool Gui_Manager::handle_edit_field_shortcut_event(Gui_Window *window, Rect_s32 *edit_field_rect, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index) {
 	bool update_value = false;
 	static bool move_vertically = false;
@@ -1847,8 +1865,8 @@ bool Gui_Manager::update_edit_field(Edit_Field_Instance *edit_field_instance)
 		}
 	}
 
-	if (next_edit_field_active && (active_edit_field != edit_field_gui_id)) {
-		next_edit_field_active = false;
+	if (next_ui_element_active && (window->gui_id == active_window) && (active_edit_field != edit_field_gui_id)) {
+		next_ui_element_active = false;
 		active_edit_field = edit_field_gui_id;
 		edit_field_state = make_edit_field_state(&edit_field_instance->caret_rect, edit_field_instance->editing_value, edit_field_instance->max_chars_number, edit_field_instance->symbol_validation);
 	}
@@ -1989,13 +2007,6 @@ void Gui_Manager::make_tab_active(Gui_ID tab_gui_id)
 void Gui_Manager::make_next_list_active()
 {
 	next_list_active = true;
-}
-
-void Gui_Manager::make_next_edit_field_active()
-{
-	if (active_edit_field == 0) {
-		next_edit_field_active = true;
-	}
 }
 
 void Gui_Manager::text(const char *some_text)
@@ -2292,7 +2303,6 @@ void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 	win32_info = &engine->win32_info;
 
 	next_list_active = false;
-	next_edit_field_active = false;
 	active_scrolling = false;
 	change_active_field = false;
 	any_window_was_moved = false;
@@ -2576,10 +2586,15 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	window_stack.push(window_index);
 	window->new_frame(window_style);
 
-	//@Note: Can I get rid of it ?
-	//update_active_and_hot_state(window, window->gui_id, &window->rect);
-	
-	update_active_window(window);
+	if (next_ui_element_active) {
+		next_ui_element_active = false;
+		became_just_actived = window->gui_id;
+		active_window = window->gui_id;
+	} else {
+		//@Note: Can I get rid of it ?
+		update_active_and_hot_state(window, window->gui_id, &window->rect);
+		update_active_window(window);
+	}
 	
 	Rect_s32 *rect = &window->rect;
 
@@ -3244,9 +3259,9 @@ void gui::make_next_list_active()
 	return gui_manager.make_next_list_active();
 }
 
-void gui::make_next_edit_field_active()
+void gui::make_next_ui_element_active()
 {
-	gui_manager.make_next_edit_field_active();
+	gui_manager.next_ui_element_active = true;
 }
 
 void gui::begin_frame()

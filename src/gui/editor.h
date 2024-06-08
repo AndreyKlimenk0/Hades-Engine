@@ -123,6 +123,8 @@ struct Command_Window : Editor_Window {
 	Command_Window();
 	~Command_Window();
 	
+	bool window_just_opened = false;
+	bool active_edit_field = false;
 	Displaying_Command *current_displaying_command = NULL;
 
 	String command_edit_field;
