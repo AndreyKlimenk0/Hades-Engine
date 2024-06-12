@@ -1,9 +1,9 @@
-#ifndef HADES_COLLISION_H
-#define HADES_COLLISION_H
+#ifndef _COLLISION_H
+#define _COLLISION_H
 
-#include "../render/model.h"
-#include "../libs/math/structures.h"
+#include "../render/mesh.h"
 #include "../libs/math/vector.h"
+#include "../libs/math/structures.h"
 
 enum Boudning_Box_Type {
 	BOUNDING_BOX_TYPE_UNKNOWN,
@@ -28,3 +28,4 @@ Bounding_Sphere make_bounding_sphere(const Vector3 &position, Triangle_Mesh *mes
 bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point = NULL);
 
 #endif
+

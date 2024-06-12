@@ -5,23 +5,13 @@
 #include <DirectXMath.h>
 
 #include "font.h"
-#include "vertex.h"
+#include "vertices.h"
 #include "render_api.h"
 #include "shader_manager.h"
-#include "../game/world.h"
-#include "../win32/win_types.h"
 #include "../libs/color.h"
-#include "../libs/ds/array.h"
 #include "../libs/math/matrix.h"
 #include "../libs/math/vector.h"
-#include "../libs/ds/hash_table.h"
-#include "../libs/ds/linked_list.h"
-
-
-struct Engine;
-struct Render_System;
-struct Render_2D;
-struct Render_Font;
+#include "../win32/win_helpers.h"
 
 struct Primitive_2D {
 	//Vars is set by Render_2D
@@ -47,6 +37,16 @@ struct Render_Primitive_2D {
 	Matrix4 transform_matrix;
 };
 
+struct Render_2D;
+
+struct Render_Font {
+	Texture2D font_atlas;
+	Hash_Table<u8, Primitive_2D *> lookup_table;
+
+	void init(Render_2D *render_2d, Font *font);
+	void make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
+};
+
 const u32 ROUND_TOP_LEFT_RECT = 0x1;
 const u32 ROUND_TOP_RIGHT_RECT = 0x2;
 const u32 ROUND_BOTTOM_LEFT_RECT = 0x4;
@@ -57,7 +57,7 @@ const u32 ROUND_TOP_RECT = ROUND_TOP_LEFT_RECT | ROUND_TOP_RIGHT_RECT;
 const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
 const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 
-struct Render_Primitive_List {	
+struct Render_Primitive_List {
 	//@Note: default construcor should be deleted. 
 	Render_Primitive_List() {}
 	Render_Primitive_List(Render_2D *render, Font *font, Render_Font *render_font);
@@ -67,7 +67,7 @@ struct Render_Primitive_List {
 	Render_2D *render_2d = NULL;
 	Font *font = NULL;
 	Render_Font *render_font = NULL;
-	
+
 	Array<Rect_s32> clip_rects;
 	Array<Render_Primitive_2D> render_primitives;
 
@@ -79,7 +79,7 @@ struct Render_Primitive_List {
 
 	void add_text(Rect_s32 *rect, const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
 	void add_text(int x, int y, const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
-	
+
 	void add_rect(Rect_s32 *rect, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void add_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
@@ -92,13 +92,7 @@ struct Render_Primitive_List {
 	Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture2D *texture, const Color &color, String &primitve_hash);
 };
 
-struct Render_Font {
-	Texture2D font_atlas;
-	Hash_Table<u8, Primitive_2D *> lookup_table;
-
-	void init(Render_2D *render_2d, Font *font);
-	void make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs);
-};
+struct Render_System;
 
 struct Render_2D {
 	~Render_2D();
@@ -106,7 +100,7 @@ struct Render_2D {
 	bool initialized = false;
 
 	Texture2D default_texture;
-	
+
 	Gpu_Buffer constant_buffer;
 	Gpu_Buffer vertex_buffer;
 	Gpu_Buffer index_buffer;
@@ -116,7 +110,7 @@ struct Render_2D {
 	Depth_Stencil_State depth_stencil_state;
 
 	Extend_Shader *render_2d = NULL;
-	
+
 	Gpu_Device *gpu_device = NULL;
 	Render_Pipeline *render_pipeline = NULL;
 	Render_System *render_system = NULL;
@@ -129,11 +123,11 @@ struct Render_2D {
 	Hash_Table<String, Primitive_2D *> lookup_table;
 	Hash_Table<String, Render_Font *> render_fonts;
 
-	void init(Engine *engine);
+	void init(Render_System *render_sys, Shader_Manager *shader_manager);
 	void add_primitive(Primitive_2D *primitive);
 	void add_render_primitive_list(Render_Primitive_List *render_primitive_list);
 	Render_Font *get_render_font(Font *font);
-	
+
 	void new_frame();
 	void render_frame(); // @Clean up change name 
 };
@@ -204,10 +198,10 @@ struct Render_System {
 	Render_Pipeline render_pipeline;
 	Render_Pipeline_States render_pipeline_states;
 
-	void init(Engine *engine);
+	void init(Win32_Window *window);
 	void init_render_targets(u32 window_width, u32 window_height);
 	void init_shader_input_layout(Shader_Manager *shader_manager);
-	
+
 	void resize(u32 window_width, u32 window_height);
 
 	void new_frame();

@@ -1,8 +1,9 @@
 #include <assert.h>
 
 #include "path.h"
-#include "../ds/array.h"
-#include "../ds/hash_table.h"
+#include "../../sys/sys.h"
+#include "../structures/array.h"
+#include "../structures/hash_table.h"
 
 const char DATA_DIR_NAME[] = "data";
 const char ENGINE_NAME[] = "hades";
@@ -44,8 +45,8 @@ static void init_base_path()
 	Array<String> dir_names;
 	split(&current_path, "\\", &dir_names);
 
-	dir_names.get_last().to_lower();
-	if (dir_names.get_last() != ENGINE_NAME || dir_names.get_last() != GITHUB_ENGINE_NAME) {
+	dir_names.last().to_lower();
+	if ((dir_names.last() != ENGINE_NAME) || (dir_names.last() != GITHUB_ENGINE_NAME)) {
 		bool succeed = build_correct_base_path(&dir_names, &os_path.base_path);
 		if (!succeed) {
 			error("Base path can't be built correct");
@@ -63,7 +64,7 @@ void init_os_path()
 	char *shader_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "shaders");
 	char *model_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "models");
 	char *editor_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "editor");
-	char *maps_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "maps");
+	char *level_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "levels");
 	char *gui_dir = format("{}\\{}\\{}", os_path.base_path, DATA_DIR_NAME, "gui");
 	char *source_shaders_dir = format("{}\\{}", os_path.base_path, "hlsl");
 
@@ -71,7 +72,7 @@ void init_os_path()
 	os_path.data_dir_paths.set("shaders", shader_dir);
 	os_path.data_dir_paths.set("models", model_dir);
 	os_path.data_dir_paths.set("editor", editor_dir);
-	os_path.data_dir_paths.set("maps", maps_dir);
+	os_path.data_dir_paths.set("levels", level_dir);
 	os_path.data_dir_paths.set("gui", gui_dir);
 	os_path.data_dir_paths.set("source_shaders", source_shaders_dir);
 
@@ -79,7 +80,7 @@ void init_os_path()
 	free_string(shader_dir);
 	free_string(model_dir);
 	free_string(editor_dir);
-	free_string(maps_dir);
+	free_string(level_dir);
 	free_string(gui_dir);
 	free_string(source_shaders_dir);
 }
@@ -95,9 +96,9 @@ bool build_full_path_to_data_directory(const char *directory_name, String &full_
 	return os_path.data_dir_paths.get(directory_name, full_path);
 }
 
-void build_full_path_to_map_file(const char *file_name, String &full_path)
+void build_full_path_to_level_file(const char *file_name, String &full_path)
 {
-	String &value = os_path.data_dir_paths["maps"];
+	String &value = os_path.data_dir_paths["levels"];
 	full_path = value + "\\" + file_name;
 }
 
@@ -131,7 +132,7 @@ void build_full_path_to_source_shader_file(const char *file_name, String &full_p
 	full_path = value + "\\" + file_name;
 }
 
-void build_full_path_to_model_file(const char * file_name, String & full_path)
+void build_full_path_to_model_file(const char *file_name, String &full_path)
 {
 	String &value = os_path.data_dir_paths["models"];
 	full_path = value + "\\" + file_name;

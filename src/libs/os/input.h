@@ -2,8 +2,8 @@
 #define INPUT_H
 
 #include "../str.h"
-#include "../ds/array.h"
-#include "../../win32/win_types.h"
+#include "../number_types.h"
+#include "../structures/array.h"
 
 const u32 INPUT_KEYS_NUMBER = 255 + 1; // The engine has KEY_UNKNOWN in the key enum
 const u32 ENGLISH_ALPHABET_KEYS_OFFSET = 230;
@@ -92,7 +92,7 @@ struct Keys_State {
 	static bool was_char_key_input;
 	static bool keys[INPUT_KEYS_NUMBER];
 	static char inputed_char;
-	
+
 	static void setup();
 	static void key_down(int key);
 	static void key_up(int key);

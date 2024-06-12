@@ -2,10 +2,10 @@
 
 #include "gui.h"
 #include "test_gui.h"
-#include "../sys/sys_local.h"
+#include "../sys/sys.h"
 #include "../libs/str.h"
-#include "../libs/ds/array.h"
 #include "../libs/math/vector.h"
+#include "../libs/structures/array.h"
 
 using namespace gui;
 
@@ -20,7 +20,7 @@ void draw_test_tab_window()
 		if (add_tab("First tab")) {
 			edit_field("Pos", &pos);
 			edit_field("Dir", &dir);
-			
+
 			for (int i = 0; i < 10; i++) {
 				char *button_name = format("First tab Button {}", i);
 				button(button_name);
@@ -42,6 +42,11 @@ void draw_test_tab_window()
 	assert(!(!draw_first_tab && !draw_second_tab));
 }
 
+void set_to_zero(Array<Gui_List_Line_State> &list_line_states)
+{
+	memset((void *)list_line_states.items, 0, sizeof(Gui_List_Line_State) * list_line_states.size);
+}
+
 void draw_test_list_window()
 {
 	if (begin_window("Test list window")) {
@@ -53,15 +58,16 @@ void draw_test_list_window()
 		if (!init) {
 			init = true;
 			list_line.reserve(20);
+			set_to_zero(list_line);
 			for (int i = 0; i < 20; i++) {
 				char *file_name = format("file_name_{}", i);
 				char *file_type = format("hlsl_{}", i);
 				char *file_size = to_string(i * 1000);
-				
+
 				file_names.push(file_name);
 				file_types.push(file_type);
 				file_sizes.push(file_size);
-				
+
 				free_string(file_name);
 				free_string(file_type);
 				free_string(file_size);
@@ -70,9 +76,19 @@ void draw_test_list_window()
 		static Gui_List_Column filters[] = { {"File Name", 50}, {"File Type", 25}, {"File Size", 25} };
 		if (begin_list("File list", filters, 3)) {
 			for (u32 i = 0; i < list_line.count; i++) {
-
 				begin_line(&list_line[i]);
-
+				if (right_mouse_click(list_line[i])) {
+					print("Was right mouse click. index", i);
+				}
+				if (left_mouse_click(list_line[i])) {
+					print("Was left mouse click. index", i);
+				}
+				if (selected(list_line[i])) {
+					print("Selected", i);
+				}
+				if (enter_key_click(list_line[i])) {
+					print("Enter key click index", i);
+				}
 				begin_column("File Name");
 				add_text(file_names[i].c_str(), RECT_LEFT_ALIGNMENT);
 				end_column();
@@ -153,7 +169,7 @@ void draw_test_list_window()
 		//	end_list();
 		//}
 		//reset_list_theme();
-		
+
 		end_window();
 	}
 }

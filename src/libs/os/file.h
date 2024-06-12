@@ -4,10 +4,9 @@
 #include <stdio.h>
 #include <windows.h>
 
-#include "../../win32/win_types.h"
 #include "../str.h"
-#include "../ds/array.h"
-
+#include "../number_types.h"
+#include "../structures/array.h"
 
 void extract_file_name(const char *path_to_file, String &file_name);
 void extract_file_extension(const char *file_name, String &file_extension);
@@ -67,7 +66,7 @@ struct File {
 	void read(T *data);
 	template< typename T>
 	void read(Array<T> *array);
-	
+
 	template< typename T>
 	void write(T *data);
 	template< typename T>
@@ -75,7 +74,7 @@ struct File {
 };
 
 template<typename T>
-inline void File::read(T * data)
+inline void File::read(T *data)
 {
 	return read((void *)data, sizeof(T));
 }
@@ -105,3 +104,4 @@ inline void File::write(Array<T> *array)
 }
 
 #endif
+

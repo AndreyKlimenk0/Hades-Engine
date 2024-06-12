@@ -2,7 +2,7 @@
 #define MCOLOR_H
 
 #include "math/vector.h"
-#include "../win32/win_types.h"
+#include "number_types.h"
 
 struct Color {
 	static Color White;

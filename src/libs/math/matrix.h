@@ -9,7 +9,9 @@ using namespace DirectX;
 struct Matrix3 : XMFLOAT3X3 {
 	Matrix3() : XMFLOAT3X3(0.0f, 0.0f, 0.0f,
 						   0.0f, 0.0f, 0.0f,
-						   0.0f, 0.0f, 0.0f) {}
+						   0.0f, 0.0f, 0.0f)
+	{
+	}
 	Matrix3(XMMATRIX matrix)
 	{
 		XMStoreFloat3x3(this, matrix);
@@ -18,9 +20,11 @@ struct Matrix3 : XMFLOAT3X3 {
 	Matrix3(float m00, float m01, float m02,
 			float m10, float m11, float m12,
 			float m20, float m21, float m22) :
-			XMFLOAT3X3(m00, m01, m02,
-					   m10, m11, m12,
-					   m20, m21, m22) {}
+		XMFLOAT3X3(m00, m01, m02,
+				   m10, m11, m12,
+				   m20, m21, m22)
+	{
+	}
 
 	void set_row_0(const Vector3 &vector);
 	void set_row_1(const Vector3 &vector);
@@ -31,7 +35,9 @@ struct Matrix4 : XMFLOAT4X4 {
 	Matrix4() : XMFLOAT4X4(0.0f, 0.0f, 0.0f, 0.0f,
 						   0.0f, 0.0f, 0.0f, 0.0f,
 						   0.0f, 0.0f, 0.0f, 0.0f,
-						   0.0f, 0.0f, 0.0f, 0.0f) {}
+						   0.0f, 0.0f, 0.0f, 0.0f)
+	{
+	}
 	Matrix4(XMMATRIX matrix)
 	{
 		XMStoreFloat4x4(this, matrix);
@@ -40,11 +46,13 @@ struct Matrix4 : XMFLOAT4X4 {
 	Matrix4(float m00, float m01, float m02, float m03,
 			float m10, float m11, float m12, float m13,
 			float m20, float m21, float m22, float m23,
-			float m30, float m31, float m32, float m33) : 
-			XMFLOAT4X4(m00, m01, m02, m03, 
-					   m10, m11, m12, m13, 
-					   m20, m21, m22, m23,
-					   m30, m31, m32, m33) {}
+			float m30, float m31, float m32, float m33) :
+		XMFLOAT4X4(m00, m01, m02, m03,
+				   m10, m11, m12, m13,
+				   m20, m21, m22, m23,
+				   m30, m31, m32, m33)
+	{
+	}
 
 	void set_row_0(const Vector4 &vector);
 	void set_row_1(const Vector4 &vector);
@@ -111,7 +119,7 @@ inline void Matrix3::set_row_2(const Vector3 &vector)
 inline Matrix3 Matrix4::to_matrix3()
 {
 	return Matrix3(_11, _12, _13,
-			       _21, _22, _23,
+				   _21, _22, _23,
 				   _31, _32, _33);
 }
 

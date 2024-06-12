@@ -3,14 +3,15 @@
 
 #include <stdlib.h>
 #include <d3d11.h>
-
-#include "../libs/color.h"
-#include "../libs/math/structures.h"
-#include "../sys/sys_local.h"
-#include "../win32/win_types.h"
-#include "../win32/win_local.h"
-
 #include <wrl/client.h>
+
+#include "../sys/utils.h"
+#include "../win32/win_helpers.h"
+#include "../libs/color.h"
+#include "../libs/number_types.h"
+#include "../libs/math/structures.h"
+#include "../libs/structures/array.h"
+
 using Microsoft::WRL::ComPtr;
 
 typedef ComPtr<ID3D11Device> Dx11_Device;
@@ -40,9 +41,6 @@ typedef ComPtr<ID3D11Resource> Dx11_Resource;
 typedef ComPtr<ID3D11Texture2D> Dx11_Texture_2D;
 typedef ComPtr<ID3D11Buffer> Dx11_Buffer;
 
-struct Gpu_Struct_Buffer;
-struct Gpu_Device;
-struct Render_Pipeline;
 
 const u32 BIND_VERTEX_BUFFER = 0x1L;
 const u32 BIND_INDEX_BUFFER = 0x2L;
@@ -80,7 +78,7 @@ const u32 RESOURCE_MISC_TILED = 0x40000L;
 const u32 RESOURCE_MISC_HW_PROTECTED = 0x80000L;
 
 enum Resource_Usage {
-	RESOURCE_USAGE_DEFAULT ,
+	RESOURCE_USAGE_DEFAULT,
 	RESOURCE_USAGE_IMMUTABLE,
 	RESOURCE_USAGE_DYNAMIC,
 	RESOURCE_USAGE_STAGING
@@ -97,7 +95,7 @@ struct Gpu_Resource {
 };
 
 template<typename T>
-inline Gpu_Resource<T>::Gpu_Resource() 
+inline Gpu_Resource<T>::Gpu_Resource()
 {
 }
 
@@ -121,15 +119,15 @@ inline T *Gpu_Resource<T>::get()
 
 struct Gpu_Buffer_Desc {
 	void *data = NULL;
-	
+
 	u32 data_count = 0;
 	u32 data_size = 0;
-	
+
 	u32 bind_flags = 0;
 	u32 cpu_access = 0;
 	u32 misc_flags = 0;
 	u32 struct_size = 0;
-	
+
 	Resource_Usage usage;
 };
 
@@ -158,7 +156,7 @@ struct Viewport {
 
 struct Rasterizer_Desc {
 	Rasterizer_Desc();
-	
+
 	D3D11_RASTERIZER_DESC desc;
 
 	//@Note: these methods can be removed 
@@ -226,7 +224,7 @@ enum Comparison_Func {
 	COMPARISON_GREATER,
 	COMPARISON_NOT_EQUAL,
 	COMPARISON_GREATER_EQUAL,
-	COMPARISON_ALWAYS 
+	COMPARISON_ALWAYS
 };
 
 struct Depth_Stencil_State_Desc {
@@ -251,7 +249,7 @@ struct Shader {
 	Hull_Shader hull_shader;
 	Domain_Shader domain_shader;
 	Pixel_Shader pixel_shader;
-	
+
 	void free();
 };
 
@@ -316,6 +314,16 @@ struct Texture3D : Gpu_Resource<ID3D11Texture3D>, Gpu_Resource_Views {
 	void release();
 };
 
+struct Gpu_Struct_Buffer {
+	Gpu_Buffer gpu_buffer;
+
+	template <typename T>
+	void allocate(u32 elements_count);
+	template <typename T>
+	void update(Array<T> *array);
+	void free();
+};
+
 struct Gpu_Device {
 	Dx11_Device dx11_device;
 	Dx11_Debug debug;
@@ -326,7 +334,7 @@ struct Gpu_Device {
 	void create_shader(u8 *byte_code, u32 byte_code_size, Hull_Shader &shader);
 	void create_shader(u8 *byte_code, u32 byte_code_size, Domain_Shader &shader);
 	void create_shader(u8 *byte_code, u32 byte_code_size, Pixel_Shader &shader);
-	
+
 	void create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer);
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
 
@@ -372,7 +380,7 @@ struct Render_Pipeline_State {
 struct Swap_Chain {
 	DXGI_Swap_Chain dxgi_swap_chain;
 
-	void init(Gpu_Device *gpu_device, Win32_Info *win32_info);
+	void init(Gpu_Device *gpu_device, Win32_Window *window);
 	void resize(u32 window_width, u32 window_height);
 	void get_back_buffer_as_texture(Texture2D *texture);
 };
@@ -382,14 +390,14 @@ struct Render_Pipeline {
 
 	template <typename T>
 	void copy_resource(const Gpu_Resource<T> &dst, const Gpu_Resource<T> &src);
-	
+
 	template <typename T>
 	void copy_subresource(const Gpu_Resource<T> &dst, u32 dst_x, u32 dst_y, const Gpu_Resource<T> &src);
 
 	void resolve_subresource(Texture2D *dst_texture, Texture2D *src_texture, DXGI_FORMAT format);
 
 	void apply(Render_Pipeline_State *render_pipeline_state);
-	
+
 	template <typename T>
 	void *map(Gpu_Resource<T> &resource, Map_Type map_type = MAP_TYPE_WRITE_DISCARD);
 	template <typename T>
@@ -401,7 +409,7 @@ struct Render_Pipeline {
 	void update_constant_buffer(Gpu_Buffer *gpu_buffer, void *data);
 	void update_subresource(Texture2D *resource, void *source_data, u32 row_pitch, Rect_u32 *rect = NULL);
 	void generate_mips(const Shader_Resource_View &shader_resource);
-	
+
 	//@Note: may be this should be removed from code.
 	void set_input_layout(void *pointer);
 	void set_input_layout(const Input_Layout &input_layout);
@@ -421,7 +429,7 @@ struct Render_Pipeline {
 	void set_vertex_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_vertex_shader_resource(u32 gpu_register, const Shader_Resource_View &shader_resource);
 	void set_vertex_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);
-	
+
 	void set_pixel_shader_sampler(u32 sampler_register, const Sampler_State &sampler_state);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
@@ -430,7 +438,7 @@ struct Render_Pipeline {
 	void set_compute_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_compute_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
 	void set_compute_shader_resource(u32 shader_resource_register, const Unordered_Access_View &unordered_access_view);
-	
+
 	void reset_pixel_shader_resource(u32 shader_resource_register);
 	void reset_compute_shader_resource_view(u32 shader_resource_register);
 	void reset_compute_unordered_access_view(u32 shader_resource_register);
@@ -442,7 +450,7 @@ struct Render_Pipeline {
 	void set_blend_state(const Blend_State &blend_state);
 	void set_depth_stencil_state(const Depth_Stencil_State &depth_stencil_state, u32 stencil_ref = 0);
 	void set_render_target(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view);
-	
+
 	void reset_rasterizer();
 	void reset_blending_state();
 	void reset_depth_stencil_state();
@@ -454,28 +462,41 @@ struct Render_Pipeline {
 	void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z);
 };
 
+u32 get_dxgi_format_size(DXGI_FORMAT format);
+Gpu_Device *get_current_gpu_device();
+Render_Pipeline *get_current_render_pipeline();
+void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
+void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
+void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multisample_info, DXGI_FORMAT format);
+
 template <typename T>
 inline void *Render_Pipeline::map(Gpu_Resource<T> &resource, Map_Type map_type)
 {
 	D3D11_MAP dx11_map_type;
 	switch (map_type) {
-		case MAP_TYPE_READ:
+		case MAP_TYPE_READ: {
 			dx11_map_type = D3D11_MAP_READ;
 			break;
-		case MAP_TYPE_WRITE:
+		}
+		case MAP_TYPE_WRITE: {
 			dx11_map_type = D3D11_MAP_WRITE;
 			break;
-		case MAP_TYPE_READ_WRITE:
+		}
+		case MAP_TYPE_READ_WRITE: {
 			dx11_map_type = D3D11_MAP_READ_WRITE;
 			break;
-		case MAP_TYPE_WRITE_DISCARD:
+		}
+		case MAP_TYPE_WRITE_DISCARD: {
 			dx11_map_type = D3D11_MAP_WRITE_DISCARD;
 			break;
-		case MAP_TYPE_MAP_WRITE_NO_OVERWRITE:
+		}
+		case MAP_TYPE_MAP_WRITE_NO_OVERWRITE: {
 			dx11_map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
 			break;
-		default:
+		}
+		default: {
 			assert(false);
+		}
 	}
 	D3D11_MAPPED_SUBRESOURCE subresource;
 	HR(dx11_context->Map(resource.get(), 0, dx11_map_type, 0, &subresource));
@@ -500,10 +521,48 @@ inline void Render_Pipeline::copy_subresource(const Gpu_Resource<T> &dst, u32 ds
 	dx11_context->CopySubresourceRegion(dst.resource.Get(), 0, dst_x, dst_y, 0, src.resource.Get(), 0, NULL);
 }
 
-u32 get_dxgi_format_size(DXGI_FORMAT format);
-void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
-void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
-void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multisample_info, DXGI_FORMAT format);
+template<typename T>
+inline void Gpu_Struct_Buffer::allocate(u32 elements_count)
+{
+	Gpu_Buffer_Desc desc;
+	desc.usage = RESOURCE_USAGE_DYNAMIC;
+	desc.data = NULL;
+	desc.data_size = sizeof(T);
+	desc.struct_size = sizeof(T);
+	desc.data_count = elements_count;
+	desc.bind_flags = BIND_SHADER_RESOURCE;
+	desc.cpu_access = CPU_ACCESS_WRITE;
+	desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+
+	Gpu_Device *gpu_device = get_current_gpu_device();
+	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
+	gpu_device->create_shader_resource_view(&gpu_buffer);
+}
+
+template<typename T>
+inline void Gpu_Struct_Buffer::update(Array<T> *array)
+{
+	if (array->count == 0) {
+		return;
+	}
+
+	Render_Pipeline *render_pipeline = get_current_render_pipeline();
+
+	if (array->count > gpu_buffer.data_count) {
+		free();
+		allocate<T>(array->count);
+	}
+
+	T *buffer = (T *)render_pipeline->map(gpu_buffer);
+	memcpy((void *)buffer, (void *)array->items, sizeof(T) * array->count);
+	render_pipeline->unmap(gpu_buffer);
+}
+
+inline void Gpu_Struct_Buffer::free()
+{
+	if (!gpu_buffer.is_empty()) {
+		gpu_buffer.free();
+	}
+}
 
 #endif
-

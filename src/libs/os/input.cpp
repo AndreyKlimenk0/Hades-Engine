@@ -1,7 +1,6 @@
 #include <windows.h>
 
 #include "input.h"
-#include "../../sys/sys_local.h"
 
 s32 Mouse_State::x = 0;
 s32 Mouse_State::y = 0;
@@ -161,7 +160,7 @@ Key win32_key_to_engine_key(s32 win32_key_code)
 			return KEY_ARROW_RIGHT;
 		case VK_LEFT:
 			return KEY_ARROW_LEFT;
-		case VK_CONTROL: 
+		case VK_CONTROL:
 			return KEY_CTRL;
 		case VK_MENU:
 			return KEY_ALT;

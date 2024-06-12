@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <string.h>
 
+#include "../sys/sys.h"
 #include "key_binding.h"
 #include "os/event.h"
-#include "../sys/sys_local.h"
 
 void Key_Command_Bindings::init()
 {
@@ -53,7 +53,7 @@ Find_Command_Result Key_Command_Bindings::find_command(Key key, Key_State key_st
 	return COMMAND_NOT_FOUND;
 }
 
-void Key_Bindings::handle_events() 
+void Key_Bindings::handle_events()
 {
 	Queue<Event> *events = get_event_queue();
 
@@ -86,11 +86,11 @@ void Key_Bindings::handle_events()
 	}
 }
 
-void Key_Bindings::bind(Key modifier_key, Key second_key) 
+void Key_Bindings::bind(Key modifier_key, Key second_key)
 {
 	if ((modifier_key != KEY_CTRL) && (modifier_key != KEY_SHIFT) && (modifier_key != KEY_ALT)) {
 		print("Key_Bindings::bind: Failed to bind keys. The first key must be modifer key (CTRL | SHIFT | ALT) not {}.", to_string(modifier_key));
-	} else if ((second_key == KEY_CTRL) || (second_key == KEY_SHIFT)|| (second_key == KEY_ALT)) {
+	} else if ((second_key == KEY_CTRL) || (second_key == KEY_SHIFT) || (second_key == KEY_ALT)) {
 		print("Key_Bindings::bind: Failed to bind keys. The second key must be not modifer key (CTRL | SHIFT | ALT).");
 	} else {
 		key_bindings.push(Key_Binding(modifier_key, second_key));
@@ -113,7 +113,7 @@ bool Key_Bindings::is_binding_down(Key modifier_key, Key second_key)
 	return false;
 }
 
-bool Key_Bindings::was_binding_triggered(Key modifier_key, Key second_key) 
+bool Key_Bindings::was_binding_triggered(Key modifier_key, Key second_key)
 {
 	Key_Binding *key_binding = NULL;
 	For(key_bindings, key_binding) {
@@ -129,7 +129,7 @@ bool Key_Bindings::was_binding_triggered(Key modifier_key, Key second_key)
 	return false;
 }
 
-Key_Binding::Key_Binding() 
+Key_Binding::Key_Binding()
 {
 	modifier_key_pressed_first = false;
 	second_key_was_just_pressed = false;
@@ -139,7 +139,7 @@ Key_Binding::Key_Binding()
 	second_key_state = KEY_UP;
 }
 
-Key_Binding::Key_Binding(Key modifier_key, Key second_key) : modifier_key(modifier_key), second_key(second_key) 
+Key_Binding::Key_Binding(Key modifier_key, Key second_key) : modifier_key(modifier_key), second_key(second_key)
 {
 	modifier_key_pressed_first = false;
 	second_key_was_just_pressed = false;
@@ -147,7 +147,7 @@ Key_Binding::Key_Binding(Key modifier_key, Key second_key) : modifier_key(modifi
 	second_key_state = KEY_UP;
 }
 
-Key_Binding::~Key_Binding() 
+Key_Binding::~Key_Binding()
 {
 }
 

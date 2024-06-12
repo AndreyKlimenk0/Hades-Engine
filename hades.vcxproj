@@ -48,7 +48,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -111,7 +111,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -150,9 +150,10 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <PreprocessorDefinitions>_CRT_OBSOLETE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <DisableSpecificWarnings>4099;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -172,87 +173,88 @@
     <ClCompile Include="src\gui\gui.cpp" />
     <ClCompile Include="src\gui\test_gui.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
-    <ClCompile Include="src\libs\ds\dict.cpp" />
-    <ClCompile Include="src\libs\ds\hash_table.cpp" />
-    <ClCompile Include="src\libs\geometry_helper.cpp" />
+    <ClCompile Include="src\libs\geometry.cpp" />
+    <ClCompile Include="src\libs\image\png.cpp" />
+    <ClCompile Include="src\libs\image\spng.cpp" />
     <ClCompile Include="src\libs\key_binding.cpp" />
-    <ClCompile Include="src\libs\math\functions.cpp" />
     <ClCompile Include="src\libs\math\structures.cpp" />
     <ClCompile Include="src\libs\math\vector.cpp" />
+    <ClCompile Include="src\libs\math\vector.h" />
     <ClCompile Include="src\libs\mesh_loader.cpp" />
+    <ClCompile Include="src\libs\number_types.h" />
     <ClCompile Include="src\libs\os\event.cpp" />
     <ClCompile Include="src\libs\os\file.cpp" />
     <ClCompile Include="src\libs\os\input.cpp" />
     <ClCompile Include="src\libs\os\path.cpp" />
-    <ClCompile Include="src\libs\png_image.cpp" />
-    <ClCompile Include="src\libs\spng.c" />
     <ClCompile Include="src\libs\str.cpp" />
+    <ClCompile Include="src\libs\structures\dict.cpp" />
+    <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\font.cpp" />
-    <ClCompile Include="src\render\model.cpp" />
     <ClCompile Include="src\render\render_api.cpp" />
     <ClCompile Include="src\render\render_helpers.cpp" />
-    <ClCompile Include="src\render\render_pass.cpp" />
+    <ClCompile Include="src\render\render_passes.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\render\render_world.cpp" />
     <ClCompile Include="src\render\shader_manager.cpp" />
     <ClCompile Include="src\sys\commands.cpp" />
+    <ClCompile Include="src\sys\debug.cpp" />
     <ClCompile Include="src\sys\engine.cpp" />
     <ClCompile Include="src\sys\file_tracking.cpp" />
-    <ClCompile Include="src\sys\map.cpp" />
-    <ClCompile Include="src\sys\sys_debug.cpp" />
-    <ClCompile Include="src\sys\sys_output_info.cpp" />
+    <ClCompile Include="src\sys\level.cpp" />
+    <ClCompile Include="src\sys\utils.h" />
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
+    <ClCompile Include="src\win32\win_helpers.cpp" />
+    <ClCompile Include="src\win32\win_helpers.h" />
     <ClCompile Include="src\win32\win_main.cpp" />
+    <ClCompile Include="src\win32\win_time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\collision\collision.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\gui\editor.h" />
+    <ClInclude Include="src\gui\enum_helper.h" />
     <ClInclude Include="src\gui\gui.h" />
     <ClInclude Include="src\gui\test_gui.h" />
     <ClInclude Include="src\libs\color.h" />
-    <ClInclude Include="src\libs\ds\array.h" />
-    <ClInclude Include="src\libs\ds\dict.h" />
-    <ClInclude Include="src\libs\ds\hash_table.h" />
-    <ClInclude Include="src\libs\ds\linked_list.h" />
-    <ClInclude Include="src\libs\ds\queue.h" />
-    <ClInclude Include="src\libs\ds\stack.h" />
-    <ClInclude Include="src\libs\enum_helper.h" />
-    <ClInclude Include="src\libs\geometry_helper.h" />
+    <ClInclude Include="src\libs\geometry.h" />
+    <ClInclude Include="src\libs\image\png.h" />
+    <ClInclude Include="src\libs\image\spng.h" />
     <ClInclude Include="src\libs\key_binding.h" />
+    <ClInclude Include="src\libs\math\3dmath.h" />
     <ClInclude Include="src\libs\math\constants.h" />
     <ClInclude Include="src\libs\math\functions.h" />
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\structures.h" />
-    <ClInclude Include="src\libs\math\vector.h" />
     <ClInclude Include="src\libs\mesh_loader.h" />
     <ClInclude Include="src\libs\os\event.h" />
     <ClInclude Include="src\libs\os\file.h" />
     <ClInclude Include="src\libs\os\input.h" />
     <ClInclude Include="src\libs\os\path.h" />
-    <ClInclude Include="src\libs\png_image.h" />
-    <ClInclude Include="src\libs\spng.h" />
     <ClInclude Include="src\libs\str.h" />
+    <ClInclude Include="src\libs\structures\dict.h" />
+    <ClInclude Include="src\libs\structures\hash_table.h" />
+    <ClInclude Include="src\libs\structures\linked_list.h" />
+    <ClInclude Include="src\libs\structures\queue.h" />
+    <ClInclude Include="src\libs\structures\array.h" />
+    <ClInclude Include="src\libs\structures\stack.h" />
     <ClInclude Include="src\render\font.h" />
     <ClInclude Include="src\render\hlsl.h" />
-    <ClInclude Include="src\render\model.h" />
+    <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\render_api.h" />
     <ClInclude Include="src\render\render_helpers.h" />
-    <ClInclude Include="src\render\render_pass.h" />
+    <ClInclude Include="src\render\render_passes.h" />
     <ClInclude Include="src\render\render_system.h" />
     <ClInclude Include="src\render\render_world.h" />
     <ClInclude Include="src\render\shader_manager.h" />
-    <ClInclude Include="src\render\vertex.h" />
+    <ClInclude Include="src\render\vertices.h" />
     <ClInclude Include="src\sys\commands.h" />
     <ClInclude Include="src\sys\engine.h" />
     <ClInclude Include="src\sys\file_tracking.h" />
-    <ClInclude Include="src\sys\map.h" />
-    <ClInclude Include="src\sys\sys_local.h" />
+    <ClInclude Include="src\sys\level.h" />
+    <ClInclude Include="src\sys\sys.h" />
     <ClInclude Include="src\win32\test.h" />
-    <ClInclude Include="src\win32\win_local.h" />
-    <ClInclude Include="src\win32\win_time.h" />
-    <ClInclude Include="src\win32\win_types.h" />
+    <ClInclude Include="src\win32\win_console.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

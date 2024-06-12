@@ -4,8 +4,7 @@
 #include <windows.h>
 
 #include "file.h"
-#include "../../sys/sys_local.h"
-
+#include "../../sys/sys.h"
 
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names)
 {
@@ -39,9 +38,9 @@ u32 get_file_count_in_dir(const char *full_path)
 
 bool file_exists(const char *full_path)
 {
-  DWORD attributes = GetFileAttributes(full_path);
+	DWORD attributes = GetFileAttributes(full_path);
 
-  return (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY));
+	return (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 bool directory_exists(const char *full_path)
@@ -154,7 +153,7 @@ void extract_file_extension(const char *file_name, String &file_extension)
 	Array<String> buffer;
 	String temp = file_name;
 	bool result = split(&temp, ".", &buffer);
-	file_extension = result ? buffer.get_last() : temp;
+	file_extension = result ? buffer.last() : temp;
 }
 
 void extract_base_file_name(const char *file_name, String &base_file_name)
@@ -162,7 +161,7 @@ void extract_base_file_name(const char *file_name, String &base_file_name)
 	Array<String> buffer;
 	String temp = file_name;
 	bool result = split(&temp, ".", &buffer);
-	base_file_name = result ? buffer.get_first() : temp;
+	base_file_name = result ? buffer.first() : temp;
 }
 
 bool extract_base_file_name_and_extension(const char *file_name, String &base_file_name, String &file_extension)
@@ -182,10 +181,10 @@ bool extract_base_file_name_and_extension(const char *file_name, String &base_fi
 				base_file_name.append(".");
 				base_file_name.append(buffer[i]);
 			}
-			file_extension = buffer.get_last();
+			file_extension = buffer.last();
 		} else {
-			base_file_name = buffer.get_first();
-			file_extension = buffer.get_last();
+			base_file_name = buffer.first();
+			file_extension = buffer.last();
 		}
 		return true;
 	}
@@ -200,13 +199,12 @@ void extract_file_name(const char *path_to_file, String &file_name)
 	if (!result) {
 		result = split(&temp, "/", &buffer);
 	}
-	file_name = result ? buffer.get_last() : temp;
+	file_name = result ? buffer.last() : temp;
 }
 
 static DWORD file_mode_to_win32(File_Mode file_mode)
 {
-	switch (file_mode)
-	{
+	switch (file_mode) {
 		case FILE_MODE_READ:
 			return GENERIC_READ;
 		case FILE_MODE_WRITE:
@@ -218,9 +216,8 @@ static DWORD file_mode_to_win32(File_Mode file_mode)
 
 static DWORD file_creation_to_win32(File_Creation file_creation)
 {
-	switch (file_creation)
-	{
-		case FILE_CREATE_ALWAYS:
+	switch (file_creation) {
+		case FILE_CREATE_ALWAYS: {}
 			return CREATE_ALWAYS;
 		case FILE_CREATE_NEW:
 			return CREATE_NEW;
@@ -245,7 +242,7 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	extract_file_name(path_to_file, file_name);
 
 	file_handle = CreateFile(path_to_file, file_mode_to_win32(mode), 0, NULL, file_creation_to_win32(file_creation), FILE_ATTRIBUTE_NORMAL, NULL);
-	
+
 	if (file_handle == INVALID_HANDLE_VALUE) {
 		DWORD error_id = GetLastError();
 		char *error_message = get_error_message_from_error_code(error_id);
@@ -271,7 +268,7 @@ void File::read(void *data, u32 data_size)
 {
 	DWORD bytes_read = 0;
 	DWORD bytes_to_read = data_size;
-	
+
 	BOOL result = ReadFile(file_handle, data, bytes_to_read, (LPDWORD)&bytes_read, NULL);
 
 	if (result == FALSE) {
@@ -314,7 +311,7 @@ void File::write(const char *string, bool new_line)
 {
 	DWORD bytes_written = 0;
 	DWORD bytes_to_write = (DWORD)strlen(string);
-	
+
 	BOOL result = WriteFile(file_handle, string, bytes_to_write, (LPDWORD)&bytes_written, NULL);
 
 	if (result == FALSE) {

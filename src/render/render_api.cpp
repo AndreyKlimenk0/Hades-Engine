@@ -1,17 +1,32 @@
 #include <assert.h>
+#include <stdlib.h>
 
 #include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
-#include "../sys/engine.h"
+#include "../sys/sys.h"
 
 static Multisample_Info default_render_api_multisample;
 
+static Gpu_Device *current_gpu_device = NULL;
+static Render_Pipeline *current_render_pipeline = NULL;
+
+Gpu_Device *get_current_gpu_device()
+{
+	assert(current_gpu_device);
+	return current_gpu_device;
+}
+
+Render_Pipeline *get_current_render_pipeline()
+{
+	assert(current_render_pipeline);
+	return current_render_pipeline;
+}
+
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
 {
-	switch (primitive_type)
-	{
+	switch (primitive_type) {
 		case RENDER_PRIMITIVE_TRIANGLES:
 			return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		case RENDER_PRIMITIVE_LINES:
@@ -55,8 +70,7 @@ inline Resource_Usage to_resource_usage(D3D11_USAGE d3d11_usage)
 
 inline D3D11_BLEND to_dx11_blend(Blend_Option blend_option)
 {
-	switch (blend_option)
-	{
+	switch (blend_option) {
 		case BLEND_ZERO:
 			return D3D11_BLEND_ZERO;
 		case BLEND_ONE:
@@ -98,8 +112,7 @@ inline D3D11_BLEND to_dx11_blend(Blend_Option blend_option)
 
 inline D3D11_BLEND_OP to_dx11_blend_op(Blend_Operation blend_operation)
 {
-	switch (blend_operation)
-	{
+	switch (blend_operation) {
 		case BLEND_OP_ADD:
 			return D3D11_BLEND_OP_ADD;
 		case BLEND_OP_SUBTRACT:
@@ -117,8 +130,7 @@ inline D3D11_BLEND_OP to_dx11_blend_op(Blend_Operation blend_operation)
 
 inline D3D11_STENCIL_OP to_dx11_stencil_op(Stencil_Operation stencil_operation)
 {
-	switch (stencil_operation)
-	{
+	switch (stencil_operation) {
 		case STENCIL_OP_KEEP:
 			return D3D11_STENCIL_OP_KEEP;
 		case STENCIL_OP_ZERO:
@@ -142,8 +154,7 @@ inline D3D11_STENCIL_OP to_dx11_stencil_op(Stencil_Operation stencil_operation)
 
 inline D3D11_COMPARISON_FUNC to_dx11_comparison_func(Comparison_Func func)
 {
-	switch (func)
-	{
+	switch (func) {
 		case COMPARISON_NEVER:
 			return D3D11_COMPARISON_NEVER;
 		case COMPARISON_LESS:
@@ -167,120 +178,119 @@ inline D3D11_COMPARISON_FUNC to_dx11_comparison_func(Comparison_Func func)
 
 u32 get_dxgi_format_size(DXGI_FORMAT format)
 {
-	switch (static_cast<int>(format))
-	{
-	case DXGI_FORMAT_R32G32B32A32_TYPELESS:
-	case DXGI_FORMAT_R32G32B32A32_FLOAT:
-	case DXGI_FORMAT_R32G32B32A32_UINT:
-	case DXGI_FORMAT_R32G32B32A32_SINT:
-		return 16;
+	switch (static_cast<int>(format)) {
+		case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		case DXGI_FORMAT_R32G32B32A32_UINT:
+		case DXGI_FORMAT_R32G32B32A32_SINT:
+			return 16;
 
-	case DXGI_FORMAT_R32G32B32_TYPELESS:
-	case DXGI_FORMAT_R32G32B32_FLOAT:
-	case DXGI_FORMAT_R32G32B32_UINT:
-	case DXGI_FORMAT_R32G32B32_SINT:
-		return 12;
+		case DXGI_FORMAT_R32G32B32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32_FLOAT:
+		case DXGI_FORMAT_R32G32B32_UINT:
+		case DXGI_FORMAT_R32G32B32_SINT:
+			return 12;
 
-	case DXGI_FORMAT_R16G16B16A16_TYPELESS:
-	case DXGI_FORMAT_R16G16B16A16_FLOAT:
-	case DXGI_FORMAT_R16G16B16A16_UNORM:
-	case DXGI_FORMAT_R16G16B16A16_UINT:
-	case DXGI_FORMAT_R16G16B16A16_SNORM:
-	case DXGI_FORMAT_R16G16B16A16_SINT:
-	case DXGI_FORMAT_R32G32_TYPELESS:
-	case DXGI_FORMAT_R32G32_FLOAT:
-	case DXGI_FORMAT_R32G32_UINT:
-	case DXGI_FORMAT_R32G32_SINT:
-	case DXGI_FORMAT_R32G8X24_TYPELESS:
-	case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-	case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
-	case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
-	case DXGI_FORMAT_Y416:
-	case DXGI_FORMAT_Y210:
-	case DXGI_FORMAT_Y216:
-		return 8;
+		case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+		case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		case DXGI_FORMAT_R16G16B16A16_UNORM:
+		case DXGI_FORMAT_R16G16B16A16_UINT:
+		case DXGI_FORMAT_R16G16B16A16_SNORM:
+		case DXGI_FORMAT_R16G16B16A16_SINT:
+		case DXGI_FORMAT_R32G32_TYPELESS:
+		case DXGI_FORMAT_R32G32_FLOAT:
+		case DXGI_FORMAT_R32G32_UINT:
+		case DXGI_FORMAT_R32G32_SINT:
+		case DXGI_FORMAT_R32G8X24_TYPELESS:
+		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+		case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+		case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+		case DXGI_FORMAT_Y416:
+		case DXGI_FORMAT_Y210:
+		case DXGI_FORMAT_Y216:
+			return 8;
 
-	case DXGI_FORMAT_R10G10B10A2_TYPELESS:
-	case DXGI_FORMAT_R10G10B10A2_UNORM:
-	case DXGI_FORMAT_R10G10B10A2_UINT:
-	case DXGI_FORMAT_R11G11B10_FLOAT:
-	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
-	case DXGI_FORMAT_R8G8B8A8_UNORM:
-	case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-	case DXGI_FORMAT_R8G8B8A8_UINT:
-	case DXGI_FORMAT_R8G8B8A8_SNORM:
-	case DXGI_FORMAT_R8G8B8A8_SINT:
-	case DXGI_FORMAT_R16G16_TYPELESS:
-	case DXGI_FORMAT_R16G16_FLOAT:
-	case DXGI_FORMAT_R16G16_UNORM:
-	case DXGI_FORMAT_R16G16_UINT:
-	case DXGI_FORMAT_R16G16_SNORM:
-	case DXGI_FORMAT_R16G16_SINT:
-	case DXGI_FORMAT_R32_TYPELESS:
-	case DXGI_FORMAT_D32_FLOAT:
-	case DXGI_FORMAT_R32_FLOAT:
-	case DXGI_FORMAT_R32_UINT:
-	case DXGI_FORMAT_R32_SINT:
-	case DXGI_FORMAT_R24G8_TYPELESS:
-	case DXGI_FORMAT_D24_UNORM_S8_UINT:
-	case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
-	case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
-	case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
-	case DXGI_FORMAT_R8G8_B8G8_UNORM:
-	case DXGI_FORMAT_G8R8_G8B8_UNORM:
-	case DXGI_FORMAT_B8G8R8A8_UNORM:
-	case DXGI_FORMAT_B8G8R8X8_UNORM:
-	case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
-	case DXGI_FORMAT_B8G8R8A8_TYPELESS:
-	case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
-	case DXGI_FORMAT_B8G8R8X8_TYPELESS:
-	case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
-	case DXGI_FORMAT_AYUV:
-	case DXGI_FORMAT_Y410:
-	case DXGI_FORMAT_YUY2:
-		return 4;
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+		case DXGI_FORMAT_R10G10B10A2_UINT:
+		case DXGI_FORMAT_R11G11B10_FLOAT:
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		case DXGI_FORMAT_R8G8B8A8_UINT:
+		case DXGI_FORMAT_R8G8B8A8_SNORM:
+		case DXGI_FORMAT_R8G8B8A8_SINT:
+		case DXGI_FORMAT_R16G16_TYPELESS:
+		case DXGI_FORMAT_R16G16_FLOAT:
+		case DXGI_FORMAT_R16G16_UNORM:
+		case DXGI_FORMAT_R16G16_UINT:
+		case DXGI_FORMAT_R16G16_SNORM:
+		case DXGI_FORMAT_R16G16_SINT:
+		case DXGI_FORMAT_R32_TYPELESS:
+		case DXGI_FORMAT_D32_FLOAT:
+		case DXGI_FORMAT_R32_FLOAT:
+		case DXGI_FORMAT_R32_UINT:
+		case DXGI_FORMAT_R32_SINT:
+		case DXGI_FORMAT_R24G8_TYPELESS:
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
+		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+		case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+		case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+		case DXGI_FORMAT_R8G8_B8G8_UNORM:
+		case DXGI_FORMAT_G8R8_G8B8_UNORM:
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+		case DXGI_FORMAT_B8G8R8X8_UNORM:
+		case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
+		case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+		case DXGI_FORMAT_AYUV:
+		case DXGI_FORMAT_Y410:
+		case DXGI_FORMAT_YUY2:
+			return 4;
 
-	case DXGI_FORMAT_P010:
-	case DXGI_FORMAT_P016:
-		return 3;
+		case DXGI_FORMAT_P010:
+		case DXGI_FORMAT_P016:
+			return 3;
 
-	case DXGI_FORMAT_R8G8_TYPELESS:
-	case DXGI_FORMAT_R8G8_UNORM:
-	case DXGI_FORMAT_R8G8_UINT:
-	case DXGI_FORMAT_R8G8_SNORM:
-	case DXGI_FORMAT_R8G8_SINT:
-	case DXGI_FORMAT_R16_TYPELESS:
-	case DXGI_FORMAT_R16_FLOAT:
-	case DXGI_FORMAT_D16_UNORM:
-	case DXGI_FORMAT_R16_UNORM:
-	case DXGI_FORMAT_R16_UINT:
-	case DXGI_FORMAT_R16_SNORM:
-	case DXGI_FORMAT_R16_SINT:
-	case DXGI_FORMAT_B5G6R5_UNORM:
-	case DXGI_FORMAT_B5G5R5A1_UNORM:
-	case DXGI_FORMAT_A8P8:
-	case DXGI_FORMAT_B4G4R4A4_UNORM:
-		return 2;
+		case DXGI_FORMAT_R8G8_TYPELESS:
+		case DXGI_FORMAT_R8G8_UNORM:
+		case DXGI_FORMAT_R8G8_UINT:
+		case DXGI_FORMAT_R8G8_SNORM:
+		case DXGI_FORMAT_R8G8_SINT:
+		case DXGI_FORMAT_R16_TYPELESS:
+		case DXGI_FORMAT_R16_FLOAT:
+		case DXGI_FORMAT_D16_UNORM:
+		case DXGI_FORMAT_R16_UNORM:
+		case DXGI_FORMAT_R16_UINT:
+		case DXGI_FORMAT_R16_SNORM:
+		case DXGI_FORMAT_R16_SINT:
+		case DXGI_FORMAT_B5G6R5_UNORM:
+		case DXGI_FORMAT_B5G5R5A1_UNORM:
+		case DXGI_FORMAT_A8P8:
+		case DXGI_FORMAT_B4G4R4A4_UNORM:
+			return 2;
 
-	case DXGI_FORMAT_BC2_TYPELESS:
-	case DXGI_FORMAT_BC2_UNORM:
-	case DXGI_FORMAT_BC2_UNORM_SRGB:
-	case DXGI_FORMAT_BC3_TYPELESS:
-	case DXGI_FORMAT_BC3_UNORM:
-	case DXGI_FORMAT_BC3_UNORM_SRGB:
-	case DXGI_FORMAT_BC5_TYPELESS:
-	case DXGI_FORMAT_BC5_UNORM:
-	case DXGI_FORMAT_BC5_SNORM:
-	case DXGI_FORMAT_BC6H_TYPELESS:
-	case DXGI_FORMAT_BC6H_UF16:
-	case DXGI_FORMAT_BC6H_SF16:
-	case DXGI_FORMAT_BC7_TYPELESS:
-	case DXGI_FORMAT_BC7_UNORM:
-	case DXGI_FORMAT_BC7_UNORM_SRGB:
-		return 1;
+		case DXGI_FORMAT_BC2_TYPELESS:
+		case DXGI_FORMAT_BC2_UNORM:
+		case DXGI_FORMAT_BC2_UNORM_SRGB:
+		case DXGI_FORMAT_BC3_TYPELESS:
+		case DXGI_FORMAT_BC3_UNORM:
+		case DXGI_FORMAT_BC3_UNORM_SRGB:
+		case DXGI_FORMAT_BC5_TYPELESS:
+		case DXGI_FORMAT_BC5_UNORM:
+		case DXGI_FORMAT_BC5_SNORM:
+		case DXGI_FORMAT_BC6H_TYPELESS:
+		case DXGI_FORMAT_BC6H_UF16:
+		case DXGI_FORMAT_BC6H_SF16:
+		case DXGI_FORMAT_BC7_TYPELESS:
+		case DXGI_FORMAT_BC7_UNORM:
+		case DXGI_FORMAT_BC7_UNORM_SRGB:
+			return 1;
 
-	default:
-		return 0;
+		default:
+			return 0;
 	}
 }
 
@@ -398,8 +408,7 @@ void Gpu_Device::create_texture_3d(Texture3D_Desc *texture_desc, Texture3D *text
 		subresource_desc.SysMemSlicePitch = get_dxgi_format_size(texture_desc->format) * texture_desc->width * texture_desc->height;
 
 		HR(dx11_device->CreateTexture3D(&texture_3d_desc, &subresource_desc, texture->resource.ReleaseAndGetAddressOf()));
-	}
-	else {
+	} else {
 		HR(dx11_device->CreateTexture3D(&texture_3d_desc, NULL, texture->resource.ReleaseAndGetAddressOf()));
 	}
 }
@@ -410,10 +419,10 @@ void Gpu_Device::create_rasterizer_state(Rasterizer_Desc *rasterizer_desc, Raste
 }
 
 void Gpu_Device::create_blend_state(Blend_State_Desc *blending_desc, Blend_State *blend_state)
-{	
+{
 	assert(blending_desc);
 	assert(blend_state);
-	
+
 	D3D11_BLEND_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.AlphaToCoverageEnable = false;
@@ -445,7 +454,7 @@ void Gpu_Device::create_depth_stencil_state(Depth_Stencil_State_Desc *depth_sten
 		desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	}
 	desc.DepthFunc = to_dx11_comparison_func(depth_stencil_desc->depth_compare_func);
-	
+
 	desc.StencilEnable = true;
 	desc.StencilReadMask = depth_stencil_desc->stencil_read_mask;
 	desc.StencilWriteMask = depth_stencil_desc->stencil_write_mack;
@@ -513,7 +522,7 @@ void Gpu_Device::create_shader_resource_view(Texture2D_Desc *texture_desc, Textu
 			shader_resource_view_desc.Texture2D.MostDetailedMip = 0;
 		}
 	}
-	
+
 	HR(dx11_device->CreateShaderResourceView(texture->resource.Get(), &shader_resource_view_desc, texture->srv.ReleaseAndGetAddressOf()));
 }
 
@@ -546,7 +555,7 @@ void Gpu_Device::create_render_target_view(Texture2D *texture)
 void Gpu_Device::create_unordered_access_view(Texture2D_Desc *texture_desc, Texture2D *texture)
 {
 	assert(!is_multisampled_texture(texture_desc));
-	
+
 	D3D11_UNORDERED_ACCESS_VIEW_DESC unordered_access_view_desc;
 	ZeroMemory(&unordered_access_view_desc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
 	unordered_access_view_desc.Format = texture_desc->format;
@@ -606,11 +615,11 @@ void Render_Pipeline::apply(Render_Pipeline_State *render_pipeline_state)
 	set_depth_stencil_state(render_pipeline_state->depth_stencil_state);
 
 	set_rasterizer_state(render_pipeline_state->rasterizer_state);
-	
+
 	set_viewport(&render_pipeline_state->viewport);
-	
+
 	set_pixel_shader(render_pipeline_state->shader);
-	
+
 	set_render_target(render_pipeline_state->render_target_view, render_pipeline_state->depth_stencil_view);
 }
 
@@ -759,7 +768,7 @@ void Render_Pipeline::set_pixel_shader_resource(u32 shader_resource_register, co
 	dx11_context->PSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
 
-void Render_Pipeline::reset_pixel_shader_resource(u32 shader_resource_register) 
+void Render_Pipeline::reset_pixel_shader_resource(u32 shader_resource_register)
 {
 	Shader_Resource_View temp = nullptr;
 	dx11_context->PSSetShaderResources(shader_resource_register, 1, temp.GetAddressOf());
@@ -1003,7 +1012,6 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 #if defined(DEBUG) || defined(_DEBUG)  
 	create_device_flag |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-
 	D3D_FEATURE_LEVEL feature_level;
 
 	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, create_device_flag, 0, 0, D3D11_SDK_VERSION, &gpu_device->dx11_device, &feature_level, &render_pipeline->dx11_context);
@@ -1014,6 +1022,9 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 	if (feature_level < D3D_FEATURE_LEVEL_11_0) {
 		error("Direct3D Feature Level 11 unsupported.");
 	}
+
+	current_gpu_device = gpu_device;
+	current_render_pipeline = render_pipeline;
 }
 
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info)
@@ -1107,11 +1118,11 @@ void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multi
 	}
 }
 
-void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
+void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Window *window)
 {
 	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
-	swap_chain_desc.BufferDesc.Width = win32_info->window_width;
-	swap_chain_desc.BufferDesc.Height = win32_info->window_height;
+	swap_chain_desc.BufferDesc.Width = window->width;
+	swap_chain_desc.BufferDesc.Height = window->height;
 	swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 	swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
 	swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -1120,7 +1131,7 @@ void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
 	swap_chain_desc.SampleDesc = { 1, 0 };
 	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_UNORDERED_ACCESS;
 	swap_chain_desc.BufferCount = 1;
-	swap_chain_desc.OutputWindow = win32_info->window;
+	swap_chain_desc.OutputWindow = window->handle;
 	swap_chain_desc.Windowed = true;
 	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 	swap_chain_desc.Flags = 0;
@@ -1129,9 +1140,9 @@ void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Info *win32_info)
 	ComPtr<IDXGIAdapter> dxgi_adapter;
 	ComPtr<IDXGIFactory> dxgi_factory;
 
-	HR(gpu_device->dx11_device->QueryInterface(__uuidof(IDXGIDevice), (void**)dxgi_device.ReleaseAndGetAddressOf()));
-	HR(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)dxgi_adapter.ReleaseAndGetAddressOf()));
-	HR(dxgi_adapter->GetParent(__uuidof(IDXGIFactory), (void**)dxgi_factory.ReleaseAndGetAddressOf()));
+	HR(gpu_device->dx11_device->QueryInterface(__uuidof(IDXGIDevice), (void **)dxgi_device.ReleaseAndGetAddressOf()));
+	HR(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void **)dxgi_adapter.ReleaseAndGetAddressOf()));
+	HR(dxgi_adapter->GetParent(__uuidof(IDXGIFactory), (void **)dxgi_factory.ReleaseAndGetAddressOf()));
 
 	HR(dxgi_factory->CreateSwapChain(gpu_device->dx11_device.Get(), &swap_chain_desc, dxgi_swap_chain.ReleaseAndGetAddressOf()));
 }
@@ -1143,7 +1154,7 @@ void Swap_Chain::resize(u32 window_width, u32 window_height)
 
 void Swap_Chain::get_back_buffer_as_texture(Texture2D *texture)
 {
-	HR(dxgi_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(texture->resource.GetAddressOf())));
+	HR(dxgi_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void **>(texture->resource.GetAddressOf())));
 }
 
 Gpu_Resource_Views::Gpu_Resource_Views()

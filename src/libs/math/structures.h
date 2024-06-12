@@ -6,7 +6,7 @@
 
 #include "vector.h"
 #include "functions.h"
-#include "../../win32/win_types.h"
+#include "../number_types.h"
 
 struct Ray {
 	Ray() {}
@@ -59,7 +59,7 @@ struct Pointv2 {
 	T z;
 
 	T &operator[](int index);
-	
+
 	void move(const T &delta_x, const T &delta_y);
 };
 
@@ -93,7 +93,7 @@ inline T &Pointv2<T>::operator[](int index)
 }
 
 template<typename T>
-inline void Pointv2<T>::move(const T & delta_x, const T & delta_y)
+inline void Pointv2<T>::move(const T &delta_x, const T &delta_y)
 {
 	x += delta_x;
 	y += delta_y;
@@ -130,7 +130,7 @@ Triangle<T>::Triangle()
 }
 
 template <typename T>
-Triangle<T>::Triangle(Pointv2<T> a, Pointv2<T> b, Pointv2<T> c) : a(a), b(b), c(c) 
+Triangle<T>::Triangle(Pointv2<T> a, Pointv2<T> b, Pointv2<T> c) : a(a), b(b), c(c)
 {
 }
 
@@ -192,7 +192,7 @@ inline Rect<T>::Rect(T _x, T _y, T _width, T _height)
 }
 
 template<typename T>
-inline Rect<T>::Rect(Size<T>& size)
+inline Rect<T>::Rect(Size<T> &size)
 {
 	memset((void *)this, 0, sizeof(Rect<T>));
 
@@ -275,7 +275,7 @@ struct Pair {
 	Pair();
 	~Pair();
 	Pair(const T &first, const U &second);
-	
+
 	T first;
 	U second;
 };
