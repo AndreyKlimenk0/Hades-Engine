@@ -1,8 +1,8 @@
 #include "world.h"
-#include "../libs/color.h"
-#include "../libs/geometry_helper.h"
-#include "../sys/engine.h"
 
+#include "../sys/sys.h"
+#include "../libs/color.h"
+#include "../libs/math/matrix.h"
 
 inline void init_entity(Entity *entity, Entity_Type type, const Vector3 &position)
 {
@@ -75,10 +75,10 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 {
 	Geometry_Entity geometry_entity;
 	init_entity(&geometry_entity, ENTITY_TYPE_GEOMETRY, position);
-	
+
 	geometry_entity.geometry_type = geometry_type;
 	geometry_entity.idx = geometry_entities.count;
-	
+
 	if (geometry_type == GEOMETRY_TYPE_BOX) {
 		geometry_entity.box = *((Box *)data);
 	} else if (geometry_type == GEOMETRY_TYPE_GRID) {
@@ -143,41 +143,6 @@ Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &di
 
 void Game_World::init()
 {
-}
-
-void Game_World::init_from_file()
-{
-	String full_path_to_map_file;
-	build_full_path_to_map_file("temp_map.bmap", full_path_to_map_file);
-
-	File file;
-	if (!file.open(full_path_to_map_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
-		print("Game_World::init_from_file: Failed to init game world from temp_map.bmap file.");
-		return;
-	}
-
-	file.read(&light_hash);
-	file.read(&entities);
-	file.read(&lights);
-	file.read(&geometry_entities);
-	file.read(&cameras);
-}
-
-void Game_World::save_to_file()
-{
-	String full_path_to_map_file;
-	build_full_path_to_map_file("temp_map.bmap", full_path_to_map_file);
-
-	File file;
-	if (!file.open(full_path_to_map_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
-		print("Game_World::save_to_file: Failed to save game world to temp_map.bmap file.");
-		return;
-	}
-	file.write(&light_hash);
-	file.write(&entities);
-	file.write(&lights);
-	file.write(&geometry_entities);
-	file.write(&cameras);
 }
 
 template <typename T>
@@ -273,7 +238,8 @@ void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
 
 	For((*entity_commands), entity_command) {
 		switch (entity_command->type) {
-			case ENTITY_COMMAND_MOVE: {
+			case ENTITY_COMMAND_MOVE:
+			{
 				Entity_Command_Move *move_command = static_cast<Entity_Command_Move *>(entity_command);
 				switch (move_command->move_direction) {
 					case MOVE_DIRECTION_FORWARD: {

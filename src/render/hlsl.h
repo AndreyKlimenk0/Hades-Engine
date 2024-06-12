@@ -1,9 +1,10 @@
 #ifndef HADES_ENGINE_HLSL_H
 #define HADES_ENGINE_HLSL_H
 
-#include "../win32/win_types.h"
+
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
+#include "../libs/number_types.h"
 
 typedef float   Pad1;
 typedef Vector2 Pad2;

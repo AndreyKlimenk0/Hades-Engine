@@ -2,9 +2,11 @@
 #define MESH_LOADER_H
 
 #include "str.h"
-#include "ds/array.h"
+#include "../render/mesh.h"
 #include "math/vector.h"
-#include "../render/model.h"
+#include "structures/array.h"
+#include "structures/hash_table.h"
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 
@@ -33,3 +35,4 @@ struct Mesh_Loader {
 };
 
 #endif
+

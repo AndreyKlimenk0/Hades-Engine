@@ -3,8 +3,8 @@
 
 #include "../libs/str.h"
 #include "../libs/color.h"
-#include "../libs/ds/array.h"
-#include "../win32/win_types.h"
+#include "../libs/number_types.h"
+#include "../libs/structures/array.h"
 
 struct Engine;
 struct Texture2D;
@@ -130,7 +130,8 @@ struct Gui_Window_Theme {
 	Color scroll_color = Color(87, 92, 97);
 };
 
-namespace gui {
+namespace gui
+{
 	void init_gui(Engine *engine, const char *font_name, u32 font_size);
 	void handle_events();
 	void shutdown();
@@ -153,18 +154,18 @@ namespace gui {
 	void set_theme(Gui_Text_Button_Theme *gui_window_theme);
 	void set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme);
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
-	
+
 	void reset_tab_theme();
 	void reset_list_theme();
 	void reset_window_theme();
 	void reset_button_theme();
 	void reset_edit_field_theme();
-	
+
 	void set_next_window_size(s32 width, s32 height);
 	void set_next_window_pos(s32 x, s32 y);
 	void same_line();
 	void next_line();
-	
+
 	void make_tab_active(Gui_ID tab_gui_id);
 	void make_next_list_active();
 	void make_next_ui_element_active();
@@ -178,7 +179,7 @@ namespace gui {
 	void text(const char *some_text);
 
 	void list_box(Array<String> *array, u32 *item_index);
-	
+
 	void image(Texture2D *texture, s32 width = -1, s32 height = -1);
 
 	void edit_field(const char *name, int *value);
@@ -188,14 +189,15 @@ namespace gui {
 
 	bool begin_list(const char *name, Gui_List_Column filters[], u32 filter_count);
 	void end_list();
-	
+
 	bool begin_line(Gui_List_Line_State *list_line);
 	void end_line();
 
 	bool selected(Gui_List_Line_State list_line_state);
 	bool left_mouse_click(Gui_List_Line_State list_line_state);
 	bool right_mouse_click(Gui_List_Line_State list_line_state);
-	
+	bool enter_key_click(Gui_List_Line_State list_line_state);
+
 	bool begin_column(const char *column_name);
 	void end_column();
 

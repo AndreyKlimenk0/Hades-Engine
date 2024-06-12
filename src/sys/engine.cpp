@@ -1,67 +1,87 @@
-#include "../libs/str.h"
-#include "map.h"
+#include <assert.h>
+
+#include "../win32/win_time.h"
 #include "engine.h"
-#include "sys_local.h"
 #include "commands.h"
 #include "../gui/gui.h"
-#include "../win32/test.h"
-#include "../win32/win_time.h"
+#include "../sys/level.h"
+#include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/os/event.h"
-#include "../libs/mesh_loader.h"
-#include "../libs/os/path.h"
 
-//@Note: Probably it is temporary decision
-#include "../libs/png_image.h"
 #include "../gui/test_gui.h"
 
 #define DRAW_TEST_GUI 0
 
-static const u32 FONT_SIZE = 11;
 static Engine *engine = NULL;
 
-void Engine::init(Win32_Info *_win32_info)
+static Font *performance_font = NULL;
+static Render_Primitive_List render_list;
+
+static void init_performance_displaying()
+{
+	performance_font = engine->font_manager.get_font("consola", 14);
+	if (!performance_font) {
+		assert(false);
+	}
+	Render_Font *render_font = engine->render_sys.render_2d.get_render_font(performance_font);
+	render_list = Render_Primitive_List(&engine->render_sys.render_2d, performance_font, render_font);
+}
+
+static void display_performance(s64 fps, s64 frame_time)
+{
+	char *test = format("Fps", fps);
+	char *test2 = format("Frame time {} ms", frame_time);
+	u32 text_width = performance_font->get_text_width(test2);
+
+	s32 x = Render_System::screen_width - text_width - 10;
+	render_list.add_text(x, 5, test);
+	render_list.add_text(x, 20, test2);
+
+	free_string(test);
+	free_string(test2);
+
+	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
+}
+
+void Engine::init(Win32_Window *window)
 {
 	engine = this;
 	
-	win32_info = *_win32_info;
 	init_os_path();
-
 	init_commands();
 
 	font_manager.init();
-
-	render_sys.init(this);
+	render_sys.init(window);
 	shader_manager.init(&render_sys.gpu_device);
-	render_sys.render_2d.init(this);
-	//@Note: It will be nice to get rid of input layouts in the future.
-	render_sys.init_shader_input_layout(&shader_manager);
-	
-	
-	gui::init_gui(this, "FiraCode-Regular", 12);
-	//gui::init_gui(this, "consola", FONT_SIZE);
-	
-	editor.init(this);
+	render_sys.render_2d.init(&render_sys, &shader_manager);
 
-	performance_displayer.init(this);
+	// @Note: It will be nice to get rid of input layouts in the future.
+	render_sys.init_shader_input_layout(&shader_manager);
+
+	gui::init_gui(this, "FiraCode-Regular", 12);
+	////gui::init_gui(this, "consola", FONT_SIZE);
+
+	editor.init(this);
 
 	game_world.init();
 	render_world.init(this);
 
 	current_map = "unnamed_map.hmap";
-	init_game_and_render_world_from_map("unnamed_map.hmap", &game_world, &render_world);
-	
+	init_game_and_render_world_from_level("unnamed_map.hmap", &game_world, &render_world);
+
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
+	init_performance_displaying();
+	
 	engine->is_initialized = true;
-}
-
-void Engine::init_from_map()
-{
 }
 
 void Engine::frame()
 {
+	static s64 fps = 60;
+	static s64 frame_time = 1000;
+
 	s64 start_time = milliseconds_counter();
 	s64 ticks_counter = cpu_ticks_counter();
 
@@ -73,7 +93,7 @@ void Engine::frame()
 	editor.handle_events();
 
 	file_tracking_sys.update();
-	
+
 	editor.update();
 
 	render_world.update();
@@ -87,7 +107,7 @@ void Engine::frame()
 #else
 	editor.render();
 #endif
-	performance_displayer.display();
+	display_performance(fps, frame_time);
 
 	render_sys.end_frame();
 
@@ -106,7 +126,7 @@ void Engine::shutdown()
 		String index = "";
 		while (true) {
 			String full_path_to_map_file;
-			build_full_path_to_map_file(map_name + index + map_extension, full_path_to_map_file);
+			build_full_path_to_level_file(map_name + index + map_extension, full_path_to_map_file);
 			if (file_exists(full_path_to_map_file.c_str())) {
 				char *str_counter = ::to_string(counter++);
 				index = str_counter;
@@ -117,26 +137,18 @@ void Engine::shutdown()
 		}
 		current_map = map_name + index + map_extension;
 	}
-	save_game_and_render_world_in_map(current_map, &game_world, &render_world);
+	save_game_and_render_world_in_level(current_map, &game_world, &render_world);
 	gui::shutdown();
 }
 
 bool Engine::initialized()
 {
-	if (engine) {
-		return engine->is_initialized;
-	}
-	return false;
+	return engine ? engine->is_initialized : false;
 }
 
 void Engine::resize_window(u32 window_width, u32 window_height)
 {
 	engine->render_sys.resize(window_width, window_height);
-}
-
-Win32_Info *Engine::get_win32_info()
-{
-	return &engine->win32_info;
 }
 
 Engine *Engine::get_instance()
@@ -163,32 +175,3 @@ Font_Manager *Engine::get_font_manager()
 {
 	return &engine->font_manager;
 }
-
-void Engine::Performance_Displayer::init(Engine *_engine)
-{
-	engine = _engine;
-	font = engine->font_manager.get_font("consola", 14);
-	if (!font) {
-		print("Engine::Performance_Displayer::init: Failed to get font.");
-		return;
-	}
-	Render_Font *render_font = engine->render_sys.render_2d.get_render_font(font);
-	render_list = Render_Primitive_List(&engine->render_sys.render_2d, font, render_font);
-}
-
-void Engine::Performance_Displayer::display()
-{
-	char *test = format("Fps", engine->fps);
-	char *test2 = format("Frame time {} ms", engine->frame_time);
-	u32 text_width = font->get_text_width(test2);
-
-	s32 x = engine->win32_info.window_width - text_width - 10;
-	render_list.add_text(x, 5, test);
-	render_list.add_text(x, 20, test2);
-	
-	free_string(test);
-	free_string(test2);
-
-	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
-}
-

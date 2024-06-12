@@ -2,14 +2,11 @@
 
 #include "hlsl.h"
 #include "font.h"
-#include "render_pass.h"
 #include "render_system.h"
 #include "render_helpers.h"
 
-#include "../gui/gui.h"
 #include "../sys/engine.h"
-#include "../sys/sys_local.h"
-#include "../win32/win_local.h"
+#include "../sys/sys.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/math/functions.h"
@@ -66,8 +63,7 @@ inline void pack_rects_in_rect(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
 	u32 large = 0;
 
 	Rect_u32 *rect = NULL;
-	For(rects, rect)
-	{
+	For(rects, rect) {
 
 		if ((rect->width + x_pos) > main_rect->width) {
 			y_pos += large;
@@ -194,10 +190,10 @@ void Render_Primitive_List::pop_clip_rect()
 
 void Render_Primitive_List::get_clip_rect(Rect_s32 *rect)
 {
-	*rect = clip_rects.get_last();
+	*rect = clip_rects.last();
 }
 
-void Render_Primitive_List::add_outlines(int x, int y, int width, int height, const Color & color, float outline_width, u32 rounding, u32 flags)
+void Render_Primitive_List::add_outlines(int x, int y, int width, int height, const Color &color, float outline_width, u32 rounding, u32 flags)
 {
 	String hash = String((int)width) + String((int)height) + String((int)outline_width) + String("outline");
 
@@ -231,7 +227,7 @@ void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text, Text_Alig
 void Render_Primitive_List::add_text(int x, int y, const char *text, Text_Alignment text_alignment)
 {
 	assert(text);
-	
+
 	u32 len = (u32)strlen(text);
 	if (len == 0) {
 		return;
@@ -277,7 +273,7 @@ void Render_Primitive_List::add_rect(Rect_s32 *rect, const Color &color, u32 rou
 	add_rect(_x, _y, _width, _height, color, rounding, flags);
 }
 
-void Render_Primitive_List::add_rect(s32 x, s32 y, s32 width, s32 height, const Color & color, u32 rounding, u32 flags)
+void Render_Primitive_List::add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding, u32 flags)
 {
 	float _x = static_cast<float>(x);
 	float _y = static_cast<float>(y);
@@ -320,7 +316,7 @@ void Render_Primitive_List::add_rect(float x, float y, float width, float height
 	render_2d->add_primitive(primitive);
 }
 
-void Render_Primitive_List::add_texture(Rect_s32 *rect, Texture2D *resource) 
+void Render_Primitive_List::add_texture(Rect_s32 *rect, Texture2D *resource)
 {
 	add_texture(rect->x, rect->y, rect->width, rect->height, resource);
 }
@@ -357,7 +353,8 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 	Point_s32 converted_point2;
 	from_win32_screen_space(window_width, window_height, second_point, &converted_point2);
 
-	Vector2 line_direction = normalize(&make_vector2(&converted_point2, &converted_point1));
+	Vector2 temp = make_vector2(&converted_point2, &converted_point1);
+	Vector2 line_direction = normalize(&temp);
 
 	float angle = get_angle(&line_direction, &Vector2::base_x);
 
@@ -422,19 +419,18 @@ Render_2D::~Render_2D()
 	}
 }
 
-void Render_2D::init(Engine *engine)
+void Render_2D::init(Render_System *render_sys, Shader_Manager *shader_manager)
 {
-	render_system = &engine->render_sys;
+	render_system = render_sys;
 	gpu_device = &render_system->gpu_device;
 	render_pipeline = &render_system->render_pipeline;
-	
-	Shader_Manager *shader_manager = &engine->shader_manager;
+
 	render_2d = GET_SHADER(shader_manager, render_2d);
 	if (!is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
 		print("Render_2D::init: Failed to initialize Render_2D. {} is not valid.", render_2d->file_name);
 		return;
 	}
-	
+
 	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
 
 	Texture2D_Desc texture_desc;
@@ -448,12 +444,12 @@ void Render_2D::init(Engine *engine)
 
 	Rasterizer_Desc rasterizer_desc;
 	rasterizer_desc.set_sciccor(true);
-	
+
 	gpu_device->create_rasterizer_state(&rasterizer_desc, &rasterizer_state);
 
 	Depth_Stencil_State_Desc depth_stencil_test_desc;
 	depth_stencil_test_desc.enable_depth_test = false;
-	
+
 	gpu_device->create_depth_stencil_state(&depth_stencil_test_desc, &depth_stencil_state);
 
 	Blend_State_Desc blending_test_desc;
@@ -477,7 +473,7 @@ void Render_2D::add_primitive(Primitive_2D *primitive)
 	primitive->index_offset = total_index_count;
 
 	total_vertex_count += primitive->vertices.count;
-	total_index_count +=  primitive->indices.count;
+	total_index_count += primitive->indices.count;
 
 	primitives.push(primitive);
 }
@@ -529,7 +525,7 @@ void Render_2D::render_frame()
 		vertex_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
 		vertex_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
 		vertex_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
-		
+
 		gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
 
 		Gpu_Buffer_Desc index_buffer_desc;
@@ -538,9 +534,9 @@ void Render_2D::render_frame()
 		index_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
 		index_buffer_desc.bind_flags = BIND_INDEX_BUFFER;
 		index_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
-		
+
 		gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
-		
+
 		Vertex_X2UV *vertices = (Vertex_X2UV *)render_pipeline->map(vertex_buffer);
 		u32 *indices = (u32 *)render_pipeline->map(index_buffer);
 
@@ -552,7 +548,7 @@ void Render_2D::render_frame()
 			vertices += primitive->vertices.count;
 			indices += primitive->indices.count;
 		}
-		
+
 		render_pipeline->unmap(vertex_buffer);
 		render_pipeline->unmap(index_buffer);
 	}
@@ -582,14 +578,14 @@ void Render_2D::render_frame()
 			render_pipeline->set_scissor(&render_primitive->clip_rect);
 
 			cb_render_info.position_orthographic_matrix = render_primitive->transform_matrix * render_system->view.orthogonal_matrix;
-			
+
 			cb_render_info.color = render_primitive->color.value;
-			
+
 			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
 			render_pipeline->set_vertex_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
 			render_pipeline->set_pixel_shader_resource(0, render_primitive->texture.srv);
-			
+
 			Primitive_2D *primitive = render_primitive->primitive;
 			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
 		}
@@ -610,14 +606,14 @@ void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, 
 	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 }
 
-void Render_System::init(Engine *engine)
+void Render_System::init(Win32_Window *window)
 {
-	Render_System::screen_width = engine->win32_info.window_width;
-	Render_System::screen_height = engine->win32_info.window_height;
+	Render_System::screen_width = window->width;
+	Render_System::screen_height = window->height;
 
 	//print("Render_System::init: Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
 	//print("Render_System::init: fov {} degrees.", 60);
-	
+
 	Multisample_Info multisample_info;
 	multisample_info.count = 4;
 	multisample_info.quality = 0;
@@ -629,7 +625,7 @@ void Render_System::init(Engine *engine)
 
 	render_pipeline_states.init(&gpu_device);
 
-	swap_chain.init(&gpu_device, &engine->win32_info);
+	swap_chain.init(&gpu_device, window);
 
 	init_render_targets(Render_System::screen_width, Render_System::screen_height);
 
@@ -646,12 +642,12 @@ void Render_System::init(Engine *engine)
 }
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
-{	
+{
 	swap_chain.get_back_buffer_as_texture(&back_buffer_texture);
-	
+
 	Texture2D_Desc back_buffer_texture_desc;
 	back_buffer_texture.get_desc(&back_buffer_texture_desc);
-	
+
 	gpu_device.create_render_target_view(&back_buffer_texture);
 	gpu_device.create_unordered_access_view(&back_buffer_texture_desc, &back_buffer_texture);
 
@@ -732,17 +728,17 @@ void Render_System::new_frame()
 
 	render_pipeline.clear_render_target_view(multisampling_back_buffer_texture.rtv, Color::LightSteelBlue);
 	render_pipeline.clear_depth_stencil_view(multisampling_depth_stencil_texture.dsv);
-	
+
 	render_pipeline.clear_depth_stencil_view(silhouette_depth_stencil_buffer.dsv);
 	render_pipeline.clear_render_target_view(silhouette_buffer.rtv, Color(0.0f, 0.0f, 0.0f, 0.0f));
 
-	render_2d.new_frame();
+	 render_2d.new_frame();
 }
 
 void Render_System::end_frame()
 {
 	render_2d.render_frame();
-	
+
 	render_pipeline.resolve_subresource(&back_buffer_texture, &multisampling_back_buffer_texture, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
@@ -812,7 +808,7 @@ void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_u
 
 	pack_rects_in_rect(&atlas_rect, rect_pointers);
 
-	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {		
+	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
 		Font_Char *font_char = font->get_font_char(c);
 		Rect_u32 rect = rects[c];
 

@@ -4,13 +4,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "../libs/ds/array.h"
+#include "../libs/geometry.h"
 #include "../libs/math/vector.h"
-#include "../libs/math/matrix.h"
-#include "../win32/win_types.h"
-#include "../libs/geometry_helper.h"
+#include "../libs/number_types.h"
+#include "../libs/structures/array.h"
 #include "../collision/collision.h"
-#include "../libs/os/file.h"
 
 
 enum Entity_Type : u32 {
@@ -38,11 +36,11 @@ struct Entity {
 	Entity() { type = ENTITY_TYPE_ENTITY; bounding_box_type = BOUNDING_BOX_TYPE_UNKNOWN; }
 	u32 idx;
 	Entity_Type type;
-	
+
 	Vector3 scaling;
 	Vector3 rotation;
 	Vector3 position;
-	
+
 	//@Note: Why is this here ?
 	Boudning_Box_Type bounding_box_type;
 	AABB AABB_box;
@@ -84,9 +82,9 @@ enum Light_Type : u32 {
 
 struct Light : Entity {
 	Light() { type = ENTITY_TYPE_LIGHT; }
-	
+
 	Light_Type light_type;
-	
+
 	float range;
 	float radius;
 
@@ -115,7 +113,7 @@ enum Move_Direction {
 };
 
 struct Entity_Command_Move : Entity_Command {
-	Entity_Command_Move() { type = ENTITY_COMMAND_MOVE;  }
+	Entity_Command_Move() { type = ENTITY_COMMAND_MOVE; }
 	Move_Direction move_direction;
 	float distance;
 };
@@ -130,7 +128,7 @@ struct Entity_Command_Rotate : Entity_Command {
 struct Camera : Entity {
 	Vector3 up;
 	Vector3 target;
-	
+
 	void handle_commands(Array<Entity_Command *> *entity_commands);
 };
 
@@ -144,8 +142,6 @@ struct Game_World {
 
 	void init();
 	void shutdown();
-	void init_from_file();
-	void save_to_file();
 
 	void delete_entity(Entity_Id entity_id);
 
@@ -162,7 +158,7 @@ struct Game_World {
 	Entity_Id make_camera(const Vector3 &position, const Vector3 &target);
 
 	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
-	
+
 	Entity_Id make_spot_light(const Vector3 &position, const Vector3 &diretion, const Vector3 &color, float radius);
 	Entity_Id make_point_light(const Vector3 &position, const Vector3 &color, float range);
 	Entity_Id make_direction_light(const Vector3 &direction, const Vector3 &color);

@@ -1,0 +1,50 @@
+#ifndef SYS_H
+#define SYS_H
+
+#include <windows.h>
+
+#include "../libs/str.h"
+#include "../win32/win_console.h"
+#include "../libs/number_types.h"
+
+void report_info(const char *info_message);
+void report_error(const char *error_message);
+char *get_error_message_from_error_code(DWORD hr);
+
+template <typename... Args>
+void print(Args... args)
+{
+	char *formatted_string = format(args...);
+	append_text_to_console_buffer(formatted_string);
+	if (formatted_string) { delete formatted_string; }
+}
+
+bool is_string_unique(const char *string);
+
+template <typename... Args>
+void loop_print(Args... args)
+{
+	char *formatted_string = format(args...);
+	if (is_string_unique(formatted_string)) {
+		append_text_to_console_buffer(formatted_string);
+	}
+	if (formatted_string) { delete formatted_string; }
+}
+
+template <typename... Args>
+void info(Args... args)
+{
+	char *formatted_string = format(args...);
+	report_info(formatted_string);
+	if (formatted_string) { delete formatted_string; }
+}
+
+template <typename... Args>
+void error(Args... args)
+{
+	char *formatted_string = format(args...);
+	report_error(formatted_string);
+	if (formatted_string) { delete formatted_string; }
+}
+
+#endif

@@ -1,8 +1,7 @@
 #include "os/path.h"
 #include "os/file.h"
 #include "mesh_loader.h"
-#include "../sys/sys_local.h"
-#include "ds/hash_table.h"
+#include "../sys/sys.h"
 
 #include <assimp/postprocess.h>
 #include <assimp/Logger.hpp>
@@ -10,7 +9,7 @@
 #include <assimp/DefaultLogger.hpp>
 
 struct Assimp_Logger : Assimp::LogStream {
-	void write(const char* message)
+	void write(const char *message)
 	{
 		::print(message);
 	}
@@ -21,7 +20,7 @@ Import_Mesh::Import_Mesh(const Import_Mesh &other)
 	*this = other;
 }
 
-Import_Mesh & Import_Mesh::operator=(const Import_Mesh &other)
+Import_Mesh &Import_Mesh::operator=(const Import_Mesh &other)
 {
 	if (this != &other) {
 		mesh_instances = other.mesh_instances;
@@ -49,7 +48,7 @@ inline void print_texture_info(aiMaterial *material, aiTextureType texture_type,
 	for (u32 i = 0; i < texture_count; i++) {
 		aiString path;
 		material->GetTexture(texture_type, i, &path);
-		
+
 		String texture_file_name;
 		extract_file_name(path.C_Str(), texture_file_name);
 		print("{}                File name: {}", spaces, texture_file_name);
@@ -186,7 +185,7 @@ void Mesh_Loader::process_nodes(aiNode *node, Array<Import_Mesh> &meshes, Hash_T
 	for (u32 i = 0; i < node->mNumMeshes; i++) {
 		u32 mesh_index = node->mMeshes[i];
 		if (scene->mMeshes[mesh_index]->mName.length > 0) {
-			
+
 			aiMesh *mesh = NULL;
 			if (!mesh_cache.get(mesh_index, &mesh)) {
 				mesh = scene->mMeshes[mesh_index];
@@ -202,7 +201,7 @@ void Mesh_Loader::process_nodes(aiNode *node, Array<Import_Mesh> &meshes, Hash_T
 				process_mesh(mesh, &temp->mesh);
 				if (scene->HasMaterials()) {
 					aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-					process_material(material, &meshes.get_last());
+					process_material(material, &meshes.last());
 				}
 			} else {
 
@@ -222,7 +221,7 @@ inline void get_texture_file_name(aiMaterial *material, aiTextureType texture_ty
 		extract_file_name(path_to_texture_file.C_Str(), texture_file_name);
 
 		if (texture_count > 1) {
-			
+
 		}
 	}
 }
@@ -231,7 +230,7 @@ void Mesh_Loader::process_material(aiMaterial *material, Import_Mesh *import_mes
 {
 	float shininess = 0.0f;
 	float shininess_strength = 1.0f;
-	
+
 	material->Get(AI_MATKEY_SHININESS, shininess);
 	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
 

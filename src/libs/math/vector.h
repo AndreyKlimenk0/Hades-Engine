@@ -228,7 +228,7 @@ inline Vector2 &Vector2::operator/=(const Vector2 &other)
 	return *this;
 }
 
-inline Vector2::operator float*()
+inline Vector2::operator float *()
 {
 	return &x;
 }
@@ -411,7 +411,7 @@ inline Vector3 &Vector3::operator/=(const Vector3 &other)
 	return *this;
 }
 
-inline Vector3::operator float*()
+inline Vector3::operator float *()
 {
 	return &x;
 }
@@ -611,7 +611,7 @@ inline Vector4 &Vector4::operator/=(const Vector4 &other)
 	return *this;
 }
 
-inline Vector4::operator float*()
+inline Vector4::operator float *()
 {
 	return &x;
 }

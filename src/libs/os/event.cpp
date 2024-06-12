@@ -5,7 +5,7 @@
 #include <windowsx.h>
 
 #include "event.h"
-#include "../../sys/sys_local.h"
+#include "../../sys/sys.h"
 
 static bool at_least_one_key_event_pushed = false;
 
@@ -32,7 +32,7 @@ inline void update_click_key_states(Event *event)
 inline void update_just_pressed_keys(Event *event)
 {
 	assert(event->type == EVENT_TYPE_KEY);
-	
+
 	if ((event->key_info.key_state == KEY_DOWN) && !just_pressed_keys[event->key_info.key]) {
 		just_pressed_keys[event->key_info.key] = true;
 	}
@@ -62,7 +62,7 @@ void push_event(Event_Type type, int first_value, int second_value)
 		print("push_event: Failed to convers a virtual key code to an engine key. An event will be skiped.");
 		return;
 	}
-	
+
 	Event event;
 	event.type = type;
 	switch (type) {
@@ -109,7 +109,7 @@ void run_event_loop()
 			update_click_key_states(&event);
 			update_just_pressed_keys(&event);
 			update_just_released_keys(&event);
-		
+
 		} else if (event.type == EVENT_TYPE_MOUSE) {
 			Mouse_State::last_x = Mouse_State::x;
 			Mouse_State::last_y = Mouse_State::y;
@@ -126,7 +126,7 @@ void clear_event_queue()
 	event_queue.clear();
 }
 
-Queue<Event>* get_event_queue()
+Queue<Event> *get_event_queue()
 {
 	return &event_queue;
 }

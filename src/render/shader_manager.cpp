@@ -5,19 +5,20 @@
 #include <wrl/client.h>
 
 #include "shader_manager.h"
+#include "../sys/sys.h"
+#include "../sys/utils.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
-#include "../sys/sys_local.h"
-#include "../render/render_api.h"
+//#include "../render/render_api.h"
 
 using Microsoft::WRL::ComPtr;
 
-const u32 COMPILE_AS_VERTEX_SHADER   = 0x1;
+const u32 COMPILE_AS_VERTEX_SHADER = 0x1;
 const u32 COMPILE_AS_GEOMETRY_SHADER = 0x2;
-const u32 COMPILE_AS_COMPUTE_SHADER  = 0x4;
-const u32 COMPILE_AS_HULL_SHADER     = 0x8;
-const u32 COMPILE_AS_DOMAIN_SHADER   = 0x10;
-const u32 COMPILE_AS_PIXEL_SHADER    = 0x20;
+const u32 COMPILE_AS_COMPUTE_SHADER = 0x4;
+const u32 COMPILE_AS_HULL_SHADER = 0x8;
+const u32 COMPILE_AS_DOMAIN_SHADER = 0x10;
+const u32 COMPILE_AS_PIXEL_SHADER = 0x20;
 
 struct Shader_Table_Entiry {
 	const char *name = NULL;
@@ -143,7 +144,7 @@ inline bool get_shader_type_from_file_name(const char *file_name, Shader_Type *s
 		return false;
 	}
 
-	String type = strings.get_last();
+	String type = strings.last();
 
 	if (type == "vs") {
 		*shader_type = VERTEX_SHADER;
@@ -175,7 +176,7 @@ inline void make_output_shader_file_name(const char *shader_base_file_name, Shad
 		case GEOMETRY_SHADER: {
 			compiled_shader_file_prefix = "_gs";
 			break;
-		} 
+		}
 		case COMPUTE_SHADER: {
 			compiled_shader_file_prefix = "_cs";
 			break;

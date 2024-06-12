@@ -2,24 +2,22 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "render_world.h"
-#include "../gui/gui.h"
+#include "../sys/sys.h"
 #include "../sys/engine.h"
-#include "../collision/collision.h"
-#include "../libs/mesh_loader.h"
-#include "../libs/math/functions.h"
-#include "../libs/math/structures.h"
 
-//@Note: Probably it is temporary decision
-#include "../libs/png_image.h"
+#include "render_world.h"
+#include "../libs/image/png.h"
+#include "../libs/os/path.h"
+#include "../libs/math/functions.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
-static Matrix4 get_world_matrix(Entity *entity) 
+static Matrix4 get_world_matrix(Entity *entity)
 {
 	if (entity->type == ENTITY_TYPE_CAMERA) {
 		Camera *camera = static_cast<Camera *>(entity);
-		return inverse(&make_look_at_matrix(camera->position, camera->target));
+		Matrix4 view_matrix = make_look_at_matrix(camera->position, camera->target);
+		return inverse(&view_matrix);
 	}
 	return make_scale_matrix(&entity->scaling) * rotate(&entity->rotation) * make_translation_matrix(&entity->position);
 }
@@ -112,7 +110,7 @@ void Shadow_Cascade_Ranges::add_range(u32 start, u32 end)
 	range.start = start;
 	range.end = end;
 	if (!ranges.is_empty()) {
-		range.previous_range_length = ranges.get_last().get_length();
+		range.previous_range_length = ranges.last().get_length();
 	}
 	ranges.push({ start, end });
 }
@@ -132,7 +130,7 @@ inline Texture2D create_color_texture(Gpu_Device *gpu_device, u32 texture_width,
 	gpu_device->create_texture_2d(&texture_desc, &texture);
 	gpu_device->create_shader_resource_view(&texture_desc, &texture);
 	fill_texture((void *)&color, &texture);
-	
+
 	return texture;
 }
 
@@ -140,10 +138,10 @@ template<typename T>
 void Mesh_Storate<T>::init(Gpu_Device *gpu_device)
 {
 	assert(gpu_device);
-	
+
 	u32 width = 200;
 	u32 height = 200;
-	
+
 	default_textures.normal = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 1.0f)));
 	default_textures.diffuse = textures.push(create_color_texture(gpu_device, width, height, DEFAULT_MESH_COLOR));
 	default_textures.specular = textures.push(create_color_texture(gpu_device, width, height, Color(0.2f, 0.2f, 2.0f)));
@@ -166,7 +164,7 @@ bool Mesh_Storate<T>::add_texture(const char *texture_name, Texture_Idx *texture
 {
 	assert(texture_name);
 	assert(texture_idx);
-	
+
 	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
 	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
 
@@ -255,15 +253,15 @@ bool Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *me
 }
 
 template<typename T>
-bool Mesh_Storate<T>::update_mesh(Mesh_Id mesh_id, Mesh<T>* mesh)
+bool Mesh_Storate<T>::update_mesh(Mesh_Id mesh_id, Mesh<T> *mesh)
 {
 	Mesh_Instance mesh_instance = mesh_instances[mesh_id];
 	if ((mesh->vertices.count == mesh_instance.vertex_count) && (mesh->indices.count == mesh_instance.index_count)) {
-		u32 vertex_offset = mesh_instance.vertex_offset > 0 ? mesh_instance.vertex_offset: 0;
-		u32 index_offset = mesh_instance.index_offset > 0 ? mesh_instance.index_offset: 0;
+		u32 vertex_offset = mesh_instance.vertex_offset > 0 ? mesh_instance.vertex_offset : 0;
+		u32 index_offset = mesh_instance.index_offset > 0 ? mesh_instance.index_offset : 0;
 		copy_array(&unified_vertices, &mesh->vertices, vertex_offset);
 		copy_array(&unified_indices, &mesh->indices, index_offset);
-		
+
 		vertex_struct_buffer.update(&unified_vertices);
 		index_struct_buffer.update(&unified_indices);
 		return true;
@@ -296,7 +294,7 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 }
 
 void Render_World::init(Engine *engine)
-{	
+{
 	//@Note: Why don't pass just the engine pointer ?
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
@@ -312,12 +310,12 @@ void Render_World::init(Engine *engine)
 
 	lights_struct_buffer.allocate<Hlsl_Light>(100);
 	world_matrices_struct_buffer.allocate<Matrix4>(100);
-	
+
 	Texture2D_Desc texture_desc;
 	texture_desc.width = 200;
 	texture_desc.height = 200;
 	texture_desc.mip_levels = 1;
-	
+
 	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
 	render_sys->gpu_device.create_shader_resource_view(&texture_desc, &default_texture);
 	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
@@ -329,7 +327,7 @@ void Render_World::init(Engine *engine)
 }
 
 void Render_World::init_shadow_rendering()
-{	
+{
 	Texture2D_Desc depth_stencil_desc;
 	depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
@@ -390,7 +388,7 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
 	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
 	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
-	
+
 	render_passes.outlining.setup_outlining(2, Color(245, 176, 66));
 	render_passes.outlining.setup_render_pipeline(shader_manager, &render_sys->silhouette_buffer, &render_sys->silhouette_depth_stencil_buffer, &render_sys->back_buffer_texture, &viewport);
 
@@ -415,7 +413,7 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 }
 
 void Render_World::update()
-{		
+{
 	update_render_entities();
 
 	if (light_hash != game_world->light_hash) {
@@ -441,17 +439,17 @@ void Render_World::update()
 void Render_World::update_render_entities()
 {
 	Render_Entity *render_entity = NULL;
-	For (game_render_entities, render_entity) {
+	For(game_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
 
-	For (line_render_entities, render_entity) {
+	For(line_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
 
-	For (vertex_render_entities, render_entity) {
+	For(vertex_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
@@ -487,23 +485,27 @@ void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id en
 	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
 
 	switch (rendering_type) {
-		case RENDERING_TYPE_FORWARD_RENDERING: {
+		case RENDERING_TYPE_FORWARD_RENDERING:
+		{
 			game_render_entities.push(render_entity);
 			break;
 		}
-		case RENDERING_TYPE_LINES_RENDERING: {
+		case RENDERING_TYPE_LINES_RENDERING:
+		{
 			assert(args);
 			line_render_entities.push(render_entity);
 			line_render_entity_colors.push(*((Color *)args));
 			break;
 		}
-		case RENDERING_TYPE_VERTICES_RENDERING: {
+		case RENDERING_TYPE_VERTICES_RENDERING:
+		{
 			assert(args);
 			vertex_render_entities.push(render_entity);
 			vertex_render_entity_colors.push(*((Color *)args));
 			break;
 		}
-		default: {
+		default:
+		{
 			print("Render_World::add_render_entity: Unable to add a render entity, unknown rendering type was passed.");
 			break;
 		}
@@ -533,15 +535,15 @@ bool Render_World::add_shadow(Light *light)
 	cascaded_shadows_info.shadow_map_end_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count + (shadow_cascade_ranges.count - 1);
 	cascaded_shadows_info_list.push(cascaded_shadows_info);
 	cascaded_shadows_info_sb.update(&cascaded_shadows_info_list);
-	
+
 	Cascaded_Shadows cascaded_shadows;
 	cascaded_shadows.light_direction = light->direction;
-	
+
 	for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
 		Cascaded_Shadow_Map cascaded_shadow_map;
 		cascaded_shadow_map.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
 		cascaded_shadow_map.init(render_sys->view.fov, render_sys->view.ratio, &shadow_cascade_ranges[i]);
-		
+
 		if (!get_shadow_atls_viewport(&cascaded_shadow_map.viewport)) {
 			assert(false);
 			return false;
@@ -560,7 +562,7 @@ void Render_World::update_shadows()
 
 		for (u32 j = 0; j < cascaded_shadows_list[i].cascaded_shadow_maps.count; j++) {
 			Cascaded_Shadow_Map *cascaded_shadow_map = &cascaded_shadows_list[i].cascaded_shadow_maps[j];
-			
+
 			Vector3 view_position = cascaded_shadow_map->view_position * inverse(&render_camera.debug_view_matrix);
 			Vector3 temp_view_position = view_position;
 
@@ -594,7 +596,7 @@ void Render_World::update_shadows()
 			//view_position.y = std::floor(view_position.y);
 			//view_position.z = std::floor(view_position.z);
 			//view_position = view_position * inverse_look_at;
-			
+
 
 			Vector3 view_direction = view_position + light_direction;
 			Matrix4 light_view_matrix = make_look_at_matrix(view_position, view_direction);
@@ -604,8 +606,8 @@ void Render_World::update_shadows()
 			//radius = std::floor(radius);
 			//radius *= r;
 
-			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius,  -5000.0f, 5000.0f);
-			
+			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius, -5000.0f, 5000.0f);
+
 			cascaded_shadow_map->view_projection_matrix = light_view_matrix * projection_matrix;
 
 			XMMATRIX shadowMatrix = XMLoadFloat4x4(&cascaded_shadow_map->view_projection_matrix);
@@ -671,7 +673,7 @@ bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
 {
 	static u32 x = 0;
 	static u32 y = 0;
-	
+
 	Point_u32 shadow_map_position;
 	shadow_map_position.x = CASCADE_SIZE + x;
 	shadow_map_position.y = CASCADE_SIZE + y;
@@ -702,7 +704,7 @@ void Render_World::render()
 
 	render_sys->render_pipeline.set_vertex_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
 	render_sys->render_pipeline.set_pixel_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
-	
+
 	Render_Pass *render_pass = NULL;
 	For(every_frame_render_passes, render_pass) {
 		render_pass->render(this, &render_sys->render_pipeline);

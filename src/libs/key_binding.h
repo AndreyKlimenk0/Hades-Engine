@@ -3,7 +3,7 @@
 
 #include "str.h"
 #include "os/input.h"
-#include "ds/array.h"
+#include "structures/array.h"
 
 
 struct Key_Command_Binding {

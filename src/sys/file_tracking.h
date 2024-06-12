@@ -3,10 +3,10 @@
 
 #include <windows.h>
 
-#include "sys_local.h"
-#include "../win32/win_types.h"
+#include "../sys/utils.h"
 #include "../libs/str.h"
-#include "../libs/ds/array.h"
+#include "../libs/number_types.h"
+#include "../libs/structures/array.h"
 
 struct File_Tracking_System {
 	File_Tracking_System();
@@ -24,7 +24,7 @@ struct File_Tracking_System {
 		void free();
 	};
 	Array<Directory *> directories;
-	
+
 	void add_directory(const char *engine_relative_dir_path, Callback *callback);
 	void update();
 	void shutdown();

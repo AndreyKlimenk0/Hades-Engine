@@ -2,13 +2,10 @@
 #include <dxgi.h>
 
 #include "render_helpers.h"
+#include "../sys/sys.h"
 #include "../sys/engine.h"
-#include "../sys/sys_local.h"
-#include "../win32/win_types.h"
-
 
 const u32 MAX_U24 = 16777215;
-
 
 bool is_valid_texture(Texture2D_Desc *texture_desc, String *error_message)
 {
@@ -141,74 +138,3 @@ float R24U8::get_unorm_value()
 	assert(MAX_U24 >= numerator);
 	return (float)numerator / (float)MAX_U24;
 }
-
-u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
-{
-	u32 *new_data = new u32[width * height];
-
-	u8* pixels = (u8*)new_data;
-	for (u32 row = 0; row < height; row++) {
-		u32 row_start = row * (width * sizeof(u32));
-		u32 row_2 = row * (width * sizeof(u8));
-
-		for (u32 col = 0; col < width; col++) {
-			u32 col_start = col * 4;
-			if (data[row_2 + col] > 0) {
-				pixels[row_start + col_start + 0] = 255;
-				pixels[row_start + col_start + 1] = 255;
-				pixels[row_start + col_start + 2] = 255;
-				pixels[row_start + col_start + 3] = data[row_2 + col];
-			} else {
-				pixels[row_start + col_start + 0] = 255;
-				pixels[row_start + col_start + 1] = 0;
-				pixels[row_start + col_start + 2] = 0;
-				pixels[row_start + col_start + 3] = 0;
-			}
-		}
-	}
-	return new_data;
-}
-//
-//template<typename T>
-//void Gpu_Struct_Buffer::allocate(u32 elements_count)
-//{
-//	Gpu_Buffer_Desc desc;
-//	desc.usage = RESOURCE_USAGE_DYNAMIC;
-//	desc.data = NULL;
-//	desc.data_size = sizeof(T);
-//	desc.struct_size = sizeof(T);
-//	desc.data_count = elements_count;
-//	desc.bind_flags = BIND_SHADER_RESOURCE;
-//	desc.cpu_access = CPU_ACCESS_WRITE;
-//	desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
-//
-//	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
-//	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
-//	gpu_device->create_shader_resource_view(&gpu_buffer);
-//}
-//
-//template<typename T>
-//void Gpu_Struct_Buffer::update(Array<T> *array)
-//{
-//	if (array->count == 0) {
-//		return;
-//	}
-//
-//	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
-//
-//	if (array->count > gpu_buffer.data_count) {
-//		free();
-//		allocate<T>(array->count);
-//	}
-//
-//	T *buffer = (T *)render_pipeline->map(gpu_buffer);
-//	memcpy((void *)buffer, (void *)array->items, sizeof(T) * array->count);
-//	render_pipeline->unmap(gpu_buffer);
-//}
-//
-//void Gpu_Struct_Buffer::free()
-//{
-//	if (!gpu_buffer.is_empty()) {
-//		gpu_buffer.free();
-//	}
-//}

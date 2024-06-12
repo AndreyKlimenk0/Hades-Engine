@@ -5,10 +5,11 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include "../sys/sys_local.h"
-#include "../win32/win_types.h"
+#include "../libs/str.h"
+#include "../libs/number_types.h"
 #include "../libs/math/structures.h"
-#include "../libs/ds/hash_table.h"
+#include "../libs/structures/array.h"
+#include "../libs/structures/hash_table.h"
 
 const u32 MAX_CHARACTERS = 128;
 const u32 CONTORL_CHARACTERS = 32;
@@ -17,14 +18,14 @@ struct Font_Char {
 	Font_Char() {}
 	Font_Char(const Font_Char &other);
 	~Font_Char();
-	
+
 	u8 character;
 	u32 *bitmap = NULL;
 	u32 advance;
 	Size_u32 bearing;
 	Size_u32 size;
 
-	
+
 	Font_Char &operator=(const Font_Char &other);
 	u32 get_index();
 };

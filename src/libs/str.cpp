@@ -7,8 +7,8 @@
 #include "str.h"
 #include "math/vector.h"
 #include "math/matrix.h"
-#include "../sys/sys_local.h"
-
+#include "../sys/sys.h"
+#include "../sys/utils.h"
 
 #define MAX_DIGITS_IN_INT 12
 #define MAX_DIGITS_IN_LONG_LONG 21
@@ -23,6 +23,12 @@
 	char *symbol = &char_array->get(char_array->count); \
 	memcpy(symbol, string, bytes_of(char, s_len));\
 	char_array->count += s_len; \
+}
+
+void free_string(const char *string)
+{
+	delete[] string;
+	string = NULL;
 }
 
 void format_(Array<char *> *array) {}
@@ -124,7 +130,7 @@ static void format_string(const char *format_string, Array<char> *formatting_str
 	}
 }
 
-char * __do_formatting(Array<char *> *strings)
+char *__do_formatting(Array<char *> *strings)
 {
 	Array<char>   formatting_string;
 	Array<char *> vars_buffer;
@@ -141,10 +147,9 @@ char * __do_formatting(Array<char *> *strings)
 			format_string(string, &formatting_string, &vars_buffer);
 			vars_buffer.clear();
 			formatting_string.push(' ');
-		}
-		else {
+		} else {
 			// Append string in buffer without needs for formatting
-			COPY_STRING_TO_CHAR_ARRAY(string, ((Array<char> *)&formatting_string));
+			COPY_STRING_TO_CHAR_ARRAY(string, ((Array<char> *) & formatting_string));
 			formatting_string.push(' ');
 		}
 	}
@@ -318,10 +323,10 @@ char *to_string(Vector4 *vector)
 char *to_string(Matrix4 *matrix)
 {
 	return format("Matrix4(\n\t{}, {}, {}, {},\n\t{}, {}, {}, {},\n\t{}, {}, {}, {}\n\t{}, {}, {}, {})",
-		matrix->_11, matrix->_12, matrix->_13, matrix->_14,
-		matrix->_21, matrix->_22, matrix->_23, matrix->_24,
-		matrix->_31, matrix->_32, matrix->_33, matrix->_34,
-		matrix->_41, matrix->_42, matrix->_43, matrix->_44);
+				  matrix->_11, matrix->_12, matrix->_13, matrix->_14,
+				  matrix->_21, matrix->_22, matrix->_23, matrix->_24,
+				  matrix->_31, matrix->_32, matrix->_33, matrix->_34,
+				  matrix->_41, matrix->_42, matrix->_43, matrix->_44);
 }
 
 char *to_string(Rect_u32 *rect)
@@ -334,7 +339,7 @@ char *to_string(Rect_s32 *rect)
 	return format("Rect_s32({}, {}, {}, {})", rect->x, rect->y, rect->width, rect->height);
 }
 
-char *to_string(Rect_f32 * rect)
+char *to_string(Rect_f32 *rect)
 {
 	return format("Rect_f32({}, {}, {}, {})", rect->x, rect->y, rect->width, rect->height);
 }
@@ -636,7 +641,7 @@ static s32 keep_char(s32 c)
 s32 String::find(const char *substring, u32 start_index, bool case_sensetive)
 {
 	assert(substring);
-	
+
 	s32 result = -1;
 	s32 substring_len = (s32)strlen(substring);
 	if ((substring_len <= 0) && (start_index <= len) && !is_empty()) {
@@ -658,7 +663,7 @@ s32 String::find(const char *substring, u32 start_index, bool case_sensetive)
 	return result;
 }
 
-void String::copy(const String & string, u32 start, u32 end)
+void String::copy(const String &string, u32 start, u32 end)
 {
 	u32 string_len = end - start;
 	if (string_len > 0) {
@@ -673,7 +678,7 @@ void String::copy(const String & string, u32 start, u32 end)
 	}
 }
 
-bool String::is_empty() 
+bool String::is_empty()
 {
 	if ((data == NULL) && (len == 0)) {
 		return true;
