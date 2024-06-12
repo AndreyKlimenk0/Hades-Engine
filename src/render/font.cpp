@@ -3,13 +3,38 @@
 #include <shlobj_core.h>
 
 #include "font.h"
-#include "render_helpers.h"
-#include "../sys/engine.h"
+#include "../sys/sys.h"
+#include "../sys/utils.h"
 #include "../libs/os/file.h"
-#include "../libs/math/functions.h"
-#include "../win32/win_types.h"
 
 static const char *DEFAULT_PATH_TO_FONT_DIR = "C:/Windows/Fonts/";
+
+inline u32 *r8_to_rgba32(u8 *data, u32 width, u32 height)
+{
+	u32 *new_data = new u32[width * height];
+
+	u8 *pixels = (u8 *)new_data;
+	for (u32 row = 0; row < height; row++) {
+		u32 row_start = row * (width * sizeof(u32));
+		u32 row_2 = row * (width * sizeof(u8));
+
+		for (u32 col = 0; col < width; col++) {
+			u32 col_start = col * 4;
+			if (data[row_2 + col] > 0) {
+				pixels[row_start + col_start + 0] = 255;
+				pixels[row_start + col_start + 1] = 255;
+				pixels[row_start + col_start + 2] = 255;
+				pixels[row_start + col_start + 3] = data[row_2 + col];
+			} else {
+				pixels[row_start + col_start + 0] = 255;
+				pixels[row_start + col_start + 1] = 0;
+				pixels[row_start + col_start + 2] = 0;
+				pixels[row_start + col_start + 3] = 0;
+			}
+		}
+	}
+	return new_data;
+}
 
 Font::Font()
 {
@@ -30,7 +55,7 @@ u32 Font::get_text_width(const char *text)
 Size_u32 Font::get_text_size(const char *text, Text_Alignment text_alignment)
 {
 	assert(text);
-	
+
 	u32 len = (u32)strlen(text);
 	u32 mines_one_len = len - 1;
 	Size_u32 text_size = { 0, 0 };
@@ -87,7 +112,7 @@ Font_Char &Font_Char::operator=(const Font_Char &other)
 		advance = other.advance;
 		size = other.size;
 		bearing = other.bearing;
-		
+
 		if (other.bitmap) {
 			DELETE_PTR(bitmap);
 			bitmap = new u32[size.width * size.height];
@@ -144,7 +169,6 @@ bool Font_Manager::load_font(const char *name, u32 font_size)
 	font.font_size = font_size;
 
 	for (u8 c = 0; c < MAX_CHARACTERS; c++) {
-
 		if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
 			print("Font::init: Failed to load Char [{}] index [{}]", (char)c, (int)c);
 			continue;
@@ -158,7 +182,7 @@ bool Font_Manager::load_font(const char *name, u32 font_size)
 
 		u32 *data = r8_to_rgba32((u8 *)face->glyph->bitmap.buffer, face->glyph->bitmap.width, face->glyph->bitmap.rows);
 		font_char.bitmap = data;
-		
+
 		font.characters[font_char.get_index()] = font_char;
 
 		font.max_symbol_height = math::max(font.max_symbol_height, font_char.size.height);
@@ -172,8 +196,7 @@ bool Font_Manager::load_font(const char *name, u32 font_size)
 	}
 	font_table.set(font_name, font);
 	free_string(font_name);
-	
-	Engine::get_render_system()->render_2d.get_render_font(&font);
+
 	return true;
 }
 

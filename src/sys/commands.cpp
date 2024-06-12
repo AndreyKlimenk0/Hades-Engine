@@ -2,12 +2,12 @@
 #include <string.h>
 
 #include "commands.h"
+#include "../game/world.h"
+#include "../sys/sys.h"
+#include "../sys/engine.h"
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/mesh_loader.h"
-#include "../sys/engine.h"
-#include "../sys/sys_local.h"
-#include "../game/world.h"
 #include "../render/render_world.h"
 
 static void load_meshes(Array<String> &mesh_names)
@@ -23,7 +23,7 @@ static void load_meshes(Array<String> &mesh_names)
 		Array<Import_Mesh> meshes;
 		if (mesh_loader.load(full_path_to_mesh, meshes, false, false)) {
 			render_world->triangle_meshes.loaded_meshes.push(mesh_names[i]);
-			
+
 			Import_Mesh *imported_mesh = NULL;
 			For(meshes, imported_mesh) {
 				Mesh_Id mesh_id;
@@ -46,11 +46,11 @@ static void load_meshes(Array<String> &mesh_names)
 
 static void create_level(Array<String> &command_args)
 {
-	if ((command_args.count == 1) && !command_args.get_first().is_empty()) {
+	//if ((command_args.count == 1) && !command_args.get_first().is_empty()) {
 
-	} else {
-		print("create_level: not valid args for the command");
-	}
+	//} else {
+	//	print("create_level: not valid args for the command");
+	//}
 }
 
 struct Command {
@@ -76,7 +76,7 @@ static void add_command(const char *command_name, void (*procedure)(Array<String
 void init_commands()
 {
 	add_command("load mesh", load_meshes);
-	add_command("create level", create_level);
+	//add_command("create level", create_level);
 	//add_command("load level", load_meshes);
 	//add_command("delete level", load_meshes);
 }

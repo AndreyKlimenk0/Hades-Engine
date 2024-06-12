@@ -5,8 +5,8 @@
 
 #include "render_api.h"
 #include "../libs/str.h"
-#include "../libs/ds/array.h"
-#include "../win32/win_types.h"
+#include "../libs/number_types.h"
+#include "../libs/structures/array.h"
 
 #define GET_SHADER(shader_manager, shader_name) ((Extend_Shader *)&shader_manager->shaders.shader_name)
 

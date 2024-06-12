@@ -1,19 +1,19 @@
 #include <assert.h>
 
 #include "editor.h"
+#include "../sys/sys.h"
 #include "../sys/engine.h"
-#include "../sys/sys_local.h"
 #include "../sys/commands.h"
 
 #include "../libs/str.h"
-#include "../libs/png_image.h"
+#include "../libs/geometry.h"
+#include "../libs/os/path.h"
+#include "../libs/os/file.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
-#include "../libs/os/path.h"
+#include "../libs/image/png.h"
 #include "../libs/math/vector.h"
-#include "../libs/math/vector.h"
-#include "../libs/mesh_loader.h"
-#include "../libs/geometry_helper.h"
+#include "../libs/math/3dmath.h"
 #include "../libs/math/functions.h"
 
 #include "../render/render_api.h"
@@ -88,7 +88,7 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 			}
 			*result = intersected_entities[most_near_entity_to_camera];
 		} else {
-			*result = intersected_entities.get_first();
+			*result = intersected_entities.first();
 		}
 		return true;
 	}
@@ -102,7 +102,7 @@ void Editor_Window::init(Engine *engine)
 	editor = static_cast<Editor *>(&engine->editor);
 	game_world = static_cast<Game_World *>(&engine->game_world);
 	render_world = static_cast<Render_World *>(&engine->render_world);
-	render_system = static_cast<Render_System *>(& engine->render_sys);
+	render_system = static_cast<Render_System *>(&engine->render_sys);
 }
 
 Make_Entity_Window::Make_Entity_Window()
@@ -120,7 +120,7 @@ Make_Entity_Window::~Make_Entity_Window()
 void Make_Entity_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
-	
+
 	set_normal_enum_formatting();
 	entity_type_helper = MAKE_ENUM_HELPER(Entity_Type, ENTITY_TYPE_UNKNOWN, ENTITY_TYPE_ENTITY, ENTITY_TYPE_LIGHT, ENTITY_TYPE_GEOMETRY, ENTITY_TYPE_CAMERA);
 	entity_type_helper->get_string_enums(&entity_types);
@@ -266,16 +266,16 @@ void Game_World_Window::draw()
 	if (gui::begin_child("World entities", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
 		buttons_theme.rect.width = gui::get_window_size().width;
 		gui::set_theme(&buttons_theme);
-		
+
 		draw_entity_list("Camera", game_world->cameras.count, ENTITY_TYPE_CAMERA);
 		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
 		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
-		
+
 		gui::reset_button_theme();
 		gui::end_child();
 	}
 	gui::reset_window_theme();
-	
+
 	gui::set_theme(&entity_info_window_theme);
 	gui::set_next_window_size(editor_window_size.width, entity_info_height);
 	if (gui::begin_child("Entity info", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
@@ -283,13 +283,13 @@ void Game_World_Window::draw()
 		if (entity) {
 			if (entity->type == ENTITY_TYPE_GEOMETRY) {
 				Geometry_Entity *geometry_entity = static_cast<Geometry_Entity *>(entity);
-				
+
 				Vector3 entity_position = geometry_entity->position;
 				gui::edit_field("Position", &entity_position);
 				if (entity_position != geometry_entity->position) {
 					game_world->place_entity(geometry_entity, entity_position);
 				}
-				
+
 				if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
 					gui::text("Geometry type: Box");
 					gui::edit_field("Width", &geometry_entity->box.width);
@@ -444,14 +444,14 @@ void Render_World_Window::draw()
 		}
 	}
 
-    Array<String> strings;
-    for (u32 i = 0; i < game_world->cameras.count; i++) {
- 		strings.push("Camera");
-    }
-    static u32 index = 0;
+	Array<String> strings;
+	for (u32 i = 0; i < game_world->cameras.count; i++) {
+		strings.push("Camera");
+	}
+	static u32 index = 0;
 	static u32 prev_index = 1;
 
-    gui::list_box(&strings, &index);
+	gui::list_box(&strings, &index);
 	bool was_update = false;
 	if (index != prev_index) {
 		Entity_Id camera_id = Entity_Id(ENTITY_TYPE_CAMERA, index);
@@ -548,7 +548,7 @@ void Editor::init(Engine *engine)
 		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
 		engine->render_world.set_camera_for_rendering(editor_camera_id);
 	} else {
-		editor_camera_id = get_entity_id(&game_world->cameras.get_first());
+		editor_camera_id = get_entity_id(&game_world->cameras.first());
 		engine->render_world.set_camera_for_rendering(editor_camera_id);
 	}
 
@@ -782,52 +782,6 @@ inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element
 	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
 }
 
-//struct Asset_Command : Command, Draw_Two_Column_List {
-//	String full_path_to_data_directory;
-//	String relative_path_to_data_directory;
-//	Array<String> asset_files;
-//};
-//
-//bool Asset_Command::init(const char *command_name, const char *data_directory_name)
-//{
-//	assert(command_name);
-//	assert(data_directory_name);
-//
-//	if (Command::init(command_name)) {
-//		relative_path_to_data_directory = "data/";
-//		relative_path_to_data_directory.append(data_directory_name);
-//		return build_full_path_to_data_directory(data_directory_name, full_path_to_data_directory) && directory_exists(full_path_to_data_directory);
-//	}
-//	return false;
-//}
-//
-//void Asset_Command::draw_info()
-//{
-//	list.clear();
-//	for (u32 i = 0; i < asset_files.count; i++) {
-//		list.push({ asset_files[i], relative_path_to_data_directory });
-//	}
-//	Draw_Two_Column_List::draw();
-//}
-//
-//void Asset_Command::proccess_input(const char * user_input)
-//{
-//	if ((u32)strlen(user_input) == 0) {
-//		return;
-//	}
-//	asset_files.clear();
-//
-//	Array<String> not_matched_files;
-//	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
-//
-//	for (u32 i = 0; i < not_matched_files.count; i++) {
-//		if (not_matched_files[i].find(user_input) != -1) {
-//			asset_files.push(not_matched_files[i]);
-//		}
-//	}
-//}
-
-
 Command_Window::Command_Window()
 {
 }
@@ -859,7 +813,7 @@ static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_Stat
 	if (gui::begin_list(list_name, columns, 2)) {
 		for (u32 i = 0; i < list.count; i++) {
 			if (gui::begin_line(&list_line_states[i])) {
-				if (gui::left_mouse_click(list_line_states[i])) {
+				if (gui::left_mouse_click(list_line_states[i]) || gui::enter_key_click(list_line_states[i])) {
 					line_index = i;
 				}
 				gui::begin_column("First column");
@@ -877,13 +831,6 @@ static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_Stat
 	}
 	return line_index;
 }
-
-struct Command_Window_Gui_Info {
-	Gui_List_Theme list_theme;
-	Array<Gui_List_Line_State> list_line_states;
-	void init();
-	void reset();
-};
 
 bool display_and_get_info_for_load_mesh_command(String *edit_field, Array<String> &command_args, void *context)
 {
@@ -909,12 +856,13 @@ bool display_and_get_info_for_load_mesh_command(String *edit_field, Array<String
 
 	Array<Pair<String, String>> mesh_path_list;
 	for (u32 i = 0; i < matched_files.count; i++) {
-		mesh_path_list.push({ matched_files[i], "data/models" } );
+		mesh_path_list.push({ matched_files[i], "data/models" });
 	}
 	Command_Window *command_window = (Command_Window *)context;
 
 	bool result = false;
 	gui::set_theme(&command_window->list_theme);
+	gui::make_next_list_active();
 	s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
 	if (line_index >= 0) {
 		command_args.push(mesh_path_list[line_index].first);
@@ -950,6 +898,10 @@ bool display_all_commands(String *edit_field, Array<String> &command_args, void 
 				command_window->current_displaying_command = &command_window->displaying_commands[i];
 				command_window->active_edit_field = true;
 				edit_field->free();
+
+				command_window->list_line_states.reserve(20);
+				memset((void *)command_window->list_line_states.items, 0, sizeof(u32) * 20);
+				command_window->list_line_states[0] = 0x1;
 				break;
 			}
 		}
@@ -965,14 +917,14 @@ void Command_Window::init(Engine *engine)
 	Editor_Window::init(engine);
 
 	displaying_command(MAIN_COMMAND_NAME, display_all_commands);
-	current_displaying_command = &displaying_commands.get_last();
+	current_displaying_command = &displaying_commands.last();
 
 	displaying_command("Load mesh", KEY_CTRL, KEY_L, display_and_get_info_for_load_mesh_command);
 	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
 	display.set_size(Render_System::screen_width, Render_System::screen_height);
-	
+
 	command_window_rect.set_size(600, 100);
 	command_window_rect_with_additional_info.set_size(600, 500);
 
@@ -996,9 +948,11 @@ void Command_Window::init(Engine *engine)
 	list_theme.line_color = Color(20);
 
 	list_line_states.reserve(20);
+	memset((void *)list_line_states.items, 0, sizeof(u32) * 20);
+	list_line_states[0] = 0x1;
 }
 
-void Command_Window::displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String>&command_args, void *context))
+void Command_Window::displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context))
 {
 	assert(command_name);
 
@@ -1010,7 +964,7 @@ void Command_Window::displaying_command(const char *command_name, bool(*display_
 	displaying_commands.push(command_displaying_info);
 }
 
-void Command_Window::displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String>&command_args, void *context))
+void Command_Window::displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context))
 {
 	assert(command_name);
 
@@ -1023,7 +977,7 @@ void Command_Window::displaying_command(const char *command_name, Key modified_k
 	command_displaying_info.display_info_and_get_command_args = display_info_and_get_command_args;
 
 	displaying_commands.push(command_displaying_info);
-	command_key_bindings.push({ &displaying_commands.get_last(), key_binding });
+	command_key_bindings.push({ &displaying_commands.last(), key_binding });
 
 	free_string(str_key_binding);
 }
@@ -1049,7 +1003,7 @@ void Command_Window::draw()
 
 	if (was_click(KEY_ESC)) {
 		if (current_displaying_command->command_name != MAIN_COMMAND_NAME) {
-			current_displaying_command = &displaying_commands.get_first();
+			current_displaying_command = &displaying_commands.first();
 		}
 	}
 	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
@@ -1058,10 +1012,10 @@ void Command_Window::draw()
 	gui::set_next_window_pos(command_window_rect.x, command_window_rect.y);
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 	gui::set_theme(&command_window_theme);
-	
+
 	IF_THEN(window_just_opened, gui::make_next_ui_element_active());
 	if (gui::begin_window("Command window", 0)) {
-		
+
 		gui::set_theme(&command_edit_field_theme);
 		IF_THEN(window_just_opened || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
 		gui::edit_field("Command field", &command_edit_field);

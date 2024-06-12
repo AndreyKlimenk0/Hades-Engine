@@ -1,30 +1,81 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "ds/array.h"
-#include "../win32/win_types.h"
-#include "../win32/win_local.h"
-#include "../libs/math/vector.h"
-#include "../libs/math/matrix.h"
-#include "../libs/math/structures.h"
+#include "math/vector.h"
+#include "math/matrix.h"
+#include "math/structures.h"
+#include "structures/array.h"
 
-struct Vector2;
-struct Vector3;
-struct Matrix4;
-struct String;
 typedef u32 String_Id;
 
+struct String {
+	String() {}
+	~String();
+
+	char *data = NULL;
+	u32 len = 0;
+
+	explicit String(char _char);
+	explicit String(int number);
+	explicit String(float number);
+	String(const char *string);
+	String(const String *other);
+	String(const String &other);
+	String(const char *string, u32 start, u32 end);
+	String(const String &string, u32 start, u32 end);
+
+	operator const char *();
+	operator const char *() const;
+
+	String &operator=(const char *string);
+	String &operator=(const String &other);
+
+	void free();
+	void print();
+	void to_lower();
+	void pop_char();
+	void insert(u32 index, char c);
+	void remove(u32 index);
+	void removee_all(char c);
+	void replace(char from, char on);
+	void append(char c);
+	void append(const char *string);
+	void append(const String &string);
+	void append(const String *string);
+	void allocate(u32 char_count);
+	void allocate_and_copy_string(const char *string);
+	void place_end_char();
+	void copy(const String &string, u32 start, u32 end);
+
+	bool is_empty();
+	s32 find(const char *substring, u32 start_index = 0, bool case_sensitive = true);
+
+	const char *c_str() { return data; }
+	String *copy();
+};
+
+inline String operator+(const String &first, const String &second);
+inline String operator+(const char *first, const String &second);
+inline String operator+(const String &first, const char *second);
+inline bool operator==(const String &first, const String &second);
+inline bool operator==(const char *first, const String &second);
+inline bool operator==(const String &first, const char *second);
+inline bool operator!=(const String &first, const String &second);
+inline bool operator!=(const char *first, const String &second);
+inline bool operator!=(const String &first, const char *second);
+inline bool operator>(const String &first, const String &second);
+inline bool operator<(const String &first, const String &second);
+inline bool operator>=(const String &first, const String &second);
+inline bool operator<=(const String &first, const String &second);
+
+void free_string(const char *string);
 void format_(Array<char *> *array);
 void split(const char *string, const char *characters, Array<char *> *array);
-bool split(String *string, const char *characters, Array<String> *array);
 void to_upper_first_letter(String *string);
-bool is_alphabet(const char *string);
 
-inline void free_string(const char *string)
-{
-	delete[] string;
-	string = NULL;
-}
+bool is_alphabet(const char *string);
+bool split(String *string, const char *characters, Array<String> *array);
+
 
 char *get_next_line(char **buffer);
 char *concatenate_c_str(const char *str1, const char *str2);
@@ -63,7 +114,7 @@ void format_(Array<char *> *array, First first, Args... args)
 	format_(array, args...);
 }
 
-char * __do_formatting(Array<char *> *strings);
+char *__do_formatting(Array<char *> *strings);
 
 template <typename... Args>
 char *format(Args... args)
@@ -73,60 +124,12 @@ char *format(Args... args)
 	return __do_formatting(&strings);
 }
 
-struct String {
-	String() {}
-	~String();
-
-	char *data = NULL;
-	u32 len = 0;
-
-	explicit String(char _char);
-	explicit String(int number);
-	explicit String(float number);
-	String(const char *string);
-	String(const String *other);
-	String(const String &other);
-	String(const char *string, u32 start, u32 end);
-	String(const String &string, u32 start, u32 end);
-
-	operator const char*();
-	operator const char*() const;
-
-	String &operator=(const char *string);
-	String &operator=(const String &other);
-
-	void free();
-	void print();
-	void to_lower();
-	void pop_char();
-	void insert(u32 index, char c);
-	void remove(u32 index);
-	void removee_all(char c);
-	void replace(char from, char on);
-	void append(char c);
-	void append(const char *string);
-	void append(const String &string);
-	void append(const String *string);
-	void allocate(u32 char_count);
-	void allocate_and_copy_string(const char *string);
-	void place_end_char();
-	void copy(const String &string, u32 start, u32 end);
-
-	bool is_empty();
-
-	s32 find(const char *substring, u32 start_index = 0, bool case_sensitive = true);
-
-	const char *c_str() { return data; }
-	
-	String *copy();
-};
-
-inline String::operator const char*()
+inline String::operator const char *()
 {
 	return data;
 }
 
-inline String::operator const char*() const
+inline String::operator const char *() const
 {
 	return data;
 }

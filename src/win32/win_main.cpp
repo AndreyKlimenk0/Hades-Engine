@@ -1,107 +1,31 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <windows.h>
 #include <windowsx.h>
 
-#include "win_time.h"
-#include "win_local.h"
-#include "win_types.h"
-
-#include "../libs/str.h"
-#include "../libs/os/input.h"
-#include "../libs/os/event.h"
-#include "../libs/os/file.h"
-#include "../libs/os/path.h"
-
-#include "../render/font.h"
-#include "../render/render_system.h"
-
-#include "../gui/gui.h"
-#include "../sys/engine.h"
-
 #include "test.h"
+#include "win_helpers.h"
+#include "win_console.h"
+#include "../sys/sys.h"
+#include "../sys/engine.h"
+#include "../libs/os/event.h"
 
-void set_cursor(Cursor_Type type)
+int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE prev_instance, PWSTR cmd_line, int cmd_show)
 {
-	HCURSOR cursor = LoadCursor(NULL, IDC_ARROW);
-	switch (type) {
-		case CURSOR_TYPE_ARROW: {
-			cursor = LoadCursor(NULL, IDC_ARROW);
-			break;
-		}
-		case CURSOR_TYPE_CROSS: {
-			cursor = LoadCursor(NULL, IDC_CROSS);
-			break;
-		}
-		case CURSOR_TYPE_RESIZE_LEFT_RIGHT: {
-			cursor = LoadCursor(NULL, IDC_SIZEWE);
-			break;
-		}
-		case CURSOR_TYPE_RESIZE_TOP_BUTTOM: {
-			cursor = LoadCursor(NULL, IDC_SIZENS);
-			break;
-		}
-		case CURSOR_TYPE_RESIZE_TOP_RIGHT: {
-			cursor = LoadCursor(NULL, IDC_SIZENESW);
-			break;
-		}
-		case CURSOR_TYPE_RESIZE_TOP_LEFT: {
-			cursor = LoadCursor(NULL, IDC_SIZENWSE);
-			break;
-		}
-		case CURSOR_TYPE_MOVE: {
-			cursor = LoadCursor(NULL, IDC_SIZEALL);
-			break;
-		}
-	}
-	SetCursor(cursor);
-}
-
-bool create_win32_window(Win32_Info *win32_state)
-{
-	const char CLASS_NAME[] = "Sample Window Class";
-
-	WNDCLASS wc = { };
-
-	wc.lpfnWndProc = Win32_Info::win32_procedure;
-	wc.hInstance = win32_state->hinstance;
-	wc.lpszClassName = CLASS_NAME;
-	wc.hCursor = LoadCursor(win32_state->hinstance, MAKEINTRESOURCE(32512));
-
-	RegisterClass(&wc);
-
-	win32_state->window = CreateWindowEx(0, CLASS_NAME,"Hades Engine", WS_OVERLAPPEDWINDOW, 10, 10, 1900, 980, NULL, NULL, win32_state->hinstance, (void *)win32_state);
-
-	if (!win32_state->window) {
-		return false;
-	}
-	
-	RECT rect;
-	GetWindowRect(win32_state->window, &rect);
-	win32_state->window_width = rect.right - rect.left;
-	win32_state->window_height = rect.bottom - rect.top;
-	return true;
-}
-
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line, int cmd_show)
-{
-	Win32_Info win32_info;
-	win32_info.hinstance = hInstance;
-
-	if (!create_console(&win32_info)) {
+	if (!create_console(hinstance)) {
 		info("Faield to create win32 console.");
 	}
-	
-	if (!create_win32_window(&win32_info)) {
+
+	Win32_Window window;
+	if (!create_win32_window(hinstance, &window)) {
 		error("Failed to create main win32 window.");
 	}
-	
-	ShowWindow(win32_info.window, cmd_show);
+
+	ShowWindow(window.handle, cmd_show);
 	set_cursor(CURSOR_TYPE_ARROW);
 
 	Engine engine;
-	engine.init(&win32_info);
+	engine.init(&window);
 
-	// Test
+	//Test
 	test();
 
 	while (1) {
@@ -112,21 +36,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev_instance, PWSTR cmd_line
 	return 0;
 }
 
-LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
-{	
-	Win32_Info *win32_info = NULL;
+LRESULT CALLBACK Win32_Window::procedure(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+{
+	Win32_Window *window = NULL;
 	if (message == WM_NCCREATE) {
-		CREATESTRUCT *cs = (CREATESTRUCT*)lparam;
-		win32_info = (Win32_Info *)cs->lpCreateParams;
+		CREATESTRUCT *cs = (CREATESTRUCT *)lparam;
+		window = (Win32_Window *)cs->lpCreateParams;
 
 		SetLastError(0);
-		if (SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win32_info) == 0) {
+		if (SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window) == 0) {
 			if (GetLastError() != 0) {
 				return FALSE;
 			}
 		}
 	} else {
-		win32_info = (Win32_Info *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+		window = (Win32_Window *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	}
 
 	switch (message) {
@@ -147,13 +71,13 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 			break;
 		}
 		case WM_SIZE: {
-			win32_info->window_width = LOWORD(lparam);
-			win32_info->window_height = HIWORD(lparam);
-			Engine::resize_window(win32_info->window_width, win32_info->window_height);
+			window->width = LOWORD(lparam);
+			window->height = HIWORD(lparam);
+			Engine::resize_window(window->width, window->height);
 			break;
 		}
 		case WM_LBUTTONDOWN: {
-			SetCapture(win32_info->window);
+			SetCapture(window->handle);
 			push_event(EVENT_TYPE_KEY, VK_LBUTTON, 1);
 			break;
 		}
@@ -163,7 +87,7 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 			break;
 		}
 		case WM_RBUTTONDOWN: {
-			SetCapture(win32_info->window);
+			SetCapture(window->handle);
 			push_event(EVENT_TYPE_KEY, VK_RBUTTON, 1);
 			break;
 		}
@@ -195,11 +119,11 @@ LRESULT CALLBACK Win32_Info::win32_procedure(HWND hwnd, UINT message, WPARAM wpa
 			push_event(EVENT_TYPE_KEY, (int)wparam, 1);
 			break;
 		}
-		case WM_KEYUP:{
+		case WM_KEYUP: {
 			push_event(EVENT_TYPE_KEY, (int)wparam, 0);
 			break;
 		}
-		case WM_CHAR:{
+		case WM_CHAR: {
 			push_event(EVENT_TYPE_CHAR, (int)wparam, 0);
 			break;
 		}

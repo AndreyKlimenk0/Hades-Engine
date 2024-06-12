@@ -2,9 +2,8 @@
 #define EVENT_H
 
 #include "input.h"
-#include "../ds/queue.h"
-#include "../../win32/win_types.h"
-
+#include "../number_types.h"
+#include "../structures/queue.h"
 
 enum Event_Type {
 	EVENT_TYPE_MOUSE,
@@ -41,3 +40,4 @@ bool was_key_just_released(Key key);
 Queue<Event> *get_event_queue();
 
 #endif
+
