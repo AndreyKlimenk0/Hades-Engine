@@ -57,18 +57,16 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 
 float4 ps_main(Vertex_Out vertex_out) : SV_TARGET
 {
+    float3 normal_sample = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    
     Material material;
-    material.ambient = ambient_texture.Sample(linear_sampling, vertex_out.uv).rgb;
+    material.normal = normal_mapping(normal_sample, vertex_out.normal, vertex_out.tangent);
     material.diffuse = diffuse_texture.Sample(linear_sampling, vertex_out.uv).rgb;
     material.specular = specular_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    float3 temp = displacement_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    
-    float3 normal_sample = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    float3 normal = normal_mapping(normal_sample, vertex_out.normal, vertex_out.tangent);
     
     uint shadow_cascade_index;
-    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);
-    float3 light_factor = calculate_light(vertex_out.world_position, normal, material, light_count, lights);
+    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, material.normal, shadow_cascade_index);
+    float3 light_factor = calculate_light(vertex_out.world_position, material, light_count, lights);
     float4 cascade_color = cascades_colors[shadow_cascade_index % CASCADES_COLOR_COUNT];
     return cascade_color * float4(light_factor, 1.0f) * shadow_factor;
 }

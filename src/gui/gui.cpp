@@ -2598,6 +2598,11 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 		update_active_window(window);
 	}
 
+	if (!detect_intersection(&window->rect) && was_click(KEY_LMOUSE)) {
+		became_just_actived = 0;
+		active_window = 0;
+	}
+
 	Rect_s32 *rect = &window->rect;
 
 	bool mouse_was_moved = (mouse_x_delta != 0) || (mouse_y_delta != 0);
