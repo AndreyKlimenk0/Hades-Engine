@@ -267,6 +267,7 @@ void Game_World_Window::draw()
 		buttons_theme.rect.width = gui::get_window_size().width;
 		gui::set_theme(&buttons_theme);
 
+		draw_entity_list("Entity", game_world->entities.count, ENTITY_TYPE_ENTITY);
 		draw_entity_list("Camera", game_world->cameras.count, ENTITY_TYPE_CAMERA);
 		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
 		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
@@ -281,7 +282,13 @@ void Game_World_Window::draw()
 	if (gui::begin_child("Entity info", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
 		Entity *entity = game_world->get_entity(editor->picked_entity);
 		if (entity) {
-			if (entity->type == ENTITY_TYPE_GEOMETRY) {
+			if (entity->type == ENTITY_TYPE_ENTITY) {
+				Vector3 entity_position = entity->position;
+				gui::edit_field("Scaling", &entity->scaling);
+				gui::edit_field("Rotation", &entity->rotation);
+				gui::edit_field("Position", &entity->position);
+
+			} else if (entity->type == ENTITY_TYPE_GEOMETRY) {
 				Geometry_Entity *geometry_entity = static_cast<Geometry_Entity *>(entity);
 
 				Vector3 entity_position = geometry_entity->position;
