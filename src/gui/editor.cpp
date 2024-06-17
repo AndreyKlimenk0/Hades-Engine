@@ -15,6 +15,7 @@
 #include "../libs/math/vector.h"
 #include "../libs/math/3dmath.h"
 #include "../libs/math/functions.h"
+#include "../libs/math/structures.h"
 
 #include "../render/render_api.h"
 #include "../render/render_system.h"
@@ -33,6 +34,12 @@ static const char *str_entity_types[STR_ENTITY_TYPES_COUNT] = {
 };
 
 static_assert(STR_ENTITY_TYPES_COUNT == ENTITY_TYPES_COUNT, "assert_failed");
+
+inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element)
+{
+	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
+	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
+}
 
 inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render_passes, u32 *index)
 {
@@ -59,58 +66,18 @@ inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix
 	*ray = Ray(camera_position, to_vector3(mouse_point_in_world) - camera_position);
 }
 
-struct Ray_Entity_Intersection {
-	struct Result {
-		Entity_Id entity_id;
-		Render_Entity_Idx render_entity_idx;
-		Vector3 intersection_point;
-	};
-	static bool detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result);
-};
-
-#include "../libs/math/structures.h"
-
 inline float find_triangle_area(const Vector3 &a, const Vector3 &b, const Vector3 &c)
 {
 	Vector3 area = cross(b - a, c - a); //  The magnitude of the cross-product can be interpreted as the area of the parallelogram
 	return length(area) * 0.5f;
 }
 
-bool is_in_range(float start, float end, float value)
+inline bool is_in_range(float start, float end, float value)
 {
 	if ((start <= value) && (value <= end)) {
 		return true;
 	}
 	return false;
-}
-
-void draw_triangles(Mesh<Vertex_PNTUV> *triangle_mesh)
-{
-	//Render_World *render_world = Engine::get_render_world();
-	//Mesh_Idx mesh_idx;
-
-	//Vector3 v = Vector3::zero;
-	//for (u32 i = 0; i < triangle_mesh->vertices.count; i++) {
-	//	v += triangle_mesh->vertices[i].position;
-	//}
-	//char *str = to_string(&v);
-	//render_world->add_mesh(str, triangle_mesh, &mesh_idx);
-	//free_string(str);
-
-	//Game_World *game_world = Engine::get_game_world();
-	//Entity_Id entity_id = game_world->make_entity(Vector3::zero);
-
-	//Render_Entity_Texture_Storage &render_entity_texture_storage = render_world->render_entity_texture_storage;
-
-	//Render_Entity_Textures render_entity_textures;
-	//render_entity_textures.ambient_texture_idx = render_entity_texture_storage.white_texture_idx;
-	//render_entity_textures.normal_texture_idx = render_entity_texture_storage.green_texture_idx;
-	//render_entity_textures.diffuse_texture_idx = render_entity_texture_storage.default_texture_idx;
-	//render_entity_textures.specular_texture_idx = render_entity_texture_storage.white_texture_idx;
-	//render_entity_textures.displacement_texture_idx = render_entity_texture_storage.white_texture_idx;
-
-	//Color color = Color::Red;
-	//render_world->add_render_entity(RENDERING_TYPE_VERTICES_RENDERING, entity_id, mesh_idx, &render_entity_textures, (void *)&color);
 }
 
 struct Ray_Trinagle_Intersection_Result {
@@ -160,10 +127,14 @@ bool detect_intersection(Matrix4 &entity_world_matrix, Ray *picking_ray, Vertex_
 	return false;
 }
 
-inline Vector3 to_vector3(Point_f32 *point)
-{
-	return { point->x, point->y, point->z };
-}
+struct Ray_Entity_Intersection {
+	struct Result {
+		Entity_Id entity_id;
+		Render_Entity_Idx render_entity_idx;
+		Vector3 intersection_point;
+	};
+	static bool detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result);
+};
 
 bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result)
 {
@@ -656,292 +627,6 @@ void Drop_Down_Entity_Window::draw()
 	gui::reset_window_theme();
 }
 
-Editor::Editor()
-{
-}
-
-Editor::~Editor()
-{
-}
-
-void Editor::init(Engine *engine)
-{
-	render_sys = &engine->render_sys;
-	game_world = &engine->game_world;
-	render_world = &engine->render_world;
-
-	command_window.init(engine);
-	make_entity_window.init(engine);
-	game_world_window.init(engine);
-	render_world_window.init(engine);
-	drop_down_entity_window.init(engine);
-
-	if (game_world->cameras.is_empty()) {
-		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
-		engine->render_world.set_camera_for_rendering(editor_camera_id);
-	} else {
-		editor_camera_id = get_entity_id(&game_world->cameras.first());
-		engine->render_world.set_camera_for_rendering(editor_camera_id);
-	}
-
-	key_command_bindings.init();
-	key_command_bindings.set("move_camera_forward", KEY_W);
-	key_command_bindings.set("move_camera_back", KEY_S);
-	key_command_bindings.set("move_camera_right", KEY_D);
-	key_command_bindings.set("move_camera_left", KEY_A);
-	key_command_bindings.set("start_rotate_camera", KEY_LMOUSE);
-	key_command_bindings.set("end_rotate_camera", KEY_LMOUSE, false);
-	key_command_bindings.set("", KEY_RMOUSE); // Don't want to get annoyiny messages
-	
-	key_bindings.bind(KEY_CTRL, KEY_C); // Command window keys binding
-}
-
-void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands)
-{
-	static s32 last_x = 0;
-	static s32 last_y = 0;
-	static bool rotate_camera = false;
-
-	for (u32 i = 0; i < editor_commands->count; i++) {
-		Editor_Command &editor_command = editor_commands->get(i);
-		String &command = editor_command.command;
-		void *additional_info = editor_command.additional_info;
-
-		if (command == "move_camera_forward") {
-			Entity_Command_Move *move_command = new Entity_Command_Move;
-			move_command->move_direction = MOVE_DIRECTION_FORWARD;
-			move_command->distance = editor_settings.camera_speed;
-			entity_commands->push(move_command);
-
-		} else if (command == "move_camera_back") {
-			Entity_Command_Move *move_command = new Entity_Command_Move;
-			move_command->move_direction = MOVE_DIRECTION_BACK;
-			move_command->distance = editor_settings.camera_speed;
-			entity_commands->push(move_command);
-
-		} else if (command == "move_camera_left") {
-			Entity_Command_Move *move_command = new Entity_Command_Move;
-			move_command->move_direction = MOVE_DIRECTION_LEFT;
-			move_command->distance = editor_settings.camera_speed;
-			entity_commands->push(move_command);
-
-		} else if (command == "move_camera_right") {
-			Entity_Command_Move *move_command = new Entity_Command_Move;
-			move_command->move_direction = MOVE_DIRECTION_RIGHT;
-			move_command->distance = editor_settings.camera_speed;
-			entity_commands->push(move_command);
-
-		} else if (command == "start_rotate_camera") {
-			rotate_camera = true;
-			last_x = Mouse_State::x;
-			last_y = Mouse_State::y;
-
-		} else if (command == "end_rotate_camera") {
-			rotate_camera = false;
-
-		} else if (command == "rotate_camera") {
-			if (!rotate_camera) {
-				continue;
-			}
-			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
-			float x_angle = degrees_to_radians((float)(mouse_info->x - last_x));
-			float y_angle = -degrees_to_radians((float)(mouse_info->y - last_y));
-
-			Entity_Command_Rotate *rotate_command = new Entity_Command_Rotate;
-			rotate_command->x_angle = x_angle * editor_settings.camera_rotation_speed;
-			rotate_command->y_angle = y_angle * editor_settings.camera_rotation_speed;
-
-			entity_commands->push(rotate_command);
-
-			last_x = mouse_info->x;
-			last_y = mouse_info->y;
-		} else {
-			print("Editor::convert_editor_commands_to_entity_commands: For the editor command {} there is no a entity command.", command);
-		}
-	}
-}
-
-void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands)
-{
-	Queue<Event> *events = get_event_queue();
-	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
-		Event *event = &node->item;
-
-		Editor_Command editor_command;
-		if (event->type == EVENT_TYPE_KEY) {
-			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.key_state, &editor_command.command);
-			if (result == COMMAND_FIND) {
-				editor_commands->push(editor_command);
-			}
-
-		} else if (event->type == EVENT_TYPE_MOUSE) {
-			Editor_Command rotate_camera_command;
-			editor_command.command = "rotate_camera";
-			editor_command.additional_info = (void *)&event->mouse_info;
-			editor_commands->push(editor_command);
-		}
-	}
-}
-
-void Editor::handle_events()
-{
-	key_bindings.handle_events();
-	if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
-		//@Note: In the future here better to use linear allocator.
-		Array<Editor_Command> editor_commands;
-		Array<Entity_Command *> entity_commands;
-
-		convert_user_input_events_to_edtior_commands(&editor_commands);
-		convert_editor_commands_to_entity_commands(&editor_commands, &entity_commands);
-
-		Camera *camera = game_world->get_camera(editor_camera_id);
-		camera->handle_commands(&entity_commands);
-
-		free_memory(&entity_commands);
-	}
-}
-
-void Editor::update()
-{
-	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
-		invert(&draw_command_window);
-		if (draw_command_window) {
-			command_window.window_just_opened = true;
-		}
-	}
-	if (!gui::were_events_handled() && were_key_events()) {
-		if (draw_drop_down_entity_window) {
-			draw_drop_down_entity_window = false;
-		}
-	}
-	render_world_window.update();
-	picking();
-}
-
-void Editor::render()
-{
-	gui::begin_frame();
-	if (gui::begin_window("Editor", WINDOW_DEFAULT_STYLE | WINDOW_TAB_BAR)) {
-
-		if (gui::add_tab("Make Entity")) {
-			make_entity_window.draw();
-		}
-
-		if (gui::add_tab("Game World")) {
-			game_world_window.draw();
-		}
-		game_world_tab_gui_id = gui::get_last_tab_gui_id();
-
-		if (gui::add_tab("Render World")) {
-			render_world_window.draw();
-		}
-
-		gui::end_window();
-	}
-	if (draw_command_window) {
-		command_window.draw();
-	}
-	if (draw_drop_down_entity_window) {
-		drop_down_entity_window.draw();
-	}
-	gui::end_frame();
-}
-
-struct Moving_Entity {
-	bool moving_entity = false;
-	float distance; // A distance between a editor camera and an moving entity
-	Vector3 ray_entity_intersection_point;
-};
-
-void Editor::picking()
-{
-	Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
-	Ray picking_ray;
-	calculate_picking_ray(camera->position, render_world->render_camera.debug_view_matrix, render_sys->view.perspective_matrix, &picking_ray);
-
-	static Moving_Entity moving_entity_info;
-
-	if (was_key_just_pressed(KEY_LMOUSE) && (editor_mode == EDITOR_MODE_MOVE_ENTITY)) {
-		Ray_Entity_Intersection::Result intersection_result;
-		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result) && (picked_entity == intersection_result.entity_id)) {
-			moving_entity_info.moving_entity = true;
-			moving_entity_info.distance = find_distance(&camera->position, &intersection_result.intersection_point);
-			moving_entity_info.ray_entity_intersection_point = intersection_result.intersection_point;
-		} else {
-			editor_mode = EDITOR_MODE_COMMON;
-			set_cursor(CURSOR_TYPE_ARROW);
-		}
-	}
-
-	if (moving_entity_info.moving_entity) {
-		Vector3 moved_picking_ray_point = picking_ray.origin + (Vector3)(picking_ray.direction * moving_entity_info.distance);
-		Vector3 difference = moved_picking_ray_point - moving_entity_info.ray_entity_intersection_point;
-
-		Entity *entity = game_world->get_entity(picked_entity);
-		game_world->move_entity(entity, difference);
-
-		moving_entity_info.ray_entity_intersection_point += difference;
-	}
-
-	if (was_key_just_released(KEY_LMOUSE) && moving_entity_info.moving_entity) {
-		moving_entity_info.moving_entity = false;
-	}
-
-	if (!gui::were_events_handled()) {
-		if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
-			Ray_Entity_Intersection::Result intersection_result;
-			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				if (picked_entity == intersection_result.entity_id) {
-					draw_drop_down_entity_window = true;
-					drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
-				}
-			}
-		} else if (was_click(KEY_LMOUSE)) {
-			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-			outlining_pass->reset_render_entity_indices();
-
-			Ray_Entity_Intersection::Result intersection_result;
-			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				gui::make_tab_active(game_world_tab_gui_id);
-				picked_entity = intersection_result.entity_id;
-				outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
-			} else {
-				picked_entity.reset();
-			}
-		}
-	}
-}
-
-inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element)
-{
-	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
-	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
-}
-
-Command_Window::Command_Window()
-{
-}
-
-Command_Window::~Command_Window()
-{
-}
-
-static bool match(const char *substring, Array<String> &strings, Array<String> &result)
-{
-	assert(substring);
-	if (strlen(substring) == 0) {
-		return false;
-	}
-	u32 count = 0;
-	for (u32 i = 0; i < strings.count; i++) {
-		if (strings[i].find(substring) != -1) {
-			result.push(strings[i]);
-			count++;
-		}
-	}
-	return count > 0;
-}
-
 static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_State> &list_line_states, Array<Pair<String, String>> &list)
 {
 	s32 line_index = -1;
@@ -1047,6 +732,14 @@ static bool display_all_commands(String *edit_field, Array<String> &command_args
 }
 
 static const char *MAIN_COMMAND_NAME = "Display all commands";
+
+Command_Window::Command_Window()
+{
+}
+
+Command_Window::~Command_Window()
+{
+}
 
 void Command_Window::init(Engine *engine)
 {
@@ -1177,4 +870,260 @@ void Command_Window::draw()
 	}
 	IF_THEN(window_just_opened, window_just_opened = false);
 	gui::reset_window_theme();
+}
+
+Editor::Editor()
+{
+}
+
+Editor::~Editor()
+{
+}
+
+void Editor::init(Engine *engine)
+{
+	render_sys = &engine->render_sys;
+	game_world = &engine->game_world;
+	render_world = &engine->render_world;
+
+	command_window.init(engine);
+	make_entity_window.init(engine);
+	game_world_window.init(engine);
+	render_world_window.init(engine);
+	drop_down_entity_window.init(engine);
+
+	if (game_world->cameras.is_empty()) {
+		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
+		engine->render_world.set_camera_for_rendering(editor_camera_id);
+	} else {
+		editor_camera_id = get_entity_id(&game_world->cameras.first());
+		engine->render_world.set_camera_for_rendering(editor_camera_id);
+	}
+
+	key_command_bindings.init();
+	key_command_bindings.set("move_camera_forward", KEY_W);
+	key_command_bindings.set("move_camera_back", KEY_S);
+	key_command_bindings.set("move_camera_right", KEY_D);
+	key_command_bindings.set("move_camera_left", KEY_A);
+	key_command_bindings.set("start_rotate_camera", KEY_LMOUSE);
+	key_command_bindings.set("end_rotate_camera", KEY_LMOUSE, false);
+	key_command_bindings.set("", KEY_RMOUSE); // Don't want to get annoyiny messages
+
+	key_bindings.bind(KEY_CTRL, KEY_C); // Command window keys binding
+}
+
+void Editor::handle_events()
+{
+	key_bindings.handle_events();
+	if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
+		//@Note: In the future here better to use linear allocator.
+		Array<Editor_Command> editor_commands;
+		Array<Entity_Command *> entity_commands;
+
+		convert_user_input_events_to_edtior_commands(&editor_commands);
+		convert_editor_commands_to_entity_commands(&editor_commands, &entity_commands);
+
+		Camera *camera = game_world->get_camera(editor_camera_id);
+		camera->handle_commands(&entity_commands);
+
+		free_memory(&entity_commands);
+	}
+}
+
+void Editor::update()
+{
+	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
+		invert(&draw_command_window);
+		if (draw_command_window) {
+			command_window.window_just_opened = true;
+		}
+	}
+	if (!gui::were_events_handled() && were_key_events()) {
+		if (draw_drop_down_entity_window) {
+			draw_drop_down_entity_window = false;
+		}
+	}
+	render_world_window.update();
+	picking();
+}
+
+struct Moving_Entity {
+	bool moving_entity = false;
+	float distance; // A distance between a editor camera and an moving entity
+	Vector3 ray_entity_intersection_point;
+};
+
+void Editor::picking()
+{
+	Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
+	Ray picking_ray;
+	calculate_picking_ray(camera->position, render_world->render_camera.debug_view_matrix, render_sys->view.perspective_matrix, &picking_ray);
+
+	static Moving_Entity moving_entity_info;
+
+	if (was_key_just_pressed(KEY_LMOUSE) && (editor_mode == EDITOR_MODE_MOVE_ENTITY)) {
+		Ray_Entity_Intersection::Result intersection_result;
+		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result) && (picked_entity == intersection_result.entity_id)) {
+			moving_entity_info.moving_entity = true;
+			moving_entity_info.distance = find_distance(&camera->position, &intersection_result.intersection_point);
+			moving_entity_info.ray_entity_intersection_point = intersection_result.intersection_point;
+		} else {
+			editor_mode = EDITOR_MODE_COMMON;
+			set_cursor(CURSOR_TYPE_ARROW);
+		}
+	}
+
+	if (moving_entity_info.moving_entity) {
+		Vector3 moved_picking_ray_point = picking_ray.origin + (Vector3)(picking_ray.direction * moving_entity_info.distance);
+		Vector3 difference = moved_picking_ray_point - moving_entity_info.ray_entity_intersection_point;
+
+		Entity *entity = game_world->get_entity(picked_entity);
+		game_world->move_entity(entity, difference);
+
+		moving_entity_info.ray_entity_intersection_point += difference;
+	}
+
+	if (was_key_just_released(KEY_LMOUSE) && moving_entity_info.moving_entity) {
+		moving_entity_info.moving_entity = false;
+	}
+
+	if (!gui::were_events_handled()) {
+		if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
+			Ray_Entity_Intersection::Result intersection_result;
+			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+				if (picked_entity == intersection_result.entity_id) {
+					draw_drop_down_entity_window = true;
+					drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
+				}
+			}
+		} else if (was_click(KEY_LMOUSE)) {
+			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
+			outlining_pass->reset_render_entity_indices();
+
+			Ray_Entity_Intersection::Result intersection_result;
+			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+				gui::make_tab_active(game_world_tab_gui_id);
+				picked_entity = intersection_result.entity_id;
+				outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
+			} else {
+				picked_entity.reset();
+			}
+		}
+	}
+}
+
+void Editor::render()
+{
+	gui::begin_frame();
+	if (gui::begin_window("Editor", WINDOW_DEFAULT_STYLE | WINDOW_TAB_BAR)) {
+
+		if (gui::add_tab("Make Entity")) {
+			make_entity_window.draw();
+		}
+
+		if (gui::add_tab("Game World")) {
+			game_world_window.draw();
+		}
+		game_world_tab_gui_id = gui::get_last_tab_gui_id();
+
+		if (gui::add_tab("Render World")) {
+			render_world_window.draw();
+		}
+
+		gui::end_window();
+	}
+	if (draw_command_window) {
+		command_window.draw();
+	}
+	if (draw_drop_down_entity_window) {
+		drop_down_entity_window.draw();
+	}
+	gui::end_frame();
+}
+
+void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands)
+{
+	Queue<Event> *events = get_event_queue();
+	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+		Event *event = &node->item;
+
+		Editor_Command editor_command;
+		if (event->type == EVENT_TYPE_KEY) {
+			Find_Command_Result result = key_command_bindings.find_command(event->key_info.key, event->key_info.key_state, &editor_command.command);
+			if (result == COMMAND_FIND) {
+				editor_commands->push(editor_command);
+			}
+
+		} else if (event->type == EVENT_TYPE_MOUSE) {
+			Editor_Command rotate_camera_command;
+			editor_command.command = "rotate_camera";
+			editor_command.additional_info = (void *)&event->mouse_info;
+			editor_commands->push(editor_command);
+		}
+	}
+}
+
+void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands)
+{
+	static s32 last_x = 0;
+	static s32 last_y = 0;
+	static bool rotate_camera = false;
+
+	for (u32 i = 0; i < editor_commands->count; i++) {
+		Editor_Command &editor_command = editor_commands->get(i);
+		String &command = editor_command.command;
+		void *additional_info = editor_command.additional_info;
+
+		if (command == "move_camera_forward") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_FORWARD;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+
+		} else if (command == "move_camera_back") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_BACK;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+
+		} else if (command == "move_camera_left") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_LEFT;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+
+		} else if (command == "move_camera_right") {
+			Entity_Command_Move *move_command = new Entity_Command_Move;
+			move_command->move_direction = MOVE_DIRECTION_RIGHT;
+			move_command->distance = editor_settings.camera_speed;
+			entity_commands->push(move_command);
+
+		} else if (command == "start_rotate_camera") {
+			rotate_camera = true;
+			last_x = Mouse_State::x;
+			last_y = Mouse_State::y;
+
+		} else if (command == "end_rotate_camera") {
+			rotate_camera = false;
+
+		} else if (command == "rotate_camera") {
+			if (!rotate_camera) {
+				continue;
+			}
+			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
+			float x_angle = degrees_to_radians((float)(mouse_info->x - last_x));
+			float y_angle = -degrees_to_radians((float)(mouse_info->y - last_y));
+
+			Entity_Command_Rotate *rotate_command = new Entity_Command_Rotate;
+			rotate_command->x_angle = x_angle * editor_settings.camera_rotation_speed;
+			rotate_command->y_angle = y_angle * editor_settings.camera_rotation_speed;
+
+			entity_commands->push(rotate_command);
+
+			last_x = mouse_info->x;
+			last_y = mouse_info->y;
+		} else {
+			print("Editor::convert_editor_commands_to_entity_commands: For the editor command {} there is no a entity command.", command);
+		}
+	}
 }
