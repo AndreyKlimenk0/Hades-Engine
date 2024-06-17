@@ -9,6 +9,7 @@
 #include "../libs/os/path.h"
 #include "../libs/mesh_loader.h"
 #include "../render/render_world.h"
+#include "../collision/collision.h"
 
 static void load_meshes(Array<String> &mesh_names)
 {
@@ -28,14 +29,17 @@ static void load_meshes(Array<String> &mesh_names)
 			For(meshes, imported_mesh) {
 				Mesh_Id mesh_id;
 				if (render_world->add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id)) {
+					AABB mesh_AABB = make_AABB(&imported_mesh->mesh);
 					if (imported_mesh->mesh_instances.count > 0) {
 						for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
 							Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
 							Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
+							game_world->attach_AABB(entity_id, &mesh_AABB);
 							render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_id);
 						}
 					} else {
 						Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
+						game_world->attach_AABB(entity_id, &mesh_AABB);
 						render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_id);
 					}
 				}

@@ -12,7 +12,7 @@
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
-static Matrix4 get_world_matrix(Entity *entity)
+Matrix4 get_world_matrix(Entity *entity) 
 {
 	if (entity->type == ENTITY_TYPE_CAMERA) {
 		Camera *camera = static_cast<Camera *>(entity);
@@ -144,7 +144,7 @@ void Mesh_Storate<T>::init(Gpu_Device *gpu_device)
 
 	default_textures.normal = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 1.0f)));
 	default_textures.diffuse = textures.push(create_color_texture(gpu_device, width, height, DEFAULT_MESH_COLOR));
-	default_textures.specular = textures.push(create_color_texture(gpu_device, width, height, Color(0.2f, 0.2f, 2.0f)));
+	default_textures.specular = textures.push(create_color_texture(gpu_device, width, height, Color(0.2f, 0.2f, 0.2f)));
 	default_textures.displacement = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 0.0f)));
 	default_textures.white = textures.push(create_color_texture(gpu_device, width, height, Color::White));
 	default_textures.black = textures.push(create_color_texture(gpu_device, width, height, Color::Black));
@@ -485,27 +485,23 @@ void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id en
 	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
 
 	switch (rendering_type) {
-		case RENDERING_TYPE_FORWARD_RENDERING:
-		{
+		case RENDERING_TYPE_FORWARD_RENDERING: {
 			game_render_entities.push(render_entity);
 			break;
 		}
-		case RENDERING_TYPE_LINES_RENDERING:
-		{
+		case RENDERING_TYPE_LINES_RENDERING: {
 			assert(args);
 			line_render_entities.push(render_entity);
 			line_render_entity_colors.push(*((Color *)args));
 			break;
 		}
-		case RENDERING_TYPE_VERTICES_RENDERING:
-		{
+		case RENDERING_TYPE_VERTICES_RENDERING: {
 			assert(args);
 			vertex_render_entities.push(render_entity);
 			vertex_render_entity_colors.push(*((Color *)args));
 			break;
 		}
-		default:
-		{
+		default: {
 			print("Render_World::add_render_entity: Unable to add a render entity, unknown rendering type was passed.");
 			break;
 		}
