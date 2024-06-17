@@ -61,15 +61,16 @@ struct File {
 	void write(void *data, u32 data_size);
 	//@Node: Get rid of the method ?
 	void write(const char *string, bool new_line = true);
-
+	
 	template< typename T>
 	void read(T *data);
-
 	template< typename T>
 	void read(Array<T> *array);
 
 	template< typename T>
 	void write(T *data);
+	template< typename T>
+	void write(Array<T> *array);
 };
 
 template<typename T>
@@ -85,22 +86,23 @@ inline void File::write(T *data)
 }
 
 template<typename T>
-inline void read_array_from_file(File *file, Array<T> *array)
+inline void File::read(Array<T> *array)
 {
 	u32 count = 0;
-	file->read(&count);
+	read(&count);
 	if (count > 0) {
 		array->reserve(count);
-		file->read((void *)array->items, array->get_size());
+		read((void *)array->items, array->get_size());
 	}
 }
 
 template<typename T>
-inline void write_array_to_file(File *file, Array<T> *array)
+inline void File::write(Array<T> *array)
 {
-	file->write(&array->count);
-	file->write((void *)array->items, array->get_size());
+	write(&array->count);
+	write((void *)array->items, array->get_size());
 }
+
 
 #endif
 

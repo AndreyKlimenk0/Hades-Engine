@@ -61,7 +61,6 @@ struct Pointv2 {
 
 	T &operator[](int index);
 	Pointv2<T> &operator=(const Vector3 &vector);
-	T &operator=(const Vector3 &vector);
 
 	void move(const T &delta_x, const T &delta_y);
 };
@@ -103,7 +102,6 @@ inline void Pointv2<T>::move(const T &delta_x, const T &delta_y)
 }
 
 template<typename T>
-inline T &Pointv2<T>::operator=(const Vector3 &vector)
 inline Pointv2<T> &Pointv2<T>::operator=(const Vector3 &vector)
 {
 	x = vector.x;

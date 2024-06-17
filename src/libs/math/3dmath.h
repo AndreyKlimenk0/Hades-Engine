@@ -23,9 +23,9 @@ inline Matrix4 make_rotation_matrix_v2(Vector3 *direction, Vector3 *up_direction
 
 	Vector3 z_axis = normalize(direction);
 	Vector3 up = up ? *up_direction : Vector3::base_y;
-	Vector3 temp = cross(&up, &z_axis);
+	Vector3 temp = cross(up, z_axis);
 	Vector3 x_axis = normalize(&temp);
-	temp = cross(&z_axis, &x_axis);
+	temp = cross(z_axis, x_axis);
 	Vector3 y_axis = normalize(&temp);
 
 	Matrix4 rotation_matrix = make_identity_matrix();
