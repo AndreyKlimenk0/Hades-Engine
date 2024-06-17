@@ -193,8 +193,8 @@ struct Editor {
 	void init(Engine *engine);
 	void handle_events();
 	void update();
-	void render();
 	void picking();
+	void render();
 
 	void convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands);
 	void convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands);
