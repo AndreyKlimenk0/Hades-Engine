@@ -100,11 +100,11 @@ inline bool detect_intersection(Rect_s32 *first_rect, Rect_s32 *second_rect)
 template <typename T>
 inline bool detect_intersection(Triangle<T> *triangle, Pointv2<T> *point)
 {
-	T triangle_area = triangle->get_area();
+	T triangle_area = triangle->find_area();
 
-	T area1 = Triangle<T>(triangle->a, triangle->b, *point).get_area();
-	T area2 = Triangle<T>(*point, triangle->b, triangle->c).get_area();
-	T area3 = Triangle<T>(triangle->a, *point, triangle->c).get_area();
+	T area1 = Triangle<T>(triangle->a, triangle->b, *point).find_area();
+	T area2 = Triangle<T>(*point, triangle->b, triangle->c).find_area();
+	T area3 = Triangle<T>(triangle->a, *point, triangle->c).find_area();
 
 	if (area1 + area2 + area3 == triangle_area) {
 		return true;
@@ -2598,7 +2598,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 		update_active_window(window);
 	}
 
-	if (!detect_intersection(&window->rect) && was_click(KEY_LMOUSE)) {
+	if (!detect_intersection(&window->rect) && was_key_just_pressed(KEY_LMOUSE)) {
 		became_just_actived = 0;
 		active_window = 0;
 	}
@@ -3314,6 +3314,7 @@ void gui::end_child()
 
 void gui::set_next_theme(Gui_Window_Theme *gui_window_theme)
 {
+	assert(false);
 	gui_manager.set_next_window_theme(gui_window_theme);
 }
 
