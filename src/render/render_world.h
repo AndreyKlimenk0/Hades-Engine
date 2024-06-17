@@ -35,6 +35,7 @@ struct Render_Entity {
 	Entity_Id entity_id;
 };
 
+Matrix4 get_world_matrix(Entity *entity);
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
 
 struct Mesh_Textures {

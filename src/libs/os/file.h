@@ -61,7 +61,7 @@ struct File {
 	void write(void *data, u32 data_size);
 	//@Node: Get rid of the method ?
 	void write(const char *string, bool new_line = true);
-
+	
 	template< typename T>
 	void read(T *data);
 	template< typename T>
@@ -102,6 +102,7 @@ inline void File::write(Array<T> *array)
 	write(&array->count);
 	write((void *)array->items, array->get_size());
 }
+
 
 #endif
 

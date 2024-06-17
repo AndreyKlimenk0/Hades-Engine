@@ -45,15 +45,13 @@ Bounding_Sphere make_bounding_sphere(const Vector3 &position, Triangle_Mesh *mes
 
 bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point)
 {
-	Vector3 normalize_ray_direction = normalize(ray->direction);
-
-	float tmin = (aabb->min.x - ray->origin.x) / normalize_ray_direction.x;
-	float tmax = (aabb->max.x - ray->origin.x) / normalize_ray_direction.x;
+	float tmin = (aabb->min.x - ray->origin.x) / ray->direction.x;
+	float tmax = (aabb->max.x - ray->origin.x) / ray->direction.x;
 
 	if (tmin > tmax) std::swap(tmin, tmax);
 
-	float tymin = (aabb->min.y - ray->origin.y) / normalize_ray_direction.y;
-	float tymax = (aabb->max.y - ray->origin.y) / normalize_ray_direction.y;
+	float tymin = (aabb->min.y - ray->origin.y) / ray->direction.y;
+	float tymax = (aabb->max.y - ray->origin.y) / ray->direction.y;
 
 	if (tymin > tymax) std::swap(tymin, tymax);
 
@@ -66,8 +64,8 @@ bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point)
 	if (tymax < tmax)
 		tmax = tymax;
 
-	float tzmin = (aabb->min.z - ray->origin.z) / normalize_ray_direction.z;
-	float tzmax = (aabb->max.z - ray->origin.z) / normalize_ray_direction.z;
+	float tzmin = (aabb->min.z - ray->origin.z) / ray->direction.z;
+	float tzmax = (aabb->max.z - ray->origin.z) / ray->direction.z;
 
 	if (tzmin > tzmax) std::swap(tzmin, tzmax);
 
@@ -81,7 +79,7 @@ bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point)
 		tmax = tzmax;
 
 	if (intersection_point) {
-		*intersection_point = ray->origin + (Vector3)(normalize_ray_direction * tmin);
+		*intersection_point = ray->origin + (Vector3)(ray->direction * tmin);
 	}
 	return true;
 }
