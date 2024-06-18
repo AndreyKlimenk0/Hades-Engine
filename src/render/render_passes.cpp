@@ -431,17 +431,19 @@ void Outlining_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_rende
 	Render_Pass::init(gpu_device, _render_pipeline_states);
 }
 
-void Outlining_Pass::setup_render_pipeline(Shader_Manager *shader_manager, Texture2D *_silhouette_back_buffer, Texture2D *_silhouette_depth_stencil_buffer, Texture2D *_screen_back_buffer, Viewport *viewport)
+void Outlining_Pass::setup_render_pipeline(Shader_Manager *shader_manager, Texture2D *_silhouette_back_buffer, Texture2D *_silhouette_depth_stencil_buffer, Texture2D *_screen_back_buffer, Texture2D *_screen_depth_stencil_back_buffer, Viewport *viewport)
 {
 	assert(shader_manager);
 	assert(_silhouette_back_buffer);
 	assert(_silhouette_depth_stencil_buffer);
 	assert(_screen_back_buffer);
+	assert(_screen_depth_stencil_back_buffer);
 	assert(viewport);
 
 	silhouette_back_buffer = _silhouette_back_buffer;
 	silhoueete_depth_stencil_buffer = _silhouette_depth_stencil_buffer;
 	screen_back_buffer = _screen_back_buffer;
+	screen_depth_stencil_back_buffer = _screen_depth_stencil_back_buffer;
 
 	outlining_compute_shader = GET_SHADER(shader_manager, outlining);
 
@@ -496,13 +498,14 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 	render_pipeline->update_constant_buffer(&outlining_info_cbuffer, (void *)&outlining_info);
 	render_pipeline->set_compute_shader_resource(CB_OUTLINING_INFO_REGISTER, outlining_info_cbuffer);
 	render_pipeline->set_compute_shader(outlining_compute_shader);
-	render_pipeline->set_compute_shader_resource(SCREEN_BACK_BUFFER, screen_back_buffer->uav);
+	render_pipeline->set_compute_shader_resource(SCREEN_BACK_BUFFER_REGISTER, screen_back_buffer->uav);
+	render_pipeline->set_compute_shader_resource(SCREEN_BACK_BUFFER_DEPTH_STECHIL_REGISTER, screen_depth_stencil_back_buffer->srv);
 	render_pipeline->set_compute_shader_resource(SILHOUETTE_TEXTURE_REGISTER, silhouette_back_buffer->srv);
 	render_pipeline->set_compute_shader_resource(SILHOUETTE_DEPTH_STENCIL_TEXTURE_REGISTER, silhoueete_depth_stencil_buffer->srv);
 
 	render_pipeline->dispatch(thread_group_count_x, thread_group_count_y, 1);
 
-	render_pipeline->reset_compute_unordered_access_view(SCREEN_BACK_BUFFER);
+	render_pipeline->reset_compute_unordered_access_view(SCREEN_BACK_BUFFER_REGISTER);
 	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_TEXTURE_REGISTER);
 	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_DEPTH_STENCIL_TEXTURE_REGISTER);
 }

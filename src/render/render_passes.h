@@ -78,6 +78,7 @@ struct Outlining_Pass : Render_Pass {
 	u32 thread_group_count_y = 0;
 	Shader *outlining_compute_shader = NULL;
 	Texture2D *screen_back_buffer = NULL;
+	Texture2D *screen_depth_stencil_back_buffer = NULL;
 	Texture2D *silhouette_back_buffer = NULL;
 	Texture2D *silhoueete_depth_stencil_buffer = NULL;
 	Outlining_Info outlining_info;
@@ -92,7 +93,7 @@ struct Outlining_Pass : Render_Pass {
 
 	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
 	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
-	void setup_render_pipeline(Shader_Manager *shader_manager, Texture2D *_silhouette_back_buffer, Texture2D *_silhouette_depth_stencil_buffer, Texture2D *_screen_back_buffer, Viewport *viewport);
+	void setup_render_pipeline(Shader_Manager *shader_manager, Texture2D *_silhouette_back_buffer, Texture2D *_silhouette_depth_stencil_buffer, Texture2D *_screen_back_buffer, Texture2D *_screen_depth_stencil_back_buffer, Viewport *viewport);
 };
 
 #endif

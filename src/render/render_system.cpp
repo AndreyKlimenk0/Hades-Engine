@@ -448,7 +448,8 @@ void Render_2D::init(Render_System *render_sys, Shader_Manager *shader_manager)
 	gpu_device->create_rasterizer_state(&rasterizer_desc, &rasterizer_state);
 
 	Depth_Stencil_State_Desc depth_stencil_test_desc;
-	depth_stencil_test_desc.enable_depth_test = false;
+	depth_stencil_test_desc.enable_depth_test = true;
+	depth_stencil_test_desc.depth_compare_func = COMPARISON_ALWAYS;
 
 	gpu_device->create_depth_stencil_state(&depth_stencil_test_desc, &depth_stencil_state);
 
@@ -566,7 +567,7 @@ void Render_2D::render_frame()
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
 	render_pipeline->set_depth_stencil_state(depth_stencil_state);
-	render_pipeline->set_render_target(render_system->multisampling_back_buffer_texture.rtv, nullptr);
+	render_pipeline->set_render_target(render_system->multisampling_back_buffer_texture.rtv, render_system->multisampling_depth_stencil_texture.dsv);
 
 	CB_Render_2d_Info cb_render_info;
 
@@ -666,13 +667,14 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	Texture2D_Desc multisampling_depth_stencil_buffer_texture_desc;
 	multisampling_depth_stencil_buffer_texture_desc.width = window_width;
 	multisampling_depth_stencil_buffer_texture_desc.height = window_height;
-	multisampling_depth_stencil_buffer_texture_desc.format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	multisampling_depth_stencil_buffer_texture_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
 	multisampling_depth_stencil_buffer_texture_desc.mip_levels = 1;
-	multisampling_depth_stencil_buffer_texture_desc.bind = BIND_DEPTH_STENCIL;
+	multisampling_depth_stencil_buffer_texture_desc.bind = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE; // The texture has bind shader resource because it is bound to outlining computer shader.
 	multisampling_depth_stencil_buffer_texture_desc.multisampling = { temp, 0 };
-
+	
 	gpu_device.create_texture_2d(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
 	gpu_device.create_depth_stencil_view(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
+	gpu_device.create_shader_resource_view(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
 
 	Texture2D_Desc silhouette_texture_desc;
 	silhouette_texture_desc.width = window_width;
