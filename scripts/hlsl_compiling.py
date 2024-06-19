@@ -99,19 +99,21 @@ def build_fxc_command_line_params(shader_name: str, profile : str, entry_point :
         return (False, "")
 
 
-def compile_hlsl_shaders(shader_list : list[str] | list[Shader_File]):
-    for shader in shader_list:
-        if isinstance(shader, str):
-            shader_file = find_shader_file_in_list(shader)
+def get_shader_file_list(shader_name_list : list[str]) -> list[Shader_File]:
+    shader_list = []
+    for shader_name in shader_name_list:
+        shader_file = find_shader_file_in_list(shader_name)
+        if shader_file is not None:
+            shader_list.append(shader_file)
         else:
-            shader_file = shader
-
-        if shader_file is None:
-            print(f"Error: shader with name {shader_file_name} was not found in file shader list.")
-            continue
+            print("Error: shader with name {} was not found in shader file list.".format(shader_name))
+    return shader_list
         
+
+def compile_hlsl_shaders(shader_files : list[Shader_File]):
+    for shader_file in shader_files:
         if len(shader_file.shader_types) == 0:
-            print("[tool.py] Warning: Type of shader file with name {} was not specified", shader_file.name)
+            print("Error: Type of shader file with name {} was not specified", shader_file.name)
             continue
 
         full_path_to_shader = os.path.join(PROJECT_DIR, HLSH_DIR, shader_file.name)
@@ -135,6 +137,7 @@ def compile_hlsl_shaders(shader_list : list[str] | list[Shader_File]):
 
 if __name__ == "__main__":
     if (len(sys.argv) > 1):
-        compile_hlsl_shaders(sys.argv[1:])
+        shader_file_list = get_shader_file_list(sys.argv[1:])
+        compile_hlsl_shaders(shader_file_list)
     else:
         compile_hlsl_shaders(shader_files)
