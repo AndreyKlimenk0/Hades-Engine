@@ -1002,6 +1002,7 @@ void Gui_Manager::edit_field(const char *name, String *string)
 	Edit_Field_Instance edit_field_instance;
 	if (string->is_empty()) {
 		edit_field_instance.editing_value = "";
+		edit_field_instance.value_rect = { 0, 0, 0, (s32)font->max_alphabet_height };
 	} else {
 		edit_field_instance.editing_value = string->c_str();
 		edit_field_instance.value_rect = get_text_rect(string->c_str());
@@ -1050,13 +1051,11 @@ void Gui_Manager::edit_field(const char *name, String *string)
 			render_list->add_rect(&edit_field_state.caret, Color::White);
 			if (!edit_field_state.data.is_empty()) {
 				render_list->add_text(&edit_field_instance.value_rect, edit_field_state.data, ALIGN_TEXT_BY_MAX_ALPHABET);
-				//draw_debug_rect(window, &edit_field_instance.value_rect);
 			}
 		} else {
 			int len = (int)strlen(edit_field_instance.editing_value);
 			if (edit_field_instance.editing_value && (len > 0)) {
 				render_list->add_text(&edit_field_instance.value_rect, edit_field_instance.editing_value, ALIGN_TEXT_BY_MAX_ALPHABET);
-				//draw_debug_rect(window, &edit_field_instance.value_rect);
 			}
 		}
 		render_list->pop_clip_rect();
@@ -1528,13 +1527,11 @@ void Gui_Manager::end_list()
 			check_timer = false;
 			timer = 0;
 			run_quick_mode = false;
-			print("Trun off quick mode");
 		}
 
 		s64 delta_two = milliseconds_counter() - timer;
 		if (!run_quick_mode && check_timer && delta_two > QUICK_GO_MODE_TIME) {
 			run_quick_mode = true;
-			print("Trun on quick mode");
 		}
 
 		static s64 last_modifing_time = 0;
@@ -1883,6 +1880,9 @@ bool Gui_Manager::update_edit_field(Edit_Field_Instance *edit_field_instance)
 			update_next_time_editing_value = false;
 		}
 		if (change_active_field) {
+			edit_field_state = make_edit_field_state(&edit_field_instance->caret_rect, edit_field_instance->editing_value, edit_field_instance->max_chars_number, edit_field_instance->symbol_validation);
+		}
+		if ((strlen(edit_field_instance->editing_value) == 0) && !edit_field_state.data.is_empty()) {
 			edit_field_state = make_edit_field_state(&edit_field_instance->caret_rect, edit_field_instance->editing_value, edit_field_instance->max_chars_number, edit_field_instance->symbol_validation);
 		}
 		if (!Keys_State::is_key_down(KEY_CTRL)) {

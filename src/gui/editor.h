@@ -22,12 +22,16 @@ struct Editor_Window {
 	Editor_Window() {}
 	~Editor_Window() {}
 
+	bool window_open = false;
+
 	Editor *editor = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 	Render_System *render_system = NULL;
 
-	void init(Engine *engine);
+	virtual void init(Engine *engine);
+	virtual void open();
+	virtual void close();
 };
 
 struct Make_Entity_Window : Editor_Window {
@@ -123,7 +127,7 @@ struct Command_Window : Editor_Window {
 	Command_Window();
 	~Command_Window();
 
-	bool window_just_opened = false;
+	bool window_just_open = false;
 	bool active_edit_field = false;
 	Displaying_Command *current_displaying_command = NULL;
 
@@ -140,6 +144,9 @@ struct Command_Window : Editor_Window {
 	Array<Pair<Displaying_Command *, Key_Binding>> command_key_bindings;
 
 	void init(Engine *engine);
+	void open();
+	void close();
+
 	void displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context));
 	void displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context));
 	//void register_command_key_bindings(Key_Bindings *key_bindings);
@@ -162,7 +169,6 @@ struct Editor {
 	Editor();
 	~Editor();
 
-	bool draw_command_window = false;
 	bool draw_make_entity_window = false;
 	bool draw_drop_down_entity_window = false;
 	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;

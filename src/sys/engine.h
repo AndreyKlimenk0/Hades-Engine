@@ -16,7 +16,7 @@
 
 struct Engine {
 	bool is_initialized = false;
-	String current_map;
+	String current_level_name;
 	
 	Editor editor;
 	Variable_Service vars;
@@ -30,6 +30,8 @@ struct Engine {
 	void init(Win32_Window *window);
 	void frame();
 	void shutdown();
+
+	void set_current_level_name(const String &level_name);
 
 	static void resize_window(u32 window_width, u32 window_height);
 	static bool initialized();

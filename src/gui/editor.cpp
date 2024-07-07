@@ -209,6 +209,16 @@ void Editor_Window::init(Engine *engine)
 	render_system = &engine->render_sys;
 }
 
+void Editor_Window::open()
+{
+	window_open = true;
+}
+
+void Editor_Window::close()
+{
+	window_open = false;
+}
+
 Make_Entity_Window::Make_Entity_Window()
 {
 	reset_state();
@@ -653,6 +663,24 @@ static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_Stat
 	return line_index;
 }
 
+inline s32 list_line_selected(Array<Gui_List_Line_State> &list_line_states)
+{
+	for (s32 i = 0; i < (s32)list_line_states.count; i++) {
+		if (gui::selected(list_line_states[i])) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+inline void select_line(u32 line_index, Array<Gui_List_Line_State> &list_line_states)
+{
+	if (list_line_states.count > line_index) {
+		memset((void *)list_line_states.items, 0, sizeof(Gui_List_Line_State) * list_line_states.count);
+		list_line_states[line_index] = 0x1;
+	}
+}
+
 static bool display_and_get_info_for_load_mesh_command(String *edit_field, Array<String> &command_args, void *context)
 {
 	assert(edit_field);
@@ -674,17 +702,77 @@ static bool display_and_get_info_for_load_mesh_command(String *edit_field, Array
 	} else {
 		matched_files = not_matched_files;
 	}
+	Command_Window *command_window = (Command_Window *)context;
+
+	if (command_window->list_line_states.is_empty()) {
+		command_window->list_line_states.reserve(matched_files.count);
+		select_line(0, command_window->list_line_states);
+	} else if ((command_window->list_line_states.count > matched_files.count) && !matched_files.is_empty()) {
+		s32 line_index = list_line_selected(command_window->list_line_states);
+		if ((line_index > -1) && (line_index > ((s32)matched_files.count - 1))) {
+			select_line((matched_files.count - 1), command_window->list_line_states);
+		}
+	}
 
 	Array<Pair<String, String>> mesh_path_list;
 	for (u32 i = 0; i < matched_files.count; i++) {
 		mesh_path_list.push({ matched_files[i], "data/models" });
 	}
-	Command_Window *command_window = (Command_Window *)context;
 
 	bool result = false;
 	gui::set_theme(&command_window->list_theme);
 	gui::make_next_list_active();
 	s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
+	if (line_index >= 0) {
+		command_args.push(mesh_path_list[line_index].first);
+		result = true;
+	}
+	gui::reset_list_theme();
+	return result;
+}
+
+static bool display_and_get_info_for_load_level_command(String *edit_field, Array<String> &command_args, void *context)
+{
+	assert(edit_field);
+	assert(context);
+
+	String full_path_to_data_directory;
+	build_full_path_to_data_directory("levels", full_path_to_data_directory);
+
+	Array<String> not_matched_files;
+	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
+
+	Array<String> matched_files;
+	if (!edit_field->is_empty()) {
+		for (u32 i = 0; i < not_matched_files.count; i++) {
+			if (not_matched_files[i].find(edit_field->c_str(), 0, false) != -1) {
+				matched_files.push(not_matched_files[i]);
+			}
+		}
+	} else {
+		matched_files = not_matched_files;
+	}
+	Command_Window *command_window = (Command_Window *)context;
+
+	if (command_window->list_line_states.is_empty()) {
+		command_window->list_line_states.reserve(matched_files.count);
+		select_line(0, command_window->list_line_states);
+	} else if ((command_window->list_line_states.count > matched_files.count) && !matched_files.is_empty()) {
+		s32 line_index = list_line_selected(command_window->list_line_states);
+		if ((line_index > -1) && (line_index > ((s32)matched_files.count - 1))) {
+			select_line((matched_files.count - 1), command_window->list_line_states);
+		}
+	}
+
+	Array<Pair<String, String>> mesh_path_list;
+	for (u32 i = 0; i < matched_files.count; i++) {
+		mesh_path_list.push({ matched_files[i], "data/levels" });
+	}
+
+	bool result = false;
+	gui::set_theme(&command_window->list_theme);
+	gui::make_next_list_active();
+	s32 line_index = draw_two_columns_list("level list", command_window->list_line_states, mesh_path_list);
 	if (line_index >= 0) {
 		command_args.push(mesh_path_list[line_index].first);
 		result = true;
@@ -718,11 +806,8 @@ static bool display_all_commands(String *edit_field, Array<String> &command_args
 			if (command_name == command_window->displaying_commands[i].command_name) {
 				command_window->current_displaying_command = &command_window->displaying_commands[i];
 				command_window->active_edit_field = true;
+				command_window->list_line_states.clear();
 				edit_field->free();
-
-				command_window->list_line_states.reserve(20);
-				memset((void *)command_window->list_line_states.items, 0, sizeof(u32) * 20);
-				command_window->list_line_states[0] = 0x1;
 				break;
 			}
 		}
@@ -749,36 +834,52 @@ void Command_Window::init(Engine *engine)
 	current_displaying_command = &displaying_commands.last();
 
 	displaying_command("Load mesh", KEY_CTRL, KEY_L, display_and_get_info_for_load_mesh_command);
+	displaying_command("Load level", display_and_get_info_for_load_level_command);
 	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
 	display.set_size(Render_System::screen_width, Render_System::screen_height);
 
-	command_window_rect.set_size(600, 100);
+	command_window_rect.set_size(600, 80);
 	command_window_rect_with_additional_info.set_size(600, 500);
 
 	place_in_middle(&display, &command_window_rect);
 	command_window_rect.y = 200;
 
 	command_window_theme.background_color = Color(20);
-	command_window_theme.vertical_offset_from_sides = 20;
+	command_window_theme.vertical_offset_from_sides = 14;
+	command_window_theme.horizontal_offset_from_sides = 10;
 
 	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_offset_from_sides * 2, 30);
 	command_edit_field_theme.draw_label = false;
 	command_edit_field_theme.color = Color(30);
+	command_edit_field_theme.rounded_border = 0;
 
 	command_window_rect.height = command_edit_field_theme.rect.height + command_window_theme.vertical_offset_from_sides * 2;
 
 	list_theme.line_height = 30;
 	list_theme.column_filter = false;
 	list_theme.line_text_offset = command_window_theme.horizontal_offset_from_sides + command_edit_field_theme.text_shift;
-	list_theme.window_size.width = command_window_rect.width;
+	list_theme.window_size.width = command_window_rect_with_additional_info.width;
+	list_theme.window_size.height = command_window_rect_with_additional_info.height - command_edit_field_theme.rect.height - command_window_theme.vertical_offset_from_sides;
 	list_theme.background_color = Color(20);
 	list_theme.line_color = Color(20);
 
-	list_line_states.reserve(20);
-	memset((void *)list_line_states.items, 0, sizeof(u32) * 20);
-	list_line_states[0] = 0x1;
+	list_line_states.reserve(displaying_commands.count);
+	select_line(0, list_line_states);
+}
+
+void Command_Window::open()
+{
+	Editor_Window::open();
+	window_just_open = true;
+}
+
+void Command_Window::close()
+{
+	Editor_Window::close();
+	window_just_open = false;
+	command_edit_field.free();
 }
 
 void Command_Window::displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context))
@@ -811,19 +912,6 @@ void Command_Window::displaying_command(const char *command_name, Key modified_k
 	free_string(str_key_binding);
 }
 
-#define FIND_BY_FIELD(array, field, object, result) \
-  do {                                              \
-    auto func = [&]() -> decltype(array.items) { \
-        for (u32 i = 0; i < array.count; i++) { \
-            if (array[i].field == object) { \
-                return &array[i]; \
-            } \
-        } \
-        return NULL; \
-    }; \
-    result = func(); \
-  } while (0)
-
 #define IF_THEN(exp, code) if (exp) { code; };
 
 void Command_Window::draw()
@@ -831,9 +919,14 @@ void Command_Window::draw()
 	assert(current_displaying_command);
 
 	if (was_click(KEY_ESC)) {
-		if (current_displaying_command->command_name != MAIN_COMMAND_NAME) {
+		if (current_displaying_command->command_name == MAIN_COMMAND_NAME) {
+			close();
+		} else {
 			current_displaying_command = &displaying_commands.first();
+			list_line_states.reserve(displaying_commands.count);
+			select_line(0, list_line_states);
 		}
+		command_edit_field.free();
 	}
 	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
 	Rect_s32 window_rect = display_additional_info ? command_window_rect_with_additional_info : command_window_rect;
@@ -842,11 +935,11 @@ void Command_Window::draw()
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 	gui::set_theme(&command_window_theme);
 
-	IF_THEN(window_just_opened, gui::make_next_ui_element_active());
+	IF_THEN(window_just_open, gui::make_next_ui_element_active());
 	if (gui::begin_window("Command window", 0)) {
 
 		gui::set_theme(&command_edit_field_theme);
-		IF_THEN(window_just_opened || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
+		IF_THEN(window_just_open || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
 		gui::edit_field("Command field", &command_edit_field);
 		gui::reset_edit_field_theme();
 
@@ -858,6 +951,7 @@ void Command_Window::draw()
 
 			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
 				run_command(current_displaying_command->command_name, command_args);
+				command_edit_field.free();
 			}
 			gui::reset_window_theme();
 		} else {
@@ -868,7 +962,7 @@ void Command_Window::draw()
 		}
 		gui::end_window();
 	}
-	IF_THEN(window_just_opened, window_just_opened = false);
+	IF_THEN(window_just_open, window_just_open = false);
 	gui::reset_window_theme();
 }
 
@@ -933,9 +1027,10 @@ void Editor::handle_events()
 void Editor::update()
 {
 	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
-		invert(&draw_command_window);
-		if (draw_command_window) {
-			command_window.window_just_opened = true;
+		if (command_window.window_open) {
+			command_window.close();
+		} else {
+			command_window.open();
 		}
 	}
 	if (!gui::were_events_handled() && were_key_events()) {
@@ -1032,7 +1127,7 @@ void Editor::render()
 
 		gui::end_window();
 	}
-	if (draw_command_window) {
+	if (command_window.window_open) {
 		command_window.draw();
 	}
 	if (draw_drop_down_entity_window) {
