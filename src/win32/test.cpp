@@ -1,6 +1,7 @@
 #include "test.h"
 #include "../libs/str.h"
 #include "../sys/sys.h"
+#include "../libs/str.h"
 
 void test()
 {

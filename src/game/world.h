@@ -143,6 +143,7 @@ struct Game_World {
 
 	void init();
 	void shutdown();
+	void release_all_resources();
 
 	void delete_entity(Entity_Id entity_id);
 

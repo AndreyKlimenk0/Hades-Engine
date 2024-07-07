@@ -655,14 +655,21 @@ s32 String::find(const char *substring, u32 start_index, bool case_sensetive)
 	int(*convert)(int c) = case_sensetive ? &keep_char : tolower;
 	for (s32 i = start_index; i < (s32)len; i++) {
 		if (convert(data[i]) == convert(substring[0])) {
-			result = i++;
-			for (s32 j = 1; (i < (s32)len) && (j < substring_len); j++, i++) {
-				if (convert(data[i]) != convert(substring[j])) {
-					result = -1;
+			if (((s32)len - i) < substring_len) {
+				result = -1;
+				break;
+			} else {
+				result = i++;
+				for (s32 j = 1; (i < (s32)len) && (j < substring_len); j++, i++) {
+					if (convert(data[i]) != convert(substring[j])) {
+						result = -1;
+						break;
+					}
+				}
+				if (result > -1) {
 					break;
 				}
 			}
-			break;
 		}
 	}
 	return result;

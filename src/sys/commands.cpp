@@ -4,9 +4,11 @@
 #include "commands.h"
 #include "../game/world.h"
 #include "../sys/sys.h"
+#include "../sys/level.h"
 #include "../sys/engine.h"
 #include "../libs/str.h"
 #include "../libs/os/path.h"
+#include "../libs/os/file.h"
 #include "../libs/mesh_loader.h"
 #include "../render/render_world.h"
 #include "../collision/collision.h"
@@ -48,13 +50,55 @@ static void load_meshes(Array<String> &mesh_names)
 	}
 }
 
+static void load_level(Array<String> &command_args)
+{
+	if (!(command_args.is_empty() || command_args.first().is_empty())) {
+		String full_path_to_level_file;
+		build_full_path_to_level_file(command_args.first(), full_path_to_level_file);
+		if (file_exists(full_path_to_level_file)) {
+			Engine *engine = Engine::get_instance();
+			Game_World *game_world = &engine->game_world;
+			Render_World *render_world = &engine->render_world;
+
+			save_game_and_render_world_in_level(engine->current_level_name, game_world, render_world);
+
+			engine->current_level_name = command_args.first();
+			game_world->release_all_resources();
+
+			render_world->release_render_entities_resources();
+			render_world->triangle_meshes.init(get_current_gpu_device());
+			render_world->line_meshes.init(get_current_gpu_device());
+
+			init_game_and_render_world_from_level(engine->current_level_name, game_world, render_world);
+		} else {
+			print("load_level: Can not load a level. {} does not exist.", command_args.first());
+		}
+	} else {
+		print("load_level: The command can't get a level name, agruments is not valid.");
+	}
+}
+
 static void create_level(Array<String> &command_args)
 {
-	//if ((command_args.count == 1) && !command_args.get_first().is_empty()) {
+	if (!(command_args.is_empty() || command_args.first().is_empty())) {
+		Engine *engine = Engine::get_instance();
+		Game_World *game_world = &engine->game_world;
+		Render_World *render_world = &engine->render_world;
+		
+		save_game_and_render_world_in_level(engine->current_level_name, game_world, render_world);
+		
+		engine->set_current_level_name(command_args.first());
+		game_world->release_all_resources();
+		
+		render_world->release_render_entities_resources();
+		render_world->triangle_meshes.init(get_current_gpu_device());
+		render_world->line_meshes.init(get_current_gpu_device());
 
-	//} else {
-	//	print("create_level: not valid args for the command");
-	//}
+		Entity_Id camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
+		engine->render_world.set_camera_for_rendering(camera_id);
+	} else {
+		print("create_level: The command can't get a level name, agruments is not valid.");
+	}
 }
 
 struct Command {
@@ -80,9 +124,8 @@ static void add_command(const char *command_name, void (*procedure)(Array<String
 void init_commands()
 {
 	add_command("load mesh", load_meshes);
-	//add_command("create level", create_level);
-	//add_command("load level", load_meshes);
-	//add_command("delete level", load_meshes);
+	add_command("load level", load_level);
+	add_command("create level", create_level);
 }
 
 void run_command(const char *command_name, Array<String> &command_args)

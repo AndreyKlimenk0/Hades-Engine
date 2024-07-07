@@ -65,6 +65,7 @@ struct Mesh_Storate {
 	};
 
 	Default_Textures default_textures;
+
 	Array<T> unified_vertices;
 	Array<u32> unified_indices;
 	Array<Texture2D> textures;
@@ -80,6 +81,8 @@ struct Mesh_Storate {
 	Gpu_Struct_Buffer mesh_struct_buffer;
 
 	void init(Gpu_Device *gpu_device);
+	void release_all_resources();
+
 	void allocate_gpu_memory();
 	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *mesh_id);
 	bool add_texture(const char *texture_name, Texture_Idx *texture_idx);
@@ -169,8 +172,6 @@ struct Render_World {
 
 	Bounding_Sphere world_bounding_sphere;
 
-	Array<Entity_Id> entity_ids; 	//temp code
-
 	Array<Matrix4> render_entity_world_matrices;
 	Array<Matrix4> light_view_matrices; // is the code necessary ? 
 	Array<Matrix4> cascaded_view_projection_matrices;
@@ -190,7 +191,6 @@ struct Render_World {
 	Mesh_Storate<Vector3> line_meshes;
 	Mesh_Storate<Vertex_PNTUV> triangle_meshes;
 
-	Texture2D default_texture;
 	Texture2D shadow_atlas;
 	Texture3D jittering_samples;
 
@@ -215,6 +215,8 @@ struct Render_World {
 	void init(Engine *engine);
 	void init_shadow_rendering();
 	void init_render_passes(Shader_Manager *shader_manager);
+	void release_all_resources();
+	void release_render_entities_resources();
 
 	void update();
 	void update_lights();
