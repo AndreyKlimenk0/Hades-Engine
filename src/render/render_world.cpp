@@ -152,6 +152,24 @@ void Mesh_Storate<T>::init(Gpu_Device *gpu_device)
 }
 
 template<typename T>
+void Mesh_Storate<T>::release_all_resources()
+{
+	unified_vertices.clear();
+	unified_indices.clear();
+	textures.clear();
+	mesh_instances.clear();
+	meshes_textures.clear();
+	loaded_meshes.clear();
+
+	mesh_table.clear();
+	texture_table.clear();
+
+	vertex_struct_buffer.free();
+	index_struct_buffer.free();
+	mesh_struct_buffer.free();
+}
+
+template<typename T>
 void Mesh_Storate<T>::allocate_gpu_memory()
 {
 	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
@@ -308,22 +326,9 @@ void Render_World::init(Engine *engine)
 
 	render_sys->gpu_device.create_constant_buffer(sizeof(CB_Frame_Info), &frame_info_cbuffer);
 
-	lights_struct_buffer.allocate<Hlsl_Light>(100);
-	world_matrices_struct_buffer.allocate<Matrix4>(100);
-
-	Texture2D_Desc texture_desc;
-	texture_desc.width = 200;
-	texture_desc.height = 200;
-	texture_desc.mip_levels = 1;
-
-	render_sys->gpu_device.create_texture_2d(&texture_desc, &default_texture);
-	render_sys->gpu_device.create_shader_resource_view(&texture_desc, &default_texture);
-	fill_texture((void *)&DEFAULT_MESH_COLOR, &default_texture);
-
-
-	if (!render_camera.is_entity_camera_set()) {
-		error("Render Camera was not initialized. There is no a view for rendering.");
-	}
+	//if (!render_camera.is_entity_camera_set()) {
+	//	error("Render Camera was not initialized. There is no a view for rendering.");
+	//}
 }
 
 void Render_World::init_shadow_rendering()
@@ -410,6 +415,40 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 			every_frame_render_passes.push(temp[i]);
 		}
 	}
+}
+
+void Render_World::release_all_resources()
+{
+	release_render_entities_resources();
+	shadow_cascade_ranges.clear();
+
+	shadow_atlas.release();
+	jittering_samples.release();
+	frame_info_cbuffer.free();
+}
+
+void Render_World::release_render_entities_resources()
+{
+	render_entity_world_matrices.clear();
+	light_view_matrices.clear();
+	cascaded_view_projection_matrices.clear();
+
+	game_render_entities.clear();
+	line_render_entities.clear();
+	vertex_render_entities.clear();
+	line_render_entity_colors.clear();
+	vertex_render_entity_colors.clear();
+
+	cascaded_shadows_list.clear();
+	cascaded_shadows_info_list.clear();
+
+	line_meshes.release_all_resources();
+	triangle_meshes.release_all_resources();
+
+	lights_struct_buffer.free();
+	cascaded_shadows_info_sb.free();
+	world_matrices_struct_buffer.free();
+	cascaded_view_projection_matrices_sb.free();
 }
 
 void Render_World::update()

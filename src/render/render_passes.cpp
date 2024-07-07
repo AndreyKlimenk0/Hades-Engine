@@ -131,7 +131,6 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
 
 	render_pipeline->set_pixel_shader_resource(CB_SHADOW_ATLAS_INFO_REGISTER, shadow_atlas_info_cbuffer);
-	render_pipeline->set_pixel_shader_resource(0, render_world->default_texture.srv);
 	render_pipeline->set_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER, render_world->shadow_atlas.srv);
 	render_pipeline->set_pixel_shader_resource(7, render_world->lights_struct_buffer);
 	render_pipeline->set_pixel_shader_resource(8, render_world->cascaded_view_projection_matrices_sb);
