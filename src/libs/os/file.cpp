@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #include "file.h"
+#include "../str.h"
 #include "../../sys/sys.h"
 
 bool get_file_names_from_dir(const char *full_path, Array<String> *file_names)
@@ -148,12 +149,18 @@ char *read_entire_file(const char *name, const char *mode, int *file_size)
 	return buffer;
 }
 
-void extract_file_extension(const char *file_name, String &file_extension)
+bool extract_file_extension(const char *file_name, String &file_extension)
 {
-	Array<String> buffer;
-	String temp = file_name;
-	bool result = split(&temp, ".", &buffer);
-	file_extension = result ? buffer.last() : temp;
+    if (!string_null_or_empty(file_name)) {
+    	Array<String> buffer;
+    	String temp = file_name;
+    	bool result = split(&temp, ".", &buffer);
+    	if (result && (buffer.count == 2)) {
+    	   file_extension = buffer.last();
+    	   return true;
+    	}
+	}
+	return false;
 }
 
 void extract_base_file_name(const char *file_name, String &base_file_name)

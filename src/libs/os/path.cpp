@@ -12,6 +12,7 @@ const char GITHUB_ENGINE_NAME[] = "hades-engine";
 
 struct Os_Path {
 	String base_path;
+	String data_dir_path;
 	//@Note: May be better to git rid of this hash table. Just hard code
 	Hash_Table<String, String> data_dir_paths;
 };
@@ -54,6 +55,7 @@ static void init_base_path()
 	} else {
 		os_path.base_path = current_path;
 	}
+	os_path.data_dir_path = join_paths(os_path.base_path, DATA_DIR_NAME);
 }
 
 void init_os_path()
@@ -141,4 +143,14 @@ void build_full_path_to_model_file(const char *file_name, String &full_path)
 const char *get_base_path()
 {
 	return os_path.base_path.c_str();
+}
+
+const char *get_full_path_to_data_directory()
+{
+    return os_path.data_dir_path;
+}
+
+String join_paths(const String &first_path, const String &second_path)
+{
+	return first_path + "\\" + second_path;
 }
