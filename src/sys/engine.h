@@ -1,6 +1,7 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#include "vars.h"
 #include "file_tracking.h"
 #include "../gui/editor.h"
 #include "../game/world.h"
@@ -18,6 +19,7 @@ struct Engine {
 	String current_map;
 	
 	Editor editor;
+	Variable_Service vars;
 	File_Tracking_System file_tracking_sys;
 	Game_World game_world;
 	Render_World render_world;

@@ -9,7 +9,7 @@
 #include "../structures/array.h"
 
 void extract_file_name(const char *path_to_file, String &file_name);
-void extract_file_extension(const char *file_name, String &file_extension);
+bool extract_file_extension(const char *file_name, String &file_extension);
 void extract_base_file_name(const char *file_name, String &base_file_name);
 bool extract_base_file_name_and_extension(const char *file_name, String &base_file_name, String &file_extension);
 
@@ -33,7 +33,6 @@ double read_real64(FILE *file);
 
 char *read_string(FILE *file, int len);
 char *read_entire_file(const char *name, const char *mode = "r", int *file_size = NULL);
-
 
 enum File_Mode {
 	FILE_MODE_READ,
