@@ -202,6 +202,7 @@
     <ClCompile Include="src\sys\file_tracking.cpp" />
     <ClCompile Include="src\sys\level.cpp" />
     <ClCompile Include="src\sys\utils.h" />
+    <ClCompile Include="src\sys\vars.cpp" />
     <ClCompile Include="src\win32\test.cpp" />
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_helpers.cpp" />
@@ -253,6 +254,7 @@
     <ClInclude Include="src\sys\file_tracking.h" />
     <ClInclude Include="src\sys\level.h" />
     <ClInclude Include="src\sys\sys.h" />
+    <ClInclude Include="src\sys\vars.h" />
     <ClInclude Include="src\win32\test.h" />
     <ClInclude Include="src\win32\win_console.h" />
   </ItemGroup>
