@@ -72,6 +72,11 @@ bool split(String *string, const char *symbols, Array<String> *array)
 	return true;
 }
 
+bool string_null_or_empty(const char *string)
+{
+    return ((string == NULL) || (string[0] == '\0'));
+}
+
 void to_upper_first_letter(String *string)
 {
 	for (u32 i = 0; i < string->len; i++) {

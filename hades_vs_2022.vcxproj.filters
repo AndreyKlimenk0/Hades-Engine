@@ -129,6 +129,24 @@
     <ClCompile Include="src\win32\win_main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\render_passes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\debug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\level.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\vars.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\win32\win_helpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libs\geometry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\D3DX11.h">
@@ -708,6 +726,45 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\win32\win_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\enum_helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_passes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\vertices.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\level.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\sys.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\vars.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\win32\win_console.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\win32\win_helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\math\3dmath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\geometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\number_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
