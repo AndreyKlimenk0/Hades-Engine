@@ -75,7 +75,7 @@ void to_upper_first_letter(String *string);
 
 bool is_alphabet(const char *string);
 bool split(String *string, const char *characters, Array<String> *array);
-
+bool string_null_or_empty(const char *string);
 
 char *get_next_line(char **buffer);
 char *concatenate_c_str(const char *str1, const char *str2);

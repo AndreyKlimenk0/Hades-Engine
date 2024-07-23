@@ -17,5 +17,8 @@ void build_full_path_to_source_shader_file(const char *file_name, String &full_p
 void build_full_path_to_model_file(const char *file_name, String &full_path);
 
 const char *get_base_path();
+const char *get_full_path_to_data_directory();
+
+String join_paths(const String &first_path, const String &second_path);
 
 #endif

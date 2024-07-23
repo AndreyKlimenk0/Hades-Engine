@@ -73,6 +73,8 @@ void Engine::init(Win32_Window *window)
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
 	init_performance_displaying();
+
+	vars.load("all.variables");
 	
 	engine->is_initialized = true;
 }
