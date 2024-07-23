@@ -2,7 +2,8 @@
 #define VAR_SERVICE_H
 
 struct Variable_Service {
-    void init();
+    void load(const char *file_name);
+    void parse(const char *data);
 };
 
 #endif
