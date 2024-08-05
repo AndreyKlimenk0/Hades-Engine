@@ -19,20 +19,6 @@ inline u32 pack_RGB(const Vector3 &rgb_value)
 	return result;
 }
 
-inline Point_u32 convert_1d_to_3d_index(u32 one_dimensional_index, u32 height, u32 depth)
-{
-	u32 i = one_dimensional_index / (height * depth);
-	u32 j = (one_dimensional_index % (height * depth)) / depth;
-	u32 k = one_dimensional_index % depth;
-	return Point_u32(i, j, k);
-}
-
-inline u32 convert_3d_to_1d_index(u32 x, u32 y, u32 z, u32 height, u32 depth)
-{
-	//return x + width * (y + depth * z);
-	return x * (height * depth) + y * depth + z;
-}
-
 template <typename T>
 struct Size3D {
 	Size3D();
