@@ -55,23 +55,25 @@ void Engine::init(Win32_Window *window)
 	init_commands();
 
 	font_manager.init();
+	
 	render_sys.init(window);
+	
 	shader_manager.init(&render_sys.gpu_device);
+	
+	render_sys.init_input_layouts(&shader_manager);
 	render_sys.render_2d.init(&render_sys, &shader_manager);
-
-	// @Note: It will be nice to get rid of input layouts in the future.
-	render_sys.init_shader_input_layout(&shader_manager);
+	render_sys.render_3d.init(&render_sys, &shader_manager);
 
 	gui::init_gui(this, "FiraCode-Regular", 12);
 	////gui::init_gui(this, "consola", FONT_SIZE);
+	
+	editor.init(this);
 
 	game_world.init();
 	render_world.init(this);
 
 	current_level_name = DEFAULT_LEVEL_NAME + LEVEL_EXTENSION;
 	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
-
-	editor.init(this);
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 

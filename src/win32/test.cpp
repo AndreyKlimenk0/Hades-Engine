@@ -27,67 +27,72 @@ inline Point_u32 convert_1d_to_3d_index(u32 one_dimensional_index, u32 height, u
 	return Point_u32(i, j, k);
 }
 
-inline u32 convert_3d_to_1d_index(u32 x, u32 y, u32 z, u32 width, u32 depth)
+inline u32 convert_3d_to_1d_index(u32 x, u32 y, u32 z, u32 height, u32 depth)
 {
 	//return x + width * (y + depth * z);
-	return x * (width * depth) + y * depth + z;
+	return x * (height * depth) + y * depth + z;
 }
 
 template <typename T>
-struct Point2D {
-	Point2D();
-	Point2D(const T &x, const T &y);
-	Point2D(const Point2D<T> &other);
+struct Size3D {
+	Size3D();
+	Size3D(const T &width, const T &height);
+	Size3D(const T &width, const T &height, const T &depth);
+	Size3D(const Size3D<T> &other);
 	template <typename U>
-	Point2D(const Point2D<U> &other);
+	Size3D(const Size3D<U> &other);
 	
-	T x;
-	T y;
+	T width;
+	T height;
+	T depth;
 
-	Point2D<T> &operator=(const Point2D<T> &other);
+	Size3D<T> &operator=(const Size3D<T> &other);
 	template <typename U>
-	Point2D<T> &operator=(const Point2D<U> &other);
+	Size3D<T> &operator=(const Size3D<U> &other);
 
 	T &operator[](u32 index);
 
-	Point2D<T> &operator+=(const T &value);
-	Point2D<T> &operator-=(const T &value);
-	Point2D<T> &operator*=(const T &value);
-	Point2D<T> &operator/=(const T &value);
+	Size3D<T> &operator+=(const T &value);
+	Size3D<T> &operator-=(const T &value);
+	Size3D<T> &operator*=(const T &value);
+	Size3D<T> &operator/=(const T &value);
 
-	Point2D<T> &operator+=(const Point2D<T> &other);
-	Point2D<T> &operator-=(const Point2D<T> &other);
-	Point2D<T> &operator*=(const Point2D<T> &other);
-	Point2D<T> &operator/=(const Point2D<T> &other);
+	Size3D<T> &operator+=(const Size3D<T> &other);
+	Size3D<T> &operator-=(const Size3D<T> &other);
+	Size3D<T> &operator*=(const Size3D<T> &other);
+	Size3D<T> &operator/=(const Size3D<T> &other);
 };
 
-typedef Point2D<s32>   Point2DS32;
-typedef Point2D<u32>   Point2DU32;
-typedef Point2D<float> Point2DF32;
+template <typename T>
+inline Size3D<T> operator+(const Size3D<T> &first_size, const Size3D<T> &second_size);
+template <typename T>
+inline Size3D<T> operator-(const Size3D<T> &first_size, const Size3D<T> &second_size);
+template <typename T>
+inline Size3D<T> operator*(const Size3D<T> &first_size, const Size3D<T> &second_size);
+template <typename T>
+inline Size3D<T> operator/(const Size3D<T> &first_size, const Size3D<T> &second_size);
 
 template <typename T>
-inline Point2D<T> operator+(const Point2D<T> &first_point, const Point2D<T> &second_point);
-template <typename T>
-inline Point2D<T> operator-(const Point2D<T> &first_point, const Point2D<T> &second_point);
-template <typename T> 
-inline Point2D<T> operator*(const Point2D<T> &first_point, const Point2D<T> &second_point);
-template <typename T>
-inline Point2D<T> operator/(const Point2D<T> &first_point, const Point2D<T> &second_point);
-
-template <typename T>
-struct Point3D : Point2D<T> {
+struct Point3D {
 	Point3D();
+	Point3D(const T &x, const T &y);
 	Point3D(const T &x, const T &y, const T &z);
-	Point3D(const Point2D<T> &point, const T &z);
 	Point3D(const Point3D<T> &other);
 	template <typename U>
 	Point3D(const Point3D<U> &other);
+	Point3D(const Vector2 &vector);
+	Point3D(const Vector3 &vector);
 
+	T x;
+	T y;
 	T z;
 
 	Point3D<T> &operator=(const Point3D<T> &other);
 	template <typename U>
 	Point3D<T> &operator=(const Point3D<U> &other);
+
+	Point3D<T> &operator=(const Vector2 &vector);
+	Point3D<T> &operator=(const Vector3 &vector);
 
 	T &operator[](u32 index);
 
@@ -100,11 +105,9 @@ struct Point3D : Point2D<T> {
 	Point3D<T> &operator-=(const Point3D<T> &other);
 	Point3D<T> &operator*=(const Point3D<T> &other);
 	Point3D<T> &operator/=(const Point3D<T> &other);
-};
 
-typedef Point3D<s32>   Point3DS32;
-typedef Point3D<u32>   Point3DU32;
-typedef Point3D<float> Point3DF32;
+	void move(const T &x_delta, const T &y_delta, const T &z_delta = {0});
+};
 
 template <typename T>
 inline Point3D<T> operator+(const Point3D<T> &first_point, const Point3D<T> &second_point);
@@ -117,9 +120,8 @@ inline Point3D<T> operator/(const Point3D<T> &first_point, const Point3D<T> &sec
 
 void test()
 {
-	Point3DS32 x = { 10, 20, 30 };
-	Point3DS32 y = { 30, 20, 10 };
-	auto resutl = x + y;
+	Point3D<s32> x = { 10, 20 };
+	Point3D<float> y = { 1.0f, 2.0f };
 }
 
 void update_test()
@@ -127,168 +129,18 @@ void update_test()
 }
 
 template<typename T>
-inline Point2D<T>::Point2D()
+inline Point3D<T>::Point3D() : x{0}, y{0}, z{0}
 {
 }
 
 template<typename T>
-inline Point2D<T>::Point2D(const T &x, const T &y) : x(x), y(y)
+Point3D<T>::Point3D(const T &x, const T &y) : x(x), y(y)
 {
+	z = {0};
 }
 
 template<typename T>
-inline Point2D<T>::Point2D(const Point2D<T> &other)
-{
-	*this = other;
-}
-
-template<typename T>
-template<typename U>
-inline Point2D<T>::Point2D(const Point2D<U> &other)
-{
-	*this = other;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator=(const Point2D<T> &other)
-{
-	if (this != &other) {
-		x = other.x;
-		y = other.y;
-	}
-	return *this;
-}
-
-template<typename T>
-template<typename U>
-inline Point2D<T> &Point2D<T>::operator=(const Point2D<U> &other)
-{
-	if (this != &other) {
-		x = static_cast<T>(other.x);
-		y = static_cast<T>(other.y);
-	}
-	return *this;
-}
-
-template<typename T>
-inline T &Point2D<T>::operator[](u32 index)
-{
-	assert(index < 2);
-	return ((T *)&x)[index];
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator+=(const T &value)
-{
-	x += value;
-	y += value;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator-=(const T &value)
-{
-	x -= value;
-	y -= value;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator*=(const T &value)
-{
-	x *= value;
-	y *= value;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator/=(const T &value)
-{
-	x /= value;
-	y /= value;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator+=(const Point2D<T> &other)
-{
-	x += other.x;
-	y += other.y;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator-=(const Point2D<T> &other)
-{
-	x -= other.x;
-	y -= other.y;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator*=(const Point2D<T> &other)
-{
-	x *= other.x;
-	y *= other.y;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> &Point2D<T>::operator/=(const Point2D<T> &other)
-{
-	x /= other.x;
-	y /= other.y;
-	return *this;
-}
-
-template<typename T>
-inline Point2D<T> operator+(const Point2D<T> &first_point, const Point2D<T> &second_point)
-{
-	Point2D<T> result;
-	result.x = first_point.x + second_point.x;
-	result.y = first_point.y + second_point.y;
-	return result;
-}
-
-template<typename T>
-inline Point2D<T> operator-(const Point2D<T> &first_point, const Point2D<T> &second_point)
-{
-	Point2D<T> result;
-	result.x = first_point.x - second_point.x;
-	result.y = first_point.y - second_point.y;
-	return result;
-}
-
-template<typename T>
-inline Point2D<T> operator*(const Point2D<T> &first_point, const Point2D<T> &second_point)
-{
-	Point2D<T> result;
-	result.x = first_point.x * second_point.x;
-	result.y = first_point.y * second_point.y;
-	return result;
-}
-
-template<typename T>
-inline Point2D<T> operator/(const Point2D<T> &first_point, const Point2D<T> &second_point)
-{
-	Point2D<T> result;
-	result.x = first_point.x / second_point.x;
-	result.y = first_point.y / second_point.y;
-	return result;
-}
-
-template<typename T>
-inline Point3D<T>::Point3D()
-{
-}
-
-template<typename T>
-inline Point3D<T>::Point3D(const T &x, const T &y, const T &z) : Point2D<T>(x, y), z(z)
-{
-}
-
-template<typename T>
-Point3D<T>::Point3D(const Point2D<T> &point, const T &z) : Point2D<T>(point), z(z)
+inline Point3D<T>::Point3D(const T &x, const T &y, const T &z) : x(x), y(y), z(z)
 {
 }
 
@@ -296,6 +148,18 @@ template<typename T>
 inline Point3D<T>::Point3D(const Point3D<T> &other)
 {
 	*this = other;
+}
+
+template<typename T>
+Point3D<T>::Point3D(const Vector2 &vector)
+{
+	*this = vector;
+}
+
+template<typename T>
+Point3D<T>::Point3D(const Vector3 &vector)
+{
+	*this = vector;
 }
 
 template<typename T>
@@ -309,7 +173,8 @@ template<typename T>
 Point3D<T> &Point3D<T>::operator=(const Point3D<T> &other)
 {
 	if (this != &other) {
-		((Point2D<T>)*this) = (Point2D<T>)other;
+		x = other.x;
+		y = other.y;
 		z = other.z;
 	}
 	return *this;
@@ -320,9 +185,28 @@ template<typename U>
 Point3D<T> &Point3D<T>::operator=(const Point3D<U> &other)
 {
 	if (this != &other) {
-		((Point2D<T>)*this) = (Point2D<U>)other;
+		x = static_cast<T>(other.x);
+		y = static_cast<T>(other.y);
 		z = static_cast<T>(other.z);
 	}
+	return *this;
+}
+
+template<typename T>
+Point3D<T> &Point3D<T>::operator=(const Vector2 &vector)
+{
+	x = static_cast<T>(vector.x);
+	y = static_cast<T>(vector.y);
+	z = { 0 };
+	return *this;
+}
+
+template<typename T>
+Point3D<T> &Point3D<T>::operator=(const Vector3 &vector)
+{
+	x = static_cast<T>(vector.x);
+	y = static_cast<T>(vector.y);
+	z = static_cast<T>(vector.z);
 	return *this;
 }
 
@@ -333,12 +217,11 @@ T &Point3D<T>::operator[](u32 index)
 	return ((T *)this)[index];
 }
 
-#define TO_POINT2D(_this) ((Point2D<T>)*_this)
-
 template<typename T>
 Point3D<T> &Point3D<T>::operator+=(const T &value)
 {
-	TO_POINT2D(this) += value;
+	x += value;
+	y += value;
 	z += value;
 	return *this;
 }
@@ -346,7 +229,8 @@ Point3D<T> &Point3D<T>::operator+=(const T &value)
 template<typename T>
 Point3D<T> &Point3D<T>::operator-=(const T &value)
 {
-	TO_POINT2D(this) -= value;
+	x -= value;
+	y -= value;
 	z -= value;
 	return *this;
 }
@@ -354,7 +238,8 @@ Point3D<T> &Point3D<T>::operator-=(const T &value)
 template<typename T>
 Point3D<T> &Point3D<T>::operator*=(const T &value)
 {
-	TO_POINT2D(this) *= value;
+	x *= value;
+	y *= value;
 	z *= value;
 	return *this;
 }
@@ -362,7 +247,8 @@ Point3D<T> &Point3D<T>::operator*=(const T &value)
 template<typename T>
 Point3D<T> &Point3D<T>::operator/=(const T &value)
 {
-	TO_POINT2D(this) /= value;
+	x /= value;
+	y /= value;
 	z /= value;
 	return *this;
 }
@@ -370,7 +256,8 @@ Point3D<T> &Point3D<T>::operator/=(const T &value)
 template<typename T>
 Point3D<T> &Point3D<T>::operator+=(const Point3D<T> &other)
 {
-	TO_POINT2D(this) += other;
+	x += other.x;
+	y += other.y;
 	z += other.z;
 	return *this;
 }
@@ -378,7 +265,8 @@ Point3D<T> &Point3D<T>::operator+=(const Point3D<T> &other)
 template<typename T>
 Point3D<T> &Point3D<T>::operator-=(const Point3D<T> &other)
 {
-	TO_POINT2D(this) -= other;
+	x -= other.x;
+	y -= other.y;
 	z -= other.z;
 	return *this;
 }
@@ -386,7 +274,8 @@ Point3D<T> &Point3D<T>::operator-=(const Point3D<T> &other)
 template<typename T>
 Point3D<T> &Point3D<T>::operator*=(const Point3D<T> &other)
 {
-	TO_POINT2D(this) *= other;
+	x *= other.x;
+	y *= other.y;
 	z *= other.z;
 	return *this;
 }
@@ -394,35 +283,141 @@ Point3D<T> &Point3D<T>::operator*=(const Point3D<T> &other)
 template<typename T>
 Point3D<T> &Point3D<T>::operator/=(const Point3D<T> &other)
 {
-	TO_POINT2D(this) /= other;
+	x /= other.x;
+	y /= other.y;
 	z /= other.z;
 	return *this;
 }
 
 template<typename T>
+void Point3D<T>::move(const T &x_delta, const T &y_delta, const T &z_delta)
+{
+	*this += Point3D<T>(x_delta, y_delta, z_delta);
+}
+
+template<typename T>
 inline Point3D<T> operator+(const Point3D<T> &first_point, const Point3D<T> &second_point)
 {
-	Point2D<T> result = (Point2D<T>)first_point + (Point2D<T>)second_point;
-	return Point3D<T>(result, first_point.z + second_point.z);
+	Point3D<T> result = first_point;
+	result += second_point;
+	return result;
 }
 
 template<typename T>
 inline Point3D<T> operator-(const Point3D<T> &first_point, const Point3D<T> &second_point)
 {
-	Point2D<T> result = (Point2D<T>)first_point - (Point2D<T>)second_point;
-	return Point3D<T>(result, first_point.z - second_point.z);
+	Point3D<T> result = first_point;
+	result -= second_point;
+	return result;
 }
 
 template<typename T>
 inline Point3D<T> operator*(const Point3D<T> &first_point, const Point3D<T> &second_point)
 {
-	Point2D<T> result = (Point2D<T>)first_point * (Point2D<T>)second_point;
-	return Point3D<T>(result, first_point.z * second_point.z);
+	Point3D<T> result = first_point;
+	result *= second_point;
+	return result;
 }
 
 template<typename T>
 inline Point3D<T> operator/(const Point3D<T> &first_point, const Point3D<T> &second_point)
 {
-	Point2D<T> result = (Point2D<T>)first_point / (Point2D<T>)second_point;
-	return Point3D<T>(result, first_point.z / second_point.z);
+	Point3D<T> result = first_point;
+	result /= second_point;
+	return result;
+}
+
+template<typename T>
+Size3D<T>::Size3D()
+{
+	width = {0};
+	height = {0};
+	depth = {0};
+}
+
+template<typename T>
+Size3D<T>::Size3D(const T &width, const T &height) : width(width), height(height), depth{0}
+{
+}
+
+template<typename T>
+Size3D<T>::Size3D(const T &width, const T &height, const T &depth) : width(width), height(height), depth(depth)
+{
+}
+
+template<typename T>
+Size3D<T>::Size3D(const Size3D<T> &other)
+{
+	*this = other;
+}
+
+template<typename T>
+template<typename U>
+Size3D<T>::Size3D(const Size3D<U> &other)
+{
+	*this = other;
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator=(const Size3D<T> &other)
+{
+	if (this != &other) {
+		width = other.width;
+		height = other.height;
+		depth = other.depth;
+	}
+	return *this;
+}
+
+template<typename T>
+template<typename U>
+Size3D<T> &Size3D<T>::operator=(const Size3D<U> &other)
+{
+	if (this != &other) {
+		width = static_cast<T>(other.width);
+		height = static_cast<T>(other.height);
+		depth = static_cast<T>(other.depth);
+	}
+	return *this;
+}
+
+template<typename T>
+T &Size3D<T>::operator[](u32 index)
+{
+	assert(index < 3);
+	((T *)this)[index];
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator+=(const Size3D<T> &other)
+{
+	width += other.width;
+	height += other.height;
+	depth += other.depth;
+	return *this;
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator-=(const Size3D<T> &other)
+{
+	width -= other.width;
+	height -= other.height;
+	depth -= other.depth;
+	return *this;
+}
+
+template<typename T>
+inline Size3D<T> operator+(const Size3D<T> &first_size, const Size3D<T> &second_size)
+{
+	Size3D<T> result = first_size;
+	result += second_size;
+	return result;
+}
+
+template<typename T>
+inline Size3D<T> operator-(const Size3D<T> &first_size, const Size3D<T> &second_size)
+{
+	Size3D<T> result = first_size;
+	result -= second_size;
+	return result;
 }

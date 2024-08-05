@@ -34,7 +34,7 @@ float calculate_cascaded_shadow_factor(Cascaded_Shadow_Calculating_Info calculat
     [unroll(10)] //@Note: Hard code
     for (; shadow_cascade_index < shadow_atlas_info.cascade_count; shadow_cascade_index++) {
         float4 position_from_cascade_perspective = mul(float4(vertex_out.world_position, 1.0f), shadow_cascade_view_projection_matrix);
-        float2 cascaded_ndc_coordinates = calculate_ndc_coordinates(position_from_cascade_perspective);
+        float2 cascaded_ndc_coordinates = normalize_ndc_coordinates(position_from_cascade_perspective);
         
         uint shadow_cascade_row_index = shadow_cascade_index % shadow_cascade_rows;
         uint shadow_cascade_col_index = shadow_cascade_index / shadow_cascade_cols;

@@ -30,19 +30,19 @@ static void load_meshes(Array<String> &mesh_names)
 			Import_Mesh *imported_mesh = NULL;
 			For(meshes, imported_mesh) {
 				Mesh_Id mesh_id;
-				if (render_world->add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id)) {
+				if (render_world->add_triangle_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id)) {
 					AABB mesh_AABB = make_AABB(&imported_mesh->mesh);
 					if (imported_mesh->mesh_instances.count > 0) {
 						for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
 							Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
 							Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
 							game_world->attach_AABB(entity_id, &mesh_AABB);
-							render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_id);
+							render_world->add_render_entity(entity_id, mesh_id);
 						}
 					} else {
 						Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
 						game_world->attach_AABB(entity_id, &mesh_AABB);
-						render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_id);
+						render_world->add_render_entity(entity_id, mesh_id);
 					}
 				}
 			}
@@ -67,7 +67,6 @@ static void load_level(Array<String> &command_args)
 
 			render_world->release_render_entities_resources();
 			render_world->triangle_meshes.init(get_current_gpu_device());
-			render_world->line_meshes.init(get_current_gpu_device());
 
 			init_game_and_render_world_from_level(engine->current_level_name, game_world, render_world);
 		} else {
@@ -92,7 +91,6 @@ static void create_level(Array<String> &command_args)
 		
 		render_world->release_render_entities_resources();
 		render_world->triangle_meshes.init(get_current_gpu_device());
-		render_world->line_meshes.init(get_current_gpu_device());
 
 		Entity_Id camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
 		engine->render_world.set_camera_for_rendering(camera_id);

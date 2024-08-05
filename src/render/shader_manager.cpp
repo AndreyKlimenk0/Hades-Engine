@@ -330,12 +330,12 @@ void Shader_Manager::init(Gpu_Device *_gpu_device)
 	u32 shader_count = 0;
 	shader_table[shader_count++] = { "debug_cascaded_shadows.hlsl", &shaders.debug_cascaded_shadows };
 	shader_table[shader_count++] = { "depth_map.hlsl", &shaders.depth_map };
-	shader_table[shader_count++] = { "draw_lines.hlsl", &shaders.draw_lines };
 	shader_table[shader_count++] = { "draw_vertices.hlsl", &shaders.draw_vertices };
 	shader_table[shader_count++] = { "forward_light.hlsl", &shaders.forward_light };
 	shader_table[shader_count++] = { "outlining.hlsl", &shaders.outlining };
 	shader_table[shader_count++] = { "render_2d.hlsl", &shaders.render_2d };
 	shader_table[shader_count++] = { "silhouette.hlsl", &shaders.silhouette };
+	shader_table[shader_count++] = { "voxelization.hlsl", &shaders.voxelization };
 
 	for (u32 i = 0; i < shader_count; i++) {
 		shader_table[i].shader->file_name = shader_table[i].name;

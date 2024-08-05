@@ -11,10 +11,11 @@ HLSH_DIR = "hlsl"
 
  # fxc /E vs_main /Od /Zi /T vs_5_0 /Fo PixelShader1.fxc demo.hlsl
  
+ 
 class Compilation_Mode(enum.Enum):
     DEBUG = 0;
     RELEASE = 1;
-    
+
 
 class Shader_Type(enum.Enum):
     VERTEX_SHADER = 1
@@ -22,6 +23,30 @@ class Shader_Type(enum.Enum):
     DOMAIN_SHADER = 3
     GEOMETRY_SHADER = 4
     PIXEL_SHADER = 5
+ 
+    
+class Shader_File:
+    def __init__(self, name, *args):
+        self.name : str = name
+        self.shader_types: [Shader_Type] = [item for item in args if isinstance(item, Shader_Type)]
+
+
+class Compilation_Params:
+    def __init__(self, compilation_mode : Compilation_Mode, shader_file_list : list[Shader_File]):
+        self.compilation_mode = compilation_mode
+        self.shader_file_list = shader_file_list
+
+
+shader_files = [
+    Shader_File("render_2d.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
+    Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER),
+    Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
+]
 
 
 def get_entry_point(shader_type: Shader_Type) -> str:
@@ -59,24 +84,6 @@ def get_output_file_name(shader_name: str, shader_type : Shader_Type) -> str:
     return name + file_prefix[shader_type] + ".cso"
 
 
-class Shader_File:
-    def __init__(self, name, *args):
-        self.name : str = name
-        self.shader_types: [Shader_Type] = [item for item in args if isinstance(item, Shader_Type)]
-
-
-shader_files = [
-    Shader_File("render_2d.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_lines.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
-    Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER)
-]
-
-
 def find_shader_file_in_list(shader_name : str):
     for shader_file in shader_files:
         if shader_name == shader_file.name:
@@ -85,33 +92,45 @@ def find_shader_file_in_list(shader_name : str):
 
 
 def build_fxc_command_line_params(shader_name: str, profile : str, entry_point : str, full_path_to_output_file : str, full_path_to_shader : str, compilation_mode = Compilation_Mode.DEBUG) -> (bool, str):
+    row_major_oder_matrices = "/Zpr"
     if compilation_mode == Compilation_Mode.DEBUG:
         path_to_shader_pdb_file = os.path.join(PROJECT_DIR, PDB_FILES_DIR, shader_name.replace("hlsl", "pdb"))
-        
         skip_optimization = "/Od"
-        row_major_oder_matrices = "/Zpr"
         enable_debugging_information = "/Zi"
         strip_reflection = "/Qstrip_reflect"
         shader_debug_file = f'/Fd "{path_to_shader_pdb_file}"'
         command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {skip_optimization} {row_major_oder_matrices} {enable_debugging_information} {strip_reflection} {shader_debug_file}'
         return (True, command_line_params)
+    
+    elif compilation_mode == Compilation_Mode.RELEASE:
+        optimization = "/O0"
+        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {row_major_oder_matrices} {optimization}'
+        return (True, command_line_params)
     else:
         return (False, "")
 
 
-def get_shader_file_list(shader_name_list : list[str]) -> list[Shader_File]:
-    shader_list = []
-    for shader_name in shader_name_list:
-        shader_file = find_shader_file_in_list(shader_name)
-        if shader_file is not None:
-            shader_list.append(shader_file)
+def parse_command_line_args(command_line_args : list[str]) -> Compilation_Params:
+    shader_file_list = []
+    compilation_mode = Compilation_Mode.DEBUG
+    for arg in command_line_args:
+        if arg.endswith(".hlsl"):
+            shader_file = find_shader_file_in_list(arg)
+            if shader_file is not None:
+                shader_file_list.append(shader_file)
+            else:
+                print("Error: Shader file '{}' was not found in shader file list.".format(arg))
+        elif arg.lower() == "release":
+            compilation_mode = Compilation_Mode.RELEASE
         else:
-            print("Error: shader with name {} was not found in shader file list.".format(shader_name))
-    return shader_list
-        
+            print("Warning: '{}' is an unknown command line argument.".format(arg))
+    if len(shader_file_list) == 0:
+        shader_file_list = shader_files
+    return Compilation_Params(compilation_mode, shader_file_list)
+            
 
-def compile_hlsl_shaders(shader_files : list[Shader_File]):
-    for shader_file in shader_files:
+def compile_hlsl_shaders(compilation_params : Compilation_Params):
+    for shader_file in compilation_params.shader_file_list:
         if len(shader_file.shader_types) == 0:
             print("Error: Type of shader file with name {} was not specified", shader_file.name)
             continue
@@ -124,7 +143,7 @@ def compile_hlsl_shaders(shader_files : list[Shader_File]):
             output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     
             full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
             
-            result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader)
+            result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
             if result:
                 result = subprocess.run(f'fxc {command_line_params}', shell=True, stdout=subprocess.PIPE)  
                 if result.returncode != 0:
@@ -136,8 +155,5 @@ def compile_hlsl_shaders(shader_files : list[Shader_File]):
 
 
 if __name__ == "__main__":
-    if (len(sys.argv) > 1):
-        shader_file_list = get_shader_file_list(sys.argv[1:])
-        compile_hlsl_shaders(shader_file_list)
-    else:
-        compile_hlsl_shaders(shader_files)
+        compilation_params = parse_command_line_args(sys.argv[1:])
+        compile_hlsl_shaders(compilation_params)

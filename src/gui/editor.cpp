@@ -6,6 +6,7 @@
 #include "../sys/commands.h"
 
 #include "../libs/str.h"
+#include "../libs/utils.h"
 #include "../libs/geometry.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -18,8 +19,9 @@
 #include "../libs/math/structures.h"
 
 #include "../render/render_api.h"
-#include "../render/render_system.h"
 #include "../render/render_world.h"
+#include "../render/render_passes.h"
+#include "../render/render_system.h"
 #include "../render/render_helpers.h"
 
 #include "../collision/collision.h"
@@ -57,7 +59,7 @@ inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render
 
 inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix, Matrix4 &perspective_matrix, Ray *ray)
 {
-	Vector2 xy_ndc_point = from_raster_to_screen_space(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
+	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
 	Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
 
 	Vector4 mouse_point_in_world = ndc_point * inverse(view_matrix * perspective_matrix);
@@ -70,14 +72,6 @@ inline float find_triangle_area(const Vector3 &a, const Vector3 &b, const Vector
 {
 	Vector3 area = cross(b - a, c - a); //  The magnitude of the cross-product can be interpreted as the area of the parallelogram
 	return length(area) * 0.5f;
-}
-
-inline bool is_in_range(float start, float end, float value)
-{
-	if ((start <= value) && (value <= end)) {
-		return true;
-	}
-	return false;
 }
 
 struct Ray_Trinagle_Intersection_Result {
@@ -112,7 +106,7 @@ static bool detect_intersection(Matrix4 &entity_world_matrix, Ray *picking_ray, 
 				float v = find_triangle_area(a, b, ray_plane_intersection_point) / triangle_area;
 				float w = find_triangle_area(b, c, ray_plane_intersection_point) / triangle_area;
 
-				if (is_in_range(0.0f, 1.1f, u + v + w)) {
+				if (in_range(0.0f, 1.1f, u + v + w)) {
 					if (result) {
 						intersection_result->a = a;
 						intersection_result->b = b;
@@ -159,7 +153,7 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 					}
 				} else {
 					Mesh_Id mesh_id = render_world->game_render_entities[i].mesh_id;
-					Mesh_Storate<Vertex_PNTUV>::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_id.instance_idx];
+					Mesh_Storate::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_id.instance_idx];
 
 					Vertex_PNTUV *vertices = &render_world->triangle_meshes.unified_vertices[mesh_instance.vertex_offset];
 					u32 *indices = &render_world->triangle_meshes.unified_indices[mesh_instance.index_offset];
@@ -299,8 +293,8 @@ void Make_Entity_Window::draw()
 
 				char *mesh_name = format("Box_{}_{}_{}", box.width, box.height, box.depth);
 				Mesh_Id mesh_id;
-				render_world->add_mesh(mesh_name, &mesh, &mesh_id);
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_id);
+				render_world->add_triangle_mesh(mesh_name, &mesh, &mesh_id);
+				render_world->add_render_entity(entity_id, mesh_id);
 
 				free_string(mesh_name);
 			}
@@ -478,34 +472,21 @@ void Game_World_Window::draw()
 			if (!draw_AABB_states.key_in_table(entity->idx)) {
 				draw_AABB_states[entity->idx] = false;
 			}
+			static Entity *last_picked_entity = NULL;
 			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->idx]);
 			if (was_click && draw_AABB_states[entity->idx]) {
-				//Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, editor->picked_entity);
-
-				//if (render_entity) {
-				//	char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
-				//	String_Id string_id = fast_hash(name);
-
-				//	Mesh_Idx mesh_idx;
-				//	if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
-				//		Line_Mesh AABB_mesh;
-				//		make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
-				//		render_world->add_mesh(name, &AABB_mesh, &mesh_idx);
-				//	}
-				//	free_string(name);
-
-				//	Render_Entity new_render_entity;
-				//	new_render_entity.entity_id = editor->picked_entity;
-				//	new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
-				//	new_render_entity.mesh_idx = mesh_idx;
-
-				//	render_world->line_render_entities.push(new_render_entity);
-				//}
-			} else if (was_click && !draw_AABB_states[entity->idx]) {
-				u32 render_entity_index = 0;
-				if (find_render_entity(&render_world->line_render_entities, editor->picked_entity, &render_entity_index)) {
-					render_world->line_render_entities.remove(render_entity_index);
+				if (entity) {
+					last_picked_entity = entity;
+					Line_Mesh AABB_mesh;
+					make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
+					render_system->render_3d.set_mesh(&AABB_mesh);
 				}
+			} else if (was_click && !draw_AABB_states[entity->idx]) {
+				render_system->render_3d.reset_mesh();
+				last_picked_entity = NULL;
+			}
+			if (draw_AABB_states[entity->idx] && last_picked_entity) {
+				render_system->render_3d.draw_lines(last_picked_entity->position, Color::Red);
 			}
 		}
 		gui::end_child();
@@ -527,27 +508,66 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 void Render_World_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
+	
+	rendering_types.push("Normal");
+	rendering_types.push("Voxel");
 }
 
 void Render_World_Window::update()
 {
 }
 
+inline Point_u32 convert_1d_to_3d_index(u32 one_dimensional_index, u32 height, u32 depth)
+{
+	u32 i = one_dimensional_index / (height * depth);
+	u32 j = (one_dimensional_index % (height * depth)) / depth;
+	u32 k = one_dimensional_index % depth;
+	return Point_u32(i, j, k);
+}
+
+u32 how_many(Array<Voxel> &voxels)
+{
+	u32 count = 0;
+	for (u32 i = 0; i < voxels.count; i++) {
+		if (voxels[i].occlusion != 0) {
+			count++;
+		}
+	}
+	return count;
+}
+
 void Render_World_Window::draw()
 {
+	static u32 render_type_index = 0;
+	static u32 prev_render_type_index = 0;
+	
+	gui::list_box(&rendering_types, &render_type_index);
+	if (render_type_index != prev_render_type_index) {
+		if (rendering_types[render_type_index] == "Normal") {
+			render_world->frame_render_passes.clear();
+			render_world->frame_render_passes.push(&render_world->render_passes.shadows);
+			render_world->frame_render_passes.push(&render_world->render_passes.forward_light);
+		
+		} else if (rendering_types[render_type_index] == "Voxel") {
+			render_world->frame_render_passes.clear();
+			render_world->frame_render_passes.push(&render_world->render_passes.voxelization);
+		}
+		prev_render_type_index = render_type_index;
+	}
+
 	if (gui::radio_button("Debug cascaded shadows", &debug_cascaded_shadows)) {
 		if (render_world->render_passes.forward_light.is_valid && render_world->render_passes.debug_cascade_shadows.is_valid) {
 			if (debug_cascaded_shadows) {
 				u32 forward_light_index = 0;
-				if (get_render_pass_index("Forward_Light", render_world->every_frame_render_passes, &forward_light_index)) {
-					render_world->every_frame_render_passes[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
+				if (get_render_pass_index("Forward_Light", render_world->frame_render_passes, &forward_light_index)) {
+					render_world->frame_render_passes[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
 				} else {
 					print("Render_World_Window::draw: Failed turn on cascaded shadows debuging. Forward light pass was not found.");
 				}
 			} else {
 				u32 debug_cascaded_shadows = 0;
-				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->every_frame_render_passes, &debug_cascaded_shadows)) {
-					render_world->every_frame_render_passes[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
+				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->frame_render_passes, &debug_cascaded_shadows)) {
+					render_world->frame_render_passes[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
 				} else {
 					print("Render_World_Window::draw: Failed turn off cascaded shadows debuging. Debug cascaded shadows pass was not found.");
 				}
@@ -556,6 +576,91 @@ void Render_World_Window::draw()
 			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes is not valid.");
 		}
 	}
+
+	gui::radio_button("Dispaly Voxel Grid", &display_voxel_grid);
+	gui::radio_button("Display voxel grid bounds", &display_voxel_grid_bounds);
+
+	if (display_voxel_grid_bounds) {
+		Vector3 max = { (float)render_world->voxel_grid.total_width() / 2.0f, (float)render_world->voxel_grid.total_height() / 2.0f, (float)render_world->voxel_grid.total_depth() / 2.0f };
+		Vector3 min = -max;
+
+		Box box = { (float)render_world->voxel_grid.total_width(), (float)render_world->voxel_grid.total_height(), (float)render_world->voxel_grid.total_depth() };
+		Triangle_Mesh tri_mesh;
+		make_box_mesh(&box, &tri_mesh);
+
+		Line_Mesh mesh;
+		//mesh.vertices.reserve(tri_mesh.vertices.count);
+		//mesh.indices.reserve(tri_mesh.indices.count);
+		//for (int i = 0; i < tri_mesh.vertices.count; i++) {
+		//	mesh.vertices[i] = tri_mesh.vertices[i].position;
+		//}
+		////mesh.indices = tri_mesh.indices;
+		//for (int i = 0, j = tri_mesh.indices.count - 1; i < tri_mesh.indices.count; i++, j--) {
+		//	mesh.indices[i] = tri_mesh.indices[j];
+		//}
+		make_AABB_mesh(&min, &max, &mesh);
+		
+		render_system->render_3d.set_mesh(&mesh);
+		render_system->render_3d.draw_lines(render_world->voxel_grid_center, Color(Color::Green.get_rgb(), 0.3f));
+		render_system->render_3d.reset_mesh();
+
+		Line_Mesh camera_AABB;
+		Vector3 temp_max = { 5.0f, 5.0f, 5.0f };
+		Vector3 temp_min = -temp_max;
+		make_AABB_mesh(&temp_min, &temp_max, &camera_AABB);
+		
+		auto view_pos = render_world->voxel_grid_center;
+		view_pos.z -= max.z;
+
+		render_system->render_3d.set_mesh(&camera_AABB);
+		render_system->render_3d.draw_lines(view_pos, Color::Green);
+		render_system->render_3d.reset_mesh();
+	}
+
+	if (display_voxel_grid) {
+		Array<Voxel> voxels;
+		voxels.reserve(render_world->voxel_grid.width * render_world->voxel_grid.height * render_world->voxel_grid.width);
+		memset((void *)voxels.items, 0, voxels.get_size());
+		render_world->voxels_sb.read(&voxels);
+
+		auto x = how_many(voxels);
+
+		if (!voxels.is_empty()) {
+			auto matrix = make_look_to_matrix(render_world->voxel_grid_center, Vector3::base_z);
+			Vector3 max = { (float)render_world->voxel_grid.ceil_width / 2.0f, (float)render_world->voxel_grid.ceil_height / 2.0f, (float)render_world->voxel_grid.ceil_depth / 2.0f };
+			Vector3 min = -max;
+
+			Line_Mesh mesh;
+			make_AABB_mesh(&min, &max, &mesh);
+
+			render_system->render_3d.set_mesh(&mesh);
+			
+			Point_u32 voxel_grid_size = { render_world->voxel_grid.width / 2, render_world->voxel_grid.height / 2, render_world->voxel_grid.depth / 2 };
+			for (u32 i = 0; i < voxels.count; i++) {
+				if (voxels[i].occlusion == 0) {
+					continue;
+				}
+
+				Point_u32 index_temp = convert_1d_to_3d_index(i, render_world->voxel_grid.height, render_world->voxel_grid.depth);
+				Point_s32 index = { (s32)index_temp.x, (s32)index_temp.y, (s32)index_temp.z };
+				index.x -= voxel_grid_size.x;
+				index.y -= voxel_grid_size.y;
+				index.z -= voxel_grid_size.z;
+
+				Vector3 offset;
+				offset.x = (float)((index.x * (s32)render_world->voxel_grid.ceil_width) + (s32)(render_world->voxel_grid.ceil_width / 2));
+				offset.y = (float)((index.y * (s32)render_world->voxel_grid.ceil_height) + (s32)(render_world->voxel_grid.ceil_height / 2));
+				offset.z = (float)((index.z * (s32)render_world->voxel_grid.ceil_depth) + (s32)(render_world->voxel_grid.ceil_depth / 2));
+
+				Vector3 voxel_center = (offset) * inverse(&matrix);
+
+				render_system->render_3d.draw_lines(voxel_center, Color::Red);
+			}
+
+			render_system->render_3d.reset_mesh();
+		}
+	}
+	render_world->voxels_sb.reset<Voxel>();
 
 	Array<String> strings;
 	for (u32 i = 0; i < game_world->cameras.count; i++) {
