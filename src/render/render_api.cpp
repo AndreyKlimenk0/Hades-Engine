@@ -1088,8 +1088,6 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 
 	current_gpu_device = gpu_device;
 	current_render_pipeline = render_pipeline;
-
-	HR(render_pipeline->dx11_context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void **)user_defined_annotation.ReleaseAndGetAddressOf()));
 }
 
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info)
