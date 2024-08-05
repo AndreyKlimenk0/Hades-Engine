@@ -49,12 +49,12 @@ struct Shader_Manager {
 	struct Shader_List {
 		Extend_Shader debug_cascaded_shadows;
 		Extend_Shader depth_map;
-		Extend_Shader draw_lines;
 		Extend_Shader draw_vertices;
 		Extend_Shader forward_light;
 		Extend_Shader outlining;
 		Extend_Shader render_2d;
 		Extend_Shader silhouette;
+		Extend_Shader voxelization;
 	} shaders;
 
 	Gpu_Device *gpu_device = NULL;

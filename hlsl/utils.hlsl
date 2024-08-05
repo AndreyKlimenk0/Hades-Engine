@@ -8,12 +8,13 @@ const static float3x3 identity_matrix3x3 =
     { 0, 0, 1 },
 };
 
-float3 calculate_ndc_coordinates(float4 transformed_vertex_position)
+// The function converts NDC coordinates from [-1, 1] to [0, 1]
+float3 normalize_ndc_coordinates(float4 transformed_vertex_position)
 {
     float3 ndc_coordinates;
     ndc_coordinates.x = 0.5f + ((transformed_vertex_position.x / transformed_vertex_position.w) * 0.5f);
 	ndc_coordinates.y = 0.5f - ((transformed_vertex_position.y / transformed_vertex_position.w) * 0.5f);
-	ndc_coordinates.z = 0.5f - ((transformed_vertex_position.z / transformed_vertex_position.w) * 0.5f);
+	ndc_coordinates.z = transformed_vertex_position.z / transformed_vertex_position.w;
 	return ndc_coordinates;
 }
 
@@ -39,6 +40,16 @@ float3 normal_mapping(float3 normal_sample, float3 vertex_normal, float3 tangent
 float4 normalize_rgb(int r, int g, int b)
 {
 	return float4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+}
+
+bool in_range(int min, int max, int value)
+{
+    return ((min <= value) && (value <= max));
+}
+
+bool in_range(float min, float max, float value)
+{
+    return ((min <= value) && (value <= max));
 }
         
 #endif

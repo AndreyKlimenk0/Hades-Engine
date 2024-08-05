@@ -87,6 +87,8 @@ struct Game_World_Window : Editor_Window {
 struct Render_World_Window : Editor_Window {
 	bool debug_cascaded_shadows = false;
 	bool show_cascaded_shadow_frustums = false;
+	bool display_voxel_grid = false;
+	bool display_voxel_grid_bounds = false;
 	Texture2D shadow_display_texture;
 
 	struct Draw_Cascade_Info {
@@ -95,6 +97,7 @@ struct Render_World_Window : Editor_Window {
 		u32 shadow_cascade_index;
 	};
 	Array<Draw_Cascade_Info> frustum_entity_ids;
+	Array<String> rendering_types;
 
 	void init(Engine *engine);
 	void update();

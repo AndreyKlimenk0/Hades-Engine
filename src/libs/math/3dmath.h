@@ -7,7 +7,7 @@
 #include "matrix.h"
 #include "../number_types.h"
 
-inline Vector2 from_raster_to_screen_space(u32 x, u32 y, u32 screen_width, u32 screen_height)
+inline Vector2 from_raster_to_ndc_coordinates(u32 x, u32 y, u32 screen_width, u32 screen_height)
 {
 	assert(screen_width > 0);
 	assert(screen_height > 0);

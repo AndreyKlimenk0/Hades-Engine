@@ -134,8 +134,7 @@ inline Texture2D create_color_texture(Gpu_Device *gpu_device, u32 texture_width,
 	return texture;
 }
 
-template<typename T>
-void Mesh_Storate<T>::init(Gpu_Device *gpu_device)
+void Mesh_Storate::init(Gpu_Device *gpu_device)
 {
 	assert(gpu_device);
 
@@ -151,8 +150,7 @@ void Mesh_Storate<T>::init(Gpu_Device *gpu_device)
 	default_textures.green = textures.push(create_color_texture(gpu_device, width, height, Color(0.5f, 0.5f, 1.0f)));
 }
 
-template<typename T>
-void Mesh_Storate<T>::release_all_resources()
+void Mesh_Storate::release_all_resources()
 {
 	unified_vertices.clear();
 	unified_indices.clear();
@@ -169,16 +167,14 @@ void Mesh_Storate<T>::release_all_resources()
 	mesh_struct_buffer.free();
 }
 
-template<typename T>
-void Mesh_Storate<T>::allocate_gpu_memory()
+void Mesh_Storate::allocate_gpu_memory()
 {
 	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
 	index_struct_buffer.allocate<u32>(100000);
 	vertex_struct_buffer.allocate<Vertex_PNTUV>(100000);
 }
 
-template<typename T>
-bool Mesh_Storate<T>::add_texture(const char *texture_name, Texture_Idx *texture_idx)
+bool Mesh_Storate::add_texture(const char *texture_name, Texture_Idx *texture_idx)
 {
 	assert(texture_name);
 	assert(texture_idx);
@@ -208,7 +204,7 @@ bool Mesh_Storate<T>::add_texture(const char *texture_name, Texture_Idx *texture
 			Texture2D texture;
 			gpu_device->create_texture_2d(&texture_desc, &texture);
 			gpu_device->create_shader_resource_view(&texture_desc, &texture);
-			render_pipeline->update_subresource(&texture, data, width * get_dxgi_format_size(texture_desc.format));
+			render_pipeline->update_subresource(&texture, data, width * dxgi_format_size(texture_desc.format));
 			render_pipeline->generate_mips(texture.srv);
 
 			*texture_idx = textures.push(texture);
@@ -220,11 +216,10 @@ bool Mesh_Storate<T>::add_texture(const char *texture_name, Texture_Idx *texture
 	return true;
 }
 
-template<typename T>
-bool Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *mesh_id)
+bool Mesh_Storate::add_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
 {
 	assert(mesh_name);
-	assert(mesh);
+	assert(triangle_mesh);
 	assert(mesh_id);
 
 	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
@@ -235,7 +230,7 @@ bool Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *me
 		return false;
 	}
 
-	if ((mesh->vertices.count == 0) || (mesh->indices.count == 0)) {
+	if ((triangle_mesh->vertices.count == 0) || (triangle_mesh->indices.count == 0)) {
 		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.", mesh_name);
 		return false;
 	}
@@ -243,23 +238,23 @@ bool Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *me
 	String_Id string_id = fast_hash(mesh_name);
 	if (!mesh_table.get(string_id, mesh_id)) {
 		Mesh_Textures mesh_textures;
-		mesh_textures.normal_idx = find_texture_or_get_default(mesh->normal_texture_name, default_textures.normal);
-		mesh_textures.diffuse_idx = find_texture_or_get_default(mesh->diffuse_texture_name, default_textures.diffuse);
-		mesh_textures.specular_idx = find_texture_or_get_default(mesh->specular_texture_name, default_textures.specular);
-		mesh_textures.displacement_idx = find_texture_or_get_default(mesh->displacement_texture_name, default_textures.displacement);
+		mesh_textures.normal_idx = find_texture_or_get_default(triangle_mesh->normal_texture_name, default_textures.normal);
+		mesh_textures.diffuse_idx = find_texture_or_get_default(triangle_mesh->diffuse_texture_name, default_textures.diffuse);
+		mesh_textures.specular_idx = find_texture_or_get_default(triangle_mesh->specular_texture_name, default_textures.specular);
+		mesh_textures.displacement_idx = find_texture_or_get_default(triangle_mesh->displacement_texture_name, default_textures.displacement);
 
 		mesh_id->textures_idx = meshes_textures.push(mesh_textures);
 
 		Mesh_Instance mesh_info;
-		mesh_info.vertex_count = mesh->vertices.count;
-		mesh_info.index_count = mesh->indices.count;
+		mesh_info.vertex_count = triangle_mesh->vertices.count;
+		mesh_info.index_count = triangle_mesh->indices.count;
 		mesh_info.vertex_offset = unified_vertices.count;
 		mesh_info.index_offset = unified_indices.count;
 
 		mesh_id->instance_idx = mesh_instances.push(mesh_info);
 
-		merge(&unified_vertices, &mesh->vertices);
-		merge(&unified_indices, &mesh->indices);
+		merge(&unified_vertices, &triangle_mesh->vertices);
+		merge(&unified_indices, &triangle_mesh->indices);
 
 		mesh_struct_buffer.update(&mesh_instances);
 		vertex_struct_buffer.update(&unified_vertices);
@@ -270,15 +265,14 @@ bool Mesh_Storate<T>::add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *me
 	return true;
 }
 
-template<typename T>
-bool Mesh_Storate<T>::update_mesh(Mesh_Id mesh_id, Mesh<T> *mesh)
+bool Mesh_Storate::update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh)
 {
-	Mesh_Instance mesh_instance = mesh_instances[mesh_id];
-	if ((mesh->vertices.count == mesh_instance.vertex_count) && (mesh->indices.count == mesh_instance.index_count)) {
+	Mesh_Instance mesh_instance = mesh_instances[mesh_id.instance_idx];
+	if ((triangle_mesh->vertices.count == mesh_instance.vertex_count) && (triangle_mesh->indices.count == mesh_instance.index_count)) {
 		u32 vertex_offset = mesh_instance.vertex_offset > 0 ? mesh_instance.vertex_offset : 0;
 		u32 index_offset = mesh_instance.index_offset > 0 ? mesh_instance.index_offset : 0;
-		copy_array(&unified_vertices, &mesh->vertices, vertex_offset);
-		copy_array(&unified_indices, &mesh->indices, index_offset);
+		copy_array(&unified_vertices, &triangle_mesh->vertices, vertex_offset);
+		copy_array(&unified_indices, &triangle_mesh->indices, index_offset);
 
 		vertex_struct_buffer.update(&unified_vertices);
 		index_struct_buffer.update(&unified_indices);
@@ -287,8 +281,7 @@ bool Mesh_Storate<T>::update_mesh(Mesh_Id mesh_id, Mesh<T> *mesh)
 	return false;
 }
 
-template<typename T>
-Texture_Idx Mesh_Storate<T>::find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture)
+Texture_Idx Mesh_Storate::find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture)
 {
 	Texture_Idx texture_idx;
 	if (!texture_file_name.is_empty() && add_texture(texture_file_name, &texture_idx)) {
@@ -318,17 +311,35 @@ void Render_World::init(Engine *engine)
 	render_sys = &engine->render_sys;
 
 	triangle_meshes.init(&render_sys->gpu_device);
-	line_meshes.init(&render_sys->gpu_device);
 
 	init_shadow_rendering();
+	
+	u32 x = 128;
+	voxel_grid.width = x;
+	voxel_grid.height = x;
+	voxel_grid.depth = x;
+	u32 y = 10;
+	voxel_grid.ceil_width = y;
+	voxel_grid.ceil_height = y;
+	voxel_grid.ceil_depth = y;
+	voxels_sb.allocate<Voxel>(voxel_grid.width * voxel_grid.height * voxel_grid.depth);
+
+	float half_voxel_grid_width = (float)(voxel_grid.width * voxel_grid.ceil_width) * 0.5f;
+	float half_voxel_grid_height = (float)(voxel_grid.height * voxel_grid.ceil_height) * 0.5f;
+	float voxel_grid_depth = (float)(voxel_grid.depth * voxel_grid.ceil_depth);
+
+	voxel_matrix = XMMatrixOrthographicOffCenterLH(-half_voxel_grid_width, half_voxel_grid_width, -half_voxel_grid_height, half_voxel_grid_height, 1.0f, voxel_grid_depth + 1.0f);
 
 	init_render_passes(&engine->shader_manager);
 
 	render_sys->gpu_device.create_constant_buffer(sizeof(CB_Frame_Info), &frame_info_cbuffer);
 
-	//if (!render_camera.is_entity_camera_set()) {
-	//	error("Render Camera was not initialized. There is no a view for rendering.");
-	//}
+	lights_struct_buffer.allocate<Hlsl_Light>(100);
+	world_matrices_struct_buffer.allocate<Matrix4>(100);
+
+	if (!render_camera.is_entity_camera_set()) {
+		error("Render Camera was not initialized. There is no a view for rendering.");
+	}
 }
 
 void Render_World::init_shadow_rendering()
@@ -389,19 +400,18 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	viewport.height = Render_System::screen_height;
 
 	render_passes.shadows.setup_render_pipeline(shader_manager, shadow_atlas.dsv);
-	render_passes.draw_lines.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
-	render_passes.draw_vertices.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
 	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
 	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
+	
+	render_passes.voxelization.setup_render_pipeline(shader_manager, voxels_sb.gpu_buffer.uav, render_sys->voxel_render_target.rtv);
 
 	render_passes.outlining.setup_outlining(2, Color(245, 176, 66));
 	render_passes.outlining.setup_render_pipeline(shader_manager, &render_sys->silhouette_buffer, &render_sys->silhouette_depth_stencil_buffer, &render_sys->back_buffer_texture, &render_sys->multisampling_depth_stencil_texture, &viewport);
 
 	Array<Render_Pass *> temp;
 	temp.push(&render_passes.shadows);
-	temp.push(&render_passes.draw_lines);
-	temp.push(&render_passes.draw_vertices);
 	temp.push(&render_passes.forward_light);
+	temp.push(&render_passes.voxelization);
 
 	for (u32 i = 0; i < render_pass_list.count; i++) {
 		if (render_pass_list[i]->is_valid) {
@@ -412,7 +422,7 @@ void Render_World::init_render_passes(Shader_Manager *shader_manager)
 	}
 	for (u32 i = 0; i < temp.count; i++) {
 		if (temp[i]->is_valid) {
-			every_frame_render_passes.push(temp[i]);
+			frame_render_passes.push(temp[i]);
 		}
 	}
 }
@@ -434,15 +444,10 @@ void Render_World::release_render_entities_resources()
 	cascaded_view_projection_matrices.clear();
 
 	game_render_entities.clear();
-	line_render_entities.clear();
-	vertex_render_entities.clear();
-	line_render_entity_colors.clear();
-	vertex_render_entity_colors.clear();
 
 	cascaded_shadows_list.clear();
 	cascaded_shadows_info_list.clear();
 
-	line_meshes.release_all_resources();
 	triangle_meshes.release_all_resources();
 
 	lights_struct_buffer.free();
@@ -473,6 +478,7 @@ void Render_World::update()
 	frame_info.far_plane = render_sys->view.far_plane;
 
 	update_shadows();
+	update_global_illumination();
 }
 
 void Render_World::update_render_entities()
@@ -482,17 +488,27 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
-
-	For(line_render_entities, render_entity) {
-		Entity *entity = game_world->get_entity(render_entity->entity_id);
-		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
-	}
-
-	For(vertex_render_entities, render_entity) {
-		Entity *entity = game_world->get_entity(render_entity->entity_id);
-		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
-	}
 	world_matrices_struct_buffer.update(&render_entity_world_matrices);
+}
+
+void Render_World::update_global_illumination()
+{	
+	Vector3 voxel_ceil_size = { (float)voxel_grid.ceil_width, (float)voxel_grid.ceil_height, (float)voxel_grid.ceil_depth };
+	Vector3 half_voxel_grid_size = { (float)voxel_grid.total_width(), (float)voxel_grid.total_height(), (float)voxel_grid.total_depth()};
+	half_voxel_grid_size *= 0.5f;
+
+	Camera *camera = game_world->get_camera(render_camera.camera_id);
+	auto dir = camera->target - camera->position;
+	voxel_grid_center = camera->position + (normalize(&dir) * half_voxel_grid_size);
+	voxel_grid_center /= voxel_ceil_size;
+	voxel_grid_center = floor(voxel_grid_center);
+	voxel_grid_center *= voxel_ceil_size;
+	
+	//voxel_grid_center = Vector3(0.0f, 160.0f, 0.0f);
+	
+	auto view_pos = voxel_grid_center;
+	view_pos.z -= half_voxel_grid_size.z;
+	voxel_view_matrix = make_look_to_matrix(view_pos, Vector3::base_z);
 }
 
 void Render_World::update_lights()
@@ -516,35 +532,14 @@ void Render_World::update_lights()
 	lights_struct_buffer.update(&shader_lights);
 }
 
-void Render_World::add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Id mesh_id, void *args)
+void Render_World::add_render_entity(Entity_Id entity_id, Mesh_Id mesh_id, void *args)
 {
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
 	render_entity.mesh_id = mesh_id;
 	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
 
-	switch (rendering_type) {
-		case RENDERING_TYPE_FORWARD_RENDERING: {
-			game_render_entities.push(render_entity);
-			break;
-		}
-		case RENDERING_TYPE_LINES_RENDERING: {
-			assert(args);
-			line_render_entities.push(render_entity);
-			line_render_entity_colors.push(*((Color *)args));
-			break;
-		}
-		case RENDERING_TYPE_VERTICES_RENDERING: {
-			assert(args);
-			vertex_render_entities.push(render_entity);
-			vertex_render_entity_colors.push(*((Color *)args));
-			break;
-		}
-		default: {
-			print("Render_World::add_render_entity: Unable to add a render entity, unknown rendering type was passed.");
-			break;
-		}
-	}
+	game_render_entities.push(render_entity);
 }
 
 u32 Render_World::delete_render_entity(Entity_Id entity_id)
@@ -671,18 +666,13 @@ void Render_World::update_shadows()
 	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
 }
 
-bool Render_World::add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Id *mesh_id)
+bool Render_World::add_triangle_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
 {
-	Bounding_Sphere temp = make_bounding_sphere(Vector3(0.0f, 0.0f, 0.0f), mesh);
-	if (temp.radious > world_bounding_sphere.radious) {
-		world_bounding_sphere = temp;
-	}
-	return triangle_meshes.add_mesh(mesh_name, mesh, mesh_id);
-}
-
-bool Render_World::add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Id *mesh_id)
-{
-	return line_meshes.add_mesh(mesh_name, mesh, mesh_id);
+	//Bounding_Sphere temp = make_bounding_sphere(Vector3(0.0f, 0.0f, 0.0f), mesh);
+	//if (temp.radious > world_bounding_sphere.radious) {
+	//	world_bounding_sphere = temp;
+	//}
+	return triangle_meshes.add_mesh(mesh_name, triangle_mesh, mesh_id);
 }
 
 void Render_World::set_camera_for_rendering(Entity_Id camera_id)
@@ -741,7 +731,7 @@ void Render_World::render()
 	render_sys->render_pipeline.set_pixel_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
 
 	Render_Pass *render_pass = NULL;
-	For(every_frame_render_passes, render_pass) {
+	For(frame_render_passes, render_pass) {
 		render_pass->render(this, &render_sys->render_pipeline);
 	}
 }
@@ -749,9 +739,8 @@ void Render_World::render()
 void Render_World::Render_Passes::get_all_passes(Array<Render_Pass *> *render_passes_list)
 {
 	render_passes_list->push(&shadows);
-	render_passes_list->push(&draw_lines);
-	render_passes_list->push(&draw_vertices);
 	render_passes_list->push(&forward_light);
 	render_passes_list->push(&debug_cascade_shadows);
 	render_passes_list->push(&outlining);
+	render_passes_list->push(&voxelization);
 }
