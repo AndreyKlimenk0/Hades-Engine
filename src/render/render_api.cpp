@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <d3d11_1.h>
 
 #include "render_api.h"
 #include "../libs/str.h"
@@ -12,6 +13,9 @@ static Multisample_Info default_render_api_multisample;
 static Gpu_Device *current_gpu_device = NULL;
 static Render_Pipeline *current_render_pipeline = NULL;
 
+static ComPtr<ID3DUserDefinedAnnotation> directx_annotation_interface = nullptr;
+static s32 debug_mark_rendering_event_counter = 0;
+
 Gpu_Device *get_current_gpu_device()
 {
 	assert(current_gpu_device);
@@ -22,6 +26,19 @@ Render_Pipeline *get_current_render_pipeline()
 {
 	assert(current_render_pipeline);
 	return current_render_pipeline;
+}
+
+void begin_mark_rendering_event(const wchar_t *event_name)
+{
+	assert(event_name);
+	debug_mark_rendering_event_counter++;
+	directx_annotation_interface->BeginEvent(event_name);
+}
+
+void end_mark_rendering_event()
+{
+	assert(--debug_mark_rendering_event_counter >= 0);
+	directx_annotation_interface->EndEvent();
 }
 
 inline D3D11_PRIMITIVE_TOPOLOGY to_dx11_primitive_type(Render_Primitive_Type primitive_type)
@@ -1085,6 +1102,7 @@ void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline)
 	if (feature_level < D3D_FEATURE_LEVEL_11_0) {
 		error("Direct3D Feature Level 11 unsupported.");
 	}
+	HR(render_pipeline->dx11_context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void **)directx_annotation_interface.ReleaseAndGetAddressOf()));
 
 	current_gpu_device = gpu_device;
 	current_render_pipeline = render_pipeline;

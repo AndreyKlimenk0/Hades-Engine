@@ -114,6 +114,7 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 	assert(render_pipeline);
 	assert(is_valid);
 
+	begin_mark_rendering_event(L"Forward rendering");
 	render_pipeline->apply(&render_pipeline_state);
 
 	CB_Shadow_Atlas_Info shadow_atlas_info;
@@ -125,8 +126,8 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 
 	render_pipeline->update_constant_buffer(&shadow_atlas_info_cbuffer, (void *)&shadow_atlas_info);
 
+	render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
-
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
@@ -151,7 +152,6 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
-		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 
 		Mesh_Textures *mesh_textures = render_world->triangle_meshes.get_mesh_textures(render_entity->mesh_id.textures_idx);
 		render_pipeline->set_pixel_shader_resource(11, render_world->triangle_meshes.get_texture(mesh_textures->normal_idx)->srv);
@@ -163,6 +163,7 @@ void Forwar_Light_Pass::render(Render_World *render_world, Render_Pipeline *rend
 	}
 	// Reset shadow atlas in order to get rid of warnings (Resource being set to OM DepthStencil is still bound on input!, Forcing PS shader resource slot 1 to NULL) from directx 11.
 	render_pipeline->reset_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER);
+	end_mark_rendering_event();
 }
 
 void Shadows_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
@@ -189,13 +190,14 @@ void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pi
 	assert(render_pipeline);
 	assert(is_valid);
 
+	begin_mark_rendering_event(L"Shadows rendering");
 	//@Note: this code can be moved to render world
 	render_pipeline->clear_depth_stencil_view(render_world->shadow_atlas.dsv);
 
 	render_pipeline->apply(&render_pipeline_state);
 
+	render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
-
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
@@ -215,12 +217,11 @@ void Shadows_Pass::render(Render_World *render_world, Render_Pipeline *render_pi
 				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
 
 				render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
-				render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
-
 				render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_id.instance_idx].index_count);
 			}
 		}
 	}
+	end_mark_rendering_event();
 }
 
 void Debug_Cascade_Shadows_Pass::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
@@ -251,6 +252,7 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 	assert(render_pipeline);
 	assert(is_valid);
 
+	begin_mark_rendering_event(L"Debug cascaded shadows");
 	render_pipeline->apply(&render_pipeline_state);
 
 	CB_Shadow_Atlas_Info shadow_atlas_info;
@@ -262,8 +264,8 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 
 	render_pipeline->update_constant_buffer(&shadow_atlas_info_cbuffer, (void *)&shadow_atlas_info);
 
+	render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
-
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
@@ -284,7 +286,6 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
-		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 
 		Mesh_Textures *mesh_textures = render_world->triangle_meshes.get_mesh_textures(render_entity->mesh_id.textures_idx);
 		render_pipeline->set_pixel_shader_resource(11, render_world->triangle_meshes.get_texture(mesh_textures->normal_idx)->srv);
@@ -296,6 +297,7 @@ void Debug_Cascade_Shadows_Pass::render(Render_World *render_world, Render_Pipel
 	}
 	// Reset shadow atlas in order to get rid of warnings (Resource being set to OM DepthStencil is still bound on input!, Forcing PS shader resource slot 1 to NULL) from directx 11.
 	render_pipeline->reset_pixel_shader_resource(SHADOW_ATLAS_TEXTURE_REGISTER);
+	end_mark_rendering_event();
 }
 
 void Outlining_Pass::add_render_entity_index(u32 entity_index)
@@ -369,12 +371,15 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 	assert(is_valid);
 	assert(outlining_compute_shader);
 
+	begin_mark_rendering_event(L"Outlining rendering");
 	render_pipeline->apply(&render_pipeline_state);
 
+	render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
+	render_pipeline->set_pixel_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 
 	Render_Entity *render_entity = NULL;
 	Render_Pass::Pass_Data pass_data;
@@ -388,9 +393,6 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 		pass_data.pad1 = i + 1;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
-		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
-		render_pipeline->set_pixel_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
-
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_id.instance_idx].index_count);
 	}
 	render_pipeline->reset_render_target();
@@ -409,6 +411,7 @@ void Outlining_Pass::render(Render_World *render_world, Render_Pipeline *render_
 	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_TEXTURE_REGISTER);
 	render_pipeline->reset_compute_shader_resource_view(SILHOUETTE_DEPTH_STENCIL_TEXTURE_REGISTER);
 	render_pipeline->reset_compute_shader_resource_view(SCREEN_BACK_BUFFER_DEPTH_STECHIL_REGISTER);
+	end_mark_rendering_event();
 }
 
 void Voxelization::init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states)
@@ -442,6 +445,7 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 	assert(render_world);
 	assert(render_pipeline);
 
+	begin_mark_rendering_event(L"Voxelization");
 	render_pipeline_state.viewport.width = render_world->voxel_grid.width;
 	render_pipeline_state.viewport.height = render_world->voxel_grid.height;
 
@@ -458,6 +462,7 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 
 	render_pipeline->apply(&render_pipeline_state);
 
+	render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
@@ -476,8 +481,7 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
-		render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
-
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_id.instance_idx].index_count);
 	}
+	end_mark_rendering_event();
 }

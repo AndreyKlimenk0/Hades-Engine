@@ -506,6 +506,8 @@ void Render_2D::new_frame()
 
 void Render_2D::render_frame()
 {
+	begin_mark_rendering_event(L"2D Rendering");
+
 	if ((total_vertex_count == 0) || !initialized) {
 		return;
 	}
@@ -599,6 +601,8 @@ void Render_2D::render_frame()
 	render_pipeline->reset_rasterizer();
 	render_pipeline->reset_blending_state();
 	render_pipeline->reset_depth_stencil_state();
+
+	end_mark_rendering_event();
 }
 
 void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
@@ -733,6 +737,8 @@ void Render_System::resize(u32 window_width, u32 window_height)
 
 void Render_System::new_frame()
 {
+	begin_mark_rendering_event(L"Frame rendering");
+
 	render_pipeline.clear_render_target_view(voxel_render_target.rtv, Color::Red);
 	render_pipeline.clear_render_target_view(back_buffer_texture.rtv, Color::LightSteelBlue);
 
@@ -749,11 +755,15 @@ void Render_System::end_frame()
 {
 	render_2d.render_frame();
 
+	begin_mark_rendering_event(L"Resoulve back buffer");
 	render_pipeline.resolve_subresource(&back_buffer_texture, &multisampling_back_buffer_texture, DXGI_FORMAT_R8G8B8A8_UNORM);
+	end_mark_rendering_event();
 
 	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
 
 	HR(swap_chain.dxgi_swap_chain->Present(0, 0));
+
+	end_mark_rendering_event();
 
 #ifdef REPORT_LIVE_OBJECTS
 	gpu_device.debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
