@@ -23,12 +23,11 @@ void cs_main(uint3 thread_id : SV_DispatchThreadID)
     
     float result = 0.0f;
     for (uint i = 0; i < sample_count; i++) {
-        result = max(result, screen_depth_stencil_back_buffer.Load(thread_id.xy, i).r);
+        result = max(result, screen_depth_stencil_back_buffer.Load(thread_id.xy, i));
     }
-    if (result == 0.0f) {
-        return;
+    if (result == 0.0f) { 
+        return; 
     }
-
     uint index_sample = silhouette_texture[thread_id.xy];
     float depth_sample = silhouette_depth_stencil_texture[thread_id.xy];    
     for (int x = -range; x <= range; x++) {
