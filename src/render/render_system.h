@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <DirectXMath.h>
 
+#include "mesh.h"
 #include "font.h"
 #include "vertices.h"
 #include "render_api.h"
@@ -167,6 +168,7 @@ struct Render_Pipeline_States {
 	Sampler_State point_sampling;
 	Sampler_State linear_sampling;
 	Rasterizer_State default_rasterizer_state;
+	Rasterizer_State disabled_multisampling_state;
 	Depth_Stencil_State default_depth_stencil_state;
 	Depth_Stencil_State disabled_depth_test;
 	Depth_Stencil_State outlining_depth_stencil_state;
@@ -175,16 +177,49 @@ struct Render_Pipeline_States {
 	void init(Gpu_Device *gpu_device);
 };
 
+struct Render_3D {
+	struct Draw_Info {
+		Color color;
+		Matrix4 world_matrix;
+	};
+
+	u32 index_count = 0;
+	u32 index_offset = 0;
+	u32 vertex_offset = 0;
+
+	Shader *draw_vertices = NULL;
+	Gpu_Device *gpu_device = NULL;
+	Render_Pipeline *render_pipeline = NULL;
+	Render_System *render_system = NULL;
+
+	Gpu_Buffer vertex_buffer;
+	Gpu_Buffer index_buffer;
+	Gpu_Buffer draw_info_cbuffer;
+
+	void init(Render_System *_render_system, Shader_Manager *shader_manager);
+	void shutdown();
+	void set_mesh(Vertex_Mesh *mesh);
+	void reset_mesh();
+	
+	void draw(const Vector3 &position, const Color &mesh_color);
+	void draw_lines(const Vector3 &position, const Color &mesh_color);
+	void draw_triangles(const Vector3 &position, const Color &mesh_color);
+};
+
 struct Render_System {
 	static u32 screen_width;
 	static u32 screen_height;
 
-	Input_Layout vertex_xuv;
+	struct Input_Layouts {
+		Input_Layout vertex_P2UV2;
+		Input_Layout vertex_P3;
+	} input_layouts;
 
 	//@Note: Why I need to have this var here ?
 	View view;
 	//@Note: Why I need to have this var here ?
 	Render_2D render_2d;
+	Render_3D render_3d;
 
 	Texture2D silhouette_buffer;
 	Texture2D silhouette_depth_stencil_buffer;
@@ -192,6 +227,7 @@ struct Render_System {
 
 	Texture2D multisampling_back_buffer_texture;
 	Texture2D multisampling_depth_stencil_texture;
+	Texture2D voxel_render_target;
 
 	Swap_Chain swap_chain;
 	Gpu_Device gpu_device;
@@ -200,7 +236,7 @@ struct Render_System {
 
 	void init(Win32_Window *window);
 	void init_render_targets(u32 window_width, u32 window_height);
-	void init_shader_input_layout(Shader_Manager *shader_manager);
+	void init_input_layouts(Shader_Manager *shader_manager);
 
 	void resize(u32 window_width, u32 window_height);
 
