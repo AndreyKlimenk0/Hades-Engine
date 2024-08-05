@@ -499,11 +499,16 @@ struct Render_Pipeline {
 };
 
 u32 dxgi_format_size(DXGI_FORMAT format);
+
 Gpu_Device *get_current_gpu_device();
 Render_Pipeline *get_current_render_pipeline();
+
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
 void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multisample_info, DXGI_FORMAT format);
+
+void begin_mark_rendering_event(const wchar_t *event_name);
+void end_mark_rendering_event();
 
 template <typename T>
 inline void *Render_Pipeline::map(Gpu_Resource<T> &resource, Map_Type map_type)
