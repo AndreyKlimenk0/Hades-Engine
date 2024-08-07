@@ -375,6 +375,42 @@ T &Size3D<T>::operator[](u32 index)
 }
 
 template<typename T>
+Size3D<T> &Size3D<T>::operator+=(const T &value)
+{
+	width += value;
+	height += value;
+	depth += value;
+	return *this;
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator-=(const T &value)
+{
+	width -= value;
+	height -= value;
+	depth -= value;
+	return *this;
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator*=(const T &value)
+{
+	width *= value;
+	height *= value;
+	depth *= value;
+	return *this;
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator/=(const T &value)
+{
+	width /= value;
+	height /= value;
+	depth /= value;
+	return *this;
+}
+
+template<typename T>
 Size3D<T> &Size3D<T>::operator+=(const Size3D<T> &other)
 {
 	width += other.width;
@@ -393,6 +429,24 @@ Size3D<T> &Size3D<T>::operator-=(const Size3D<T> &other)
 }
 
 template<typename T>
+Size3D<T> &Size3D<T>::operator*=(const Size3D<T> &other)
+{
+	width *= other.width;
+	height *= other.height;
+	depth *= other.depth;
+	return *this;
+}
+
+template<typename T>
+Size3D<T> &Size3D<T>::operator/=(const Size3D<T> &other)
+{
+	width /= other.width;
+	height /= other.height;
+	depth /= other.depth;
+	return *this;
+}
+
+template<typename T>
 inline Size3D<T> operator+(const Size3D<T> &first_size, const Size3D<T> &second_size)
 {
 	Size3D<T> result = first_size;
@@ -405,5 +459,21 @@ inline Size3D<T> operator-(const Size3D<T> &first_size, const Size3D<T> &second_
 {
 	Size3D<T> result = first_size;
 	result -= second_size;
+	return result;
+}
+
+template<typename T>
+inline Size3D<T> operator*(const Size3D<T> &first_size, const Size3D<T> &second_size)
+{
+	Size3D<T> result = first_size;
+	result *= second_size;
+	return result;
+}
+
+template<typename T>
+inline Size3D<T> operator/(const Size3D<T> &first_size, const Size3D<T> &second_size)
+{
+	Size3D<T> result = first_size;
+	result /= second_size;
 	return result;
 }
