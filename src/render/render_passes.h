@@ -96,7 +96,7 @@ struct Voxelization : Render_Pass {
 		Vector3 grid_center;
 		Pad1 pad;
 		Matrix4 voxel_orthographic_matrix;
-		Matrix4 voxel_view_matrix;
+		Matrix4 voxel_view_matrices[3];
 	};
 
 	Gpu_Buffer voxelization_info_cbuffer;

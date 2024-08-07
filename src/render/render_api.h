@@ -465,6 +465,8 @@ struct Render_Pipeline {
 	void set_vertex_shader_resource(u32 gpu_register, const Shader_Resource_View &shader_resource);
 	void set_vertex_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);
 
+	void set_geometry_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
+
 	void set_pixel_shader_sampler(u32 sampler_register, const Sampler_State &sampler_state);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
