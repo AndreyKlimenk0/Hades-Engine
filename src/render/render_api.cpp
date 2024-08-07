@@ -796,6 +796,11 @@ void Render_Pipeline::set_vertex_shader_resource(u32 shader_resource_register, c
 	dx11_context->VSSetShaderResources(shader_resource_register, 1, struct_buffer.gpu_buffer.srv.GetAddressOf());
 }
 
+void Render_Pipeline::set_geometry_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer)
+{
+	dx11_context->GSSetConstantBuffers(gpu_register, 1, constant_buffer.resource.GetAddressOf());
+}
+
 void Render_Pipeline::set_pixel_shader_sampler(u32 sampler_register, const Sampler_State &sampler_state)
 {
 	dx11_context->PSSetSamplers(sampler_register, 1, sampler_state.GetAddressOf());

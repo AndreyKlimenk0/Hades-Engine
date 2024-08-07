@@ -313,8 +313,8 @@ void Render_World::init(Engine *engine)
 	triangle_meshes.init(&render_sys->gpu_device);
 
 	init_shadow_rendering();
-	
-	u32 x = 128;
+
+	u32 x = 124;
 	voxel_grid.width = x;
 	voxel_grid.height = x;
 	voxel_grid.depth = x;
@@ -504,11 +504,13 @@ void Render_World::update_global_illumination()
 	voxel_grid_center = floor(voxel_grid_center);
 	voxel_grid_center *= voxel_ceil_size;
 	
-	//voxel_grid_center = Vector3(0.0f, 160.0f, 0.0f);
+	Vector3 left_to_right_view_position = { voxel_grid_center.x - half_voxel_grid_size.x, voxel_grid_center.y, voxel_grid_center.z };
+	Vector3 top_to_down_view_position = { voxel_grid_center.x, voxel_grid_center.y + half_voxel_grid_size.y, voxel_grid_center.z };
+	Vector3 back_to_front_view_position = { voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z - half_voxel_grid_size.z };
 	
-	auto view_pos = voxel_grid_center;
-	view_pos.z -= half_voxel_grid_size.z;
-	voxel_view_matrix = make_look_to_matrix(view_pos, Vector3::base_z);
+	left_to_right_voxel_view_matrix = make_look_to_matrix(left_to_right_view_position, Vector3::base_x);
+	top_to_down_voxel_view_matrix = make_look_to_matrix(top_to_down_view_position, negate(&Vector3::base_y), negate(&Vector3::base_z));
+	back_to_front_voxel_view_matrix = make_look_to_matrix(back_to_front_view_position, Vector3::base_z);
 }
 
 void Render_World::update_lights()

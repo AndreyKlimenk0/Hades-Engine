@@ -45,7 +45,7 @@ shader_files = [
     Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER),
-    Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
+    Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER)
 ]
 
 

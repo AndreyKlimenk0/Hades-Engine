@@ -179,7 +179,10 @@ struct Render_World {
 	Matrix4 voxel_matrix;
 	Voxel_Grid voxel_grid;
 	Vector3 voxel_grid_center;
-	Matrix4 voxel_view_matrix;
+	
+	Matrix4 left_to_right_voxel_view_matrix;
+	Matrix4 top_to_down_voxel_view_matrix;
+	Matrix4 back_to_front_voxel_view_matrix;
 
 	CB_Frame_Info frame_info;
 	Render_Camera render_camera;

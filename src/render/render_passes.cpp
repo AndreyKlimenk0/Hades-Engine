@@ -448,6 +448,8 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 	begin_mark_rendering_event(L"Voxelization");
 	render_pipeline_state.viewport.width = render_world->voxel_grid.width;
 	render_pipeline_state.viewport.height = render_world->voxel_grid.height;
+	//render_pipeline_state.viewport.width = 512;
+	//render_pipeline_state.viewport.height = 512;
 
 	Voxelization_Info voxelization_info;
 	voxelization_info.voxel_grid_width = render_world->voxel_grid.width;
@@ -458,18 +460,25 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 	voxelization_info.voxel_grid_ceil_depth = render_world->voxel_grid.ceil_depth;
 	voxelization_info.grid_center = render_world->voxel_grid_center;
 	voxelization_info.voxel_orthographic_matrix = render_world->voxel_matrix;
-	voxelization_info.voxel_view_matrix = render_world->voxel_view_matrix;
+	voxelization_info.voxel_view_matrices[0] = render_world->left_to_right_voxel_view_matrix;
+	voxelization_info.voxel_view_matrices[1] = render_world->top_to_down_voxel_view_matrix;
+	voxelization_info.voxel_view_matrices[2] = render_world->back_to_front_voxel_view_matrix;
 
 	render_pipeline->apply(&render_pipeline_state);
+	render_pipeline->set_geometry_shader(render_pipeline_state.shader);
+
+	
+	render_pipeline->update_constant_buffer(&voxelization_info_cbuffer, (void *)&voxelization_info);
 
 	render_pipeline->set_vertex_shader_resource(CB_PASS_DATA_REGISTER, pass_data_cbuffer);
 	render_pipeline->set_vertex_shader_resource(3, render_world->world_matrices_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(2, render_world->triangle_meshes.mesh_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(4, render_world->triangle_meshes.index_struct_buffer);
 	render_pipeline->set_vertex_shader_resource(5, render_world->triangle_meshes.vertex_struct_buffer);
-	
-	render_pipeline->update_constant_buffer(&voxelization_info_cbuffer, (void *)&voxelization_info);
 	render_pipeline->set_vertex_shader_resource(1, voxelization_info_cbuffer);
+
+	render_pipeline->set_geometry_shader_resource(1, voxelization_info_cbuffer);
+	
 	render_pipeline->set_pixel_shader_resource(1, voxelization_info_cbuffer);
 	render_pipeline->set_pixel_shader_sampler(LINEAR_SAMPLING_REGISTER, render_pipeline_states->linear_sampling);
 
@@ -483,5 +492,6 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_id.instance_idx].index_count);
 	}
+	render_pipeline->dx11_context->GSSetShader(nullptr, 0, 0);
 	end_mark_rendering_event();
 }
