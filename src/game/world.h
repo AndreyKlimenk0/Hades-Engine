@@ -134,7 +134,7 @@ struct Camera : Entity {
 };
 
 struct Game_World {
-	u32 light_hash = 0;
+	u32 light_hash = 0xffff;
 
 	Array<Entity> entities;
 	Array<Camera> cameras;
@@ -143,6 +143,7 @@ struct Game_World {
 
 	void init();
 	void shutdown();
+	void release_all_resources();
 
 	void delete_entity(Entity_Id entity_id);
 
