@@ -21,7 +21,7 @@ bool is_valid_texture(Texture2D_Desc *texture_desc, String *error_message)
 	} else if (texture_desc->height == 0) {
 		message = "Texture2d is not valid. Height was not set.";
 		result = false;
-	} else if (get_dxgi_format_size(texture_desc->format) == 0) {
+	} else if (dxgi_format_size(texture_desc->format) == 0) {
 		message = "Texture2d is not valid. Format size was not set.";
 		result = false;
 	} else if (texture_desc->format == DXGI_FORMAT_UNKNOWN) {

@@ -7,6 +7,8 @@
 #include "../libs/color.h"
 #include "../libs/number_types.h"
 #include "../libs/math/vector.h"
+#include "../libs/math/matrix.h"
+#include "../libs/math/structures.h"
 
 struct Shader;
 struct Gpu_Device;
@@ -39,12 +41,6 @@ struct Forwar_Light_Pass : Render_Pass {
 	void setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
 };
 
-struct Draw_Lines_Pass : Render_Pass {
-	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
-	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
-	void setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
-};
-
 struct Shadows_Pass : Render_Pass {
 	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
 	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
@@ -53,14 +49,6 @@ struct Shadows_Pass : Render_Pass {
 
 struct Debug_Cascade_Shadows_Pass : Render_Pass {
 	Gpu_Buffer shadow_atlas_info_cbuffer;
-
-	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
-	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
-	void setup_render_pipeline(Shader_Manager *shader_manager, const Depth_Stencil_View &depth_stencil_view, const Render_Target_View &render_target_view, Viewport *viewport);
-};
-
-struct Draw_Vertices_Pass : Render_Pass {
-	Gpu_Buffer mesh_color_cbuffer;
 
 	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
 	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
@@ -94,6 +82,24 @@ struct Outlining_Pass : Render_Pass {
 	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
 	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
 	void setup_render_pipeline(Shader_Manager *shader_manager, Texture2D *_silhouette_back_buffer, Texture2D *_silhouette_depth_stencil_buffer, Texture2D *_screen_back_buffer, Texture2D *_screen_depth_stencil_back_buffer, Viewport *viewport);
+};
+
+struct Voxelization : Render_Pass {
+	struct Voxelization_Info {
+		Size_u32 grid_size;
+		Size_u32 ceil_size;
+		Vector2 texel_size;
+		Vector3 grid_center;
+		Pad1 pad;
+		Matrix4 voxel_orthographic_matrix;
+		Matrix4 voxel_view_matrices[3];
+	};
+
+	Gpu_Buffer voxelization_info_cbuffer;
+	
+	void init(Gpu_Device *gpu_device, Render_Pipeline_States *_render_pipeline_states);
+	void render(Render_World *render_world, Render_Pipeline *render_pipeline);
+	void setup_render_pipeline(Shader_Manager *shader_manager, const Unordered_Access_View &voxel_buffer_view, const Render_Target_View &render_target_view);
 };
 
 #endif

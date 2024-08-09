@@ -63,7 +63,7 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 			Import_Mesh *imported_mesh = NULL;
 			For(meshes, imported_mesh) {
 				Mesh_Id mesh_id;
-				render_world->add_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id);
+				render_world->add_triangle_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id);
 			}
 		}
 
@@ -84,7 +84,7 @@ inline void make_render_entities(File *level_file, Game_World *game_world, Rende
 		if (game_world->get_entity(entity->first)) {
 			Mesh_Id mesh_id;
 			if (render_world->triangle_meshes.mesh_table.get(entity->second, &mesh_id)) {
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity->first, mesh_id);
+				render_world->add_render_entity(entity->first, mesh_id);
 			}
 		}
 	}

@@ -145,6 +145,17 @@ struct Gpu_Buffer : Gpu_Resource<ID3D11Buffer> {
 	u32 get_data_width();
 };
 
+struct Input_Layout_Element {
+	const char *semantic_name = NULL;
+	DXGI_FORMAT format;
+};
+
+struct Input_Layout_Elements {
+	Array<Input_Layout_Element> elements;
+
+	void add(const char *semantic_name, DXGI_FORMAT format);
+};
+
 struct Viewport {
 	u32 x = 0;
 	u32 y = 0;
@@ -161,8 +172,11 @@ struct Rasterizer_Desc {
 
 	//@Note: these methods can be removed 
 	// when Rasterizer_Desc will fully wrap D3D11_RASTERIZER_DESC
+	void none_culling();
 	void set_sciccor(bool state);
 	void set_counter_clockwise(bool state);
+	void set_multisampling(bool state);
+	void set_depthclip(bool state);
 };
 
 enum Blend_Option {
@@ -324,6 +338,21 @@ struct Gpu_Struct_Buffer {
 	void free();
 };
 
+struct Gpu_RWStruct_Buffer {
+	Gpu_Buffer gpu_buffer;
+
+	template <typename T>
+	void allocate(u32 elements_count);
+	template <typename T>
+	void write(Array<T> *array);
+	template <typename T>
+	void read(Array<T> *array);
+	template <typename T>
+	void reset();
+
+	void free();
+};
+
 struct Gpu_Device {
 	Dx11_Device dx11_device;
 	Dx11_Debug debug;
@@ -334,6 +363,8 @@ struct Gpu_Device {
 	void create_shader(u8 *byte_code, u32 byte_code_size, Hull_Shader &shader);
 	void create_shader(u8 *byte_code, u32 byte_code_size, Domain_Shader &shader);
 	void create_shader(u8 *byte_code, u32 byte_code_size, Pixel_Shader &shader);
+
+	void create_input_layout(void *shader_bytecode, u32 shader_bytecode_size, Input_Layout_Elements *input_layout_elements, Input_Layout &input_layout);
 
 	void create_gpu_buffer(Gpu_Buffer_Desc *desc, Gpu_Buffer *buffer);
 	void create_constant_buffer(u32 buffer_size, Gpu_Buffer *buffer);
@@ -348,8 +379,11 @@ struct Gpu_Device {
 	void create_shader_resource_view(Gpu_Buffer *gpu_buffer);
 	void create_shader_resource_view(Texture2D_Desc *texture_desc, Texture2D *texture);
 	void create_shader_resource_view(Texture3D_Desc *texture_desc, Texture3D *texture);
-	void create_depth_stencil_view(Texture2D_Desc *texture_desc, Texture2D *texture);
+	
+	void create_unordered_access_view(Gpu_Buffer *gpu_buffer);
 	void create_unordered_access_view(Texture2D_Desc *texture_desc, Texture2D *texture);
+	
+	void create_depth_stencil_view(Texture2D_Desc *texture_desc, Texture2D *texture);
 	void create_render_target_view(Texture2D *texture);
 };
 
@@ -375,6 +409,7 @@ struct Render_Pipeline_State {
 	Viewport viewport;
 	Depth_Stencil_View depth_stencil_view;
 	Render_Target_View render_target_view;
+	Unordered_Access_View unordered_access_view;
 };
 
 struct Swap_Chain {
@@ -430,6 +465,8 @@ struct Render_Pipeline {
 	void set_vertex_shader_resource(u32 gpu_register, const Shader_Resource_View &shader_resource);
 	void set_vertex_shader_resource(u32 shader_resource_register, const Gpu_Struct_Buffer &struct_buffer);
 
+	void set_geometry_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
+
 	void set_pixel_shader_sampler(u32 sampler_register, const Sampler_State &sampler_state);
 	void set_pixel_shader_resource(u32 gpu_register, const Gpu_Buffer &constant_buffer);
 	void set_pixel_shader_resource(u32 shader_resource_register, const Shader_Resource_View &shader_resource_view);
@@ -450,6 +487,7 @@ struct Render_Pipeline {
 	void set_blend_state(const Blend_State &blend_state);
 	void set_depth_stencil_state(const Depth_Stencil_State &depth_stencil_state, u32 stencil_ref = 0);
 	void set_render_target(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view);
+	void set_render_target_and_unordered_access_view(const Render_Target_View &render_target_view, const Depth_Stencil_View &depth_stencil_view, const Unordered_Access_View &unordered_access_view);
 
 	void reset_rasterizer();
 	void reset_blending_state();
@@ -462,12 +500,17 @@ struct Render_Pipeline {
 	void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z);
 };
 
-u32 get_dxgi_format_size(DXGI_FORMAT format);
+u32 dxgi_format_size(DXGI_FORMAT format);
+
 Gpu_Device *get_current_gpu_device();
 Render_Pipeline *get_current_render_pipeline();
+
 void init_render_api(Gpu_Device *gpu_device, Render_Pipeline *render_pipeline);
 void setup_multisampling(Gpu_Device *gpu_device, Multisample_Info *multisample_info);
 void get_max_multisampling_level(Gpu_Device *gpu_device, Multisample_Info *multisample_info, DXGI_FORMAT format);
+
+void begin_mark_rendering_event(const wchar_t *event_name);
+void end_mark_rendering_event();
 
 template <typename T>
 inline void *Render_Pipeline::map(Gpu_Resource<T> &resource, Map_Type map_type)
@@ -559,6 +602,96 @@ inline void Gpu_Struct_Buffer::update(Array<T> *array)
 }
 
 inline void Gpu_Struct_Buffer::free()
+{
+	if (!gpu_buffer.is_empty()) {
+		gpu_buffer.free();
+	}
+}
+
+template<typename T>
+inline void Gpu_RWStruct_Buffer::allocate(u32 elements_count)
+{
+	Gpu_Buffer_Desc desc;
+	desc.usage = RESOURCE_USAGE_DEFAULT;
+	desc.data_size = sizeof(T);
+	desc.struct_size = sizeof(T);
+	desc.data_count = elements_count;
+	desc.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+
+	Gpu_Device *gpu_device = get_current_gpu_device();
+	gpu_device->create_gpu_buffer(&desc, &gpu_buffer);
+	gpu_device->create_unordered_access_view(&gpu_buffer);
+	gpu_device->create_shader_resource_view(&gpu_buffer);
+}
+
+template<typename T>
+inline void Gpu_RWStruct_Buffer::write(Array<T> *array)
+{
+	if (array->is_empty()) {
+		return;
+	}
+	if (array->count > gpu_buffer.data_count) {
+		free();
+		allocate<T>(array->count);
+	}
+
+	Gpu_Device *gpu_device = get_current_gpu_device();
+	Render_Pipeline *render_pipeline = get_current_render_pipeline();
+
+	Gpu_Buffer_Desc readable_cpu_buffer_desc;
+	readable_cpu_buffer_desc.usage = RESOURCE_USAGE_STAGING;
+	readable_cpu_buffer_desc.data_size = sizeof(T);
+	readable_cpu_buffer_desc.data_count = array->count;
+	readable_cpu_buffer_desc.bind_flags = 0;
+	readable_cpu_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
+	readable_cpu_buffer_desc.data = (void *)array->items;
+	
+	Gpu_Buffer readable_cpu_buffer;
+	gpu_device->create_gpu_buffer(&readable_cpu_buffer_desc, &readable_cpu_buffer);
+	render_pipeline->copy_resource(gpu_buffer, readable_cpu_buffer);
+	
+	readable_cpu_buffer.free();
+}
+
+template<typename T>
+inline void Gpu_RWStruct_Buffer::read(Array<T> *array)
+{
+	if (array->count == 0) { 
+		return; 
+	}
+	Gpu_Device *gpu_device = get_current_gpu_device();
+	Render_Pipeline *render_pipeline = get_current_render_pipeline();
+
+	Gpu_Buffer_Desc readable_cpu_buffer_desc;
+	readable_cpu_buffer_desc.usage = RESOURCE_USAGE_STAGING;
+	readable_cpu_buffer_desc.data = NULL;
+	readable_cpu_buffer_desc.data_size = sizeof(T);
+	readable_cpu_buffer_desc.data_count = array->count;
+	readable_cpu_buffer_desc.bind_flags = 0;
+	readable_cpu_buffer_desc.cpu_access = CPU_ACCESS_READ;
+
+	Gpu_Buffer readable_cpu_buffer;
+	gpu_device->create_gpu_buffer(&readable_cpu_buffer_desc, &readable_cpu_buffer);
+	render_pipeline->copy_resource(readable_cpu_buffer, gpu_buffer);
+
+	T *buffer = (T *)render_pipeline->map(readable_cpu_buffer, MAP_TYPE_READ);
+	memcpy((void *)array->items, (void *)buffer, sizeof(T) * array->count); // An array tells how much data must be read
+	render_pipeline->unmap(readable_cpu_buffer);
+
+	readable_cpu_buffer.free();
+}
+
+template<typename T>
+inline void Gpu_RWStruct_Buffer::reset()
+{
+	Array<T> temp;
+	temp.reserve(gpu_buffer.data_count);
+	memset((void *)temp.items, 0, temp.get_size());
+	write(&temp);
+}
+
+inline void Gpu_RWStruct_Buffer::free()
 {
 	if (!gpu_buffer.is_empty()) {
 		gpu_buffer.free();

@@ -22,10 +22,12 @@ struct Color {
 	Color(int r, int g, int b, int a = 255);
 	Color(float r, float g, float b, float a = 1.0f) : value(r, g, b, a) {}
 	explicit Color(s32 color);
+	explicit Color(const Vector3 &rgb, float a = 1.0f);
 
 	operator Vector4();
 
 	u32 get_packed_rgba();
+	Vector3 get_rgb();
 };
 
 inline Color::operator Vector4()

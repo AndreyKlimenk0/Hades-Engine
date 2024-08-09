@@ -358,6 +358,7 @@
     <ClInclude Include="src\libs\structures\linked_list.h" />
     <ClInclude Include="src\libs\structures\queue.h" />
     <ClInclude Include="src\libs\structures\stack.h" />
+    <ClInclude Include="src\libs\utils.h" />
     <ClInclude Include="src\render\font.h" />
     <ClInclude Include="src\render\hlsl.h" />
     <ClInclude Include="src\render\mesh.h" />

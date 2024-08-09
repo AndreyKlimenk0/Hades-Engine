@@ -146,7 +146,6 @@ bool Mesh_Loader::load(const char *full_path_to_mesh_file, Array<Import_Mesh> &m
 		defer(Assimp::DefaultLogger::kill());
 	}
 
-	//scene = (aiScene *)importer.ReadFile(full_path_to_mesh_file, aiProcessPreset_TargetRealtime_Fast | aiProcess_ConvertToLeftHanded);
 	scene = (aiScene *)importer.ReadFile(full_path_to_mesh_file, aiProcessPreset_TargetRealtime_Fast | aiProcess_ConvertToLeftHanded);
 	if (!scene) {
 		print("Mesh_Loader::load: Failed to load a scene from {}.", file_name);
@@ -203,8 +202,6 @@ void Mesh_Loader::process_nodes(aiNode *node, Array<Import_Mesh> &meshes, Hash_T
 					aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
 					process_material(material, &meshes.last());
 				}
-			} else {
-
 			}
 		}
 	}
@@ -212,18 +209,17 @@ void Mesh_Loader::process_nodes(aiNode *node, Array<Import_Mesh> &meshes, Hash_T
 		process_nodes(node->mChildren[i], meshes, mesh_cache);
 	}
 }
-inline void get_texture_file_name(aiMaterial *material, aiTextureType texture_type, String &texture_file_name)
+
+inline bool get_texture_file_name(aiMaterial *material, aiTextureType texture_type, String &texture_file_name)
 {
 	u32 texture_count = material->GetTextureCount(texture_type);
 	if (texture_count > 0) {
 		aiString path_to_texture_file;
 		material->GetTexture(texture_type, 0, &path_to_texture_file);
 		extract_file_name(path_to_texture_file.C_Str(), texture_file_name);
-
-		if (texture_count > 1) {
-
-		}
+		return true;
 	}
+	return false;
 }
 
 void Mesh_Loader::process_material(aiMaterial *material, Import_Mesh *import_mesh)
@@ -234,7 +230,9 @@ void Mesh_Loader::process_material(aiMaterial *material, Import_Mesh *import_mes
 	material->Get(AI_MATKEY_SHININESS, shininess);
 	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
 
-	get_texture_file_name(material, aiTextureType_NORMALS, import_mesh->mesh.normal_texture_name);
+	if (!get_texture_file_name(material, aiTextureType_NORMALS, import_mesh->mesh.normal_texture_name)) {
+		get_texture_file_name(material, aiTextureType_HEIGHT, import_mesh->mesh.normal_texture_name);
+	}
 	get_texture_file_name(material, aiTextureType_DIFFUSE, import_mesh->mesh.diffuse_texture_name);
 	get_texture_file_name(material, aiTextureType_SPECULAR, import_mesh->mesh.specular_texture_name);
 	get_texture_file_name(material, aiTextureType_DISPLACEMENT, import_mesh->mesh.displacement_texture_name);

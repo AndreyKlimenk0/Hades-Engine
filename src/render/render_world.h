@@ -11,6 +11,7 @@
 #include "../libs/number_types.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
+#include "../libs/math/structures.h"
 #include "../libs/structures/array.h"
 
 struct Engine;
@@ -45,7 +46,6 @@ struct Mesh_Textures {
 	Texture_Idx displacement_idx;
 };
 
-template <typename T>
 struct Mesh_Storate {
 	struct Mesh_Instance {
 		u32 vertex_count = 0;
@@ -65,7 +65,8 @@ struct Mesh_Storate {
 	};
 
 	Default_Textures default_textures;
-	Array<T> unified_vertices;
+
+	Array<Vertex_PNTUV> unified_vertices;
 	Array<u32> unified_indices;
 	Array<Texture2D> textures;
 	Array<Mesh_Instance> mesh_instances;
@@ -80,24 +81,24 @@ struct Mesh_Storate {
 	Gpu_Struct_Buffer mesh_struct_buffer;
 
 	void init(Gpu_Device *gpu_device);
+	void release_all_resources();
+
 	void allocate_gpu_memory();
-	bool add_mesh(const char *mesh_name, Mesh<T> *mesh, Mesh_Id *mesh_id);
+	bool add_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
 	bool add_texture(const char *texture_name, Texture_Idx *texture_idx);
-	bool update_mesh(Mesh_Id mesh_id, Mesh<T> *mesh);
+	bool update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh);
 	Texture_Idx find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture);
 
 	Mesh_Textures *get_mesh_textures(u32 index);
 	Texture2D *get_texture(Texture_Idx texture_idx);
 };
 
-template<typename T>
-inline Mesh_Textures *Mesh_Storate<T>::get_mesh_textures(u32 index)
+inline Mesh_Textures *Mesh_Storate::get_mesh_textures(u32 index)
 {
 	return &meshes_textures[index];
 }
 
-template<typename T>
-inline Texture2D *Mesh_Storate<T>::get_texture(Texture_Idx texture_idx)
+inline Texture2D *Mesh_Storate::get_texture(Texture_Idx texture_idx)
 {
 	return &textures[texture_idx];
 }
@@ -148,11 +149,28 @@ struct Render_Camera {
 	bool is_entity_camera_set();
 };
 
-enum Rendering_Type {
-	RENDERING_TYPE_FORWARD_RENDERING,
-	RENDERING_TYPE_LINES_RENDERING,
-	RENDERING_TYPE_VERTICES_RENDERING,
+struct Voxel {
+	u32 encoded_color;
+	u32 occlusion;
 };
+
+struct Voxel_Grid {
+	Size_u32 grid_size;
+	Size_u32 ceil_size;
+	
+	u32 ceil_count();
+	Size_u32 total_size();
+};
+
+inline u32 Voxel_Grid::ceil_count()
+{
+	return grid_size.find_area();
+}
+
+inline Size_u32 Voxel_Grid::total_size()
+{
+	return grid_size * ceil_size;
+}
 
 struct Render_World {
 	Game_World *game_world = NULL;
@@ -164,38 +182,39 @@ struct Render_World {
 	u32 jittering_filter_size = 0;
 	u32 jittering_scaling = 0;
 
+	Matrix4 voxel_matrix;
+	Voxel_Grid voxel_grid;
+	Vector3 voxel_grid_center;
+	
+	Matrix4 left_to_right_voxel_view_matrix;
+	Matrix4 top_to_down_voxel_view_matrix;
+	Matrix4 back_to_front_voxel_view_matrix;
+
 	CB_Frame_Info frame_info;
 	Render_Camera render_camera;
 
 	Bounding_Sphere world_bounding_sphere;
-
-	Array<Entity_Id> entity_ids; 	//temp code
 
 	Array<Matrix4> render_entity_world_matrices;
 	Array<Matrix4> light_view_matrices; // is the code necessary ? 
 	Array<Matrix4> cascaded_view_projection_matrices;
 
 	Array<Render_Entity> game_render_entities;
-	Array<Render_Entity> line_render_entities;
-	Array<Render_Entity> vertex_render_entities;
-	Array<Color> line_render_entity_colors;
-	Array<Color> vertex_render_entity_colors;
 
 	Array<Cascaded_Shadows> cascaded_shadows_list;
 	Array<Cascaded_Shadows_Info> cascaded_shadows_info_list;
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
 
-	Array<Render_Pass *> every_frame_render_passes;
+	Array<Render_Pass *> frame_render_passes;
 
-	Mesh_Storate<Vector3> line_meshes;
-	Mesh_Storate<Vertex_PNTUV> triangle_meshes;
+	Mesh_Storate triangle_meshes;
 
-	Texture2D default_texture;
 	Texture2D shadow_atlas;
 	Texture3D jittering_samples;
 
 	Gpu_Buffer frame_info_cbuffer;
 
+	Gpu_RWStruct_Buffer voxels_sb;
 	Gpu_Struct_Buffer lights_struct_buffer;
 	Gpu_Struct_Buffer cascaded_shadows_info_sb;
 	Gpu_Struct_Buffer world_matrices_struct_buffer;
@@ -203,11 +222,10 @@ struct Render_World {
 
 	struct Render_Passes {
 		Shadows_Pass shadows;
-		Draw_Lines_Pass draw_lines;
-		Draw_Vertices_Pass draw_vertices;
 		Forwar_Light_Pass forward_light;
 		Debug_Cascade_Shadows_Pass debug_cascade_shadows;
 		Outlining_Pass outlining;
+		Voxelization voxelization;
 
 		void get_all_passes(Array<Render_Pass *> *render_passes_list);
 	} render_passes;
@@ -215,13 +233,16 @@ struct Render_World {
 	void init(Engine *engine);
 	void init_shadow_rendering();
 	void init_render_passes(Shader_Manager *shader_manager);
+	void release_all_resources();
+	void release_render_entities_resources();
 
 	void update();
 	void update_lights();
 	void update_shadows();
 	void update_render_entities();
+	void update_global_illumination();
 
-	void add_render_entity(Rendering_Type rendering_type, Entity_Id entity_id, Mesh_Id mesh_id, void *args = NULL);
+	void add_render_entity(Entity_Id entity_id, Mesh_Id mesh_id, void *args = NULL);
 	bool add_shadow(Light *light);
 
 	u32 delete_render_entity(Entity_Id entity_id);
@@ -232,8 +253,7 @@ struct Render_World {
 	void set_camera_for_debuging(Entity_Id camera_info_id);
 
 	bool get_shadow_atls_viewport(Viewport *viewport);
-	bool add_mesh(const char *mesh_name, Mesh<Vertex_PNTUV> *mesh, Mesh_Id *mesh_id);
-	bool add_mesh(const char *mesh_name, Mesh<Vector3> *mesh, Mesh_Id *mesh_id);
+	bool add_triangle_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
 
 	Vector3 get_light_position(Vector3 light_direction);
 };

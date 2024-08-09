@@ -17,23 +17,23 @@
 u32 Render_System::screen_width = 0;
 u32 Render_System::screen_height = 0;
 
-inline void from_win32_screen_space(u32 screen_width, u32 screen_height, Point_s32 *win32_point, Point_s32 *normal_point)
+inline void from_win32_screen_space(u32 screen_width, u32 screen_height, const Point_s32 &win32_point, Point_s32 &normal_point)
 {
-	normal_point->x = win32_point->x - (screen_width / 2);
-	normal_point->y = -win32_point->y + (screen_height / 2);
+	normal_point.x = win32_point.x - (screen_width / 2);
+	normal_point.y = -win32_point.y + (screen_height / 2);
 }
 
-inline void to_win32_screen_space(Point_s32 *point, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
+inline void to_win32_screen_space(const Point_s32 &point, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
 {
-	*screen_x = point->x + (screen_width / 2);
-	*screen_y = -point->y + (screen_height / 2);
+	*screen_x = point.x + (screen_width / 2);
+	*screen_y = -point.y + (screen_height / 2);
 }
 
 template< typename T >
-inline Vector2 make_vector2(Pointv2<T> *first_point, Pointv2<T> *second_point)
+inline Vector2 make_vector2(const Point3D<T> &first_point, const Point3D<T> &second_point)
 {
-	Pointv2<T> result = *first_point - *second_point;
-	return Vector2((float)result.x, (float)result.y);
+	Point3D<T> result = first_point - second_point;
+	return result.to_vector2();;
 }
 
 inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
@@ -342,18 +342,18 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 	render_2d->add_primitive(primitive);
 }
 
-void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thickness)
+void Render_Primitive_List::add_line(const Point_s32 &first_point, const Point_s32 &second_point, const Color &color, float thickness)
 {
 	u32 window_width = Render_System::screen_width;
 	u32 window_height = Render_System::screen_height;
 
 	Point_s32 converted_point1;
-	from_win32_screen_space(window_width, window_height, first_point, &converted_point1);
+	from_win32_screen_space(window_width, window_height, first_point, converted_point1);
 
 	Point_s32 converted_point2;
-	from_win32_screen_space(window_width, window_height, second_point, &converted_point2);
+	from_win32_screen_space(window_width, window_height, second_point, converted_point2);
 
-	Vector2 temp = make_vector2(&converted_point2, &converted_point1);
+	Vector2 temp = make_vector2(converted_point2, converted_point1);
 	Vector2 line_direction = normalize(&temp);
 
 	float angle = get_angle(&line_direction, &Vector2::base_x);
@@ -363,11 +363,13 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 		angle = math::abs(RADIANS_360 - angle);
 	}
 
-	Vector2 position = { (float)first_point->x, (float)first_point->y };
+	Vector2 position = first_point.to_vector2();
 	Matrix4 transform_matrix;
 	transform_matrix = rotate_about_z(-angle) * make_translation_matrix(&position);
 
-	float line_width = (float)find_distance(first_point, second_point);
+	Vector2 temp1 = first_point.to_vector2();
+	Vector2 temp2 = second_point.to_vector2();
+	float line_width = (float)find_distance(&temp1, &temp2);
 	String hash = String(line_width + thickness);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
@@ -506,6 +508,8 @@ void Render_2D::new_frame()
 
 void Render_2D::render_frame()
 {
+	begin_mark_rendering_event(L"2D Rendering");
+
 	if ((total_vertex_count == 0) || !initialized) {
 		return;
 	}
@@ -554,7 +558,7 @@ void Render_2D::render_frame()
 		render_pipeline->unmap(index_buffer);
 	}
 
-	render_pipeline->set_input_layout(render_system->vertex_xuv);
+	render_pipeline->set_input_layout(render_system->input_layouts.vertex_P2UV2);
 	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
 
 	render_pipeline->set_vertex_buffer(&vertex_buffer);
@@ -564,6 +568,10 @@ void Render_2D::render_frame()
 	render_pipeline->set_pixel_shader(render_2d);
 	render_pipeline->set_pixel_shader_sampler(POINT_SAMPLING_REGISTER, render_system->render_pipeline_states.point_sampling);
 
+	Viewport viewport;
+	viewport.width = Render_System::screen_width;
+	viewport.height = Render_System::screen_height;
+	render_pipeline->set_viewport(&viewport);
 	render_pipeline->set_rasterizer_state(rasterizer_state);
 	render_pipeline->set_blend_state(blend_state);
 	render_pipeline->set_depth_stencil_state(depth_stencil_state);
@@ -595,6 +603,8 @@ void Render_2D::render_frame()
 	render_pipeline->reset_rasterizer();
 	render_pipeline->reset_blending_state();
 	render_pipeline->reset_depth_stencil_state();
+
+	end_mark_rendering_event();
 }
 
 void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
@@ -609,37 +619,26 @@ void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, 
 
 void Render_System::init(Win32_Window *window)
 {
+	assert(window);
+	assert(window->width > 0);
+	assert(window->height > 0);
+
 	Render_System::screen_width = window->width;
 	Render_System::screen_height = window->height;
-
-	//print("Render_System::init: Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
-	//print("Render_System::init: fov {} degrees.", 60);
-
-	Multisample_Info multisample_info;
-	multisample_info.count = 4;
-	multisample_info.quality = 0;
 
 	view.update_projection_matries(60, Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
 
 	init_render_api(&gpu_device, &render_pipeline);
-	//print("Render_System::init: Render API based on directx 11 was successfully initialized.");
-
-	render_pipeline_states.init(&gpu_device);
 
 	swap_chain.init(&gpu_device, window);
-
 	init_render_targets(Render_System::screen_width, Render_System::screen_height);
+
+	render_pipeline_states.init(&gpu_device);
 
 	print("Rendering system info:");
 	print("  Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
 	print("  FOV {} degrees.", 60);
 	print("  Render API based on Directx 11.");
-
-	Multisample_Info temp;
-	temp.count = 8;
-	temp.quality = 0;
-	get_max_multisampling_level(&gpu_device, &temp, DXGI_FORMAT_R32_UINT);
-	int i = 0;
 }
 
 void Render_System::init_render_targets(u32 window_width, u32 window_height)
@@ -651,6 +650,17 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 
 	gpu_device.create_render_target_view(&back_buffer_texture);
 	gpu_device.create_unordered_access_view(&back_buffer_texture_desc, &back_buffer_texture);
+
+	Texture2D_Desc temp_desc;
+	temp_desc.width = 512;
+	temp_desc.height = 512;
+	temp_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	temp_desc.mip_levels = 1;
+	temp_desc.bind = BIND_RENDER_TARGET;
+	temp_desc.multisampling = { 1, 0 };
+
+	gpu_device.create_texture_2d(&temp_desc, &voxel_render_target);
+	gpu_device.create_render_target_view(&voxel_render_target);
 
 	u32 temp = 8;
 	Texture2D_Desc multisampling_back_buffer_texture_desc;
@@ -699,17 +709,20 @@ void Render_System::init_render_targets(u32 window_width, u32 window_height)
 	gpu_device.create_shader_resource_view(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
 }
 
-void Render_System::init_shader_input_layout(Shader_Manager *shader_manager)
+void Render_System::init_input_layouts(Shader_Manager *shader_manager)
 {
-	const D3D11_INPUT_ELEMENT_DESC vertex_xuv_desc[2] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{"TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
+	Input_Layout_Elements position_uv_input_layout;
+	position_uv_input_layout.add("POSITION", DXGI_FORMAT_R32G32_FLOAT);
+	position_uv_input_layout.add("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT);
+
+	Input_Layout_Elements position_input_layout;
+	position_input_layout.add("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
 
 	Extend_Shader *render_2d = GET_SHADER(shader_manager, render_2d);
-	if (is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
-		HR(gpu_device.dx11_device->CreateInputLayout(vertex_xuv_desc, 2, (void *)render_2d->bytecode, render_2d->bytecode_size, vertex_xuv.ReleaseAndGetAddressOf()));
-	}
+	Extend_Shader *draw_vertices = GET_SHADER(shader_manager, draw_vertices);
+	
+	gpu_device.create_input_layout((void *)render_2d->bytecode, render_2d->bytecode_size, &position_uv_input_layout, input_layouts.vertex_P2UV2);
+	gpu_device.create_input_layout((void *)draw_vertices->bytecode, draw_vertices->bytecode_size, &position_input_layout, input_layouts.vertex_P3);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -726,6 +739,9 @@ void Render_System::resize(u32 window_width, u32 window_height)
 
 void Render_System::new_frame()
 {
+	begin_mark_rendering_event(L"Frame rendering");
+
+	render_pipeline.clear_render_target_view(voxel_render_target.rtv, Color::Red);
 	render_pipeline.clear_render_target_view(back_buffer_texture.rtv, Color::LightSteelBlue);
 
 	render_pipeline.clear_render_target_view(multisampling_back_buffer_texture.rtv, Color::LightSteelBlue);
@@ -741,11 +757,15 @@ void Render_System::end_frame()
 {
 	render_2d.render_frame();
 
+	begin_mark_rendering_event(L"Resoulve back buffer");
 	render_pipeline.resolve_subresource(&back_buffer_texture, &multisampling_back_buffer_texture, DXGI_FORMAT_R8G8B8A8_UNORM);
+	end_mark_rendering_event();
 
 	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
 
 	HR(swap_chain.dxgi_swap_chain->Present(0, 0));
+
+	end_mark_rendering_event();
 
 #ifdef REPORT_LIVE_OBJECTS
 	gpu_device.debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
@@ -834,6 +854,12 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 	Rasterizer_Desc default_rasterizer_state_desc;
 	gpu_device->create_rasterizer_state(&default_rasterizer_state_desc, &default_rasterizer_state);
 
+	Rasterizer_Desc disabled_multisampling_rasterizer_state_desc;
+	disabled_multisampling_rasterizer_state_desc.none_culling();
+	disabled_multisampling_rasterizer_state_desc.set_multisampling(false);
+	disabled_multisampling_rasterizer_state_desc.set_depthclip(false);
+	gpu_device->create_rasterizer_state(&disabled_multisampling_rasterizer_state_desc, &disabled_multisampling_state);
+
 	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
 	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &default_depth_stencil_state);
 
@@ -911,4 +937,105 @@ void Render_Pipeline_States::init(Gpu_Device *gpu_device)
 
 	gpu_device->create_depth_stencil_state(&temp2, &outlining_depth_stencil_state);
 
+}
+
+void Render_3D::init(Render_System *_render_system, Shader_Manager *shader_manager)
+{
+	assert(_render_system);
+	assert(shader_manager);
+
+	render_system = _render_system;
+	draw_vertices = GET_SHADER(shader_manager, draw_vertices);
+	gpu_device = &render_system->gpu_device;
+	render_pipeline = &render_system->render_pipeline;
+
+	gpu_device->create_constant_buffer(sizeof(Draw_Info), &draw_info_cbuffer);
+}
+
+void Render_3D::shutdown()
+{
+	vertex_buffer.free();
+	index_buffer.free();
+	draw_info_cbuffer.free();
+}
+
+void Render_3D::set_mesh(Vertex_Mesh *mesh)
+{
+	assert(mesh);
+
+	if (mesh->empty()) {
+		return;
+	}
+	index_count = mesh->indices.count;
+	vertex_buffer.free();
+	index_buffer.free();
+
+	Gpu_Buffer_Desc vertex_buffer_desc;
+	vertex_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
+	vertex_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
+	vertex_buffer_desc.data = (void *)mesh->vertices.items;
+	vertex_buffer_desc.data_size = sizeof(Vector3);
+	vertex_buffer_desc.data_count = mesh->vertices.count;
+
+	gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
+
+	Gpu_Buffer_Desc index_buffer_desc;
+	index_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
+	index_buffer_desc.bind_flags = BIND_INDEX_BUFFER;
+	index_buffer_desc.data = (void *)mesh->indices.items;
+	index_buffer_desc.data_size = sizeof(u32);
+	index_buffer_desc.data_count = mesh->indices.get_size();
+
+	gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
+}
+
+void Render_3D::reset_mesh()
+{
+	index_count = 0;
+	vertex_buffer.free();
+	index_buffer.free();
+}
+
+void Render_3D::draw_lines(const Vector3 &position, const Color &mesh_color)
+{
+	render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
+	draw(position, mesh_color);
+}
+
+void Render_3D::draw(const Vector3 &position, const Color &mesh_color)
+{
+	render_pipeline->set_input_layout(render_system->input_layouts.vertex_P3);
+	render_pipeline->set_vertex_buffer(&vertex_buffer);
+	render_pipeline->set_index_buffer(&index_buffer);
+
+	render_pipeline->set_vertex_shader(draw_vertices);
+
+	render_pipeline->set_blend_state(render_system->render_pipeline_states.default_blend_state);
+	render_pipeline->set_depth_stencil_state(render_system->render_pipeline_states.default_depth_stencil_state);
+	render_pipeline->set_rasterizer_state(render_system->render_pipeline_states.default_rasterizer_state);
+
+	Viewport viewport;
+	viewport.width = Render_System::screen_width;
+	viewport.height = Render_System::screen_height;
+	
+	render_pipeline->set_viewport(&viewport);
+	render_pipeline->set_pixel_shader(draw_vertices);
+
+	render_pipeline->set_render_target(render_system->multisampling_back_buffer_texture.rtv, render_system->multisampling_depth_stencil_texture.dsv);
+
+	Draw_Info draw_info;
+	draw_info.color = mesh_color;
+	draw_info.world_matrix = make_translation_matrix((Vector3 *)&position);
+	render_pipeline->update_constant_buffer(&draw_info_cbuffer, (void *)&draw_info);
+
+	render_pipeline->set_vertex_shader_resource(0, draw_info_cbuffer);
+	render_pipeline->set_pixel_shader_resource(0, draw_info_cbuffer);
+
+	render_pipeline->draw_indexed(index_count, index_offset, vertex_offset);
+}
+
+void Render_3D::draw_triangles(const Vector3 &position, const Color &mesh_color)
+{
+	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
+	draw(position, mesh_color);
 }

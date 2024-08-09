@@ -1,15 +1,49 @@
 #include "test.h"
 #include "../libs/str.h"
 #include "../sys/sys.h"
+#include "../libs/str.h"
+#include "../libs/number_types.h"
+#include "../libs/math/vector.h"
+#include "../libs/color.h"
+
+inline u32 pack_RGB(const Vector3 &rgb_value)
+{
+	u32 r = u32(255.0f * rgb_value.x);
+	u32 g = u32(255.0f * rgb_value.y);
+	u32 b = u32(255.0f * rgb_value.z);
+
+	u32 result = 0;
+	result |= r << 24;
+	result |= g << 16;
+	result |= b << 8;
+	result |= 0xff;
+	return result;
+}
+
+inline u32 encode_color(const Vector3 &rgb_value)
+{
+	u32 r = u32(255.0f * rgb_value.x);
+	u32 g = u32(255.0f * rgb_value.y);
+	u32 b = u32(255.0f * rgb_value.z);
+
+	u32 result = 0;
+	result |= r << 16;
+	result |= g << 8;
+	result |= b;
+	return result;
+}
+
+void func(const Vector3 &base)
+{
+	u32 color_mask = encode_color(base);
+	Vector3
+	length()
+}
 
 void test()
 {
-	const char *null_str = NULL;
-	const char *empty_str = "";
-	const char *almost_empty = " a";
-	print(string_null_or_empty(null_str));
-	print(string_null_or_empty(empty_str));
-	print(string_null_or_empty(almost_empty));
+	Point3D<s32> x = { 10, 20 };
+	Point3D<float> y = { 1.0f, 2.0f };
 }
 
 void update_test()

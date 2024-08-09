@@ -112,6 +112,8 @@ inline void Array<T>::clear()
 template <typename T>
 inline void Array<T>::resize(u32 new_size)
 {
+	assert(new_size > count);
+
 	if (!items) {
 		items = new T[new_size];
 		return;
@@ -119,7 +121,6 @@ inline void Array<T>::resize(u32 new_size)
 
 	T* temp_array = items;
 	items = new T[new_size];
-
 
 	for (u32 i = 0; i < count; i++) {
 		items[i] = temp_array[i];
@@ -155,6 +156,9 @@ inline void Array<T>::remove(u32 index)
 template <typename T>
 inline void Array<T>::reserve(u32 _count)
 {
+	if (!is_empty()) {
+		clear();
+	}
 	resize(_count);
 	count = _count;
 }
