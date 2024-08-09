@@ -11,6 +11,7 @@
 #include "../libs/number_types.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
+#include "../libs/math/structures.h"
 #include "../libs/structures/array.h"
 
 struct Engine;
@@ -154,17 +155,22 @@ struct Voxel {
 };
 
 struct Voxel_Grid {
-	u32 width;
-	u32 height;
-	u32 depth;
-	u32 ceil_width;
-	u32 ceil_height;
-	u32 ceil_depth;
-
-	u32 total_width() { return width * ceil_width; }
-	u32 total_height() { return height * ceil_height; }
-	u32 total_depth() { return depth * ceil_depth;}
+	Size_u32 grid_size;
+	Size_u32 ceil_size;
+	
+	u32 ceil_count();
+	Size_u32 total_size();
 };
+
+inline u32 Voxel_Grid::ceil_count()
+{
+	return grid_size.find_area();
+}
+
+inline Size_u32 Voxel_Grid::total_size()
+{
+	return grid_size * ceil_size;
+}
 
 struct Render_World {
 	Game_World *game_world = NULL;

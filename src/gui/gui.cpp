@@ -98,13 +98,13 @@ inline bool detect_intersection(Rect_s32 *first_rect, Rect_s32 *second_rect)
 }
 
 template <typename T>
-inline bool detect_intersection(Triangle<T> *triangle, Pointv2<T> *point)
+inline bool detect_intersection(const Triangle<T> &triangle, const Point3D<T> &point)
 {
-	T triangle_area = triangle->find_area();
+	T triangle_area = triangle.find_area();
 
-	T area1 = Triangle<T>(triangle->a, triangle->b, *point).find_area();
-	T area2 = Triangle<T>(*point, triangle->b, triangle->c).find_area();
-	T area3 = Triangle<T>(triangle->a, *point, triangle->c).find_area();
+	T area1 = Triangle<T>(triangle.a, triangle.b, point).find_area();
+	T area2 = Triangle<T>(point, triangle.b, triangle.c).find_area();
+	T area3 = Triangle<T>(triangle.a, point, triangle.c).find_area();
 
 	if (area1 + area2 + area3 == triangle_area) {
 		return true;
@@ -798,7 +798,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	window.rect = window_rect;
 	window.view_rect = window_rect;
 	window.content_rect = { window_rect.x, window_rect.y + offset, 0, 0 };
-	window.scroll = { window_rect.x, window_rect.y + offset };
+	window.scroll = Point_s32(window_rect.x, window_rect.y + offset);
 
 	window.render_list = Render_Primitive_List(render_2d, font, render_font);
 #ifdef _DEBUG
@@ -829,7 +829,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	window.rect = *rect;
 	window.view_rect = *rect;
 	window.content_rect = { rect->x, rect->y + offset, 0, 0 };
-	window.scroll = { rect->x, rect->y + offset };
+	window.scroll = Point_s32(rect->x, rect->y + offset);
 
 	window.style = window_style;
 	window.alignment = VERTICALLY_ALIGNMENT | VERTICALLY_ALIGNMENT_JUST_SET;
@@ -1472,7 +1472,7 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 			if ((offset_in_persents < 100) && (i < (columns_count - 1))) {
 				Point_s32 first_point = { window->rect.x + calculate(window_list_size.width, offset_in_persents), window->rect.y + half_difference };
 				Point_s32 second_point = { window->rect.x + calculate(window_list_size.width, offset_in_persents), window->rect.y + list_theme.filter_rect_height - half_difference };
-				render_list->add_line(&first_point, &second_point, list_theme.split_lines_color, list_theme.split_line_thickness);
+				render_list->add_line(first_point, second_point, list_theme.split_lines_color, list_theme.split_line_thickness);
 			}
 			prev_offset_in_persents += columns[i].size_in_percents;
 		}
@@ -2089,7 +2089,7 @@ bool Gui_Manager::add_tab(const char *tab_name)
 		tab.draw = true;
 		tab.gui_id = tab_gui_id;
 		tab.placing_info.content_rect = { window->rect.x, window->rect.y + offset, 0, 0 };
-		tab.placing_info.scroll = { window->rect.x, window->rect.y + offset };
+		tab.placing_info.scroll = Point_s32(window->rect.x, window->rect.y + offset);
 
 		if ((active_tab == 0) && window->tabs.is_empty()) {
 			active_tab = tab_gui_id;
@@ -2811,7 +2811,7 @@ void Gui_Manager::render_window(Gui_Window *window)
 	}
 
 	if (window->style & WINDOW_TAB_BAR) {
-		window->tab_position = { window->view_rect.x, window->view_rect.y };
+		window->tab_position = Point_s32(window->view_rect.x, window->view_rect.y);
 		Rect_s32 tab_bar_rect = { window->view_rect.x, window->view_rect.y, window->view_rect.width, tab_theme.tab_bar_height };
 		window->tab_bar_clip_rect = calculate_clip_rect(&window->clip_rect, &tab_bar_rect);
 		window->place_rect_over_window(&tab_bar_rect);
@@ -3084,10 +3084,10 @@ bool Gui_Manager::detect_collision_window_borders(Rect_s32 *rect, Rect_Side *rec
 	Triangle<s32> left_triangle = Triangle<s32>(Point_s32(rect->x, rect->bottom()), Point_s32(rect->x, rect->bottom() - tri_size), Point_s32(rect->x + tri_size, rect->bottom()));
 	Triangle<s32> right_triangle = Triangle<s32>(Point_s32(rect->right() - tri_size, rect->bottom()), Point_s32(rect->right(), rect->bottom() - tri_size), Point_s32(rect->right(), rect->bottom()));
 
-	if (detect_intersection(&left_triangle, &mouse)) {
+	if (detect_intersection(left_triangle, mouse)) {
 		*rect_side = RECT_SIDE_LEFT_BOTTOM;
 		return true;
-	} else if (detect_intersection(&right_triangle, &mouse)) {
+	} else if (detect_intersection(right_triangle, mouse)) {
 		*rect_side = RECT_SIDE_RIGHT_BOTTOM;
 		return true;
 	} else if ((mouse_x >= (rect->x - offset_from_border)) && (mouse_x <= rect->x) && ((mouse_y >= rect->y) && (mouse_y <= rect->bottom()))) {

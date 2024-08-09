@@ -314,21 +314,18 @@ void Render_World::init(Engine *engine)
 
 	init_shadow_rendering();
 
-	u32 x = 124;
-	voxel_grid.width = x;
-	voxel_grid.height = x;
-	voxel_grid.depth = x;
-	u32 y = 10;
-	voxel_grid.ceil_width = y;
-	voxel_grid.ceil_height = y;
-	voxel_grid.ceil_depth = y;
-	voxels_sb.allocate<Voxel>(voxel_grid.width * voxel_grid.height * voxel_grid.depth);
+	u32 x = 128;
+	voxel_grid.grid_size = { x, x, x };
+	u32 y = 20;
+	voxel_grid.ceil_size = { y, y, y };
 
-	float half_voxel_grid_width = (float)(voxel_grid.width * voxel_grid.ceil_width) * 0.5f;
-	float half_voxel_grid_height = (float)(voxel_grid.height * voxel_grid.ceil_height) * 0.5f;
-	float voxel_grid_depth = (float)(voxel_grid.depth * voxel_grid.ceil_depth);
+	voxels_sb.allocate<Voxel>(voxel_grid.grid_size.find_area());
 
-	voxel_matrix = XMMatrixOrthographicOffCenterLH(-half_voxel_grid_width, half_voxel_grid_width, -half_voxel_grid_height, half_voxel_grid_height, 1.0f, voxel_grid_depth + 1.0f);
+	Size_f32 grid_size = voxel_grid.total_size();
+	float grid_depth = grid_size.depth;
+	grid_size *= 0.5f;
+
+	voxel_matrix = XMMatrixOrthographicOffCenterLH(-grid_size.width, grid_size.width, -grid_size.height, grid_size.height, 1.0f, grid_depth + 1.0f);
 
 	init_render_passes(&engine->shader_manager);
 
@@ -493,20 +490,19 @@ void Render_World::update_render_entities()
 
 void Render_World::update_global_illumination()
 {	
-	Vector3 voxel_ceil_size = { (float)voxel_grid.ceil_width, (float)voxel_grid.ceil_height, (float)voxel_grid.ceil_depth };
-	Vector3 half_voxel_grid_size = { (float)voxel_grid.total_width(), (float)voxel_grid.total_height(), (float)voxel_grid.total_depth()};
-	half_voxel_grid_size *= 0.5f;
+	Vector3 voxel_ceil_size = voxel_grid.ceil_size.to_vector3();
+	Vector3 voxel_grid_size = voxel_grid.total_size().to_vector3() * 0.5f; // Holdes the half of a total voxel grid size.
 
 	Camera *camera = game_world->get_camera(render_camera.camera_id);
 	auto dir = camera->target - camera->position;
-	voxel_grid_center = camera->position + (normalize(&dir) * half_voxel_grid_size);
+	voxel_grid_center = camera->position + (normalize(&dir) * voxel_grid_size);
 	voxel_grid_center /= voxel_ceil_size;
 	voxel_grid_center = floor(voxel_grid_center);
 	voxel_grid_center *= voxel_ceil_size;
 	
-	Vector3 left_to_right_view_position = { voxel_grid_center.x - half_voxel_grid_size.x, voxel_grid_center.y, voxel_grid_center.z };
-	Vector3 top_to_down_view_position = { voxel_grid_center.x, voxel_grid_center.y + half_voxel_grid_size.y, voxel_grid_center.z };
-	Vector3 back_to_front_view_position = { voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z - half_voxel_grid_size.z };
+	Vector3 left_to_right_view_position = { voxel_grid_center.x - voxel_grid_size.x, voxel_grid_center.y, voxel_grid_center.z };
+	Vector3 top_to_down_view_position = { voxel_grid_center.x, voxel_grid_center.y + voxel_grid_size.y, voxel_grid_center.z };
+	Vector3 back_to_front_view_position = { voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z - voxel_grid_size.z };
 	
 	left_to_right_voxel_view_matrix = make_look_to_matrix(left_to_right_view_position, Vector3::base_x);
 	top_to_down_voxel_view_matrix = make_look_to_matrix(top_to_down_view_position, negate(&Vector3::base_y), negate(&Vector3::base_z));

@@ -446,18 +446,16 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 	assert(render_pipeline);
 
 	begin_mark_rendering_event(L"Voxelization");
-	render_pipeline_state.viewport.width = render_world->voxel_grid.width;
-	render_pipeline_state.viewport.height = render_world->voxel_grid.height;
-	//render_pipeline_state.viewport.width = 512;
-	//render_pipeline_state.viewport.height = 512;
+	Viewport viewport;
+	viewport.width = render_world->voxel_grid.grid_size.width;
+	viewport.height = render_world->voxel_grid.grid_size.height;
+
+	render_pipeline_state.viewport = viewport;
 
 	Voxelization_Info voxelization_info;
-	voxelization_info.voxel_grid_width = render_world->voxel_grid.width;
-	voxelization_info.voxel_grid_height = render_world->voxel_grid.height;
-	voxelization_info.voxel_grid_depth = render_world->voxel_grid.depth;
-	voxelization_info.voxel_grid_ceil_width = render_world->voxel_grid.ceil_width;
-	voxelization_info.voxel_grid_ceil_height = render_world->voxel_grid.ceil_height;
-	voxelization_info.voxel_grid_ceil_depth = render_world->voxel_grid.ceil_depth;
+	voxelization_info.grid_size = render_world->voxel_grid.grid_size;
+	voxelization_info.ceil_size = render_world->voxel_grid.ceil_size;
+	voxelization_info.texel_size = Vector2(1.0f / viewport.width, 1.0f / viewport.height);
 	voxelization_info.grid_center = render_world->voxel_grid_center;
 	voxelization_info.voxel_orthographic_matrix = render_world->voxel_matrix;
 	voxelization_info.voxel_view_matrices[0] = render_world->left_to_right_voxel_view_matrix;
@@ -466,7 +464,6 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 
 	render_pipeline->apply(&render_pipeline_state);
 	render_pipeline->set_geometry_shader(render_pipeline_state.shader);
-
 	
 	render_pipeline->update_constant_buffer(&voxelization_info_cbuffer, (void *)&voxelization_info);
 

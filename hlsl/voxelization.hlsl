@@ -20,10 +20,11 @@ cbuffer Voxelization_Info : register(b1) {
     uint voxel_grid_ceil_width;
     uint voxel_grid_ceil_height;
     uint voxel_grid_ceil_depth;
+    float2 texel_size;
     
-    uint2 pad234;
     float3 voxel_grid_center;
     float1 pad33;
+    
     float4x4 voxel_orthographic_matrix;
     float4x4 voxel_view_matrices[3];
 };
@@ -108,8 +109,16 @@ void gs_main( triangle VS_Output input[3], inout TriangleStream<GS_Output> outpu
     	output[i].voxel_position = input[i].voxel_position;
     	output[i].normal = input[i].normal;
     	output[i].uv = input[i].uv;
-    	
-    	output_stream.Append(output[i]);
+    }    
+    float2 side0 = normalize(output[1].screen_position.xy - output[0].screen_position.xy);
+    float2 side1 = normalize(output[2].screen_position.xy - output[1].screen_position.xy);
+    float2 side2 = normalize(output[0].screen_position.xy - output[2].screen_position.xy);
+    output[0].screen_position.xy += normalize(-side0 + side2) * texel_size;
+    output[1].screen_position.xy += normalize(side0 + side1) * texel_size;
+    output[2].screen_position.xy += normalize(side1 + side2) * texel_size;
+    [unroll]
+    for (uint j = 0; j < 3; j++) {
+        output_stream.Append(output[j]);
     }
     output_stream.RestartStrip();
 }
