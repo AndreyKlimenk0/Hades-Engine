@@ -562,10 +562,11 @@ void Render_World_Window::draw()
 	gui::radio_button("Display voxel grid bounds", &display_voxel_grid_bounds);
 
 	if (display_voxel_grid_bounds) {
-		Vector3 max = { (float)render_world->voxel_grid.total_width() / 2.0f, (float)render_world->voxel_grid.total_height() / 2.0f, (float)render_world->voxel_grid.total_depth() / 2.0f };
+		Vector3 max = render_world->voxel_grid.total_size().to_vector3() * 0.5f;
 		Vector3 min = -max;
 
-		Box box = { (float)render_world->voxel_grid.total_width(), (float)render_world->voxel_grid.total_height(), (float)render_world->voxel_grid.total_depth() };
+		Size_f32 size = render_world->voxel_grid.total_size();
+		Box box = { size.width, size.height, size.depth };
 		Triangle_Mesh tri_mesh;
 		make_box_mesh(&box, &tri_mesh);
 
@@ -600,13 +601,13 @@ void Render_World_Window::draw()
 
 	if (display_voxel_grid) {
 		Array<Voxel> voxels;
-		voxels.reserve(render_world->voxel_grid.width * render_world->voxel_grid.height * render_world->voxel_grid.width);
+		voxels.reserve(render_world->voxel_grid.ceil_count());
 		memset((void *)voxels.items, 0, voxels.get_size());
 		render_world->voxels_sb.read(&voxels);
 
 		if (!voxels.is_empty()) {
 			auto matrix = make_look_to_matrix(render_world->voxel_grid_center, Vector3::base_z);
-			Vector3 max = { (float)render_world->voxel_grid.ceil_width / 2.0f, (float)render_world->voxel_grid.ceil_height / 2.0f, (float)render_world->voxel_grid.ceil_depth / 2.0f };
+			Vector3 max = render_world->voxel_grid.ceil_size.to_vector3() * 0.5f;
 			Vector3 min = -max;
 
 			Line_Mesh mesh;
@@ -614,28 +615,22 @@ void Render_World_Window::draw()
 
 			render_system->render_3d.set_mesh(&mesh);
 			
-			Point_u32 voxel_grid_size = { render_world->voxel_grid.width / 2, render_world->voxel_grid.height / 2, render_world->voxel_grid.depth / 2 };
+			Size_s32 voxel_grid_size = (Size_s32)render_world->voxel_grid.grid_size / 2;
+
 			for (u32 i = 0; i < voxels.count; i++) {
 				if (voxels[i].occlusion == 0) {
 					continue;
 				}
+				Point_s32 index = (Point_s32)convert_1d_to_3d_index(i, render_world->voxel_grid.grid_size.height, render_world->voxel_grid.grid_size.depth);
+				index = index - Point_s32(voxel_grid_size);
 
-				Point_u32 index_temp = convert_1d_to_3d_index(i, render_world->voxel_grid.height, render_world->voxel_grid.depth);
-				Point_s32 index = { (s32)index_temp.x, (s32)index_temp.y, (s32)index_temp.z };
-				index.x -= voxel_grid_size.x;
-				index.y -= voxel_grid_size.y;
-				index.z -= voxel_grid_size.z;
+				Point_s32 ceil_size = Point_s32((Size_s32)render_world->voxel_grid.ceil_size);
 
-				Vector3 offset;
-				offset.x = (float)((index.x * (s32)render_world->voxel_grid.ceil_width) + (s32)(render_world->voxel_grid.ceil_width / 2));
-				offset.y = (float)((index.y * (s32)render_world->voxel_grid.ceil_height) + (s32)(render_world->voxel_grid.ceil_height / 2));
-				offset.z = (float)((index.z * (s32)render_world->voxel_grid.ceil_depth) + (s32)(render_world->voxel_grid.ceil_depth / 2));
-
+				Vector3 offset = ((index * ceil_size) + (ceil_size / 2)).to_vector3();
 				Vector3 voxel_center = (offset) * inverse(&matrix);
 
 				render_system->render_3d.draw_lines(voxel_center, Color::Red);
 			}
-
 			render_system->render_3d.reset_mesh();
 		}
 	}
@@ -1172,7 +1167,7 @@ void Editor::picking()
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 				if (picked_entity == intersection_result.entity_id) {
 					draw_drop_down_entity_window = true;
-					drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
+					drop_down_entity_window.mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
 				}
 			}
 		} else if (was_click(KEY_LMOUSE)) {

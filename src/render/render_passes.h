@@ -8,6 +8,7 @@
 #include "../libs/number_types.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/matrix.h"
+#include "../libs/math/structures.h"
 
 struct Shader;
 struct Gpu_Device;
@@ -85,14 +86,9 @@ struct Outlining_Pass : Render_Pass {
 
 struct Voxelization : Render_Pass {
 	struct Voxelization_Info {
-		u32 voxel_grid_width;
-		u32 voxel_grid_height;
-		u32 voxel_grid_depth;
-		
-		u32 voxel_grid_ceil_width;
-		u32 voxel_grid_ceil_height;
-		u32 voxel_grid_ceil_depth;
-		Pad2 pad2;
+		Size_u32 grid_size;
+		Size_u32 ceil_size;
+		Vector2 texel_size;
 		Vector3 grid_center;
 		Pad1 pad;
 		Matrix4 voxel_orthographic_matrix;
