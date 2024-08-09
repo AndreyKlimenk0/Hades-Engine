@@ -14,18 +14,8 @@ struct Cascaded_Shadows_Info {
     uint shadow_map_end_index;
 };
 
-
 StructuredBuffer<float4x4> shadow_cascade_view_projection_matrices : register(t8);
 StructuredBuffer<Cascaded_Shadows_Info> cascaded_shadows_info_buffer : register(t9);
-
-static bool is_in_range(float value, float min, float max)
-{
-    bool result = false;
-    if ((min <= value) && (value <= max)) {
-        result = true;
-    }
-    return result;
-}
 
 float4 calculate_shadow_factor(float3 world_position, float2 screen_position, float3 normal, out uint cascade_index)
 {
@@ -50,11 +40,11 @@ float4 calculate_shadow_factor(float3 world_position, float2 screen_position, fl
         for (; shadow_cascade_index <= cascaded_shadows_info.shadow_map_end_index; shadow_cascade_index++) {
             float4x4 shadow_cascade_view_projection_matrix = transpose(shadow_cascade_view_projection_matrices[shadow_cascade_index]);        
             float4 position_from_cascade_perspective = mul(float4(world_position, 1.0f), shadow_cascade_view_projection_matrix);
-            float3 cascaded_ndc_coordinates = calculate_ndc_coordinates(position_from_cascade_perspective);
+            float3 cascaded_ndc_coordinates = normalize_ndc_coordinates(position_from_cascade_perspective);
     
             float min = 0.1f;
             float max = 0.9f;
-            if (is_in_range(cascaded_ndc_coordinates.x, min, max) && is_in_range(cascaded_ndc_coordinates.y, min, max) && is_in_range(cascaded_ndc_coordinates.z, min, max)) {     
+            if (in_range(min, max, cascaded_ndc_coordinates.x) && in_range(min, max, cascaded_ndc_coordinates.y) && in_range(min, max, cascaded_ndc_coordinates.z)) {     
                 uint shadow_cascade_row_index = shadow_cascade_index % shadow_cascade_rows;
                 uint shadow_cascade_col_index = shadow_cascade_index / shadow_cascade_cols;
                 float2 shadow_atlas_ndc_coordinates;

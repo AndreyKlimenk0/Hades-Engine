@@ -41,6 +41,7 @@ inline float find_distance(Vector2 *first_vector2, Vector2 *second_vector2);
 inline Vector2 negate(Vector2 *vector);
 inline Vector2 normalize(Vector2 *vector);
 inline Vector2 cross(const Vector2 &first_vector, const Vector2 &second_vector);
+inline Vector2 floor(const Vector2 &vector);
 
 inline Vector2 operator+(const Vector2 &first_vector, const Vector2 &second_vector);
 inline Vector2 operator-(const Vector2 &first_vector, const Vector2 &second_vector);
@@ -85,6 +86,7 @@ inline Vector3 negate(Vector3 *vector);
 inline Vector3 normalize(Vector3 *vector);
 inline Vector3 normalize(const Vector3 &vector);
 inline Vector3 cross(const Vector3 &first_vector, const Vector3 &second_vector);
+inline Vector3 floor(const Vector3 &vector);
 
 inline Vector3 operator+(const Vector3 &first_vector, const Vector3 &second_vector);
 inline Vector3 operator-(const Vector3 &first_vector, const Vector3 &second_vector);
@@ -125,6 +127,7 @@ inline Vector3 to_vector3(const Vector4 &vector);
 inline Vector4 negate(Vector4 *vector);
 inline Vector4 normalize(Vector4 *vector);
 inline Vector4 cross(const Vector4 &first_vector, const Vector4 &second_vector, const Vector4 &third_vector);
+inline Vector4 floor(const Vector4 &vector);
 
 inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector);
 inline Vector4 operator-(const Vector4 &first_vector, const Vector4 &second_vector);
@@ -282,6 +285,12 @@ inline Vector2 cross(const Vector2 &first_vector, const Vector2 &second_vector)
 	XMVECTOR first = XMLoadFloat2(&first_vector);
 	XMVECTOR second = XMLoadFloat2(&second_vector);
 	return XMVector2Cross(first, second);
+}
+
+inline Vector2 floor(const Vector2 &vector)
+{
+	XMVECTOR temp = XMLoadFloat2(&vector);
+	return XMVectorFloor(temp);
 }
 
 inline Vector2 operator+(const Vector2 &first_vector, const Vector2 &second_vector)
@@ -472,6 +481,12 @@ inline Vector3 cross(const Vector3 &first_vector, const Vector3 &second_vector)
 	XMVECTOR first = XMLoadFloat3(&first_vector);
 	XMVECTOR second = XMLoadFloat3(&second_vector);
 	return XMVector3Cross(first, second);
+}
+
+inline Vector3 floor(const Vector3 &vector)
+{
+	XMVECTOR temp = XMLoadFloat3(&vector);
+	return XMVectorFloor(temp);
 }
 
 inline Vector3 operator+(const Vector3 &first_vector, const Vector3 &second_vector)
@@ -673,6 +688,12 @@ inline Vector4 cross(const Vector4 &first_vector, const Vector4 &second_vector, 
 	XMVECTOR second = XMLoadFloat4(&second_vector);
 	XMVECTOR third = XMLoadFloat4(&third_vector);
 	return XMVector4Cross(first, second, third);
+}
+
+inline Vector4 floor(const Vector4 &vector)
+{
+	XMVECTOR temp = XMLoadFloat4(&vector);
+	return XMVectorFloor(temp);
 }
 
 inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector)

@@ -18,6 +18,9 @@ static Engine *engine = NULL;
 static Font *performance_font = NULL;
 static Render_Primitive_List render_list;
 
+static const String DEFAULT_LEVEL_NAME = "unnamed_level";
+static const String LEVEL_EXTENSION = ".hl";
+
 static void init_performance_displaying()
 {
 	performance_font = engine->font_manager.get_font("consola", 14);
@@ -52,23 +55,25 @@ void Engine::init(Win32_Window *window)
 	init_commands();
 
 	font_manager.init();
+	
 	render_sys.init(window);
+	
 	shader_manager.init(&render_sys.gpu_device);
+	
+	render_sys.init_input_layouts(&shader_manager);
 	render_sys.render_2d.init(&render_sys, &shader_manager);
-
-	// @Note: It will be nice to get rid of input layouts in the future.
-	render_sys.init_shader_input_layout(&shader_manager);
+	render_sys.render_3d.init(&render_sys, &shader_manager);
 
 	gui::init_gui(this, "FiraCode-Regular", 12);
 	////gui::init_gui(this, "consola", FONT_SIZE);
-
+	
 	editor.init(this);
 
 	game_world.init();
 	render_world.init(this);
 
-	current_map = "unnamed_map.hmap";
-	init_game_and_render_world_from_level("unnamed_map.hmap", &game_world, &render_world);
+	current_level_name = DEFAULT_LEVEL_NAME + LEVEL_EXTENSION;
+	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
@@ -121,14 +126,12 @@ void Engine::frame()
 
 void Engine::shutdown()
 {
-	if (current_map.is_empty()) {
+	if (current_level_name.is_empty()) {
 		int counter = 0;
-		String map_name = "unnamed_map";
-		String map_extension = ".hmap";
 		String index = "";
 		while (true) {
 			String full_path_to_map_file;
-			build_full_path_to_level_file(map_name + index + map_extension, full_path_to_map_file);
+			build_full_path_to_level_file(DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION, full_path_to_map_file);
 			if (file_exists(full_path_to_map_file.c_str())) {
 				char *str_counter = ::to_string(counter++);
 				index = str_counter;
@@ -137,10 +140,17 @@ void Engine::shutdown()
 			}
 			break;
 		}
-		current_map = map_name + index + map_extension;
+		current_level_name = DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION;
 	}
-	save_game_and_render_world_in_level(current_map, &game_world, &render_world);
+	save_game_and_render_world_in_level(current_level_name, &game_world, &render_world);
 	gui::shutdown();
+}
+
+void Engine::set_current_level_name(const String &level_name)
+{
+	assert(level_name.len > 0);
+
+	current_level_name = level_name + LEVEL_EXTENSION;
 }
 
 bool Engine::initialized()

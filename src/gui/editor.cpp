@@ -6,6 +6,7 @@
 #include "../sys/commands.h"
 
 #include "../libs/str.h"
+#include "../libs/utils.h"
 #include "../libs/geometry.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -18,8 +19,9 @@
 #include "../libs/math/structures.h"
 
 #include "../render/render_api.h"
-#include "../render/render_system.h"
 #include "../render/render_world.h"
+#include "../render/render_passes.h"
+#include "../render/render_system.h"
 #include "../render/render_helpers.h"
 
 #include "../collision/collision.h"
@@ -57,7 +59,7 @@ inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render
 
 inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix, Matrix4 &perspective_matrix, Ray *ray)
 {
-	Vector2 xy_ndc_point = from_raster_to_screen_space(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
+	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
 	Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
 
 	Vector4 mouse_point_in_world = ndc_point * inverse(view_matrix * perspective_matrix);
@@ -70,14 +72,6 @@ inline float find_triangle_area(const Vector3 &a, const Vector3 &b, const Vector
 {
 	Vector3 area = cross(b - a, c - a); //  The magnitude of the cross-product can be interpreted as the area of the parallelogram
 	return length(area) * 0.5f;
-}
-
-inline bool is_in_range(float start, float end, float value)
-{
-	if ((start <= value) && (value <= end)) {
-		return true;
-	}
-	return false;
 }
 
 struct Ray_Trinagle_Intersection_Result {
@@ -112,7 +106,7 @@ static bool detect_intersection(Matrix4 &entity_world_matrix, Ray *picking_ray, 
 				float v = find_triangle_area(a, b, ray_plane_intersection_point) / triangle_area;
 				float w = find_triangle_area(b, c, ray_plane_intersection_point) / triangle_area;
 
-				if (is_in_range(0.0f, 1.1f, u + v + w)) {
+				if (in_range(0.0f, 1.1f, u + v + w)) {
 					if (result) {
 						intersection_result->a = a;
 						intersection_result->b = b;
@@ -159,7 +153,7 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 					}
 				} else {
 					Mesh_Id mesh_id = render_world->game_render_entities[i].mesh_id;
-					Mesh_Storate<Vertex_PNTUV>::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_id.instance_idx];
+					Mesh_Storate::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_id.instance_idx];
 
 					Vertex_PNTUV *vertices = &render_world->triangle_meshes.unified_vertices[mesh_instance.vertex_offset];
 					u32 *indices = &render_world->triangle_meshes.unified_indices[mesh_instance.index_offset];
@@ -207,6 +201,16 @@ void Editor_Window::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 	render_system = &engine->render_sys;
+}
+
+void Editor_Window::open()
+{
+	window_open = true;
+}
+
+void Editor_Window::close()
+{
+	window_open = false;
 }
 
 Make_Entity_Window::Make_Entity_Window()
@@ -289,8 +293,8 @@ void Make_Entity_Window::draw()
 
 				char *mesh_name = format("Box_{}_{}_{}", box.width, box.height, box.depth);
 				Mesh_Id mesh_id;
-				render_world->add_mesh(mesh_name, &mesh, &mesh_id);
-				render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_id);
+				render_world->add_triangle_mesh(mesh_name, &mesh, &mesh_id);
+				render_world->add_render_entity(entity_id, mesh_id);
 
 				free_string(mesh_name);
 			}
@@ -468,34 +472,21 @@ void Game_World_Window::draw()
 			if (!draw_AABB_states.key_in_table(entity->idx)) {
 				draw_AABB_states[entity->idx] = false;
 			}
+			static Entity *last_picked_entity = NULL;
 			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->idx]);
 			if (was_click && draw_AABB_states[entity->idx]) {
-				//Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, editor->picked_entity);
-
-				//if (render_entity) {
-				//	char *name = format(&entity->AABB_box.min, &entity->AABB_box.max);
-				//	String_Id string_id = fast_hash(name);
-
-				//	Mesh_Idx mesh_idx;
-				//	if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
-				//		Line_Mesh AABB_mesh;
-				//		make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
-				//		render_world->add_mesh(name, &AABB_mesh, &mesh_idx);
-				//	}
-				//	free_string(name);
-
-				//	Render_Entity new_render_entity;
-				//	new_render_entity.entity_id = editor->picked_entity;
-				//	new_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
-				//	new_render_entity.mesh_idx = mesh_idx;
-
-				//	render_world->line_render_entities.push(new_render_entity);
-				//}
-			} else if (was_click && !draw_AABB_states[entity->idx]) {
-				u32 render_entity_index = 0;
-				if (find_render_entity(&render_world->line_render_entities, editor->picked_entity, &render_entity_index)) {
-					render_world->line_render_entities.remove(render_entity_index);
+				if (entity) {
+					last_picked_entity = entity;
+					Line_Mesh AABB_mesh;
+					make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
+					render_system->render_3d.set_mesh(&AABB_mesh);
 				}
+			} else if (was_click && !draw_AABB_states[entity->idx]) {
+				render_system->render_3d.reset_mesh();
+				last_picked_entity = NULL;
+			}
+			if (draw_AABB_states[entity->idx] && last_picked_entity) {
+				render_system->render_3d.draw_lines(last_picked_entity->position, Color::Red);
 			}
 		}
 		gui::end_child();
@@ -517,6 +508,9 @@ bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, 
 void Render_World_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
+	
+	rendering_types.push("Normal");
+	rendering_types.push("Voxel");
 }
 
 void Render_World_Window::update()
@@ -525,19 +519,36 @@ void Render_World_Window::update()
 
 void Render_World_Window::draw()
 {
+	static u32 render_type_index = 0;
+	static u32 prev_render_type_index = 0;
+	
+	gui::list_box(&rendering_types, &render_type_index);
+	if (render_type_index != prev_render_type_index) {
+		if (rendering_types[render_type_index] == "Normal") {
+			render_world->frame_render_passes.clear();
+			render_world->frame_render_passes.push(&render_world->render_passes.shadows);
+			render_world->frame_render_passes.push(&render_world->render_passes.forward_light);
+		
+		} else if (rendering_types[render_type_index] == "Voxel") {
+			render_world->frame_render_passes.clear();
+			render_world->frame_render_passes.push(&render_world->render_passes.voxelization);
+		}
+		prev_render_type_index = render_type_index;
+	}
+
 	if (gui::radio_button("Debug cascaded shadows", &debug_cascaded_shadows)) {
 		if (render_world->render_passes.forward_light.is_valid && render_world->render_passes.debug_cascade_shadows.is_valid) {
 			if (debug_cascaded_shadows) {
 				u32 forward_light_index = 0;
-				if (get_render_pass_index("Forward_Light", render_world->every_frame_render_passes, &forward_light_index)) {
-					render_world->every_frame_render_passes[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
+				if (get_render_pass_index("Forward_Light", render_world->frame_render_passes, &forward_light_index)) {
+					render_world->frame_render_passes[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
 				} else {
 					print("Render_World_Window::draw: Failed turn on cascaded shadows debuging. Forward light pass was not found.");
 				}
 			} else {
 				u32 debug_cascaded_shadows = 0;
-				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->every_frame_render_passes, &debug_cascaded_shadows)) {
-					render_world->every_frame_render_passes[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
+				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->frame_render_passes, &debug_cascaded_shadows)) {
+					render_world->frame_render_passes[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
 				} else {
 					print("Render_World_Window::draw: Failed turn off cascaded shadows debuging. Debug cascaded shadows pass was not found.");
 				}
@@ -546,6 +557,84 @@ void Render_World_Window::draw()
 			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes is not valid.");
 		}
 	}
+
+	gui::radio_button("Dispaly Voxel Grid", &display_voxel_grid);
+	gui::radio_button("Display voxel grid bounds", &display_voxel_grid_bounds);
+
+	if (display_voxel_grid_bounds) {
+		Vector3 max = render_world->voxel_grid.total_size().to_vector3() * 0.5f;
+		Vector3 min = -max;
+
+		Size_f32 size = render_world->voxel_grid.total_size();
+		Box box = { size.width, size.height, size.depth };
+		Triangle_Mesh tri_mesh;
+		make_box_mesh(&box, &tri_mesh);
+
+		Line_Mesh mesh;
+		//mesh.vertices.reserve(tri_mesh.vertices.count);
+		//mesh.indices.reserve(tri_mesh.indices.count);
+		//for (int i = 0; i < tri_mesh.vertices.count; i++) {
+		//	mesh.vertices[i] = tri_mesh.vertices[i].position;
+		//}
+		////mesh.indices = tri_mesh.indices;
+		//for (int i = 0, j = tri_mesh.indices.count - 1; i < tri_mesh.indices.count; i++, j--) {
+		//	mesh.indices[i] = tri_mesh.indices[j];
+		//}
+		make_AABB_mesh(&min, &max, &mesh);
+		
+		render_system->render_3d.set_mesh(&mesh);
+		render_system->render_3d.draw_lines(render_world->voxel_grid_center, Color(Color::Green.get_rgb(), 0.3f));
+		render_system->render_3d.reset_mesh();
+
+		Line_Mesh camera_AABB;
+		Vector3 temp_max = { 5.0f, 5.0f, 5.0f };
+		Vector3 temp_min = -temp_max;
+		make_AABB_mesh(&temp_min, &temp_max, &camera_AABB);
+		
+		auto view_pos = render_world->voxel_grid_center;
+		view_pos.z -= max.z;
+
+		render_system->render_3d.set_mesh(&camera_AABB);
+		render_system->render_3d.draw_lines(view_pos, Color::Green);
+		render_system->render_3d.reset_mesh();
+	}
+
+	if (display_voxel_grid) {
+		Array<Voxel> voxels;
+		voxels.reserve(render_world->voxel_grid.ceil_count());
+		memset((void *)voxels.items, 0, voxels.get_size());
+		render_world->voxels_sb.read(&voxels);
+
+		if (!voxels.is_empty()) {
+			auto matrix = make_look_to_matrix(render_world->voxel_grid_center, Vector3::base_z);
+			Vector3 max = render_world->voxel_grid.ceil_size.to_vector3() * 0.5f;
+			Vector3 min = -max;
+
+			Line_Mesh mesh;
+			make_AABB_mesh(&min, &max, &mesh);
+
+			render_system->render_3d.set_mesh(&mesh);
+			
+			Size_s32 voxel_grid_size = (Size_s32)render_world->voxel_grid.grid_size / 2;
+
+			for (u32 i = 0; i < voxels.count; i++) {
+				if (voxels[i].occlusion == 0) {
+					continue;
+				}
+				Point_s32 index = (Point_s32)convert_1d_to_3d_index(i, render_world->voxel_grid.grid_size.height, render_world->voxel_grid.grid_size.depth);
+				index = index - Point_s32(voxel_grid_size);
+
+				Point_s32 ceil_size = Point_s32((Size_s32)render_world->voxel_grid.ceil_size);
+
+				Vector3 offset = ((index * ceil_size) + (ceil_size / 2)).to_vector3();
+				Vector3 voxel_center = (offset) * inverse(&matrix);
+
+				render_system->render_3d.draw_lines(voxel_center, Color::Red);
+			}
+			render_system->render_3d.reset_mesh();
+		}
+	}
+	render_world->voxels_sb.reset<Voxel>();
 
 	Array<String> strings;
 	for (u32 i = 0; i < game_world->cameras.count; i++) {
@@ -653,6 +742,24 @@ static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_Stat
 	return line_index;
 }
 
+inline s32 list_line_selected(Array<Gui_List_Line_State> &list_line_states)
+{
+	for (s32 i = 0; i < (s32)list_line_states.count; i++) {
+		if (gui::selected(list_line_states[i])) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+inline void select_line(u32 line_index, Array<Gui_List_Line_State> &list_line_states)
+{
+	if (list_line_states.count > line_index) {
+		memset((void *)list_line_states.items, 0, sizeof(Gui_List_Line_State) * list_line_states.count);
+		list_line_states[line_index] = 0x1;
+	}
+}
+
 static bool display_and_get_info_for_load_mesh_command(String *edit_field, Array<String> &command_args, void *context)
 {
 	assert(edit_field);
@@ -674,17 +781,77 @@ static bool display_and_get_info_for_load_mesh_command(String *edit_field, Array
 	} else {
 		matched_files = not_matched_files;
 	}
+	Command_Window *command_window = (Command_Window *)context;
+
+	if (command_window->list_line_states.is_empty()) {
+		command_window->list_line_states.reserve(matched_files.count);
+		select_line(0, command_window->list_line_states);
+	} else if ((command_window->list_line_states.count > matched_files.count) && !matched_files.is_empty()) {
+		s32 line_index = list_line_selected(command_window->list_line_states);
+		if ((line_index > -1) && (line_index > ((s32)matched_files.count - 1))) {
+			select_line((matched_files.count - 1), command_window->list_line_states);
+		}
+	}
 
 	Array<Pair<String, String>> mesh_path_list;
 	for (u32 i = 0; i < matched_files.count; i++) {
 		mesh_path_list.push({ matched_files[i], "data/models" });
 	}
-	Command_Window *command_window = (Command_Window *)context;
 
 	bool result = false;
 	gui::set_theme(&command_window->list_theme);
 	gui::make_next_list_active();
 	s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
+	if (line_index >= 0) {
+		command_args.push(mesh_path_list[line_index].first);
+		result = true;
+	}
+	gui::reset_list_theme();
+	return result;
+}
+
+static bool display_and_get_info_for_load_level_command(String *edit_field, Array<String> &command_args, void *context)
+{
+	assert(edit_field);
+	assert(context);
+
+	String full_path_to_data_directory;
+	build_full_path_to_data_directory("levels", full_path_to_data_directory);
+
+	Array<String> not_matched_files;
+	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
+
+	Array<String> matched_files;
+	if (!edit_field->is_empty()) {
+		for (u32 i = 0; i < not_matched_files.count; i++) {
+			if (not_matched_files[i].find(edit_field->c_str(), 0, false) != -1) {
+				matched_files.push(not_matched_files[i]);
+			}
+		}
+	} else {
+		matched_files = not_matched_files;
+	}
+	Command_Window *command_window = (Command_Window *)context;
+
+	if (command_window->list_line_states.is_empty()) {
+		command_window->list_line_states.reserve(matched_files.count);
+		select_line(0, command_window->list_line_states);
+	} else if ((command_window->list_line_states.count > matched_files.count) && !matched_files.is_empty()) {
+		s32 line_index = list_line_selected(command_window->list_line_states);
+		if ((line_index > -1) && (line_index > ((s32)matched_files.count - 1))) {
+			select_line((matched_files.count - 1), command_window->list_line_states);
+		}
+	}
+
+	Array<Pair<String, String>> mesh_path_list;
+	for (u32 i = 0; i < matched_files.count; i++) {
+		mesh_path_list.push({ matched_files[i], "data/levels" });
+	}
+
+	bool result = false;
+	gui::set_theme(&command_window->list_theme);
+	gui::make_next_list_active();
+	s32 line_index = draw_two_columns_list("level list", command_window->list_line_states, mesh_path_list);
 	if (line_index >= 0) {
 		command_args.push(mesh_path_list[line_index].first);
 		result = true;
@@ -718,11 +885,8 @@ static bool display_all_commands(String *edit_field, Array<String> &command_args
 			if (command_name == command_window->displaying_commands[i].command_name) {
 				command_window->current_displaying_command = &command_window->displaying_commands[i];
 				command_window->active_edit_field = true;
+				command_window->list_line_states.clear();
 				edit_field->free();
-
-				command_window->list_line_states.reserve(20);
-				memset((void *)command_window->list_line_states.items, 0, sizeof(u32) * 20);
-				command_window->list_line_states[0] = 0x1;
 				break;
 			}
 		}
@@ -749,36 +913,52 @@ void Command_Window::init(Engine *engine)
 	current_displaying_command = &displaying_commands.last();
 
 	displaying_command("Load mesh", KEY_CTRL, KEY_L, display_and_get_info_for_load_mesh_command);
+	displaying_command("Load level", display_and_get_info_for_load_level_command);
 	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
 	display.set_size(Render_System::screen_width, Render_System::screen_height);
 
-	command_window_rect.set_size(600, 100);
+	command_window_rect.set_size(600, 80);
 	command_window_rect_with_additional_info.set_size(600, 500);
 
 	place_in_middle(&display, &command_window_rect);
 	command_window_rect.y = 200;
 
 	command_window_theme.background_color = Color(20);
-	command_window_theme.vertical_offset_from_sides = 20;
+	command_window_theme.vertical_offset_from_sides = 14;
+	command_window_theme.horizontal_offset_from_sides = 10;
 
 	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_offset_from_sides * 2, 30);
 	command_edit_field_theme.draw_label = false;
 	command_edit_field_theme.color = Color(30);
+	command_edit_field_theme.rounded_border = 0;
 
 	command_window_rect.height = command_edit_field_theme.rect.height + command_window_theme.vertical_offset_from_sides * 2;
 
 	list_theme.line_height = 30;
 	list_theme.column_filter = false;
 	list_theme.line_text_offset = command_window_theme.horizontal_offset_from_sides + command_edit_field_theme.text_shift;
-	list_theme.window_size.width = command_window_rect.width;
+	list_theme.window_size.width = command_window_rect_with_additional_info.width;
+	list_theme.window_size.height = command_window_rect_with_additional_info.height - command_edit_field_theme.rect.height - command_window_theme.vertical_offset_from_sides;
 	list_theme.background_color = Color(20);
 	list_theme.line_color = Color(20);
 
-	list_line_states.reserve(20);
-	memset((void *)list_line_states.items, 0, sizeof(u32) * 20);
-	list_line_states[0] = 0x1;
+	list_line_states.reserve(displaying_commands.count);
+	select_line(0, list_line_states);
+}
+
+void Command_Window::open()
+{
+	Editor_Window::open();
+	window_just_open = true;
+}
+
+void Command_Window::close()
+{
+	Editor_Window::close();
+	window_just_open = false;
+	command_edit_field.free();
 }
 
 void Command_Window::displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context))
@@ -811,19 +991,6 @@ void Command_Window::displaying_command(const char *command_name, Key modified_k
 	free_string(str_key_binding);
 }
 
-#define FIND_BY_FIELD(array, field, object, result) \
-  do {                                              \
-    auto func = [&]() -> decltype(array.items) { \
-        for (u32 i = 0; i < array.count; i++) { \
-            if (array[i].field == object) { \
-                return &array[i]; \
-            } \
-        } \
-        return NULL; \
-    }; \
-    result = func(); \
-  } while (0)
-
 #define IF_THEN(exp, code) if (exp) { code; };
 
 void Command_Window::draw()
@@ -831,9 +998,14 @@ void Command_Window::draw()
 	assert(current_displaying_command);
 
 	if (was_click(KEY_ESC)) {
-		if (current_displaying_command->command_name != MAIN_COMMAND_NAME) {
+		if (current_displaying_command->command_name == MAIN_COMMAND_NAME) {
+			close();
+		} else {
 			current_displaying_command = &displaying_commands.first();
+			list_line_states.reserve(displaying_commands.count);
+			select_line(0, list_line_states);
 		}
+		command_edit_field.free();
 	}
 	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
 	Rect_s32 window_rect = display_additional_info ? command_window_rect_with_additional_info : command_window_rect;
@@ -842,11 +1014,11 @@ void Command_Window::draw()
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 	gui::set_theme(&command_window_theme);
 
-	IF_THEN(window_just_opened, gui::make_next_ui_element_active());
+	IF_THEN(window_just_open, gui::make_next_ui_element_active());
 	if (gui::begin_window("Command window", 0)) {
 
 		gui::set_theme(&command_edit_field_theme);
-		IF_THEN(window_just_opened || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
+		IF_THEN(window_just_open || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
 		gui::edit_field("Command field", &command_edit_field);
 		gui::reset_edit_field_theme();
 
@@ -858,6 +1030,7 @@ void Command_Window::draw()
 
 			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
 				run_command(current_displaying_command->command_name, command_args);
+				command_edit_field.free();
 			}
 			gui::reset_window_theme();
 		} else {
@@ -868,7 +1041,7 @@ void Command_Window::draw()
 		}
 		gui::end_window();
 	}
-	IF_THEN(window_just_opened, window_just_opened = false);
+	IF_THEN(window_just_open, window_just_open = false);
 	gui::reset_window_theme();
 }
 
@@ -933,9 +1106,10 @@ void Editor::handle_events()
 void Editor::update()
 {
 	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
-		invert(&draw_command_window);
-		if (draw_command_window) {
-			command_window.window_just_opened = true;
+		if (command_window.window_open) {
+			command_window.close();
+		} else {
+			command_window.open();
 		}
 	}
 	if (!gui::were_events_handled() && were_key_events()) {
@@ -993,7 +1167,7 @@ void Editor::picking()
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 				if (picked_entity == intersection_result.entity_id) {
 					draw_drop_down_entity_window = true;
-					drop_down_entity_window.mouse_position = { Mouse_State::x, Mouse_State::y };
+					drop_down_entity_window.mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
 				}
 			}
 		} else if (was_click(KEY_LMOUSE)) {
@@ -1032,7 +1206,7 @@ void Editor::render()
 
 		gui::end_window();
 	}
-	if (draw_command_window) {
+	if (command_window.window_open) {
 		command_window.draw();
 	}
 	if (draw_drop_down_entity_window) {

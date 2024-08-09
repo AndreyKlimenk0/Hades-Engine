@@ -66,8 +66,10 @@ Entity_Id Game_World::make_camera(const Vector3 &position, const Vector3 &target
 {
 	Camera camera;
 	init_entity(&camera, ENTITY_TYPE_CAMERA, position);
+	camera.up = Vector3::base_y;
 	camera.target = target;
-	camera.idx = cameras.push(camera);
+	camera.idx = cameras.count;
+	cameras.push(camera);
 	return get_entity_id(&camera);
 }
 
@@ -143,6 +145,15 @@ Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &di
 
 void Game_World::init()
 {
+}
+
+void Game_World::release_all_resources()
+{
+	light_hash = 0;
+	entities.clear();
+	cameras.clear();
+	lights.clear();
+	geometry_entities.clear();
 }
 
 template <typename T>
