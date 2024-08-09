@@ -17,23 +17,23 @@
 u32 Render_System::screen_width = 0;
 u32 Render_System::screen_height = 0;
 
-inline void from_win32_screen_space(u32 screen_width, u32 screen_height, Point_s32 *win32_point, Point_s32 *normal_point)
+inline void from_win32_screen_space(u32 screen_width, u32 screen_height, const Point_s32 &win32_point, Point_s32 &normal_point)
 {
-	normal_point->x = win32_point->x - (screen_width / 2);
-	normal_point->y = -win32_point->y + (screen_height / 2);
+	normal_point.x = win32_point.x - (screen_width / 2);
+	normal_point.y = -win32_point.y + (screen_height / 2);
 }
 
-inline void to_win32_screen_space(Point_s32 *point, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
+inline void to_win32_screen_space(const Point_s32 &point, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
 {
-	*screen_x = point->x + (screen_width / 2);
-	*screen_y = -point->y + (screen_height / 2);
+	*screen_x = point.x + (screen_width / 2);
+	*screen_y = -point.y + (screen_height / 2);
 }
 
 template< typename T >
-inline Vector2 make_vector2(Pointv2<T> *first_point, Pointv2<T> *second_point)
+inline Vector2 make_vector2(const Point3D<T> &first_point, const Point3D<T> &second_point)
 {
-	Pointv2<T> result = *first_point - *second_point;
-	return Vector2((float)result.x, (float)result.y);
+	Point3D<T> result = first_point - second_point;
+	return result.to_vector2();;
 }
 
 inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
@@ -342,18 +342,18 @@ void Render_Primitive_List::add_texture(int x, int y, int width, int height, Tex
 	render_2d->add_primitive(primitive);
 }
 
-void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thickness)
+void Render_Primitive_List::add_line(const Point_s32 &first_point, const Point_s32 &second_point, const Color &color, float thickness)
 {
 	u32 window_width = Render_System::screen_width;
 	u32 window_height = Render_System::screen_height;
 
 	Point_s32 converted_point1;
-	from_win32_screen_space(window_width, window_height, first_point, &converted_point1);
+	from_win32_screen_space(window_width, window_height, first_point, converted_point1);
 
 	Point_s32 converted_point2;
-	from_win32_screen_space(window_width, window_height, second_point, &converted_point2);
+	from_win32_screen_space(window_width, window_height, second_point, converted_point2);
 
-	Vector2 temp = make_vector2(&converted_point2, &converted_point1);
+	Vector2 temp = make_vector2(converted_point2, converted_point1);
 	Vector2 line_direction = normalize(&temp);
 
 	float angle = get_angle(&line_direction, &Vector2::base_x);
@@ -363,11 +363,13 @@ void Render_Primitive_List::add_line(Point_s32 *first_point, Point_s32 *second_p
 		angle = math::abs(RADIANS_360 - angle);
 	}
 
-	Vector2 position = { (float)first_point->x, (float)first_point->y };
+	Vector2 position = first_point.to_vector2();
 	Matrix4 transform_matrix;
 	transform_matrix = rotate_about_z(-angle) * make_translation_matrix(&position);
 
-	float line_width = (float)find_distance(first_point, second_point);
+	Vector2 temp1 = first_point.to_vector2();
+	Vector2 temp2 = second_point.to_vector2();
+	float line_width = (float)find_distance(&temp1, &temp2);
 	String hash = String(line_width + thickness);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);

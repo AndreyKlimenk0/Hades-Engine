@@ -88,7 +88,7 @@ struct Render_Primitive_List {
 	void add_texture(Rect_s32 *rect, Texture2D *resource);
 	void add_texture(int x, int y, int width, int height, Texture2D *resource);
 
-	void add_line(Point_s32 *first_point, Point_s32 *second_point, const Color &color, float thicknesss = 0.5f);
+	void add_line(const Point_s32 &first_point, const Point_s32 &second_point, const Color &color, float thicknesss = 0.5f);
 
 	Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture2D *texture, const Color &color, String &primitve_hash);
 };
