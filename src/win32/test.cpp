@@ -33,13 +33,6 @@ inline u32 encode_color(const Vector3 &rgb_value)
 	return result;
 }
 
-void func(const Vector3 &base)
-{
-	u32 color_mask = encode_color(base);
-	Vector3
-	length()
-}
-
 void test()
 {
 	Point3D<s32> x = { 10, 20 };
