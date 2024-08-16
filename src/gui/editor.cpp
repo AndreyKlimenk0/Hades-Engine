@@ -2,6 +2,7 @@
 
 #include "editor.h"
 #include "../sys/sys.h"
+#include "../sys/utils.h"
 #include "../sys/engine.h"
 #include "../sys/commands.h"
 
@@ -27,15 +28,13 @@
 #include "../collision/collision.h"
 
 static const u32 STR_ENTITY_TYPES_COUNT = 5;
-static const char *str_entity_types[STR_ENTITY_TYPES_COUNT] = {
+static const String str_entity_types[STR_ENTITY_TYPES_COUNT] = {
 	"Unknown",
 	"Entity",
 	"Light",
 	"Geometry",
 	"Camera"
 };
-
-static_assert(STR_ENTITY_TYPES_COUNT == ENTITY_TYPES_COUNT, "assert_failed");
 
 inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element)
 {
@@ -213,16 +212,14 @@ void Editor_Window::close()
 	window_open = false;
 }
 
-Make_Entity_Window::Make_Entity_Window()
+void Editor_Window::set_position(s32 x, s32 y)
 {
-	reset_state();
+	window_rect.set(x, y);
 }
 
-Make_Entity_Window::~Make_Entity_Window()
+void Editor_Window::set_size(s32 width, s32 height)
 {
-	DELETE_PTR(entity_type_helper);
-	DELETE_PTR(light_type_helper);
-	DELETE_PTR(geometry_type_helper);
+	window_rect.set_size(width, height);
 }
 
 void Make_Entity_Window::init(Engine *engine)
@@ -763,18 +760,17 @@ void Drop_Down_Entity_Window::draw()
 		gui::button("Rotate");
 		if (gui::button("Move")) {
 			set_cursor(CURSOR_TYPE_MOVE);
-			editor->draw_drop_down_entity_window = false;
 			editor->editor_mode = EDITOR_MODE_MOVE_ENTITY;
+			close();
 		}
 		gui::button("Copy");
 		if (gui::button("Delete")) {
 			game_world->delete_entity(editor->picked_entity);
 			u32 render_entity_index = render_world->delete_render_entity(editor->picked_entity);
-
 			render_world->render_passes.outlining.delete_render_entity_index(render_entity_index);
 
 			editor->picked_entity.reset();
-			editor->draw_drop_down_entity_window = false;
+			close();
 		}
 		gui::reset_button_theme();
 		gui::end_window();
@@ -1119,16 +1115,43 @@ Editor::~Editor()
 {
 }
 
+void load_textures(Gpu_Device *gpu_device, Array<Pair<String, Texture2D *>> &textures)
+{
+	assert(gpu_device);
+
+	u8 *image_data = NULL;
+	u32 width = 0;
+	u32 height = 0;
+	String full_path;
+	Texture2D_Desc texture_desc;
+	for (u32 i = 0; i < textures.count; i++) {
+		build_full_path_to_editor_file(textures[i].first, full_path);
+		if (file_exists(full_path)) {
+			if (load_png_file(full_path, &image_data, &width, &height)) {
+				texture_desc.width = width;
+				texture_desc.height = height;
+				texture_desc.mip_levels = 1;
+				texture_desc.data = (void *)image_data;
+				gpu_device->create_texture_2d(&texture_desc, textures[i].second);
+				gpu_device->create_shader_resource_view(&texture_desc, textures[i].second);
+				DELETE_PTR(image_data);
+			}
+		} else {
+			print("load_textures: {} doesn't exist in the editor directory.", textures[i].first);
+		}
+	}
+}
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 void Editor::init(Engine *engine)
 {
 	render_sys = &engine->render_sys;
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
+	entity_window.init(engine);
 	command_window.init(engine);
-	make_entity_window.init(engine);
-	game_world_window.init(engine);
-	render_world_window.init(engine);
 	drop_down_entity_window.init(engine);
 
 	if (game_world->cameras.is_empty()) {
@@ -1149,6 +1172,11 @@ void Editor::init(Engine *engine)
 	key_command_bindings.set("", KEY_RMOUSE); // Don't want to get annoyiny messages
 
 	key_bindings.bind(KEY_CTRL, KEY_C); // Command window keys binding
+
+	Pair<String, Image *> images[] = { { "entity2.png", &entity_icon_image }, { "entities.png", &entities_icon_image }, { "rendering.png", &rendering_icon_image } };
+	for (u32 i = 0; i < ARRAY_SIZE(images); i++) {
+		images[i].second->init_from_file(images[i].first, "editor");
+	}
 }
 
 void Editor::handle_events()
@@ -1179,17 +1207,16 @@ void Editor::update()
 		}
 	}
 	if (!gui::were_events_handled() && were_key_events()) {
-		if (draw_drop_down_entity_window) {
-			draw_drop_down_entity_window = false;
+		if (drop_down_entity_window.window_open) {
+			drop_down_entity_window.close();
 		}
 	}
-	render_world_window.update();
 	picking();
 }
 
 struct Moving_Entity {
 	bool moving_entity = false;
-	float distance; // A distance between a editor camera and an moving entity
+	float distance; // A distance between the editor camera and a moving entity
 	Vector3 ray_entity_intersection_point;
 };
 
@@ -1232,7 +1259,7 @@ void Editor::picking()
 			Ray_Entity_Intersection::Result intersection_result;
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 				if (picked_entity == intersection_result.entity_id) {
-					draw_drop_down_entity_window = true;
+					drop_down_entity_window.open();
 					drop_down_entity_window.mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
 				}
 			}
@@ -1242,7 +1269,7 @@ void Editor::picking()
 
 			Ray_Entity_Intersection::Result intersection_result;
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				gui::make_tab_active(game_world_tab_gui_id);
+				//gui::make_tab_active(game_world_tab_gui_id);
 				picked_entity = intersection_result.entity_id;
 				outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
 			} else {
@@ -1255,28 +1282,49 @@ void Editor::picking()
 void Editor::render()
 {
 	gui::begin_frame();
-	if (gui::begin_window("Editor", WINDOW_DEFAULT_STYLE | WINDOW_TAB_BAR)) {
 
-		if (gui::add_tab("Make Entity")) {
-			make_entity_window.draw();
-		}
+	Gui_Window_Theme window_theme;
+	window_theme.place_between_rects = 1;
+	window_theme.horizontal_offset_from_sides = 0;
+	window_theme.vertical_offset_from_sides = 0;
+	window_theme.background_color = Color(0, 0, 0, 0);
 
-		if (gui::add_tab("Game World")) {
-			game_world_window.draw();
-		}
-		game_world_tab_gui_id = gui::get_last_tab_gui_id();
+	Gui_Text_Button_Theme button_theme;
+	button_theme.rect = { 0, 0, 50, 50 };
 
-		if (gui::add_tab("Render World")) {
-			render_world_window.draw();
+	gui::set_theme(&window_theme);
+	gui::set_next_window_pos(10, 20);
+	gui::set_next_window_size(50, 170);
+	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
+
+		Gui_Image_Button_Theme button_theme;
+		button_theme.hover_color = Color(48);
+		button_theme.color = Color(38);
+		gui::set_theme(&button_theme);
+		if (gui::image_button(&entity_icon_image)) {
+			if (!entity_window.window_open) {
+				entity_window.open();
+			} else {
+				entity_window.close();
+			}
 		}
+		
+		Gui_Image_Button_Theme button_theme2 = button_theme;
+		button_theme2.rect_rounding = 0;
+		gui::set_theme(&button_theme2);
+		gui::image_button(&entities_icon_image);
+		gui::reset_image_button_theme();
+		
+		gui::set_theme(&button_theme);
+		gui::image_button(&rendering_icon_image);
+		gui::reset_image_button_theme();
 
 		gui::end_window();
 	}
-	if (command_window.window_open) {
-		command_window.draw();
-	}
-	if (draw_drop_down_entity_window) {
-		drop_down_entity_window.draw();
+	gui::reset_window_theme();
+
+	if (entity_window.window_open) {
+		entity_window.draw();
 	}
 	gui::end_frame();
 }
@@ -1366,4 +1414,77 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 			print("Editor::convert_editor_commands_to_entity_commands: For the editor command {} there is no a entity command.", command);
 		}
 	}
+}
+
+inline Rect_s32 get_display_screen_rect()
+{
+	return Rect_s32(0, 0, Render_System::screen_width, Render_System::screen_height);
+}
+
+inline void place_rect_on_top_right(Rect_s32 *src, Rect_s32 *dest)
+{
+	assert(src);
+	assert(dest);
+	assert(src->width >= dest->width);
+
+	dest->x = src->width - dest->width;
+	dest->y = 0;
+}
+
+void Entity_Window::init(Engine *engine)
+{
+	Editor_Window::init(engine);
+	set_size(400, 600);
+	Rect_s32 screen_rect = get_display_screen_rect();
+	place_rect_on_top_right(&screen_rect, &window_rect);
+
+	window_theme.rounded_border = 0;
+	window_theme.header_height = 40;
+	window_theme.background_color = Color(25);
+	window_theme.header_color = Color(30);
+}
+
+static String to_string(Entity_Id entity_id)
+{
+	char *entity_index = to_string(entity_id.index);
+	defer(free_string(entity_index));
+	return str_entity_types[(u32)entity_id.type] + "#" + entity_index;
+}
+
+void Entity_Window::draw()
+{
+	static Entity_Id prev_entity_id;
+	static Vector3 scaling;
+	static Vector3 rotation;
+	static Vector3 position;
+
+	Entity *entity = game_world->get_entity(editor->picked_entity);
+	String str_entity_id;
+	if (entity) {
+		str_entity_id = to_string(get_entity_id(entity));
+		if (editor->picked_entity != prev_entity_id) {
+			scaling = entity->scaling;
+			rotation = entity->rotation;
+			position = entity->position;
+		}
+	}
+	window_theme.header_text = str_entity_id.c_str();
+	gui::set_theme(&window_theme);
+	gui::set_next_window_pos(window_rect.x, window_rect.y);
+	gui::set_next_window_size(window_rect.width, window_rect.height);
+	if (gui::begin_window("Entity window", WINDOW_HEADER)) {
+		if (entity) {
+			gui::edit_field("Scaling", &scaling);
+			gui::edit_field("Rotation", &rotation);
+			if (gui::edit_field("Position", &position)) {
+				game_world->place_entity(entity, position);
+			}
+			if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
+				static bool temp;
+				gui::radio_button("Draw bounding box", &temp);
+			}
+		}
+		gui::end_window();
+	}
+	gui::reset_window_theme();
 }
