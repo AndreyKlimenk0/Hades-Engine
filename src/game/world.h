@@ -17,8 +17,6 @@ enum Entity_Type : u32 {
 	ENTITY_TYPE_LIGHT,
 	ENTITY_TYPE_GEOMETRY,
 	ENTITY_TYPE_CAMERA,
-
-	ENTITY_TYPES_COUNT
 };
 
 struct Entity_Id {
@@ -142,7 +140,6 @@ struct Game_World {
 	Array<Geometry_Entity> geometry_entities;
 
 	void init();
-	void shutdown();
 	void release_all_resources();
 
 	void delete_entity(Entity_Id entity_id);

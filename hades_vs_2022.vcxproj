@@ -141,6 +141,7 @@
     <ClCompile Include="src\gui\test_gui.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\geometry.cpp" />
+    <ClCompile Include="src\libs\image\image.cpp" />
     <ClCompile Include="src\libs\image\png.cpp" />
     <ClCompile Include="src\libs\image\spng.cpp" />
     <ClCompile Include="src\libs\key_binding.cpp" />
@@ -335,6 +336,7 @@
     <ClInclude Include="src\libs\ds\stack.h" />
     <ClInclude Include="src\libs\enum_helper.h" />
     <ClInclude Include="src\libs\geometry.h" />
+    <ClInclude Include="src\libs\image\image.h" />
     <ClInclude Include="src\libs\image\png.h" />
     <ClInclude Include="src\libs\image\spng.h" />
     <ClInclude Include="src\libs\key_binding.h" />

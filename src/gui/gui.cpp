@@ -78,9 +78,6 @@ const s32 TAB_BAR_HEIGHT = 30;
 
 const Rect_s32 DEFAULT_WINDOW_RECT = { 50, 50, 300, 300 };
 
-const Gui_Window_Theme DEFAULT_WINDOW_THEME;
-const Gui_Text_Button_Theme DEFAULT_BUTTON_THEME;
-
 inline bool detect_intersection(Rect_s32 *rect)
 {
 	if ((Mouse_State::x > rect->x) && (Mouse_State::x < (rect->x + rect->width)) && (Mouse_State::y > rect->y) && (Mouse_State::y < (rect->y + rect->height))) {
@@ -522,9 +519,9 @@ struct Gui_Manager {
 	Render_Font *render_font = NULL;
 	Render_2D *render_2d = NULL;
 
+	Image cross_icon_image;
 	Texture2D up_texture;
 	Texture2D down_texture;
-	Texture2D cross_texture;
 	Texture2D check_texture;
 	Texture2D default_texture;
 	Texture2D expand_down_texture;
@@ -551,6 +548,7 @@ struct Gui_Manager {
 	Array<Gui_Window_Theme> backup_window_themes;
 	Gui_Window_Theme future_window_theme;
 	Gui_Text_Button_Theme button_theme;
+	Gui_Image_Button_Theme image_button_theme;
 	Gui_Radio_Button_Theme radio_button_theme;
 	Gui_Edit_Field_Theme edit_field_theme;
 	Gui_Edit_Field_Theme backup_edit_field_theme;
@@ -605,7 +603,8 @@ struct Gui_Manager {
 	bool button(const char *name, bool *state = NULL);
 	void core_button(const char *name, bool *left_mouse_click, bool *right_mouse_click);
 	bool radio_button(const char *name, bool *state);
-	bool image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect);
+	bool image_button(Image *image);
+	bool base_image_button(Rect_s32 *button_rect, Image *image);
 
 	bool edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z);
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
@@ -644,6 +643,7 @@ struct Gui_Manager {
 
 	Gui_Window *create_window(const char *name, Window_Type window_type, Window_Style window_style);
 	Gui_Window *create_window(const char *name, Window_Type window_type, Window_Style window_style, Rect_s32 *rect);
+	Gui_Window *create_window_from_file(const char *name, Window_Type window_type, Window_Style window_style, Rect_s32 *rect, u32 offset);
 
 	Gui_Window *get_window_by_index(Array<u32> *window_indices, u32 index);
 };
@@ -847,6 +847,35 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	return &windows.last();
 }
 
+Gui_Window *Gui_Manager::create_window_from_file(const char *name, Window_Type window_type, Window_Style window_style, Rect_s32 *rect, u32 offset)
+{
+	Gui_Window window;
+	window.open = true;
+	window.name = name;
+	window.gui_id = fast_hash(name);
+	window.type = window_type;
+
+	window.rect = *rect;
+	window.view_rect = *rect;
+	window.content_rect = { rect->x, rect->y + (s32)offset, 0, 0 };
+	window.scroll = Point_s32(rect->x, rect->y + (s32)offset);
+
+	window.style = window_style;
+	window.alignment = VERTICALLY_ALIGNMENT | VERTICALLY_ALIGNMENT_JUST_SET;
+
+	window.render_list = Render_Primitive_List(render_2d, font, render_font);
+#ifdef _DEBUG
+	window.name = name;
+#endif
+	window.index_in_windows_array = windows.count;
+	windows.push(window);
+
+	if (window_type == WINDOW_TYPE_PARENT) {
+		window_parent_count++;
+	}
+	return &windows.last();
+}
+
 inline Gui_Window *Gui_Manager::get_window_by_index(Array<u32> *window_indices, u32 index)
 {
 	u32 window_index = window_indices->get(index);
@@ -934,30 +963,54 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 	return was_click_by_mouse_key;
 }
 
-bool Gui_Manager::image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect)
+bool Gui_Manager::image_button(Image *image)
 {
-	assert(rect);
-	assert(texture);
-	assert((rect->width > 0) && (rect->height > 0));
+	assert(image);
+	assert((image->width > 0) && (image->height > 0));
 
-	Gui_Window *window = get_window();
-	Rect_s32 image_rect = *rect;
-
-	if ((image_rect.x < 0) && (image_rect.y < 0)) {
-		place_rect_in_window(window, &image_rect, window->place_between_rects, window->horizontal_offset_from_sides, window->vertical_offset_from_sides);
+	Size_s32 button_size = image_button_theme.button_size;
+	if ((button_size.width < 0) || (button_size.height < 0)) {
+		button_size = image_button_theme.image_size;
 	}
-	Gui_ID image_button_gui_id = GET_IMAGE_BUTTON_GUI_ID();
-	if (must_rect_be_drawn(&window->clip_rect, &image_rect)) {
-		update_active_and_hot_state(image_button_gui_id, &image_rect);
+	Rect_s32 button_rect = button_size;
+	Gui_Window *window = get_window();
+	place_rect_in_window(window, &button_rect, window->place_between_rects, window->horizontal_offset_from_sides, window->vertical_offset_from_sides);
+	return base_image_button(&button_rect, image);
+}
 
+bool Gui_Manager::base_image_button(Rect_s32 *button_rect, Image *image)
+{
+	Size_s32 image_size = image_button_theme.image_size;
+	if ((image_size.width < 0) || (image_size.height < 0)) {
+		image_size = Size_s32(image->width, image->height);
+	}
+	image_size.width = math::min(image_size.width, button_rect->width);
+	image_size.height = math::min(image_size.height, button_rect->height);
+	Rect_s32 image_rect = image_size;
+	
+	Gui_Window *window = get_window();
+	Gui_ID image_button_gui_id = GET_IMAGE_BUTTON_GUI_ID();
+	if (must_rect_be_drawn(&window->clip_rect, button_rect)) {
+		update_active_and_hot_state(image_button_gui_id, button_rect);
+
+		if (image_button_theme.image_alignment == RECT_RIGHT_ALIGNMENT) {
+			place_in_middle_and_by_right(button_rect, &image_rect, 0);
+		} else if (image_button_theme.image_alignment == RECT_LEFT_ALIGNMENT) {
+			place_in_middle_and_by_left(button_rect, &image_rect, 0);
+		} else if (image_button_theme.image_alignment == RECT_CENTER_ALIGNMENT) {
+			place_in_middle(button_rect, &image_rect, BOTH_AXIS);
+		}
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		render_list->push_clip_rect(&window->clip_rect);
-		render_list->add_texture(&image_rect, texture);
+		Color button_color = (hot_item == image_button_gui_id) ? image_button_theme.hover_color : image_button_theme.color;
+		render_list->add_rect(button_rect, button_color, image_button_theme.rounded_border, image_button_theme.rect_rounding);
+		render_list->add_texture(&image_rect, &image->texture);
 		render_list->pop_clip_rect();
 	}
 	image_button_count++;
 	return ((hot_item == image_button_gui_id) && was_click(KEY_LMOUSE));
 }
+
 static bool is_symbol_int_valid(char symbol)
 {
 	return (isdigit(symbol) || (symbol == '-'));
@@ -1903,7 +1956,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 			}
 			if (event->is_key_down(KEY_BACKSPACE)) {
 				if (edit_field_state.caret_index_in_text > -1) {
-					*update_editing_value = true;
+					//*update_editing_value = true;
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
 					edit_field_state.data.remove(edit_field_state.caret_index_in_text);
 
@@ -1956,7 +2009,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 				if ((event->char_key == '-') && (edit_field_state.data.len > 0) && (edit_field_state.data[0] == '-')) {
 					return;
 				}
-				*update_editing_value = true;
+				//*update_editing_value = true;
 				if (edit_field_state.caret_index_in_text == (edit_field_state.data.len - 1)) {
 					edit_field_state.data.append(event->char_key);
 				} else {
@@ -2211,7 +2264,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 					active_list_box = 0;
 				}
 			}
-			button_theme = DEFAULT_BUTTON_THEME;
+			button_theme = Gui_Text_Button_Theme();
 			end_window();
 
 			gui::reset_window_theme();
@@ -2319,7 +2372,7 @@ void Gui_Manager::init(Engine *engine)
 	reset_window_params = 0;
 	curr_parent_windows_index_sum = 0;
 	prev_parent_windows_index_sum = 0;
-	window_theme = DEFAULT_WINDOW_THEME;
+	window_theme = Gui_Window_Theme();
 	active_list = 0;
 
 	key_bindings.bind(KEY_CTRL, KEY_BACKSPACE);
@@ -2372,8 +2425,11 @@ void Gui_Manager::init_from_save_file()
 		Rect_s32 rect;
 		save_file.read((void *)&rect, sizeof(Rect_s32));
 
-		create_window(string, WINDOW_TYPE_PARENT, window_style, &rect);
-		print("  Window {} {}x{} was created.", string, rect.width, rect.height);
+		u32 offset;
+		save_file.read((void *)&offset, sizeof(u32));
+
+		create_window_from_file(string, WINDOW_TYPE_PARENT, window_style, &rect, offset);
+		print("  Window '{}' {}x{} was created.", string, rect.width, rect.height);
 		free_string(string);
 	}
 }
@@ -2387,8 +2443,10 @@ void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
 {
 	assert(gpu_device);
 
-	const u32 TEXTURE_COUNT = 5;
-	Name_Texture pairs[TEXTURE_COUNT] = { {"expand_down1.png", &expand_down_texture }, { "cross-small.png", &cross_texture }, { "check2.png", &check_texture }, { "up.png", &up_texture }, {"down.png", &down_texture } };
+	cross_icon_image.init_from_file("cross-small.png", "editor");
+
+	const u32 TEXTURE_COUNT = 4;
+	Name_Texture pairs[TEXTURE_COUNT] = { {"expand_down1.png", &expand_down_texture }, { "check2.png", &check_texture }, { "up.png", &up_texture }, {"down.png", &down_texture } };
 
 	Texture2D_Desc texture_desc;
 	texture_desc.width = 64;
@@ -2451,17 +2509,17 @@ void Gui_Manager::shutdown()
 		print("Gui_Manager::shutdown: Hades gui data can not be save in file by path {}.", path_to_save_file);
 		return;
 	}
-
 	save_file.write((void *)&window_parent_count, sizeof(u32));
 
 	Gui_Window *window = NULL;
-	int i = 0;
 	For(windows, window) {
 		if (window->type == WINDOW_TYPE_PARENT) {
 			save_file.write((void *)&window->style, sizeof(u32));
 			save_file.write((void *)&window->name.len, sizeof(int));
 			save_file.write((void *)&window->name.data[0], window->name.len);
 			save_file.write((void *)&window->rect, sizeof(Rect_s32));
+			u32 offset = window->content_rect.y - window->rect.y;
+			save_file.write((void *)&offset, sizeof(u32));
 		}
 	}
 }
@@ -2775,7 +2833,7 @@ void Gui_Manager::end_window()
 
 	if (reset_window_params & SET_WINDOW_THEME) {
 		reset_window_params &= ~SET_WINDOW_THEME;
-		window_theme = DEFAULT_WINDOW_THEME;
+		window_theme = Gui_Window_Theme();
 	}
 	window_stack.pop();
 }
@@ -2802,15 +2860,16 @@ void Gui_Manager::render_window(Gui_Window *window)
 		} else {
 			render_list->push_clip_rect(&header_rect);
 		}
+		Rect_s32 header_text_rect = get_text_rect(window->name);
+		place_in_middle(&header_rect, &header_text_rect, BOTH_AXIS);
 
-		Rect_s32 name_rect = get_text_rect(window->name);
-		place_in_middle(&header_rect, &name_rect, BOTH_AXIS);
-		render_list->add_text(&name_rect, window->name);
+		const char *header_text = window_theme.header_text ? window_theme.header_text : window->name.c_str();
+		render_list->add_text(&header_text_rect, header_text);
 
 		if (window->style & WINDOW_CLOSE_BUTTON) {
-			Rect_s32 cross_texture_rect = { 0, 0, header_rect.height, header_rect.height };
-			place_in_middle_and_by_right(&header_rect, &cross_texture_rect, 5);
-			if (image_button(&cross_texture_rect, &cross_texture, &window->rect)) {
+			Rect_s32 cross_icon_image_rect = { 0, 0, header_rect.height, header_rect.height };
+			place_in_middle_and_by_right(&header_rect, &cross_icon_image_rect, 5);
+			if (base_image_button(&cross_icon_image_rect, &cross_icon_image)) {
 				window->open = false;
 			}
 		}
@@ -3164,11 +3223,9 @@ bool gui::radio_button(const char *name, bool *state)
 	return gui_manager.radio_button(name, state);
 }
 
-bool gui::image_button(u32 width, u32 height, Texture2D *texture)
+bool gui::image_button(Image *image)
 {
-	Gui_Window *window = gui_manager.get_window();
-	Rect_s32 rect = { -1, -1, (s32)width, (s32)height };
-	return gui_manager.image_button(&rect, texture, &window->view_rect);
+	return gui_manager.image_button(image);
 }
 
 void gui::edit_field(const char *name, int *value)
@@ -3337,6 +3394,11 @@ void gui::set_theme(Gui_Text_Button_Theme *gui_button_theme)
 	gui_manager.button_theme = *gui_button_theme;
 }
 
+void gui::set_theme(Gui_Image_Button_Theme *gui_button_theme)
+{
+	gui_manager.image_button_theme = *gui_button_theme;
+}
+
 void gui::set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme)
 {
 	gui_manager.backup_edit_field_theme = gui_manager.edit_field_theme;
@@ -3365,7 +3427,12 @@ void gui::reset_window_theme()
 
 void gui::reset_button_theme()
 {
-	gui_manager.button_theme = DEFAULT_BUTTON_THEME;
+	gui_manager.button_theme = Gui_Text_Button_Theme();
+}
+
+void gui::reset_image_button_theme()
+{
+	gui_manager.image_button_theme = Gui_Image_Button_Theme();
 }
 
 void gui::reset_edit_field_theme()

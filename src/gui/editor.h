@@ -6,8 +6,9 @@
 #include "../game/world.h"
 #include "../libs/str.h"
 #include "../libs/os/input.h"
-#include "../libs/structures/array.h"
 #include "../libs/key_binding.h"
+#include "../libs/image/image.h"
+#include "../libs/structures/array.h"
 #include "../libs/math/structures.h"
 #include "../render/render_world.h"
 
@@ -28,60 +29,22 @@ struct Editor_Window {
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 	Render_System *render_system = NULL;
+	
+	Rect_s32 window_rect;
 
 	virtual void init(Engine *engine);
 	virtual void open();
 	virtual void close();
+
+	void set_position(s32 x, s32 y);
+	void set_size(s32 width, s32 height);
 };
 
-struct Make_Entity_Window : Editor_Window {
-	Make_Entity_Window();
-	~Make_Entity_Window();
-
-	u32 light_index;
-	u32 entity_index;
-	u32 geometry_index;
-	Box box;
-	Sphere sphere;
-	// Light entity
-	Vector3 position;
-	Vector3 direction;
-	Vector3 color;
-
-	struct Camera_Fields {
-		Vector3 position;
-		Vector3 target;
-	} camera_fields;
-
-	Light_Type_Helper *light_type_helper = NULL;
-	Entity_Type_Helper *entity_type_helper = NULL;
-	Geometry_Type_Helper *geometry_type_helper = NULL;
-
-	Array<String> light_types;
-	Array<String> entity_types;
-	Array<String> geometry_types;
-
-	void init(Engine *engine);
-	void reset_state();
-	void draw();
-};
-
-struct Game_World_Window : Editor_Window {
-	s32 window_width_delta;
-	s32 world_entities_height;
-	s32 entity_info_height;
-	Window_Style window_style;
-
-	Gui_Window_Theme world_entities_window_theme;
-	Gui_Window_Theme entity_info_window_theme;
-	Gui_Text_Button_Theme buttons_theme;
-
-	Hash_Table<u32, bool> draw_AABB_states;
-	Hash_Table<u32, bool> draw_frustum_states;
+struct Entity_Window : Editor_Window {
+	Gui_Window_Theme window_theme;
 
 	void init(Engine *engine);
 	void draw();
-	bool draw_entity_list(const char *list_name, u32 list_count, Entity_Type type);
 };
 
 struct Render_World_Window : Editor_Window {
@@ -121,10 +84,6 @@ struct Displaying_Command {
 	String str_key_binding;
 
 	bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context) = NULL;
-};
-
-struct Displaying_Info {
-	String command_name;
 };
 
 struct Command_Window : Editor_Window {
@@ -173,8 +132,6 @@ struct Editor {
 	Editor();
 	~Editor();
 
-	bool draw_make_entity_window = false;
-	bool draw_drop_down_entity_window = false;
 	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;
 
 	Entity_Id picked_entity;
@@ -184,7 +141,9 @@ struct Editor {
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 
-	Gui_ID game_world_tab_gui_id;
+	Image entity_icon_image; // should be released !!!
+	Image entities_icon_image;
+	Image rendering_icon_image;
 
 	struct Settings {
 		float camera_speed = 5.0f;
@@ -194,10 +153,8 @@ struct Editor {
 	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
 
+	Entity_Window entity_window;
 	Command_Window command_window;
-	Make_Entity_Window make_entity_window;
-	Game_World_Window game_world_window;
-	Render_World_Window render_world_window;
 	Drop_Down_Entity_Window drop_down_entity_window;
 
 	void init(Engine *engine);

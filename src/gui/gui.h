@@ -3,6 +3,7 @@
 
 #include "../libs/str.h"
 #include "../libs/color.h"
+#include "../libs/image/image.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
 
@@ -25,6 +26,16 @@ const Window_Style WINDOW_RESIZABLE = 0x8;
 const Window_Style WINDOW_CLOSE_BUTTON = 0x10;
 const Window_Style WINDOW_TAB_BAR = 0x20;
 const Window_Style WINDOW_DEFAULT_STYLE = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON;
+
+const u32 GUI_ROUND_TOP_LEFT_RECT = 0x1;
+const u32 GUI_ROUND_TOP_RIGHT_RECT = 0x2;
+const u32 GUI_ROUND_BOTTOM_LEFT_RECT = 0x4;
+const u32 GUI_ROUND_BOTTOM_RIGHT_RECT = 0x8;
+const u32 GUI_ROUND_RIGHT_RECT = GUI_ROUND_TOP_RIGHT_RECT | GUI_ROUND_BOTTOM_RIGHT_RECT;
+const u32 GUI_ROUND_LEFT_RECT = GUI_ROUND_TOP_LEFT_RECT | GUI_ROUND_BOTTOM_LEFT_RECT;
+const u32 GUI_ROUND_TOP_RECT = GUI_ROUND_TOP_LEFT_RECT | GUI_ROUND_TOP_RIGHT_RECT;
+const u32 GUI_ROUND_BOTTOM_RECT = GUI_ROUND_BOTTOM_LEFT_RECT | GUI_ROUND_BOTTOM_RIGHT_RECT;
+const u32 GUI_ROUND_RECT = GUI_ROUND_TOP_RECT | GUI_ROUND_BOTTOM_RECT;
 
 enum Alignment {
 	RECT_CENTER_ALIGNMENT,
@@ -92,6 +103,16 @@ struct Gui_Text_Button_Theme {
 	Rect_s32 rect{ 0, 0, 125, 20 };
 };
 
+struct Gui_Image_Button_Theme {
+	Alignment image_alignment = RECT_CENTER_ALIGNMENT;
+	u32 rect_rounding = GUI_ROUND_RECT;
+	s32 rounded_border = 5;
+	Size_s32 image_size = { -1, -1 };
+	Size_s32 button_size = { 50, 50 };
+	Color color = Color(0, 75, 168);
+	Color hover_color = Color(0, 60, 168);
+};
+
 struct Gui_List_Theme {
 	bool column_filter = true;
 	s32 line_height = 20;
@@ -128,6 +149,7 @@ struct Gui_Window_Theme {
 	Color outlines_color = Color(92, 100, 107);
 	Color scroll_bar_color = Color(48, 50, 54);
 	Color scroll_color = Color(87, 92, 97);
+	const char *header_text = NULL;
 };
 
 namespace gui
@@ -151,7 +173,8 @@ namespace gui
 	void set_theme(Gui_Tab_Theme *gui_tab_theme);
 	void set_theme(Gui_List_Theme *gui_list_theme);
 	void set_theme(Gui_Window_Theme *gui_window_theme);
-	void set_theme(Gui_Text_Button_Theme *gui_window_theme);
+	void set_theme(Gui_Text_Button_Theme *gui_button_theme);
+	void set_theme(Gui_Image_Button_Theme *gui_button_theme);
 	void set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme);
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
 
@@ -159,6 +182,7 @@ namespace gui
 	void reset_list_theme();
 	void reset_window_theme();
 	void reset_button_theme();
+	void reset_image_button_theme();
 	void reset_edit_field_theme();
 
 	void set_next_window_size(s32 width, s32 height);
@@ -172,7 +196,7 @@ namespace gui
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
-	bool image_button(u32 width, u32 height, Texture2D *texture);
+	bool image_button(Image *image);
 
 	bool add_tab(const char *tab_name);
 
