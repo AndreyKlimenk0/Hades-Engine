@@ -22,7 +22,7 @@ void draw_test_tab_window()
 			edit_field("Dir", &dir);
 
 			for (int i = 0; i < 10; i++) {
-				char *button_name = format("First tab Button {}", i);
+				char *button_name = format("fbutton {}", i);
 				button(button_name);
 				free_string(button_name);
 			}
@@ -30,7 +30,7 @@ void draw_test_tab_window()
 		}
 		if (add_tab("Second tab")) {
 			for (int i = 0; i < 10; i++) {
-				char *button_name = format("Second tab Button {}", i);
+				char *button_name = format("sbutton {}", i);
 				button(button_name);
 				free_string(button_name);
 			}
@@ -205,8 +205,12 @@ void draw_test_main_window()
 		edit_field("Value1", &value1);
 		edit_field("Value2", &value2);
 		edit_field("Value3", &value3);
-		edit_field("Position", &position2);
-		edit_field("Position", &position3);
+		if (edit_field("Position", &position2)) {
+			print("Update position1");
+		}
+		if (edit_field("Position", &position3)) {
+			print("Update position2");
+		}
 		edit_field("Value4", &value4);
 		edit_field("Value5", &value5);
 		edit_field("Value6", &value6);

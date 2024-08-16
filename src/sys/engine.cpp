@@ -125,7 +125,7 @@ void Engine::frame()
 #else
 	editor.render();
 #endif
-	display_performance(fps, frame_time);
+	//display_performance(fps, frame_time);
 
 	render_sys.end_frame();
 
