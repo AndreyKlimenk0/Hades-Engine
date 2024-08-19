@@ -150,7 +150,8 @@ struct Render_Camera {
 };
 
 struct Voxel {
-	u32 encoded_color;
+	u32 packed_color;
+	u32 packed_normal;
 	u32 occlusion;
 };
 

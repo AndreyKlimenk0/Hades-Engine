@@ -485,7 +485,10 @@ void Voxelization::render(Render_World *render_world, Render_Pipeline *render_pi
 	For(render_world->game_render_entities, render_entity) {
 		pass_data.mesh_idx = render_entity->mesh_id.instance_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
-
+		
+		Mesh_Textures *mesh_textures = render_world->triangle_meshes.get_mesh_textures(render_entity->mesh_id.textures_idx);
+		render_pipeline->set_pixel_shader_resource(12, render_world->triangle_meshes.get_texture(mesh_textures->diffuse_idx)->srv);
+		
 		render_pipeline->update_constant_buffer(&pass_data_cbuffer, (void *)&pass_data);
 		render_pipeline->draw(render_world->triangle_meshes.mesh_instances[render_entity->mesh_id.instance_idx].index_count);
 	}

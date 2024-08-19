@@ -639,19 +639,19 @@ inline void Gpu_RWStruct_Buffer::write(Array<T> *array)
 	Gpu_Device *gpu_device = get_current_gpu_device();
 	Render_Pipeline *render_pipeline = get_current_render_pipeline();
 
-	Gpu_Buffer_Desc readable_cpu_buffer_desc;
-	readable_cpu_buffer_desc.usage = RESOURCE_USAGE_STAGING;
-	readable_cpu_buffer_desc.data_size = sizeof(T);
-	readable_cpu_buffer_desc.data_count = array->count;
-	readable_cpu_buffer_desc.bind_flags = 0;
-	readable_cpu_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
-	readable_cpu_buffer_desc.data = (void *)array->items;
+	Gpu_Buffer_Desc temp_gpu_buffer_desc;
+	temp_gpu_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
+	temp_gpu_buffer_desc.data_size = sizeof(T);
+	temp_gpu_buffer_desc.data_count = array->count;
+	temp_gpu_buffer_desc.bind_flags = 0;
+	temp_gpu_buffer_desc.cpu_access = 0;
+	temp_gpu_buffer_desc.data = (void *)array->items;
 	
-	Gpu_Buffer readable_cpu_buffer;
-	gpu_device->create_gpu_buffer(&readable_cpu_buffer_desc, &readable_cpu_buffer);
-	render_pipeline->copy_resource(gpu_buffer, readable_cpu_buffer);
+	Gpu_Buffer temp_gpu_buffer;
+	gpu_device->create_gpu_buffer(&temp_gpu_buffer_desc, &temp_gpu_buffer);
+	render_pipeline->copy_resource(gpu_buffer, temp_gpu_buffer);
 	
-	readable_cpu_buffer.free();
+	temp_gpu_buffer.free();
 }
 
 template<typename T>
@@ -685,10 +685,8 @@ inline void Gpu_RWStruct_Buffer::read(Array<T> *array)
 template<typename T>
 inline void Gpu_RWStruct_Buffer::reset()
 {
-	Array<T> temp;
-	temp.reserve(gpu_buffer.data_count);
-	memset((void *)temp.items, 0, temp.get_size());
-	write(&temp);
+	UINT temp[4] = { 0, 0, 0, 0 };
+	get_current_render_pipeline()->dx11_context->ClearUnorderedAccessViewUint(gpu_buffer.uav.Get(), temp);
 }
 
 inline void Gpu_RWStruct_Buffer::free()

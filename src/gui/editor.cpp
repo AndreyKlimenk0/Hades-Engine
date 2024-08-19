@@ -517,6 +517,15 @@ void Render_World_Window::update()
 {
 }
 
+inline Vector3 unpack_RGB8(u32 value)
+{
+	u32 r = (value & 0xff000000) >> 24;
+	u32 g = (value & 0x00ff0000) >> 16;
+	u32 b = (value & 0x0000ff00) >> 8;
+	return Vector3((float)r, (float)g, (float)b);
+	//return Vector3(float(value & 0xff000000), float(value & 0x00ff0000), float(value & 0x0000ff00));
+}
+
 void Render_World_Window::draw()
 {
 	static u32 render_type_index = 0;
@@ -556,6 +565,66 @@ void Render_World_Window::draw()
 		} else {
 			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes is not valid.");
 		}
+	}
+
+	if (gui::radio_button("Dispaly voxel world", &display_voxel_world)) {
+		if (display_voxel_world) {
+			render_world->frame_render_passes.remove(0);
+			render_world->frame_render_passes.remove(0);
+		} else {
+			render_world->frame_render_passes.clear();
+			render_world->frame_render_passes.push(&render_world->render_passes.shadows);
+			render_world->frame_render_passes.push(&render_world->render_passes.forward_light);
+			render_world->frame_render_passes.push(&render_world->render_passes.voxelization);
+		}
+	}
+	if (display_voxel_world) {
+		Array<Voxel> voxels;
+		voxels.reserve(render_world->voxel_grid.ceil_count());
+		memset((void *)voxels.items, 0, voxels.get_size());
+		render_world->voxels_sb.read(&voxels);
+
+		if (!voxels.is_empty()) {
+			auto matrix = make_look_to_matrix(render_world->voxel_grid_center, Vector3::base_z);
+			Size_f32 s = render_world->voxel_grid.ceil_size;
+			Box box = { s.width, s.height, s.depth };
+			Triangle_Mesh tri_mesh;
+			make_box_mesh(&box, &tri_mesh);
+
+			Vertex_Mesh mesh;
+			mesh.vertices.reserve(tri_mesh.vertices.count);
+			mesh.indices.reserve(tri_mesh.indices.count);
+
+			for (u32 i = 0; i < tri_mesh.vertices.count; i++) {
+				mesh.vertices[i] = tri_mesh.vertices[i].position;
+			}
+			mesh.indices = tri_mesh.indices;
+
+			render_system->render_3d.set_mesh(&mesh);
+
+			Size_s32 voxel_grid_size = (Size_s32)render_world->voxel_grid.grid_size / 2;
+
+			for (u32 i = 0; i < voxels.count; i++) {
+				if (voxels[i].occlusion == 0) {
+					continue;
+				}
+				Point_s32 index = (Point_s32)convert_1d_to_3d_index(i, render_world->voxel_grid.grid_size.height, render_world->voxel_grid.grid_size.depth);
+				index = index - Point_s32(voxel_grid_size);
+
+				Point_s32 ceil_size = Point_s32((Size_s32)render_world->voxel_grid.ceil_size);
+
+				Vector3 offset = ((index * ceil_size) + (ceil_size / 2)).to_vector3();
+				Vector3 voxel_center = (offset)*inverse(&matrix);
+
+				u32 packed_color = voxels[i].packed_color;
+				Vector3 values = unpack_RGB8(voxels[i].packed_color);
+				values /= 255.0f;
+				Color color = Color(values.x, values.y, values.z);
+				render_system->render_3d.draw_triangles(voxel_center, color);
+			}
+			render_system->render_3d.reset_mesh();
+		}
+		render_world->voxels_sb.reset<Voxel>();
 	}
 
 	gui::radio_button("Dispaly Voxel Grid", &display_voxel_grid);
@@ -633,8 +702,8 @@ void Render_World_Window::draw()
 			}
 			render_system->render_3d.reset_mesh();
 		}
+		render_world->voxels_sb.reset<Voxel>();
 	}
-	render_world->voxels_sb.reset<Voxel>();
 
 	Array<String> strings;
 	for (u32 i = 0; i < game_world->cameras.count; i++) {
