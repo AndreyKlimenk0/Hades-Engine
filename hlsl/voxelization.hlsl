@@ -30,7 +30,8 @@ cbuffer Voxelization_Info : register(b1) {
 };
 
 struct Voxel {
-	uint encoded_color;
+    uint packed_color;
+	uint packed_normal;
 	uint occlusion;
 };
 
@@ -54,12 +55,19 @@ StructuredBuffer<uint> unified_index_buffer : register(t4);
 StructuredBuffer<Vertex_XNUV> unified_vertex_buffer : register(t5);
 RWStructuredBuffer<Voxel> voxels : register(u1);
 
-static uint pack_RGB(float3 color)
+static uint pack_RGBA8(float4 value)
 {
-    uint r = (uint)(255.0f * color.r);
-    uint g = (uint)(255.0f * color.g);
-    uint b = (uint)(255.0f * color.b);
-    return (r << 24) | (g << 16) | (b << 8) | 0xff;
+    return (uint(value.r) << 24) | (uint(value.g) << 16) | (uint(value.b) << 8) | uint(value.a);
+}
+
+static uint pack_RGB8(float3 value)
+{
+    return (uint(value.r) << 24) | (uint(value.g) << 16) | (uint(value.b) << 8);
+}
+
+static float4 unpack_RGBA8(uint value)
+{
+    return float4(float(value & 0xff000000), float(value & 0x00ff0000), float(value & 0x0000ff00), float(value & 0x000000ff));
 }
 
 static uint get_view_matrix_index(float3 normal)
@@ -123,6 +131,35 @@ void gs_main( triangle VS_Output input[3], inout TriangleStream<GS_Output> outpu
     output_stream.RestartStrip();
 }
 
+static float3 normalize_RGB(float3 value)
+{
+    return value / 255.0f;
+}
+
+static float3 denormalize_RGB(float3 value)
+{
+    return value * 255.0f;
+}
+
+void write_voxel_data(uint voxel_index, float3 color)
+{
+    uint old_packed_color = voxels[voxel_index].packed_color;
+    uint new_packed_color = 0;
+    uint current_packed_color;
+
+    [allow_uav_condition] 
+    while (old_packed_color != current_packed_color) {
+        old_packed_color = voxels[voxel_index].packed_color;
+        
+        float3 old_color = unpack_RGBA8(old_packed_color).xyz;
+        float color_count = unpack_RGBA8(old_packed_color).w + 1.0f;
+        float3 new_color = (normalize_RGB(old_color) + color) / color_count;
+        new_packed_color = pack_RGBA8(float4(denormalize_RGB(new_color), color_count));
+
+        InterlockedCompareExchange(voxels[voxel_index].packed_color, old_packed_color, new_packed_color, current_packed_color);
+    }
+}
+
 void ps_main(GS_Output input)
 {
     float3 color = diffuse_texture.Sample(linear_sampling, input.uv).rgb;
@@ -134,7 +171,10 @@ void ps_main(GS_Output input)
     
     if (in_range(0, voxel_grid_width - 1, voxel_grid_index.x) && in_range(0, voxel_grid_height - 1, voxel_grid_index.y) && in_range(0, voxel_grid_depth - 1, voxel_grid_index.z)) {
         int voxel_index = voxel_grid_index.x * (voxel_grid_width * voxel_grid_depth) + voxel_grid_index.y * voxel_grid_depth + voxel_grid_index.z;
-        InterlockedMax(voxels[voxel_index].encoded_color, pack_RGB(color));
+
+        //write_voxel_data(voxel_index, color);
+        InterlockedMax(voxels[voxel_index].packed_color, pack_RGB8(color * 255.0f));
+        InterlockedMax(voxels[voxel_index].packed_normal, pack_RGB8(input.normal));
         InterlockedMax(voxels[voxel_index].occlusion, uint(1));
     }
 }
