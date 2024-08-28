@@ -53,6 +53,7 @@ void Engine::init(Win32_Window *window)
 	
 	init_os_path();
 	init_commands();
+	vars.load("all.variables");
 
 	font_manager.init();
 	
@@ -73,13 +74,15 @@ void Engine::init(Win32_Window *window)
 	render_world.init(this);
 
 	current_level_name = DEFAULT_LEVEL_NAME + LEVEL_EXTENSION;
+	Variable_Directory *system_vars = vars.get_variable_directory("system");
+	if (system_vars) {
+		system_vars->attach("load_level", current_level_name);
+	}
 	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
 	init_performance_displaying();
-
-	vars.load("all.variables");
 	
 	engine->is_initialized = true;
 }
@@ -144,6 +147,7 @@ void Engine::shutdown()
 	}
 	save_game_and_render_world_in_level(current_level_name, &game_world, &render_world);
 	gui::shutdown();
+	vars.shutdown();
 }
 
 void Engine::set_current_level_name(const String &level_name)
