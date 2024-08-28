@@ -189,7 +189,7 @@ char *get_next_line(char **buffer)
 	if (*t) {
 		end++;
 		if (*t == '\r') {
-			if (*end = '\n') end++;
+			if (*end == '\n') end++;
 		}
 		*t = '\0';
 	}
@@ -580,7 +580,7 @@ void String::append(char c)
 	s[0] = c;
 	s[1] = '\0';
 	append(s);
-	DELETE_PTR(s);
+	DELETE_ARRAY(s);
 }
 
 void String::append(const char *string)

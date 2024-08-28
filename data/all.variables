@@ -1,9 +1,3 @@
-:/Camera
-speed 5.0f
-position Vector3(0.0f, 100.0f, -50.0f)
-
-:/Shadows
-jittering_tile_size 16
-jittering_filter_size 8
-shadow_cascade_ranges { { 1, 5 }, { 15, 150 }, { 150, 500 }, { 500, 100 } }
-shadow_cascade_ranges [ [ 1, 5 ], [ 15, 150 ], [ 150, 500 ], [ 500, 100 ] ]
+:/system
+print_mesh_info true
+load_level "test_displacment_mapping.hl"

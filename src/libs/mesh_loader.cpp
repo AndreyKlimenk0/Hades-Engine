@@ -2,6 +2,7 @@
 #include "os/file.h"
 #include "mesh_loader.h"
 #include "../sys/sys.h"
+#include "../win32/win_time.h"
 
 #include <assimp/postprocess.h>
 #include <assimp/Logger.hpp>
@@ -130,8 +131,10 @@ void print_nodes(aiScene *scene, aiNode *node, u32 node_level = 0)
 
 bool Mesh_Loader::load(const char *full_path_to_mesh_file, Array<Import_Mesh> &meshes, bool print_info, bool print_assimp_log)
 {
+	s64 start = milliseconds_counter();
+
 	String file_name;
-	extract_base_file_name(full_path_to_mesh_file, file_name);
+	extract_file_name(full_path_to_mesh_file, file_name);
 
 	print("Mesh_Loader::load: Started to load {}.", file_name);
 
@@ -163,7 +166,7 @@ bool Mesh_Loader::load(const char *full_path_to_mesh_file, Array<Import_Mesh> &m
 	Hash_Table<u32, aiMesh *> mesh_cache;
 	process_nodes(scene->mRootNode, meshes, mesh_cache);
 
-	print("Mesh_Loader::load: {} was load successfully.", file_name);
+	print("Mesh_Loader::load: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
 	return true;
 }
 

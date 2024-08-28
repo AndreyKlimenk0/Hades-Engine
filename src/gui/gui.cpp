@@ -28,7 +28,7 @@ static s32 list_line_debug_counter = 0;
 static s32 list_column_debug_counter = 0;
 #endif
 
-#define PRINT_GUI_INFO 1
+#define PRINT_GUI_INFO 0
 #define DRAW_WINDOW_DEBUG_RECTS 0
 #define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
 
