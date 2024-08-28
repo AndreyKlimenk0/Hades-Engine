@@ -6,6 +6,8 @@
 
 #include "../number_types.h"
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 #define For(array, ptr) for (u32 _i = 0; (_i < array.count ? array.set_pointer_to_item(&ptr, _i), true : false); _i++)
 
 template <typename T>

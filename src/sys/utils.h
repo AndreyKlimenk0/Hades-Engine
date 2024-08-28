@@ -51,6 +51,8 @@ Deffer<F> defer_func(F f)
 	class_name(const class_name &other) = delete; \
 	void operator=(const class_name &other) = delete; \
 
+#define CALL_METHOD(object, method_ptr, ...) ((object.*method_ptr)(__VA_ARGS__))
+
 struct Callback {
 	~Callback() {}
 	virtual void call(void *args) = 0;
