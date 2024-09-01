@@ -558,7 +558,7 @@ struct Gui_Manager {
 
 	Key_Bindings key_bindings;
 
-	void init(Engine *engine, const char *font_name, u32 font_size);
+	void init(Engine *engine);
 	void init_from_save_file();
 	void load_and_init_textures(Gpu_Device *gpu_device);
 	void handle_events();
@@ -2303,7 +2303,7 @@ bool Gui_Manager::can_window_be_resized(Gui_Window *window)
 	return true;
 }
 
-void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
+void Gui_Manager::init(Engine *engine)
 {
 	render_2d = &engine->render_sys.render_2d;
 
@@ -2329,7 +2329,14 @@ void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
 	key_bindings.bind(KEY_CTRL, KEY_ARROW_RIGHT);
 	key_bindings.bind(KEY_CTRL, KEY_LMOUSE);
 
-	set_font(font_name, font_size);
+	s32 font_size = 12;
+	String font_name = "consola";
+	
+	Variable_Service *gui = engine->var_service.find_namespace("gui");
+	ATTACH(gui, font_size);
+	ATTACH(gui, font_name);
+
+	set_font(font_name, (u32)font_size);
 	init_from_save_file();
 	load_and_init_textures(&engine->render_sys.gpu_device);
 }
@@ -3117,9 +3124,9 @@ Gui_ID Gui_Manager::get_last_tab_gui_id()
 static Gui_Manager gui_manager;
 
 
-void gui::init_gui(Engine *engine, const char *font_name, u32 font_size)
+void gui::init_gui(Engine *engine)
 {
-	gui_manager.init(engine, font_name, font_size);
+	gui_manager.init(engine);
 }
 
 void gui::handle_events()

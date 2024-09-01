@@ -19,7 +19,7 @@ struct Engine {
 	String current_level_name;
 	
 	Editor editor;
-	Variable_Service vars;
+	Variable_Service var_service;
 	File_Tracking_System file_tracking_sys;
 	Game_World game_world;
 	Render_World render_world;
@@ -27,6 +27,7 @@ struct Engine {
 	Font_Manager font_manager;
 	Shader_Manager shader_manager;
 
+	void init_base();
 	void init(Win32_Window *window);
 	void frame();
 	void shutdown();

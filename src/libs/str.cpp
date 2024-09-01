@@ -690,6 +690,19 @@ void String::copy(const String &string, u32 start, u32 end)
 	}
 }
 
+void String::move(char *string)
+{
+	assert(string);
+
+	DELETE_ARRAY(data);
+	len = 0;
+	u32 temp = strlen(string);
+	if (temp > 0) {
+		data = string;
+		len = temp;
+	}
+}
+
 bool String::is_empty()
 {
 	if ((data == NULL) && (len == 0)) {

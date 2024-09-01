@@ -84,7 +84,7 @@ struct Mesh_Storate {
 	void release_all_resources();
 
 	void allocate_gpu_memory();
-	bool add_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
+	bool add_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
 	bool add_texture(const char *texture_name, Texture_Idx *texture_idx);
 	bool update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh);
 	Texture_Idx find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture);
@@ -254,7 +254,7 @@ struct Render_World {
 	void set_camera_for_debuging(Entity_Id camera_info_id);
 
 	bool get_shadow_atls_viewport(Viewport *viewport);
-	bool add_triangle_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
+	bool add_triangle_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
 
 	Vector3 get_light_position(Vector3 light_direction);
 };

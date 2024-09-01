@@ -2,7 +2,10 @@
 #define VAR_SERVICE_H
 
 #include "../libs/str.h"
-#include "../libs/structures/hash_table.h"
+#include "../libs/structures/array.h"
+
+#define ATTACH(service, variable) (service->attach(#variable, &variable))
+#define ATTACH2(service, variable) (service.attach(#variable, &variable))
 
 enum Value_Type {
     BOOLEAN_VALUE = 0,
@@ -14,7 +17,6 @@ enum Value_Type {
 struct Rvalue {
     Rvalue();
     ~Rvalue();
-    Rvalue(const Rvalue &other);
 
     Value_Type type;
     union {
@@ -23,40 +25,37 @@ struct Rvalue {
         float real;
         const char *string;
     };
-    Rvalue &operator=(const Rvalue &other);
-
-    void free();
 };
 
-struct Variable_Directory {
-    Variable_Directory(const char *name);
-    ~Variable_Directory();
-
+struct Variable_Binding {
     String name;
-    Hash_Table<String, Rvalue> variables;
-
-    void attach(const char *variable_name, bool *value);
-    void attach(const char *variable_name, int *value);
-    void attach(const char *variable_name, float *value);
-    void attach(const char *variable_name, String &string);
-
-    void bind_boolean(const char *variable_name, const char *string);
-    void bind_integer(const char *variable_name, const char *string);
-    void bind_float(const char *variable_name, const char *string);
-    void bind_string(const char *variable_name, const char *string);
+    Rvalue rvalue;
 };
 
 struct Variable_Service {
     Variable_Service();
     ~Variable_Service();
 
-    Hash_Table<String, Variable_Directory *> variable_directories;
+    String namespace_name;
+    Array<Variable_Binding *> bindings;
+    Array<Variable_Service *> namespaces;
 
     void load(const char *file_name);
     void parse(const char *data);
     void shutdown();
 
-    Variable_Directory *get_variable_directory(const char *name);
+    void attach(const char *variable_name, bool *value);
+    void attach(const char *variable_name, int *value);
+    void attach(const char *variable_name, float *value);
+    void attach(const char *variable_name, String *string);
+
+    void bind_boolean(const char *variable_name, const char *string);
+    void bind_integer(const char *variable_name, const char *string);
+    void bind_float(const char *variable_name, const char *string);
+    void bind_string(const char *variable_name, const char *string);
+
+    Variable_Binding *find_binding(const char *name);
+    Variable_Service *find_namespace(const char *name);
 };
 
 #endif

@@ -155,6 +155,7 @@
     <ClCompile Include="src\libs\structures\dict.cpp" />
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\font.cpp" />
+    <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\render_api.cpp" />
     <ClCompile Include="src\render\render_helpers.cpp" />
     <ClCompile Include="src\render\render_passes.cpp" />
