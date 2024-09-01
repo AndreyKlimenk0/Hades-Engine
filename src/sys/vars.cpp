@@ -9,7 +9,6 @@
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
-#include "../libs/structures/array.h"
 
 static const String VARIABLE_FILE_EXTENSION = "variables";
 
@@ -194,143 +193,150 @@ Rvalue::Rvalue()
 
 Rvalue::~Rvalue()
 {
-    free();
-}
-
-Rvalue::Rvalue(const Rvalue &other)
-{
-    *this = other;
-}
-
-Rvalue &Rvalue::operator=(const Rvalue &other)
-{
-    if (this != &other) {
-        if (type == STRING_VALUE) {
-            DELETE_ARRAY(string);
-        }
-        type = other.type;
-        if (type == STRING_VALUE) {
-            string = copy_string(other.string, 0, (u32)strlen(other.string));
-        } else {
-            integer = other.integer;
-        }
-    }
-    return *this;
-}
-
-void Rvalue::free()
-{
     if (type == STRING_VALUE) {
-        DELETE_ARRAY(string);
+        free_string(string);
     }
 }
 
-Variable_Directory::Variable_Directory(const char *name) : name(name)
-{
-}
-
-Variable_Directory::~Variable_Directory()
-{
-    variables.clear();
-}
-
-void Variable_Directory::attach(const char *variable_name, bool *value)
+void Variable_Service::attach(const char *variable_name, bool *value)
 {
     assert(variable_name);
     assert(value);
 
-    Rvalue rvalue;
-    if (variables.get(variable_name, rvalue)) {
-        if (rvalue.type == BOOLEAN_VALUE) {
-            *value = rvalue.boolean;
+    Variable_Binding *binding = find_binding(variable_name);
+    if (binding) {
+        if (binding->rvalue.type == BOOLEAN_VALUE) {
+            *value = binding->rvalue.boolean;
         } else {
-            print("Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("Error: A value can not be attached to '{}' because binding '{} = bool' does not exist.", variable_name, variable_name);
+        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = bool' does not exist.", variable_name, variable_name);
     }
 }
 
-void Variable_Directory::attach(const char *variable_name, int *value)
+void Variable_Service::attach(const char *variable_name, int *value)
 {
     assert(variable_name);
     assert(value);
 
-    Rvalue rvalue;
-    if (variables.get(variable_name, rvalue)) {
-        if (rvalue.type == INTEGER_VALUE) {
-            *value = rvalue.integer;
+    Variable_Binding *binding = find_binding(variable_name);
+    if (binding) {
+        if (binding->rvalue.type == INTEGER_VALUE) {
+            *value = binding->rvalue.integer;
         } else {
-            print("Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("Error: A value can not be attached to '{}' because binding '{} = integer' does not exist.", variable_name, variable_name);
+        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = integer' does not exist.", variable_name, variable_name);
     }
 }
 
-void Variable_Directory::attach(const char *variable_name, float *value)
+void Variable_Service::attach(const char *variable_name, float *value)
 {
     assert(variable_name);
     assert(value);
 
-    Rvalue rvalue;
-    if (variables.get(variable_name, rvalue)) {
-        if (rvalue.type == FLOAT_VALUE) {
-            *value = rvalue.real;
+    Variable_Binding *binding = find_binding(variable_name);
+    if (binding) {
+        if (binding->rvalue.type == FLOAT_VALUE) {
+            *value = binding->rvalue.real;
         } else {
-            print("Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("Error: A value can not be attached to '{}' because binding '{} = float' does not exist.", variable_name, variable_name);
+        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = float' does not exist.", variable_name, variable_name);
     }
 }
 
-void Variable_Directory::attach(const char *variable_name, String &string)
+void Variable_Service::attach(const char *variable_name, String *string)
 {
     assert(variable_name);
+    assert(string);
 
-    Rvalue rvalue;
-    if (variables.get(variable_name, rvalue)) {
-        if (rvalue.type == STRING_VALUE) {
-            string = rvalue.string;
+    Variable_Binding *binding = find_binding(variable_name);
+    if (binding) {
+        if (binding->rvalue.type == STRING_VALUE) {
+            *string = binding->rvalue.string;
         } else {
-            print("Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("Error: A value can not be attached to '{}' because binding '{} = string' does not exist.", variable_name, variable_name);
+        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = string' does not exist.", variable_name, variable_name);
     }
 }
 
-void Variable_Directory::bind_boolean(const char *variable_name, const char *string)
+void Variable_Service::bind_boolean(const char *variable_name, const char *string)
 {
-    Rvalue value;
-    value.type = BOOLEAN_VALUE;
-    value.boolean = !strcmp(string, "true") ? true : false;
-    variables.set(variable_name, value);
+    assert(variable_name);
+    assert(string);
+
+    Variable_Binding *binding = new Variable_Binding();
+    binding->name = variable_name;
+    binding->rvalue.type = BOOLEAN_VALUE;
+    binding->rvalue.boolean = !strcmp(string, "true") ? true : false;
+    bindings.push(binding);
 }
 
-void Variable_Directory::bind_integer(const char *variable_name, const char *string)
+void Variable_Service::bind_integer(const char *variable_name, const char *string)
 {
-    Rvalue value;
-    value.type = INTEGER_VALUE;
-    value.real = (float)atoi(string);
-    variables.set(variable_name, value);
+    assert(variable_name);
+    assert(string);
+
+    Variable_Binding *binding = new Variable_Binding();
+    binding->name = variable_name;
+    binding->rvalue.type = INTEGER_VALUE;
+    binding->rvalue.integer = (float)atoi(string);
+    bindings.push(binding);
 }
 
-void Variable_Directory::bind_float(const char *variable_name, const char *string)
+void Variable_Service::bind_float(const char *variable_name, const char *string)
 {
-    Rvalue value;
-    value.type = FLOAT_VALUE;
-    value.real = (float)atof(string);
-    variables.set(variable_name, value);
+    assert(variable_name);
+    assert(string);
+
+    Variable_Binding *binding = new Variable_Binding();
+    binding->name = variable_name;
+    binding->rvalue.type = FLOAT_VALUE;
+    binding->rvalue.real = (float)atof(string);
+    bindings.push(binding);
 }
 
-void Variable_Directory::bind_string(const char *variable_name, const char *string)
+void Variable_Service::bind_string(const char *variable_name, const char *string)
 {
-    Rvalue value;
-    value.type = STRING_VALUE;
-    value.string = copy_string(string, 1, (u32)strlen(string) - 1);
-    variables.set(variable_name, value);
+    assert(variable_name);
+    assert(string);
+    assert(strlen(string) > 0);
+
+    Variable_Binding *binding = new Variable_Binding();
+    binding->name = variable_name;
+    binding->rvalue.type = STRING_VALUE;
+    binding->rvalue.string = copy_string(string, 1, (u32)strlen(string) - 1);
+    bindings.push(binding);
+}
+
+Variable_Binding *Variable_Service::find_binding(const char *name)
+{
+    assert(name);
+
+    for (u32 i = 0; i < bindings.count; i++) {
+        if (bindings[i]->name == name) {
+            return bindings[i];
+        }
+    }
+    return NULL;
+}
+
+Variable_Service *Variable_Service::find_namespace(const char *name)
+{
+    assert(name);
+
+    for (u32 i = 0; i < namespaces.count; i++) {
+        if (namespaces[i]->namespace_name == name) {
+            return namespaces[i];
+        }
+    }
+    return this;
 }
 
 Variable_Service::Variable_Service()
@@ -346,17 +352,17 @@ void Variable_Service::load(const char *file_name)
 {
     assert(file_name);
 
-    print("Start to load variables from '{}'.", file_name);
+    print("[var service] Info: Loading variables from '{}'.", file_name);
 
     String file_extension;
     if (!(extract_file_extension(file_name, file_extension) || (file_extension == VARIABLE_FILE_EXTENSION))) {
-        print("Variable_Service::load: The variable file name '{}' is wrong. A variable file name must have format 'some_file_name.variables'", file_name);
+        print("[variable service] Error: The variable file name '{}' is wrong. A variable file name must have format 'some_file_name.variables'", file_name);
         return;
     }
 
     String full_path_to_variable_file = join_paths(get_full_path_to_data_directory(), file_name);
     if (!file_exists(full_path_to_variable_file)) {
-        print("Variable_Service::load: File {} doesn't exist in the data directory.", file_name);
+        print("[variable service] Error: File {} doesn't exist in the data directory.", file_name);
         return;
     }
 
@@ -367,42 +373,41 @@ void Variable_Service::load(const char *file_name)
     }
 }
 
-typedef void (Variable_Directory::*Bind_Method)(const char *, const char *);
+typedef void (Variable_Service:: *Bind_Method)(const char *, const char *);
 typedef bool (*Match_Function)(const char *string);
 
 static const Pair<Match_Function, Bind_Method> binding_table[] = {
-    { &string_contain_boolean, &Variable_Directory::bind_boolean },
-    { &string_contain_integer, &Variable_Directory::bind_integer },
-    { &string_contain_real,    &Variable_Directory::bind_float },
-    { &string_contain_string,  &Variable_Directory::bind_string },
+    { &string_contain_boolean, &Variable_Service::bind_boolean },
+    { &string_contain_integer, &Variable_Service::bind_integer },
+    { &string_contain_real,    &Variable_Service::bind_float },
+    { &string_contain_string,  &Variable_Service::bind_string },
 };
 
 void Variable_Service::parse(const char *data)
 {
     assert(data);
+    namespace_name = "base_namespace";
+
     u32 line_number = 0;
     char *text = (char *)data;
-    Variable_Directory *variable_directory = NULL;
+    Variable_Service *service = this;
 
     while (true) {
         char *line = get_next_line(&text);
         if (!line) {
             break;
-        } else if (compare_start(line, "//") || string_empty(line)) {
+        } else if (compare_start(line, "#") || string_empty(line)) {
             continue;
         } else if (compare_start(line, ":/")) {
-            String directory_name;
-            if (parse_variable_directory_name(line, directory_name)) {
-                variable_directory = new Variable_Directory(directory_name);
-                variable_directories.set(directory_name, variable_directory);
+            String namespace_name;
+            if (parse_variable_directory_name(line, namespace_name)) {
+                service = new Variable_Service();
+                service->namespace_name = namespace_name;
+                namespaces.push(service);
             } else {
                 report_error(line_number, line, "Not valid a directory name. The directory name must contain only [a-zA-Z_] symbols.");
             }
         } else {
-            if (!variable_directory) {
-                report_error(line_number, line, "Can not bind a variable. A variable directory was not specified above.");
-                continue;
-            }
             char *origin_line = line;
             char *name = get_next_world(&line);
             char *value = get_next_world(&line);
@@ -414,7 +419,7 @@ void Variable_Service::parse(const char *data)
             for (u32 i = 0; i < ARRAY_SIZE(binding_table); i++) {
                 if (binding_table[i].first(value)) {
                     Bind_Method method = binding_table[i].second;
-                    CALL_METHOD(*variable_directory, method, name, value);
+                    CALL_METHOD(*service, method, name, value);
                     result = true;
                     break;
                 }
@@ -429,15 +434,17 @@ void Variable_Service::parse(const char *data)
 
 void Variable_Service::shutdown()
 {
-    for (u32 i = 0; i < variable_directories.count; i++) {
-        DELETE_PTR(variable_directories.get_value(i));
+    Variable_Service *variable_namespace = NULL;
+    For(namespaces, variable_namespace) {
+        variable_namespace->shutdown();
     }
-    variable_directories.clear();
-}
-
-Variable_Directory *Variable_Service::get_variable_directory(const char *name)
-{
-    Variable_Directory *temp = NULL;
-    variable_directories.get(name, &temp);
-    return temp;
+    For(namespaces, variable_namespace) {
+        DELETE_PTR(variable_namespace);
+    }
+    Variable_Binding *binding = NULL;
+    For(bindings, binding) {
+        DELETE_PTR(binding);
+    }
+    namespaces.clear();
+    bindings.clear();
 }

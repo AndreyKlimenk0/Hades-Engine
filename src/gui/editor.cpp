@@ -291,12 +291,9 @@ void Make_Entity_Window::draw()
 				AABB aabb = make_AABB(&mesh);
 				game_world->attach_AABB(entity_id, &aabb);
 
-				char *mesh_name = format("Box_{}_{}_{}", box.width, box.height, box.depth);
 				Mesh_Id mesh_id;
-				render_world->add_triangle_mesh(mesh_name, &mesh, &mesh_id);
+				render_world->add_triangle_mesh(&mesh, &mesh_id);
 				render_world->add_render_entity(entity_id, mesh_id);
-
-				free_string(mesh_name);
 			}
 		} else if (geometry_type == GEOMETRY_TYPE_SPHERE) {
 			gui::edit_field("Radious", &sphere.radius);
