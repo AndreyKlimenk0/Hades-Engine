@@ -1,3 +1,12 @@
 :/system
-print_mesh_info true
-load_level "test_displacment_mapping.hl"
+window_width 1900
+window_height 980
+#load_level "normal_displacment_mapping.hl"
+
+:/log
+log_mesh_info false
+log_assimp_info false
+
+:/gui
+font_name "FiraCode-Regular"
+font_sise 12

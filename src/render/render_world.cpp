@@ -141,7 +141,7 @@ void Mesh_Storate::init(Gpu_Device *gpu_device)
 	u32 width = 200;
 	u32 height = 200;
 
-	default_textures.normal = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 1.0f)));
+	default_textures.normal = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 0.0f)));
 	default_textures.diffuse = textures.push(create_color_texture(gpu_device, width, height, DEFAULT_MESH_COLOR));
 	default_textures.specular = textures.push(create_color_texture(gpu_device, width, height, Color(0.2f, 0.2f, 0.2f)));
 	default_textures.displacement = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 0.0f)));
@@ -216,52 +216,65 @@ bool Mesh_Storate::add_texture(const char *texture_name, Texture_Idx *texture_id
 	return true;
 }
 
-bool Mesh_Storate::add_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
+bool Mesh_Storate::add_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
 {
-	assert(mesh_name);
 	assert(triangle_mesh);
 	assert(mesh_id);
 
 	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
 	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
 
-	if (strlen(mesh_name) == 0) {
-		print("Render_World::add_mesh: A mesh name is not valid.", mesh_name);
+	String_Id mesh_string_id;
+	if (!triangle_mesh->name.is_empty() && !triangle_mesh->file_name.is_empty()) {
+		mesh_string_id = fast_hash(triangle_mesh->file_name + "_" + triangle_mesh->name);
+	} else if (exclusive_or(triangle_mesh->name.is_empty(), triangle_mesh->file_name.is_empty())) {
+		if (triangle_mesh->name.is_empty()) {
+			mesh_string_id = fast_hash(triangle_mesh->file_name);
+			print("[Mesh storage] Warning: A tringle mesh contains only a file name '{}' it's possible to get the collision.", triangle_mesh->file_name);
+		} else {
+			mesh_string_id = fast_hash(triangle_mesh->name);
+			print("[Mesh storage] Warning: A tringle mesh contains only a name '{}' it's possible to get the collision.", triangle_mesh->name);
+		}
+	} else {
+		print("[Mesh storage] Error: Not possible to add a triangle mesh to the storage. the triangle mesh doesn't has a file name and mesh name.");
 		return false;
 	}
 
-	if ((triangle_mesh->vertices.count == 0) || (triangle_mesh->indices.count == 0)) {
-		print("Render_World::add_mesh: Mesh {} can be added because doesn't have all necessary data.", mesh_name);
+	if (triangle_mesh->empty()) {
+		print("Render_World::add_mesh: Mesh {} from {} can be added because doesn't have all necessary data.", triangle_mesh->name, triangle_mesh->file_name);
 		return false;
 	}
 
-	String_Id string_id = fast_hash(mesh_name);
-	if (!mesh_table.get(string_id, mesh_id)) {
-		Mesh_Textures mesh_textures;
-		mesh_textures.normal_idx = find_texture_or_get_default(triangle_mesh->normal_texture_name, default_textures.normal);
-		mesh_textures.diffuse_idx = find_texture_or_get_default(triangle_mesh->diffuse_texture_name, default_textures.diffuse);
-		mesh_textures.specular_idx = find_texture_or_get_default(triangle_mesh->specular_texture_name, default_textures.specular);
-		mesh_textures.displacement_idx = find_texture_or_get_default(triangle_mesh->displacement_texture_name, default_textures.displacement);
-
-		mesh_id->textures_idx = meshes_textures.push(mesh_textures);
-
-		Mesh_Instance mesh_info;
-		mesh_info.vertex_count = triangle_mesh->vertices.count;
-		mesh_info.index_count = triangle_mesh->indices.count;
-		mesh_info.vertex_offset = unified_vertices.count;
-		mesh_info.index_offset = unified_indices.count;
-
-		mesh_id->instance_idx = mesh_instances.push(mesh_info);
-
-		merge(&unified_vertices, &triangle_mesh->vertices);
-		merge(&unified_indices, &triangle_mesh->indices);
-
-		mesh_struct_buffer.update(&mesh_instances);
-		vertex_struct_buffer.update(&unified_vertices);
-		index_struct_buffer.update(&unified_indices);
-
-		mesh_table.set(string_id, *mesh_id);
+	if (mesh_table.get(mesh_string_id, mesh_id)) {
+		print("[Mesh storage] Info: {} mesh has already been placed in the mesh storage.", triangle_mesh->get_pretty_name());
+		return true;
 	}
+
+	Mesh_Textures mesh_textures;
+	mesh_textures.normal_idx = find_texture_or_get_default(triangle_mesh->normal_texture_name, default_textures.normal);
+	mesh_textures.diffuse_idx = find_texture_or_get_default(triangle_mesh->diffuse_texture_name, default_textures.diffuse);
+	mesh_textures.specular_idx = find_texture_or_get_default(triangle_mesh->specular_texture_name, default_textures.specular);
+	mesh_textures.displacement_idx = find_texture_or_get_default(triangle_mesh->displacement_texture_name, default_textures.displacement);
+
+	mesh_id->textures_idx = meshes_textures.push(mesh_textures);
+
+	Mesh_Instance mesh_info;
+	mesh_info.vertex_count = triangle_mesh->vertices.count;
+	mesh_info.index_count = triangle_mesh->indices.count;
+	mesh_info.vertex_offset = unified_vertices.count;
+	mesh_info.index_offset = unified_indices.count;
+
+	mesh_id->instance_idx = mesh_instances.push(mesh_info);
+
+	merge(&unified_vertices, &triangle_mesh->vertices);
+	merge(&unified_indices, &triangle_mesh->indices);
+
+	mesh_struct_buffer.update(&mesh_instances);
+	vertex_struct_buffer.update(&unified_vertices);
+	index_struct_buffer.update(&unified_indices);
+
+	mesh_table.set(mesh_string_id, *mesh_id);
+	
 	return true;
 }
 
@@ -664,13 +677,13 @@ void Render_World::update_shadows()
 	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
 }
 
-bool Render_World::add_triangle_mesh(const char *mesh_name, Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
+bool Render_World::add_triangle_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
 {
 	//Bounding_Sphere temp = make_bounding_sphere(Vector3(0.0f, 0.0f, 0.0f), mesh);
 	//if (temp.radious > world_bounding_sphere.radious) {
 	//	world_bounding_sphere = temp;
 	//}
-	return triangle_meshes.add_mesh(mesh_name, triangle_mesh, mesh_id);
+	return triangle_meshes.add_mesh(triangle_mesh, mesh_id);
 }
 
 void Render_World::set_camera_for_rendering(Entity_Id camera_id)

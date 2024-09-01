@@ -44,7 +44,7 @@ void get_window_size(HWND window, int *width, int *height)
 	*height = rect.bottom - rect.top;
 }
 
-bool create_win32_window(HINSTANCE hinstance, Win32_Window *window)
+bool create_win32_window(HINSTANCE hinstance, Win32_Window *window, s32 window_width, s32 window_height)
 {
 	const char CLASS_NAME[] = "Sample Window Class";
 
@@ -57,7 +57,7 @@ bool create_win32_window(HINSTANCE hinstance, Win32_Window *window)
 
 	RegisterClass(&wc);
 
-	window->handle = CreateWindowEx(0, CLASS_NAME, "Hades Engine", WS_OVERLAPPEDWINDOW, 10, 10, 1900, 980, NULL, NULL, hinstance, (void *)window);
+	window->handle = CreateWindowEx(0, CLASS_NAME, "Hades Engine", WS_OVERLAPPEDWINDOW, 10, 10, window_width, window_height, NULL, NULL, hinstance, (void *)window);
 
 	if (window->handle) {
 		RECT rect;

@@ -22,20 +22,19 @@ static void load_meshes(Array<String> &mesh_names)
 		String full_path_to_mesh;
 		build_full_path_to_model_file(mesh_names[i], full_path_to_mesh);
 
-		Mesh_Loader mesh_loader;
-		Array<Import_Mesh> meshes;
-		if (mesh_loader.load(full_path_to_mesh, meshes, false, false)) {
+		Array<Mesh_Data> submeshes_data;
+		if (load_triangle_mesh(full_path_to_mesh, submeshes_data)) {
 			render_world->triangle_meshes.loaded_meshes.push(mesh_names[i]);
 
-			Import_Mesh *imported_mesh = NULL;
-			For(meshes, imported_mesh) {
+			Mesh_Data *mesh_data = NULL;
+			For(submeshes_data, mesh_data) {
 				Mesh_Id mesh_id;
-				if (render_world->add_triangle_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id)) {
-					AABB mesh_AABB = make_AABB(&imported_mesh->mesh);
-					if (imported_mesh->mesh_instances.count > 0) {
-						for (u32 j = 0; j < imported_mesh->mesh_instances.count; j++) {
-							Import_Mesh::Transform_Info t = imported_mesh->mesh_instances[j];
-							Entity_Id entity_id = game_world->make_entity(t.scaling, t.rotation, t.translation);
+				if (render_world->add_triangle_mesh(&mesh_data->mesh, &mesh_id)) {
+					AABB mesh_AABB = make_AABB(&mesh_data->mesh);
+					if (mesh_data->mesh_instances.count > 0) {
+						for (u32 j = 0; j < mesh_data->mesh_instances.count; j++) {
+							Mesh_Data::Transformation temp = mesh_data->mesh_instances[j];
+							Entity_Id entity_id = game_world->make_entity(temp.scaling, temp.rotation, temp.translation);
 							game_world->attach_AABB(entity_id, &mesh_AABB);
 							render_world->add_render_entity(entity_id, mesh_id);
 						}

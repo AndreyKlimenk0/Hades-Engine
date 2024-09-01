@@ -15,10 +15,15 @@ struct Mesh {
 
 struct Triangle_Mesh : Mesh<Vertex_PNTUV> {
 	String name;
+	String file_name;
+
 	String normal_texture_name;
 	String diffuse_texture_name;
 	String specular_texture_name;
 	String displacement_texture_name;
+
+	const char *get_name();
+	String get_pretty_name();
 };
 
 typedef Mesh<Vector3> Line_Mesh;

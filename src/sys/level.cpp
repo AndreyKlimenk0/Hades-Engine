@@ -52,18 +52,17 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 		mesh_name.append(unified_strings[i]);
 	}
 
-	Mesh_Loader mesh_loader;
 	for (u32 i = 0; i < mesh_names.count; i++) {
 		String full_path_to_mesh_file;
 		build_full_path_to_model_file(mesh_names[i].c_str(), full_path_to_mesh_file);
 
-		Array<Import_Mesh> meshes;
-		if (mesh_loader.load(full_path_to_mesh_file, meshes, false, false)) {
+		Array<Mesh_Data> submeshes_data;
+		if (load_triangle_mesh(full_path_to_mesh_file, submeshes_data)) {
 			render_world->triangle_meshes.loaded_meshes.push(mesh_names[i].c_str());
-			Import_Mesh *imported_mesh = NULL;
-			For(meshes, imported_mesh) {
+			Mesh_Data *mesh_data = NULL;
+			For(submeshes_data, mesh_data) {
 				Mesh_Id mesh_id;
-				render_world->add_triangle_mesh(imported_mesh->mesh.name, &imported_mesh->mesh, &mesh_id);
+				render_world->add_triangle_mesh(&mesh_data->mesh, &mesh_id);
 			}
 		}
 

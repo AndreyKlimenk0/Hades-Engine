@@ -8,6 +8,7 @@
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/os/event.h"
+#include "../libs/mesh_loader.h"
 
 #include "../gui/test_gui.h"
 
@@ -47,14 +48,23 @@ static void display_performance(s64 fps, s64 frame_time)
 	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
 }
 
-void Engine::init(Win32_Window *window)
+void Engine::init_base()
 {
 	engine = this;
-	
 	init_os_path();
 	init_commands();
-	vars.load("all.variables");
+	var_service.load("all.variables");
+	
+	bool log_mesh_info = false;
+	bool log_assimp_info = false;
+	Variable_Service *log = var_service.find_namespace("log");
+	ATTACH(log, log_mesh_info);
+	ATTACH(log, log_assimp_info);
+	setup_3D_file_loading_log(log_mesh_info, log_assimp_info);
+}
 
+void Engine::init(Win32_Window *window)
+{
 	font_manager.init();
 	
 	render_sys.init(window);
@@ -65,8 +75,7 @@ void Engine::init(Win32_Window *window)
 	render_sys.render_2d.init(&render_sys, &shader_manager);
 	render_sys.render_3d.init(&render_sys, &shader_manager);
 
-	gui::init_gui(this, "FiraCode-Regular", 12);
-	////gui::init_gui(this, "consola", FONT_SIZE);
+	gui::init_gui(this);
 	
 	editor.init(this);
 
@@ -74,10 +83,9 @@ void Engine::init(Win32_Window *window)
 	render_world.init(this);
 
 	current_level_name = DEFAULT_LEVEL_NAME + LEVEL_EXTENSION;
-	Variable_Directory *system_vars = vars.get_variable_directory("system");
-	if (system_vars) {
-		system_vars->attach("load_level", current_level_name);
-	}
+	Variable_Service *system = var_service.find_namespace("system");
+	system->attach("load_level", &current_level_name);
+
 	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
@@ -147,7 +155,7 @@ void Engine::shutdown()
 	}
 	save_game_and_render_world_in_level(current_level_name, &game_world, &render_world);
 	gui::shutdown();
-	vars.shutdown();
+	var_service.shutdown();
 }
 
 void Engine::set_current_level_name(const String &level_name)

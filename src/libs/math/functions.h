@@ -95,4 +95,9 @@ inline void invert(bool *value)
 	*value = *value ? false : true;
 }
 
+inline bool exclusive_or(bool q, bool p)
+{
+	return !(p && q) && (p || q);
+}
+
 #endif

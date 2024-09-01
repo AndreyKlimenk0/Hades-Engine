@@ -46,6 +46,7 @@ struct String {
 	void allocate_and_copy_string(const char *string);
 	void place_end_char();
 	void copy(const String &string, u32 start, u32 end);
+	void move(char *string);
 
 	bool is_empty();
 	s32 find(const char *substring, u32 start_index = 0, bool case_sensitive = true);

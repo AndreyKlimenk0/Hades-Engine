@@ -132,7 +132,7 @@ struct Gui_Window_Theme {
 
 namespace gui
 {
-	void init_gui(Engine *engine, const char *font_name, u32 font_size);
+	void init_gui(Engine *engine);
 	void handle_events();
 	void shutdown();
 	void set_font(const char *font_name, u32 font_size);

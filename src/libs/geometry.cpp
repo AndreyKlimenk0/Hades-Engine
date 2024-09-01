@@ -54,6 +54,8 @@ void make_box_mesh(Box *box, Triangle_Mesh *mesh)
 	float h = 0.5f * box->height;
 	float d = 0.5f * box->depth;
 
+	mesh->name.move(format("Box_{}_{}_{}", box->width, box->height, box->depth));
+
 	mesh->vertices.reserve(24);
 
 	mesh->vertices[0] = Vertex_PNTUV(Vector3(-w, -h, -d), Vector3(0.0f, 0.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f), Vector2(0.0f, 1.0f));
