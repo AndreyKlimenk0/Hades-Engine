@@ -58,6 +58,11 @@ const u32 ROUND_TOP_RECT = ROUND_TOP_LEFT_RECT | ROUND_TOP_RIGHT_RECT;
 const u32 ROUND_BOTTOM_RECT = ROUND_BOTTOM_LEFT_RECT | ROUND_BOTTOM_RIGHT_RECT;
 const u32 ROUND_RECT = ROUND_TOP_RECT | ROUND_BOTTOM_RECT;
 
+struct Circle_Range {
+	u32 start;
+	u32 end;
+};
+
 struct Render_Primitive_List {
 	//@Note: default construcor should be deleted. 
 	Render_Primitive_List() {}
@@ -89,6 +94,9 @@ struct Render_Primitive_List {
 	void add_texture(int x, int y, int width, int height, Texture2D *resource);
 
 	void add_line(const Point_s32 &first_point, const Point_s32 &second_point, const Color &color, float thicknesss = 0.5f);
+
+	void add_circle(int x, int y, u32 radius, const Color &color, const Circle_Range &circle_range = { 0, 360 } );
+	void add_outline_circle(int x, int y, u32 radius, float thickness, const Color &color);
 
 	Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture2D *texture, const Color &color, String &primitve_hash);
 };
