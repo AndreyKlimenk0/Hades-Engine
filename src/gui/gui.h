@@ -13,15 +13,19 @@ struct Texture2D;
 
 typedef u32 Gui_ID;
 typedef u32 Window_Style;
-typedef u32 Element_Alignment;
 typedef u32 Gui_List_Line_State;
 typedef u32 Gui_Tree_Style;
+typedef u32 Gui_Layout;
 
+const Gui_Layout LAYOUT_LEFT = 0x1;
+const Gui_Layout LAYOUT_RIGHT = 0x2;
+const Gui_Layout LAYOUT_HORIZONTALLY = 0x4;
+const Gui_Layout LAYOUT_VERTICALLY = 0x8;
+const Gui_Layout LAYOUT_HORIZONTALLY_CENTER = 0x10;
+const Gui_Layout LAYOUT_VERTICALLY_CENTER = 0x20;
+const Gui_Layout LAYOUT_CENTER = LAYOUT_HORIZONTALLY_CENTER | LAYOUT_VERTICALLY_CENTER;
 const Gui_Tree_Style GUI_TREE_NODE_NO_FLAGS = 0x0;
 const Gui_Tree_Style GUI_TREE_NODE_FINAL = 0x1;
-
-const Element_Alignment RIGHT_ALIGNMENT = 0x01;
-const Element_Alignment LEFT_ALIGNMENT = 0x02;
 
 const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_HEADER = 0x1;
@@ -99,7 +103,7 @@ struct Gui_List_Box_Theme {
 };
 
 struct Gui_Text_Button_Theme {
-	u32 aligment = 0;
+	Gui_Layout text_layout = LAYOUT_CENTER;
 	s32 shift_from_size = 10;
 	s32 rounded_border = 5;
 	Color stroke_color = Color::Black;

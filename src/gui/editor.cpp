@@ -744,7 +744,7 @@ void Drop_Down_Entity_Window::init(Engine *engine)
 
 	buttons_theme.rect.set_size(window_size.width, 25);
 	buttons_theme.color = window_theme.background_color;
-	buttons_theme.aligment = LEFT_ALIGNMENT;
+	//buttons_theme.aligment = LEFT_ALIGNMENT;
 }
 
 void Drop_Down_Entity_Window::draw()

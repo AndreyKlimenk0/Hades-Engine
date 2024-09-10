@@ -500,14 +500,51 @@ void draw_test_main_window()
 	}
 }
 
+void test_gui_context_layout()
+{
+	if (begin_window("Layout window")) {
+		//same_line();
+		button("Button 11111111111111111111111111");
+		button("Button 2");
+		button("Button 3");
+		button("Button 4");
+		button("Button 5");
+		same_line();
+		button("Button 11");
+		button("Button 22");
+		button("Button 33");
+		button("Button 44");
+		button("Button 55");
+		same_line();
+		button("Button 41");
+		button("Button 42");
+		button("Button 43");
+		button("Button 44");
+		button("Button 45");
+		next_line();
+		button("Button 51");
+		button("Button 52");
+		button("Button 53");
+		button("Button 54");
+		button("Button 55");
+		same_line();
+		button("Button 101");
+		button("Button 102");
+		button("Button 103");
+		button("Button 104");
+		button("Button 105");
+		button("Button 106");
+		end_window();
+	}
+}
 
 void draw_test_gui()
 {
 	begin_frame();
-
-	draw_test_tab_window();
-	draw_test_list_window();
-	draw_test_main_window();
+	test_gui_context_layout();
+	//draw_test_tab_window();
+	//draw_test_list_window();
+	//draw_test_main_window();
 
 	gui::end_frame();
 }
