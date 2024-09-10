@@ -16,6 +16,7 @@ typedef u32 Window_Style;
 typedef u32 Gui_List_Line_State;
 typedef u32 Gui_Tree_Style;
 typedef u32 Gui_Layout;
+typedef u32 Gui_Tree_Node_State;
 
 const Gui_Layout LAYOUT_LEFT = 0x1;
 const Gui_Layout LAYOUT_RIGHT = 0x2;
@@ -151,6 +152,25 @@ struct Gui_List_Theme {
 	Size_s32 window_size = Size_s32(500, 300);
 };
 
+struct Gui_Tree_List_Theme {
+	bool column_filter = true;
+	s32 line_height = 20;
+	s32 line_text_offset = 10;
+	s32 split_line_size = 18;
+	s32 filter_button_size = 12;
+	s32 filter_text_offset = 10;
+	s32 filter_button_offset = 7;
+	s32 filter_rect_height = 20;
+	float split_line_thickness = 1.0f;
+	Color filter_rect_color = Color(36, 36, 36);
+	Color split_lines_color = Color(46, 46, 46);
+	Color line_color = Color(40, 40, 40);
+	Color background_color = Color(40, 40, 40);
+	Color hover_line_color = Color(0, 89, 254, 170);
+	Color picked_line_color = Color(0, 89, 254, 235);
+	Size_s32 window_size = Size_s32(500, 300);
+};
+
 struct Gui_Window_Theme {
 	s32 header_height = 18;
 	s32 rounded_border = 6;
@@ -256,6 +276,11 @@ namespace gui
 	void add_text(const char *text, Alignment alignment);
 	void add_image(Texture2D *texture, Alignment alignment);
 	void add_image_button(Texture2D *texture, Alignment alignment);
+
+	bool begin_tree_list(const char *name);
+	void end_tree_list();
+	bool begin_tree_node(Gui_Tree_Node_State *tree_node_state = NULL);
+	void end_tree_node();
 
 	Size_s32 get_window_size();
 	Gui_ID get_last_tab_gui_id();

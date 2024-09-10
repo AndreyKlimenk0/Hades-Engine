@@ -219,6 +219,13 @@ void draw_test_list_window()
 			end_list();
 		}
 
+		static bool init_list = false;
+		static Array<Gui_List_Line_State> list_line_states;
+		static Array<String> file_names2;
+		static Array<String> file_types2;
+		if (!init_list) {
+			init_list = true;
+			list_line_states.reserve(20);
 		static bool node_list_init = false;
 		static Directory_Entry dir_tree;
 		static Directory_Entry dota_dir;
@@ -381,61 +388,69 @@ void draw_test_list_window()
 		//	init_list = true;
 		//	list_line_states.reserve(20);
 
-		//	for (u32 i = 0; i < 20; i++) {
-		//		list_line_states[i] = 0;
-		//	}
+			for (u32 i = 0; i < 20; i++) {
+				list_line_states[i] = 0;
+			}
 
-		//	for (u32 i = 0; i < 10; i++) {
-		//		char *file_name = format("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArect{}.cpp", i);
-		//		file_names2.push(file_name);
-		//		file_types2.push("cpp");
+			for (u32 i = 0; i < 10; i++) {
+				char *file_name = format("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArect{}.cpp", i);
+				file_names2.push(file_name);
+				file_types2.push("cpp");
 
-		//		free_string(file_name);
-		//	}
-		//	for (u32 i = 10; i < 20; i++) {
-		//		char *file_name = format("draw_rect{}.hlsl", i);
+				free_string(file_name);
+			}
+			for (u32 i = 10; i < 20; i++) {
+				char *file_name = format("draw_rect{}.hlsl", i);
 
-		//		file_names2.push(file_name);
-		//		file_types2.push("hlsl");
+				file_names2.push(file_name);
+				file_types2.push("hlsl");
 
-		//		free_string(file_name);
-		//	}
-		//}
+				free_string(file_name);
+			}
+		}
 
-		//Gui_List_Theme list_theme;
-		//list_theme.column_filter = false;
+		Gui_List_Theme list_theme;
+		list_theme.column_filter = true;
 
-		//set_theme(&list_theme);
-		//static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 25} };
-		//if (begin_list("Cpp file list", file_filter, 2)) {
-		//	for (u32 i = 0; i < 20; i++) {
-		//		begin_line(&list_line_states[i]);
+		set_theme(&list_theme);
+		static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 50} };
+		if (begin_list("Cpp file list", file_filter, 2)) {
+			//for (u32 i = 0; i < 20; i++) {
+			//	begin_line(&list_line_states[i]);
 
-		//		if (right_mouse_click(list_line_states[i])) {
-		//			print("Was right mouse click. index", i);
-		//		}
+			//	if (right_mouse_click(list_line_states[i])) {
+			//		print("Was right mouse click. index", i);
+			//	}
 
-		//		if (left_mouse_click(list_line_states[i])) {
-		//			print("Was left mouse click. index", i);
-		//		}
+			//	if (left_mouse_click(list_line_states[i])) {
+			//		print("Was left mouse click. index", i);
+			//	}
 
-		//		if (selected(list_line_states[i])) {
-		//			//print("Selected", i);
-		//		}
+			//	if (selected(list_line_states[i])) {
+			//		//print("Selected", i);
+			//	}
 
-		//		begin_column("File name");
-		//		add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
-		//		end_column();
+			//	begin_column("File name");
+			//	add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
+			//	end_column();
 
-		//		begin_column("File Type");
-		//		add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
-		//		end_column();
+			//	begin_column("File Type");
+			//	add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
+			//	end_column();
 
-		//		end_line();
-		//	}
-		//	end_list();
-		//}
-		//reset_list_theme();
+			//	end_line();
+			//}
+			end_list();
+		}
+		reset_list_theme();
+
+		if (gui::begin_tree_list("Some tree list")) {
+			gui::begin_tree_node();
+			gui::text("Some text");
+			gui::text("Other words");
+			//gui::end_tree_node();
+			gui::end_tree_list();
+		}
 
 		end_window();
 	}
@@ -543,7 +558,7 @@ void draw_test_gui()
 	begin_frame();
 	test_gui_context_layout();
 	//draw_test_tab_window();
-	//draw_test_list_window();
+	draw_test_list_window();
 	//draw_test_main_window();
 
 	gui::end_frame();

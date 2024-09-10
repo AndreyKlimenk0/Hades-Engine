@@ -513,7 +513,7 @@ void Window_Context::setup(Gui_Layout _layout_flags, Gui_Window *_window, Paddin
 {
 	assert(_window && _padding);
 	window = _window;
-	Context::setup(_layout_flags, &window->view_rect, &window->clip_rect, _padding);
+	Context::setup(_layout_flags, &window->content_rect, &window->clip_rect, _padding);
 }
 
 void Window_Context::place_rect(Rect_s32 *placing_rect)
@@ -619,6 +619,8 @@ struct Gui_Manager {
 	Gui_Tab_Theme backup_tab_theme;
 	Gui_List_Theme list_theme;
 	Gui_List_Theme backup_list_theme;
+	Gui_Tree_List_Theme tree_list_theme;
+	Gui_Tree_List_Theme backup_tree_list_theme;
 	Gui_List_Box_Theme list_box_theme;
 	Gui_Window_Theme window_theme;
 	Array<Gui_Window_Theme> backup_window_themes;
@@ -671,6 +673,7 @@ struct Gui_Manager {
 	void move_window_content(Gui_Window *window, u32 distance, Moving_Direction moving_direction);
 
 	void text(const char *some_text);
+	
 	void image(Texture2D *texture, s32 width, s32 height);
 	void list_box(Array<String> *array, u32 *item_index);
 	void edit_field(const char *name, int *value);
@@ -701,6 +704,11 @@ struct Gui_Manager {
 
 	bool begin_column(const char *column_name);
 	void end_column();
+
+	bool begin_tree_list(const char *name);
+	bool begin_tree_node(Gui_Tree_Node_State *tree_node_state);
+	void end_tree_node();
+	void end_tree_list();
 
 	void add_text(const char *text, Alignment alignment);
 	void add_image(Texture2D *texture, Alignment alignment);
@@ -1991,6 +1999,44 @@ void Gui_Manager::end_column()
 	ASSERT_MSG(list_column_debug_counter == 0, "You forgot to use gui::begin_column");
 #endif
 	current_list_line.columns.push(current_list_column);
+}
+
+bool Gui_Manager::begin_tree_list(const char *name)
+{
+	Gui_Window_Theme window_theme;
+	window_theme.background_color = tree_list_theme.background_color;
+	window_theme.place_between_rects = 0;
+	window_theme.horizontal_offset_from_sides = 0;
+	window_theme.vertical_offset_from_sides = 0;
+	window_theme.rounded_border = 0;
+	window_theme.rounded_scrolling = 0;
+
+	gui::set_theme(&window_theme);
+
+	Size_s32 window_tree_size = tree_list_theme.window_size;
+	set_next_window_size(window_tree_size.width, window_tree_size.height);
+
+
+	if (begin_child(name, WINDOW_SCROLL_BAR)) {
+
+		return true;
+	}
+	return false;
+}
+
+void Gui_Manager::end_tree_list()
+{
+	end_child();
+	gui::reset_window_theme();
+}
+
+bool Gui_Manager::begin_tree_node(Gui_Tree_Node_State *tree_node_state)
+{
+	return false;
+}
+
+void Gui_Manager::end_tree_node()
+{
 }
 
 void Gui_Manager::add_text(const char *text, Alignment alignment)
