@@ -2,30 +2,30 @@
 #include <stdlib.h>
 
 #include "gui.h"
-
 #include "../render/font.h"
 #include "../render/render_system.h"
-
 #include "../sys/sys.h"
 #include "../sys/engine.h"
-
 #include "../win32/win_time.h"
-
-#include "../libs/str.h"
-#include "../libs/math/functions.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
-#include "../libs/structures/stack.h"
-#include "../libs/key_binding.h"
+#include "../libs/str.h"
 #include "../libs/image/png.h"
+#include "../libs/key_binding.h"
+#include "../libs/math/functions.h"
+#include "../libs/structures/tree.h"
+#include "../libs/structures/stack.h"
+#include "../libs/structures/array.h"
 
 #define ASSERT_MSG(expr, str_msg) (assert((expr) && (str_msg)))
 
 #ifdef _DEBUG
 static s32 list_line_debug_counter = 0;
 static s32 list_column_debug_counter = 0;
+static s32 tree_debug_counter = 0;
+static s32 tree_node_debug_counter = 0;
 #endif
 
 #define PRINT_GUI_INFO 0
@@ -233,6 +233,17 @@ struct Gui_Window_Placing_Info {
 	Rect_s32 last_placed_rect;
 };
 
+typedef u32 Gui_Tree_Node_State;
+
+struct Gui_Tree_Node {
+	String name;
+	Gui_Tree_Node_State state;
+};
+
+static const Gui_Tree_Node_State GUI_TREE_NODE_NO_STATE = 0x0;
+static const Gui_Tree_Node_State GUI_TREE_NODE_OPEN = 0x1;
+static const Gui_Tree_Node_State GUI_TREE_NODE_SELECTED = 0x2;
+
 struct Gui_Window {
 	bool open = true;
 	bool tab_was_added = false;
@@ -269,6 +280,7 @@ struct Gui_Window {
 	Array<u32> child_windows;
 	Array<u32> collided_windows;
 	Array<Gui_Window_Tab> tabs;
+	Array<Ordered_Tree<Gui_Tree_Node> *> trees;
 
 	Render_Primitive_List render_list;
 
@@ -411,6 +423,13 @@ struct Edit_Field_State {
 	Rect_s32 caret;
 };
 
+struct Tree_State {
+	s32 tree_level_depth = -1;
+	Ordered_Tree<Gui_Tree_Node>::Node *parent_node = NULL;
+	Ordered_Tree<Gui_Tree_Node> *current_tree = NULL;
+	Array<u32> level_node_count_stack;
+};
+
 Edit_Field_State make_edit_field_state(Rect_s32 *caret, const char *str_value, u32 max_text_width, bool(*symbol_validation)(char symbol))
 {
 	Edit_Field_State edit_field;
@@ -525,7 +544,9 @@ struct Gui_Manager {
 	Texture2D check_texture;
 	Texture2D default_texture;
 	Texture2D expand_down_texture;
+	Texture2D expand_right_texture;
 
+	Rect_s32 last_drawn_rect;
 	Rect_s32 window_rect;
 	Cursor_Type cursor_type;
 
@@ -538,6 +559,9 @@ struct Gui_Manager {
 	Stack<u32> window_stack;
 	Array<u32> windows_order;
 	Array<Gui_Window> windows;
+
+	Gui_Tree_Theme tree_theme;
+	Array<Gui_Tree_Theme> backup_tree_themes;
 
 	Gui_Tab_Theme tab_theme;
 	Gui_Tab_Theme backup_tab_theme;
@@ -552,6 +576,8 @@ struct Gui_Manager {
 	Gui_Radio_Button_Theme radio_button_theme;
 	Gui_Edit_Field_Theme edit_field_theme;
 	Gui_Edit_Field_Theme backup_edit_field_theme;
+	
+	Tree_State tree_state;
 	Edit_Field_State edit_field_state;
 
 	Key_Bindings key_bindings;
@@ -610,6 +636,12 @@ struct Gui_Manager {
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color, u32 index);
 
+	bool begin_tree(const char *name);
+	void end_tree();
+
+	bool begin_tree_node(const char *name, Gui_Tree_Style node_flags);
+	void end_tree_node();
+
 	bool begin_list(const char *name, Gui_List_Column columns[], u32 column_count);
 	void end_list();
 
@@ -623,6 +655,7 @@ struct Gui_Manager {
 	void add_image(Texture2D *texture, Alignment alignment);
 	void add_image_button(Texture2D *texture, Alignment alignment);
 
+	bool element_clicked(Key key);
 	bool window_active(Gui_Window *window);
 	bool handle_edit_field_shortcut_event(Gui_Window *window, Rect_s32 *edit_field_rect, Gui_ID edit_field_gui_id, Edit_Field_Type edit_field_type, u32 vector3_edit_field_index = 0);
 	bool update_edit_field(Edit_Field_Instance *edit_field_instance);
@@ -1266,6 +1299,164 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 	return update_value;
 }
 
+bool Gui_Manager::begin_tree(const char *name)
+{
+#ifdef _DEBUG
+	if (tree_debug_counter != 0) {
+		ASSERT_MSG(tree_debug_counter > 0, "You forgot to use 'gui::begin_tree'.");
+		ASSERT_MSG(tree_debug_counter < 0, "You forgot to use 'gui::end_tree'.");
+	}
+	if (tree_node_debug_counter != 0) {
+		ASSERT_MSG(tree_node_debug_counter > 0, "You forgot to use 'gui::begin_node_tree'.");
+		ASSERT_MSG(tree_node_debug_counter < 0, "You forgot to use 'gui::end_node_tree'.");
+	}
+	tree_debug_counter++;
+#endif
+	Gui_Window_Theme tree_window_theme;
+	tree_window_theme.background_color = list_theme.background_color;
+	tree_window_theme.place_between_rects = 0;
+	tree_window_theme.horizontal_offset_from_sides = 0;
+	tree_window_theme.vertical_offset_from_sides = 0;
+	tree_window_theme.rounded_border = 0;
+	tree_window_theme.rounded_scrolling = 0;
+
+	const auto compare_function = [](Ordered_Tree<Gui_Tree_Node> *tree, const String &string) {
+		return tree->root_node ? tree->root_node->data.name == string : false;
+	};
+	gui::set_theme(&tree_window_theme);
+
+	Gui_Tree_Theme *theme = &tree_theme;
+	set_next_window_size(theme->window_size.width, theme->window_size.height);
+	if (begin_child(name, WINDOW_SCROLL_BAR)) {
+		Gui_Window *window = get_parent_window(get_window());
+		Find_Result<Ordered_Tree<Gui_Tree_Node> *> find_result = find_in_array(window->trees, name, compare_function);
+		Ordered_Tree<Gui_Tree_Node> *tree = find_result.value;
+		if (!find_result.found) {
+			tree = new Ordered_Tree<Gui_Tree_Node>();
+			tree->create_root_node({ name, GUI_TREE_NODE_OPEN });
+			window->trees.push(tree);
+		}
+		tree_state.current_tree = tree;
+		tree_state.parent_node = tree->root_node;
+		tree_state.level_node_count_stack.push(0);
+		tree_state.tree_level_depth = -1;
+		return true;
+	}
+	return false;
+}
+
+void Gui_Manager::end_tree()
+{
+#ifdef _DEBUG
+	tree_debug_counter--;
+	if (tree_debug_counter != 0) {
+		ASSERT_MSG(tree_debug_counter > 0, "You forgot to use 'gui::begin_tree'.");
+		ASSERT_MSG(tree_debug_counter < 0, "You forgot to use 'gui::end_tree'.");
+	}
+	if (tree_node_debug_counter != 0) {
+		ASSERT_MSG(tree_node_debug_counter > 0, "You forgot to use 'gui::begin_node_tree'.");
+		ASSERT_MSG(tree_node_debug_counter < 0, "You forgot to use 'gui::end_node_tree'.");
+	}
+#endif
+	tree_state.current_tree = NULL;
+	tree_state.parent_node = NULL;
+	tree_state.level_node_count_stack.clear();
+	tree_state.tree_level_depth = -1;
+	
+	end_child();
+	gui::reset_window_theme();
+}
+
+static void update_node_state(Gui_Tree_Node *node_info, void *args)
+{
+	node_info->state &= ~GUI_TREE_NODE_OPEN;
+	node_info->state &= ~GUI_TREE_NODE_SELECTED;
+}
+
+bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
+{
+	if (!(tree_state.parent_node->data.state & GUI_TREE_NODE_OPEN)) {
+		return false;
+	}
+	tree_state.tree_level_depth += 1;
+	u32 level_node_counter = tree_state.level_node_count_stack.last();
+	Ordered_Tree<Gui_Tree_Node>::Node *current_node = tree_state.current_tree->get_child_node(tree_state.parent_node, level_node_counter);
+	if (!current_node) {
+		current_node = tree_state.current_tree->create_child_node(tree_state.parent_node, { name , GUI_TREE_NODE_NO_STATE }, level_node_counter);
+	}
+	
+	Gui_Window *window = get_window();
+	Gui_Tree_Theme *theme = &tree_theme;
+	
+	Rect_s32 tree_node_rect = Rect_s32(0, 0, window->view_rect.width, theme->tree_node_height);
+	place_rect_in_window(window, &tree_node_rect, window->place_between_rects, window->horizontal_offset_from_sides, window->vertical_offset_from_sides);
+	bool mouse_over = detect_intersection(&tree_node_rect);
+
+	Gui_Tree_Node_State node_state = current_node->data.state;
+	//if ((node_state & GUI_TREE_NODE_SELECTED) && !Keys_State::is_key_down(KEY_CTRL) && was_click(KEY_LMOUSE)) {
+	//	node_state &= ~GUI_TREE_NODE_SELECTED;
+	//}
+	if (active_window == window->gui_id) {
+		if ((node_state & GUI_TREE_NODE_SELECTED) && !Keys_State::is_key_down(KEY_CTRL) && was_click(KEY_LMOUSE)) {
+			node_state &= ~GUI_TREE_NODE_SELECTED;
+		}
+		if (mouse_over && was_click(KEY_LMOUSE)) {
+			if (node_state & GUI_TREE_NODE_SELECTED) {
+				node_state &= ~GUI_TREE_NODE_SELECTED;
+			} else {
+				node_state |= GUI_TREE_NODE_SELECTED;
+			}
+			if (node_state & GUI_TREE_NODE_OPEN) {
+				node_state &= ~GUI_TREE_NODE_OPEN;
+				tree_state.current_tree->walk_and_update_nodes(current_node, update_node_state, NULL);
+			} else {
+				node_state |= GUI_TREE_NODE_OPEN;
+			}
+		}
+	}
+	if (must_rect_be_drawn(&window->clip_rect, &tree_node_rect)) {
+		s32 offset = tree_state.tree_level_depth * theme->tree_node_depth_offset;
+		s32 text_offset = (node_flags & GUI_TREE_NODE_FINAL) ? 5 : 20;
+		Rect_s32 down_image_rect = { 0, 0, 15, 15 };
+		Rect_s32 node_text_rect = get_text_rect(name);
+		place_in_middle_and_by_left(&tree_node_rect, &down_image_rect, offset);
+		place_in_middle_and_by_left(&tree_node_rect, &node_text_rect, text_offset + offset);
+
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		Rect_s32 clip_rect = calculate_clip_rect(&window->clip_rect, &tree_node_rect);
+		render_list->push_clip_rect(&clip_rect);
+		
+		Color tree_node_color = (node_state & GUI_TREE_NODE_SELECTED) ? theme->picked_tree_node_color : mouse_over && (active_window == window->gui_id) ? theme->hover_tree_node_color : theme->tree_node_color;
+		render_list->add_rect(&tree_node_rect, tree_node_color, 0);
+		if (!(node_flags & GUI_TREE_NODE_FINAL)) {
+			Texture2D *expand = (node_state & GUI_TREE_NODE_OPEN) ? &expand_down_texture : &expand_right_texture;
+			render_list->add_texture(&down_image_rect, expand);
+		}
+		
+		render_list->add_text(&node_text_rect, name);
+		render_list->pop_clip_rect();
+	}
+	last_drawn_rect = tree_node_rect;
+	current_node->data.state = node_state;
+	tree_state.level_node_count_stack.last() = level_node_counter + 1;
+	tree_state.level_node_count_stack.push(0);
+	tree_state.parent_node = current_node;
+#ifdef _DEBUG
+	tree_node_debug_counter++;
+#endif
+	return true;
+}
+
+void Gui_Manager::end_tree_node()
+{
+#ifdef _DEBUG
+	tree_node_debug_counter--;
+#endif
+	tree_state.level_node_count_stack.pop();
+	tree_state.parent_node = tree_state.parent_node->parent_node;
+	tree_state.tree_level_depth -= 1;
+}
+
 template <typename T>
 static T calculate(const T &value, const T &percents)
 {
@@ -1798,6 +1989,14 @@ void Gui_Manager::add_image(Texture2D *texture, Alignment alignment)
 
 void Gui_Manager::add_image_button(Texture2D *texture, Alignment alignment)
 {
+}
+
+bool Gui_Manager::element_clicked(Key key)
+{
+	if (detect_intersection(&last_drawn_rect) && was_click(key)) {
+		return true;
+	}
+	return false;
 }
 
 bool Gui_Manager::window_active(Gui_Window *window)
@@ -2445,8 +2644,8 @@ void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
 
 	cross_icon_image.init_from_file("cross-small.png", "editor");
 
-	const u32 TEXTURE_COUNT = 4;
-	Name_Texture pairs[TEXTURE_COUNT] = { {"expand_down1.png", &expand_down_texture }, { "check2.png", &check_texture }, { "up.png", &up_texture }, {"down.png", &down_texture } };
+	const u32 TEXTURE_COUNT = 5;
+	Name_Texture pairs[TEXTURE_COUNT] = { { "expand_down1.png", &expand_down_texture }, { "check2.png", &check_texture }, { "up.png", &up_texture }, { "down.png", &down_texture }, { "expand_right.png", &expand_right_texture } };
 
 	Texture2D_Desc texture_desc;
 	texture_desc.width = 64;
@@ -2547,6 +2746,7 @@ void Gui_Manager::new_frame()
 	became_just_actived = 0;
 
 	curr_parent_windows_index_sum = 0;
+	last_drawn_rect = Rect_s32(0, 0, 0, 0);
 
 	frame_count++;
 	// Using frame_count in order to update collided windows in not moved windows.
@@ -2662,12 +2862,6 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 		update_active_and_hot_state(window, window->gui_id, &window->rect);
 		update_active_window(window);
 	}
-
-	if (!detect_intersection(&window->rect) && was_key_just_pressed(KEY_LMOUSE)) {
-		became_just_actived = 0;
-		active_window = 0;
-	}
-
 	Rect_s32 *rect = &window->rect;
 
 	bool mouse_was_moved = (mouse_x_delta != 0) || (mouse_y_delta != 0);
@@ -2773,6 +2967,10 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	window->place_between_rects = window_theme.place_between_rects;
 	window->horizontal_offset_from_sides = window_theme.horizontal_offset_from_sides;
 	window->vertical_offset_from_sides = window_theme.vertical_offset_from_sides;
+
+	if (window->open) {
+		last_drawn_rect = window->rect;
+	}
 
 	return window->open;
 }
@@ -3182,8 +3380,7 @@ Gui_ID Gui_Manager::get_last_tab_gui_id()
 
 static Gui_Manager gui_manager;
 
-
-void gui::init_gui(Engine *engine)
+void gui::init_gui(Engine *engine, const char *font_name, u32 font_size)
 {
 	gui_manager.init(engine);
 }
@@ -3246,6 +3443,39 @@ void gui::edit_field(const char *name, String *string)
 bool gui::edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z)
 {
 	return gui_manager.edit_field(name, vector, x, y, z);
+}
+
+bool gui::begin_tree(const char *name)
+{
+	return gui_manager.begin_tree(name);
+}
+
+void gui::end_tree()
+{
+	gui_manager.end_tree();
+}
+
+bool gui::begin_tree_node(const char *name_label, Gui_Tree_Style node_flags)
+{
+	return gui_manager.begin_tree_node(name_label, node_flags);
+}
+
+void gui::end_tree_node()
+{
+	gui_manager.end_tree_node();
+}
+
+bool gui::tree_node_selected()
+{
+	if (gui_manager.tree_state.current_tree && gui_manager.tree_state.parent_node) {
+		return gui_manager.tree_state.parent_node->data.state & GUI_TREE_NODE_SELECTED;
+	}
+	return false;
+}
+
+bool gui::element_clicked(Key key)
+{
+	return gui_manager.element_clicked(key);
 }
 
 bool gui::begin_list(const char *name, Gui_List_Column filters[], u32 filter_count)
@@ -3311,6 +3541,11 @@ void gui::add_image(Texture2D *texture, Alignment alignment)
 void gui::add_image_button(Texture2D *texture, Alignment alignment)
 {
 	gui_manager.add_image_button(texture, alignment);
+}
+
+bool gui::mouse_over_element()
+{
+	return detect_intersection(&gui_manager.last_drawn_rect);
 }
 
 Size_s32 gui::get_window_size()

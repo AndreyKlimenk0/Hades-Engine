@@ -1308,7 +1308,7 @@ void Editor::render()
 				entity_window.close();
 			}
 		}
-		
+
 		Gui_Image_Button_Theme button_theme2 = button_theme;
 		button_theme2.rect_rounding = 0;
 		gui::set_theme(&button_theme2);
