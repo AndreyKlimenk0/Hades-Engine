@@ -6,6 +6,7 @@
 #include "../libs/image/image.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
+#include "../libs/os/input.h"
 
 struct Engine;
 struct Texture2D;
@@ -14,6 +15,10 @@ typedef u32 Gui_ID;
 typedef u32 Window_Style;
 typedef u32 Element_Alignment;
 typedef u32 Gui_List_Line_State;
+typedef u32 Gui_Tree_Style;
+
+const Gui_Tree_Style GUI_TREE_NODE_NO_FLAGS = 0x0;
+const Gui_Tree_Style GUI_TREE_NODE_FINAL = 0x1;
 
 const Element_Alignment RIGHT_ALIGNMENT = 0x01;
 const Element_Alignment LEFT_ALIGNMENT = 0x02;
@@ -113,6 +118,16 @@ struct Gui_Image_Button_Theme {
 	Color hover_color = Color(0, 60, 168);
 };
 
+struct Gui_Tree_Theme {
+	s32 tree_node_height = 20;
+	s32 tree_node_depth_offset = 15;
+	Color tree_node_color = Color(47, 47, 47);
+	Color hover_tree_node_color = Color(0, 89, 254, 170);
+	Color picked_tree_node_color = Color(0, 89, 254, 235);
+	Color background_color = Color(40, 40, 40);
+	Size_s32 window_size = Size_s32(500, 300);
+};
+
 struct Gui_List_Theme {
 	bool column_filter = true;
 	s32 line_height = 20;
@@ -210,6 +225,15 @@ namespace gui
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *string);
 	bool edit_field(const char *name, Vector3 *vector, const char *x = "X", const char *y = "Y", const char *z = "z");
+
+	bool begin_tree(const char *name);
+	void end_tree();
+	bool begin_tree_node(const char *name_label, Gui_Tree_Style flags = GUI_TREE_NODE_NO_FLAGS);
+	void end_tree_node();
+
+	bool tree_node_selected();
+	bool element_clicked(Key key);
+	bool mouse_over_element();
 
 	bool begin_list(const char *name, Gui_List_Column filters[], u32 filter_count);
 	void end_list();

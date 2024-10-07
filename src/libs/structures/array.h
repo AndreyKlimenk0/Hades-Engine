@@ -1,8 +1,9 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "../number_types.h"
 
@@ -135,24 +136,14 @@ inline void Array<T>::resize(u32 new_size)
 template<typename T>
 inline void Array<T>::remove(u32 index)
 {
-	assert(count > index);
-
-	T* new_data = new T[size];
-
-	void* first_part_dest_str = new_data;
-	void* first_part_src_str = items;
-
-	memcpy(first_part_dest_str, first_part_src_str, sizeof(T) * index);
-
-	void* second_part_dest_str = &new_data[index];
-	void* second_part_src_str = &items[index + 1];
-
-	memcpy(second_part_dest_str, second_part_src_str, sizeof(T) * (count - index - 1));
-
-	delete[] items;
-
-	count -= 1;
-	items = new_data;
+	if (index < count) {
+		u32 offset = index + 1;
+		for (; offset < count; offset++) {
+			items[offset - 1] = items[offset];
+		}
+		memset((void *)&items[count - 1], 0, sizeof(T));
+		count -= 1;
+	}
 }
 
 template <typename T>
@@ -262,6 +253,34 @@ inline void free_memory(Array<T*>* array)
 			ptr = NULL;
 		}
 	}
+}
+
+template <typename T>
+struct Find_Result {
+	bool found;
+	u32 index;
+	T value;
+};
+template <typename T, typename U, typename F>
+Find_Result<T> find_in_array(Array<T> &dynamic_array, const U &value, const F &compare_func)
+{
+	for (u32 i = 0; i < dynamic_array.count; i++) {
+		if (compare_func(dynamic_array[i], value)) {
+			return Find_Result<T>(true, i, dynamic_array[i]);
+		}
+	}
+	return Find_Result<T>(false, UINT32_MAX, T());
+}
+
+template <typename T, typename F>
+T *find_in_array(Array<T> &dynamic_array, const T &value, const F &compare_func)
+{
+	for (u32 i = 0; i < dynamic_array.count; i++) {
+		if (compare_func(dynamic_array[i], value)) {
+			return Find_Result<T>(true, i, dynamic_array[i]);
+		}
+	}
+	return Find_Result<T>(false, UINT32_MAX, T());
 }
 
 #endif
