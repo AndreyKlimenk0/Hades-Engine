@@ -127,7 +127,7 @@ bool create_console(HINSTANCE hinstance)
 	return true;
 }
 
-void append_text_to_console_buffer(const char *text)
+void append_text_to_console_buffer(const char *text, bool move_to_next_line)
 {
 	Array<char> buffer;
 	const char *t = text;
@@ -140,8 +140,10 @@ void append_text_to_console_buffer(const char *text)
 		}
 		t++;
 	}
-	buffer.push('\r');
-	buffer.push('\n');
+	if (move_to_next_line) {
+		buffer.push('\r');
+		buffer.push('\n');
+	}
 	buffer.push('\0');
 
 	SendMessage(win_console.text_buffer, EM_LINESCROLL, 0, 0xffff);
