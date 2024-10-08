@@ -415,31 +415,31 @@ void draw_test_list_window()
 		set_theme(&list_theme);
 		static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 50} };
 		if (begin_list("Cpp file list", file_filter, 2)) {
-			//for (u32 i = 0; i < 20; i++) {
-			//	begin_line(&list_line_states[i]);
+			for (u32 i = 0; i < 20; i++) {
+				begin_line(&list_line_states[i]);
 
-			//	if (right_mouse_click(list_line_states[i])) {
-			//		print("Was right mouse click. index", i);
-			//	}
+				if (right_mouse_click(list_line_states[i])) {
+					print("Was right mouse click. index", i);
+				}
 
-			//	if (left_mouse_click(list_line_states[i])) {
-			//		print("Was left mouse click. index", i);
-			//	}
+				if (left_mouse_click(list_line_states[i])) {
+					print("Was left mouse click. index", i);
+				}
 
-			//	if (selected(list_line_states[i])) {
-			//		//print("Selected", i);
-			//	}
+				if (selected(list_line_states[i])) {
+					//print("Selected", i);
+				}
 
-			//	begin_column("File name");
-			//	add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
-			//	end_column();
+				begin_column("File name");
+				add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
+				end_column();
 
-			//	begin_column("File Type");
-			//	add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
-			//	end_column();
+				begin_column("File Type");
+				add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
+				end_column();
 
-			//	end_line();
-			//}
+				end_line();
+			}
 			end_list();
 		}
 		reset_list_theme();
@@ -557,9 +557,9 @@ void draw_test_gui()
 {
 	begin_frame();
 	test_gui_context_layout();
-	//draw_test_tab_window();
+	draw_test_tab_window();
 	draw_test_list_window();
-	//draw_test_main_window();
+	draw_test_main_window();
 
 	gui::end_frame();
 }
