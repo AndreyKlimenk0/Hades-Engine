@@ -2,6 +2,8 @@
 
 #include "gui.h"
 #include "test_gui.h"
+#include "../libs/os/event.h"
+#include "../libs/os/input.h"
 #include "../sys/sys.h"
 #include "../libs/str.h"
 #include "../libs/os/event.h"
@@ -443,15 +445,6 @@ void draw_test_list_window()
 			end_list();
 		}
 		reset_list_theme();
-
-		if (gui::begin_tree_list("Some tree list")) {
-			gui::begin_tree_node();
-			gui::text("Some text");
-			gui::text("Other words");
-			//gui::end_tree_node();
-			gui::end_tree_list();
-		}
-
 		end_window();
 	}
 }
@@ -510,6 +503,19 @@ void draw_test_main_window()
 			button("Button10");
 			end_child();
 		}
+		if (begin_child("Next widnow")) {
+			button("Button1");
+			button("Button2");
+			button("Button3");
+			button("Button4");
+			button("Button5");
+			button("Button6");
+			button("Button7");
+			button("Button8");
+			button("Button9");
+			button("Button10");
+			end_child();
+		}
 		button("Button2345");
 		end_window();
 	}
@@ -553,9 +559,35 @@ void test_gui_context_layout()
 	}
 }
 
+void test_window()
+{
+	if (begin_window("Window 1")) {
+		button("ButtonW11");
+		button("ButtonW12");
+		button("ButtonW13");
+		button("ButtonW14");
+		end_window();
+	}
+	if (begin_window("Window 2")) {
+		button("ButtonW21");
+		button("ButtonW22");
+		button("ButtonW23");
+		button("ButtonW24");
+		end_window();
+	}
+	if (begin_window("Window 3")) {
+		button("ButtonW31");
+		button("ButtonW32");
+		button("ButtonW33");
+		button("ButtonW34");
+		end_window();
+	}
+}
+
 void draw_test_gui()
 {
 	begin_frame();
+	//test_window();
 	test_gui_context_layout();
 	draw_test_tab_window();
 	draw_test_list_window();
