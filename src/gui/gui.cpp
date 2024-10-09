@@ -31,6 +31,7 @@ static s32 tree_node_debug_counter = 0;
 #define PRINT_GUI_INFO 0
 #define DRAW_WINDOW_DEBUG_RECTS 0
 #define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
+#define OUTLINE_ACTIVE_WINDOW 1
 
 const Gui_Layout HORIZONTAL_LAYOUT_JUST_SET = 0x80;
 
@@ -945,6 +946,7 @@ Context *Gui_Manager::get_context()
 
 void Gui_Manager::update_active_window(Gui_Window *window)
 {
+	//if (detect_intersection(&window->rect) && was_key_just_pressed(KEY_LMOUSE) && (active_window != window->gui_id)) {
 	if ((hot_item == window->gui_id) && was_key_just_pressed(KEY_LMOUSE) && (active_window != window->gui_id)) {
 		became_just_actived = window->gui_id;
 		active_window = window->gui_id;
@@ -963,8 +965,12 @@ void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
 
 void Gui_Manager::update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect)
 {
+	Gui_ID window_gui_id = window->gui_id;
+	if (window->type == WINDOW_TYPE_CHILD) {
+		window_gui_id = get_parent_window(window)->gui_id;
+	}
 	if (handle_events_for_one_window) {
-		if (window->gui_id == window_events_handler_id) {
+		if (window_gui_id == window_events_handler_id) {
 			update_active_and_hot_state(rect_gui_id, rect);
 		}
 	} else {
@@ -1645,13 +1651,13 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 		line_list.count = 0;
 		Gui_Window *window = get_window();
 
-		static Gui_ID last_active_window = 0;
-		if (detect_intersection(&window->view_rect) && (active_window != window->gui_id)) {
-			last_active_window = active_window;
-			active_window = window->gui_id;
-		} else if (!detect_intersection(&window->view_rect) && (active_window == window->gui_id)) {
-			active_window = last_active_window;
-		}
+		//static Gui_ID last_active_window = 0;
+		//if (detect_intersection(&window->view_rect) && (active_window != window->gui_id)) {
+		//	last_active_window = active_window;
+		//	active_window = window->gui_id;
+		//} else if (!detect_intersection(&window->view_rect) && (active_window == window->gui_id)) {
+		//	active_window = last_active_window;
+		//}
 
 		if (!list_theme.column_filter) {
 			picked_column = &columns[0];
@@ -1765,6 +1771,8 @@ void Gui_Manager::end_list()
 {
 	Gui_Window *window = get_window();
 	Gui_ID list_gui_id = GET_LIST_GUI_ID();
+	update_active_and_hot_state(window, list_gui_id, &window->view_rect);
+
 	if (detect_intersection(&window->rect) && (was_click(KEY_LMOUSE) || was_click(KEY_RMOUSE))) {
 		if (active_list != list_gui_id) {
 			active_list = list_gui_id;
@@ -1923,10 +1931,12 @@ void Gui_Manager::end_list()
 			}
 
 			Color line_color = list_theme.line_color;
-			if (detect_intersection(&line_rect) && !(*gui_list_line->state & GUI_LIST_LINE_SELECTED)) {
-				line_color = list_theme.hover_line_color;
-			} else if (*gui_list_line->state & GUI_LIST_LINE_SELECTED) {
-				line_color = list_theme.picked_line_color;
+			if (hot_item == list_gui_id) {
+				if (detect_intersection(&line_rect) && !(*gui_list_line->state & GUI_LIST_LINE_SELECTED)) {
+					line_color = list_theme.hover_line_color;
+				} else if (*gui_list_line->state & GUI_LIST_LINE_SELECTED) {
+					line_color = list_theme.picked_line_color;
+				}
 			}
 			render_list->add_rect(&line_rect, line_color);
 
@@ -2827,7 +2837,7 @@ void Gui_Manager::new_frame()
 
 	u32 max_windows_order_index = 0;
 	u32 mouse_interception_count = 0;
-	Gui_ID first_drawing_window_id;
+	Gui_ID first_drawing_window_id = 0;
 	for (u32 i = 0; i < windows_order.count; i++) {
 		Gui_Window *window = get_window_by_index(&windows_order, i);
 		if (detect_intersection(&window->rect)) {
@@ -3099,7 +3109,11 @@ void Gui_Manager::render_window(Gui_Window *window)
 
 	Render_Primitive_List *render_list = GET_RENDER_LIST();
 	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
-
+#ifdef OUTLINE_ACTIVE_WINDOW
+	if (active_window == window->gui_id) {
+		render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, Color::Red, 3.0f, window_theme.rounded_border);
+	}
+#endif
 	if (window->style & WINDOW_OUTLINES) {
 		render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, window_theme.outlines_color, window_theme.outlines_width, window_theme.rounded_border);
 	}
@@ -3185,8 +3199,16 @@ bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 		child_window->set_position(child_rect.x, child_rect.y);
 		child_window->new_frame(window_style);
 
-		update_active_and_hot_state(child_window, child_window->gui_id, &child_window->rect);
+		if (handle_events_for_one_window) {
+			if (parent_window->gui_id == window_events_handler_id) {
+				update_active_and_hot_state(child_window->gui_id, &child_window->rect);
+			}
+		} else {
+			update_active_and_hot_state(child_window->gui_id, &child_window->rect);
+		}
 		update_active_window(child_window);
+
+		//update_active_and_hot_state(child_window, child_window->gui_id, &child_window->rect);
 
 		if (reset_window_params & SET_WINDOW_POSITION) {
 			child_window->set_position(window_rect.x, window_rect.y);
