@@ -561,33 +561,42 @@ void test_gui_context_layout()
 
 void test_window()
 {
+	Array<String> temp;
+	temp.push("String 1");
+	temp.push("String 2");
+	temp.push("String 3");
+	temp.push("String 4");
+	temp.push("String 5");
+	temp.push("String 6");
+	static u32 index = 0;
 	if (begin_window("Window 1")) {
-		button("ButtonW11");
-		button("ButtonW12");
-		button("ButtonW13");
-		button("ButtonW14");
+		list_box(&temp, &index);
+		//button("ButtonW11");
+		//button("ButtonW12");
+		//button("ButtonW13");
+		//button("ButtonW14");
 		end_window();
 	}
-	if (begin_window("Window 2")) {
-		button("ButtonW21");
-		button("ButtonW22");
-		button("ButtonW23");
-		button("ButtonW24");
-		end_window();
-	}
-	if (begin_window("Window 3")) {
-		button("ButtonW31");
-		button("ButtonW32");
-		button("ButtonW33");
-		button("ButtonW34");
-		end_window();
-	}
+	//if (begin_window("Window 2")) {
+	//	button("ButtonW21");
+	//	button("ButtonW22");
+	//	button("ButtonW23");
+	//	button("ButtonW24");
+	//	end_window();
+	//}
+	//if (begin_window("Window 3")) {
+	//	button("ButtonW31");
+	//	button("ButtonW32");
+	//	button("ButtonW33");
+	//	button("ButtonW34");
+	//	end_window();
+	//}
 }
 
 void draw_test_gui()
 {
 	begin_frame();
-	//test_window();
+	test_window();
 	test_gui_context_layout();
 	draw_test_tab_window();
 	draw_test_list_window();
