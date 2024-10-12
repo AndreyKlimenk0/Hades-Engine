@@ -12,7 +12,7 @@
 
 #include "../gui/test_gui.h"
 
-#define DRAW_TEST_GUI 1
+#define DRAW_TEST_GUI 0
 
 static Engine *engine = NULL;
 
