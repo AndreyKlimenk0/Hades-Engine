@@ -5,6 +5,17 @@
 #include "../os/path.h"
 #include "../os/file.h"
 
+Image::Image()
+{
+}
+
+Image::~Image()
+{
+	width = 0;
+	height = 0;
+	texture.release();
+}
+
 bool Image::init_from_file(const char *file_name, const char *data_directory_name)
 {
 	assert(file_name);
@@ -30,6 +41,8 @@ bool Image::init_from_file(const char *file_name, const char *data_directory_nam
 		texture_desc.height = image_height;
 		texture_desc.mip_levels = 1;
 		texture_desc.data = (void *)image_data;
+
+		texture.release();
 		gpu_device->create_texture_2d(&texture_desc, &texture);
 		gpu_device->create_shader_resource_view(&texture_desc, &texture);
 		
