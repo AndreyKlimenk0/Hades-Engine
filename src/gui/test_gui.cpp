@@ -6,6 +6,7 @@
 #include "../libs/os/input.h"
 #include "../sys/sys.h"
 #include "../libs/str.h"
+#include "../libs/image/image.h"
 #include "../libs/os/event.h"
 #include "../libs/os/input.h"
 #include "../libs/math/vector.h"
@@ -221,13 +222,13 @@ void draw_test_list_window()
 			end_list();
 		}
 
-		static bool init_list = false;
-		static Array<Gui_List_Line_State> list_line_states;
-		static Array<String> file_names2;
-		static Array<String> file_types2;
-		if (!init_list) {
-			init_list = true;
-			list_line_states.reserve(20);
+		//static bool init_list = false;
+		//static Array<Gui_List_Line_State> list_line_states;
+		//static Array<String> file_names2;
+		//static Array<String> file_types2;
+		//if (!init_list) {
+		//	init_list = true;
+		//	list_line_states.reserve(20);
 		static bool node_list_init = false;
 		static Directory_Entry dir_tree;
 		static Directory_Entry dota_dir;
@@ -390,61 +391,61 @@ void draw_test_list_window()
 		//	init_list = true;
 		//	list_line_states.reserve(20);
 
-			for (u32 i = 0; i < 20; i++) {
-				list_line_states[i] = 0;
-			}
+		//	for (u32 i = 0; i < 20; i++) {
+		//		list_line_states[i] = 0;
+		//	}
 
-			for (u32 i = 0; i < 10; i++) {
-				char *file_name = format("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArect{}.cpp", i);
-				file_names2.push(file_name);
-				file_types2.push("cpp");
+		//	for (u32 i = 0; i < 10; i++) {
+		//		char *file_name = format("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAArect{}.cpp", i);
+		//		file_names2.push(file_name);
+		//		file_types2.push("cpp");
 
-				free_string(file_name);
-			}
-			for (u32 i = 10; i < 20; i++) {
-				char *file_name = format("draw_rect{}.hlsl", i);
+		//		free_string(file_name);
+		//	}
+		//	for (u32 i = 10; i < 20; i++) {
+		//		char *file_name = format("draw_rect{}.hlsl", i);
 
-				file_names2.push(file_name);
-				file_types2.push("hlsl");
+		//		file_names2.push(file_name);
+		//		file_types2.push("hlsl");
 
-				free_string(file_name);
-			}
-		}
+		//		free_string(file_name);
+		//	}
+		//}
 
-		Gui_List_Theme list_theme;
-		list_theme.column_filter = true;
+		//Gui_List_Theme list_theme;
+		//list_theme.column_filter = true;
 
-		set_theme(&list_theme);
-		static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 50} };
-		if (begin_list("Cpp file list", file_filter, 2)) {
-			for (u32 i = 0; i < 20; i++) {
-				begin_line(&list_line_states[i]);
+		//set_theme(&list_theme);
+		//static Gui_List_Column file_filter[] = { {"File name", 50}, {"File Type", 50} };
+		//if (begin_list("Cpp file list", file_filter, 2)) {
+		//	for (u32 i = 0; i < 20; i++) {
+		//		begin_line(&list_line_states[i]);
 
-				if (right_mouse_click(list_line_states[i])) {
-					print("Was right mouse click. index", i);
-				}
+		//		if (right_mouse_click(list_line_states[i])) {
+		//			print("Was right mouse click. index", i);
+		//		}
 
-				if (left_mouse_click(list_line_states[i])) {
-					print("Was left mouse click. index", i);
-				}
+		//		if (left_mouse_click(list_line_states[i])) {
+		//			print("Was left mouse click. index", i);
+		//		}
 
-				if (selected(list_line_states[i])) {
-					//print("Selected", i);
-				}
+		//		if (selected(list_line_states[i])) {
+		//			//print("Selected", i);
+		//		}
 
-				begin_column("File name");
-				add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
+		//		begin_column("File name");
+		//		add_text(file_names2[i].c_str(), RECT_LEFT_ALIGNMENT);
+		//		end_column();
 
-				begin_column("File Type");
-				add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
-				end_column();
+		//		begin_column("File Type");
+		//		add_text(file_types2[i].c_str(), RECT_LEFT_ALIGNMENT);
+		//		end_column();
 
-				end_line();
-			}
-			end_list();
-		}
-		reset_list_theme();
+		//		end_line();
+		//	}
+		//	end_list();
+		//}
+		//reset_list_theme();
 		end_window();
 	}
 }
@@ -561,6 +562,15 @@ void test_gui_context_layout()
 
 void test_window()
 {
+	static Image dir_image;
+	static Image file_image;
+	static bool init_local = false;
+	if (!init_local) {
+		init_local = true;
+		dir_image.init_from_file("folder.png", "editor");
+		file_image.init_from_file("google-docs.png", "editor");
+	}
+
 	Array<String> temp;
 	temp.push("String 1");
 	temp.push("String 2");
@@ -569,12 +579,55 @@ void test_window()
 	temp.push("String 5");
 	temp.push("String 6");
 	static u32 index = 0;
-	if (begin_window("Window 1")) {
+	if (begin_window("Window 23451")) {
 		list_box(&temp, &index);
 		//button("ButtonW11");
 		//button("ButtonW12");
 		//button("ButtonW13");
 		//button("ButtonW14");
+
+		if (begin_tree("Layout  tree")) {
+			if (begin_tree_node("Node 1")) {
+				if (begin_tree_node("Node 11", GUI_TREE_NODE_NOT_DISPLAY_NAME)) {
+					image(&dir_image.texture, 16, 16);
+					
+					text("Text 1");
+					text("Text 2");
+					text("Text 3");
+
+					Gui_Text_Button_Theme theme;
+					theme.rect.set_size(40, 16);
+					theme.color = Color(32, 32, 32);
+					set_theme(&theme);
+					button("B");
+					reset_button_theme();
+
+					end_tree_node();
+				}
+				end_tree_node();
+			}
+			if (begin_tree_node("Node 2")) {
+				if (begin_tree_node("Node 22", GUI_TREE_NODE_NOT_DISPLAY_NAME)) {
+					image(&file_image.texture, 18, 18);
+					text("Color.png");
+					end_tree_node();
+				}
+				if (begin_tree_node("Node 23", GUI_TREE_NODE_NOT_DISPLAY_NAME | GUI_TREE_NODE_FINAL)) {
+					image(&file_image.texture, 18, 18);
+					text("Code.png");
+					end_tree_node();
+				}
+				if (begin_tree_node("Node 43", GUI_TREE_NODE_FINAL)) {
+					end_tree_node();
+				}
+				if (begin_tree_node("Node 53")) {
+					end_tree_node();
+				}
+				end_tree_node();
+			}
+			end_tree();
+		}
+
 		end_window();
 	}
 	//if (begin_window("Window 2")) {
@@ -593,10 +646,26 @@ void test_window()
 	//}
 }
 
+void test_layout()
+{
+	if (begin_window("Test Layout")) {
+		//button("Button 1");
+		//button("Button 2");
+		//button("Button 3");
+		set_layout();
+		button("Button 12");
+		button("Button 23");
+		button("Button 34");
+		reset_layout();
+		end_window();
+	}
+}
+
 void draw_test_gui()
 {
 	begin_frame();
 	test_window();
+	test_layout();
 	test_gui_context_layout();
 	draw_test_tab_window();
 	draw_test_list_window();

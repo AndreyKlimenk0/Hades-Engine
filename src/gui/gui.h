@@ -16,7 +16,6 @@ typedef u32 Window_Style;
 typedef u32 Gui_List_Line_State;
 typedef u32 Gui_Tree_Style;
 typedef u32 Gui_Layout;
-typedef u32 Gui_Tree_Node_State;
 
 const Gui_Layout LAYOUT_LEFT = 0x1;
 const Gui_Layout LAYOUT_RIGHT = 0x2;
@@ -25,8 +24,10 @@ const Gui_Layout LAYOUT_VERTICALLY = 0x8;
 const Gui_Layout LAYOUT_HORIZONTALLY_CENTER = 0x10;
 const Gui_Layout LAYOUT_VERTICALLY_CENTER = 0x20;
 const Gui_Layout LAYOUT_CENTER = LAYOUT_HORIZONTALLY_CENTER | LAYOUT_VERTICALLY_CENTER;
+
 const Gui_Tree_Style GUI_TREE_NODE_NO_FLAGS = 0x0;
 const Gui_Tree_Style GUI_TREE_NODE_FINAL = 0x1;
+const Gui_Tree_Style GUI_TREE_NODE_NOT_DISPLAY_NAME = 0x2;
 
 const Window_Style NO_WINDOW_STYLE = 0x0;
 const Window_Style WINDOW_HEADER = 0x1;
@@ -277,12 +278,10 @@ namespace gui
 	void add_image(Texture2D *texture, Alignment alignment);
 	void add_image_button(Texture2D *texture, Alignment alignment);
 
-	bool begin_tree_list(const char *name);
-	void end_tree_list();
-	bool begin_tree_node(Gui_Tree_Node_State *tree_node_state = NULL);
-	void end_tree_node();
-
 	Size_s32 get_window_size();
 	Gui_ID get_last_tab_gui_id();
+
+	void set_layout();
+	void reset_layout();
 }
 #endif

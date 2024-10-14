@@ -29,7 +29,7 @@ struct Editor_Window {
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 	Render_System *render_system = NULL;
-	
+
 	Rect_s32 window_rect;
 
 	virtual void init(Engine *engine);
@@ -70,7 +70,7 @@ struct Render_World_Window : Editor_Window {
 
 struct Drop_Down_Entity_Window : Editor_Window {
 	Size_u32 window_size;
-	Point_s32 mouse_position; // When happens the right button mouse click by a picked entity, the variable stores current mouse position.
+	Point_s32 mouse_position; // When happens the right button mouse click by a picking entity, the variable stores current mouse position.
 
 	Gui_Window_Theme window_theme;
 	Gui_Text_Button_Theme buttons_theme;

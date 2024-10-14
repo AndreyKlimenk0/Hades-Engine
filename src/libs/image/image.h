@@ -5,6 +5,9 @@
 #include "../../render/render_api.h"
 
 struct Image {
+	Image();
+	~Image();
+
 	u32 width = 0;
 	u32 height = 0;
 	Texture2D texture;

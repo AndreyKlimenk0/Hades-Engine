@@ -31,7 +31,7 @@ static s32 tree_node_debug_counter = 0;
 #define PRINT_GUI_INFO 0
 #define DRAW_WINDOW_DEBUG_RECTS 0
 #define DRAW_CHILD_WINDOW_DEBUG_RECTS 0
-#define OUTLINE_ACTIVE_WINDOW 1
+#define OUTLINE_ACTIVE_WINDOW 0
 
 const Gui_Layout HORIZONTAL_LAYOUT_JUST_SET = 0x80;
 
@@ -377,13 +377,6 @@ struct Edit_Field_State {
 	Rect_s32 caret;
 };
 
-struct Tree_State {
-	s32 tree_level_depth = -1;
-	Ordered_Tree<Gui_Tree_Node>::Node *parent_node = NULL;
-	Ordered_Tree<Gui_Tree_Node> *current_tree = NULL;
-	Array<u32> level_node_count_stack;
-};
-
 Edit_Field_State make_edit_field_state(Rect_s32 *caret, const char *str_value, u32 max_text_width, bool(*symbol_validation)(char symbol))
 {
 	Edit_Field_State edit_field;
@@ -466,7 +459,6 @@ void Context::setup(Gui_Layout layout_flags, Rect_s32 *_rect, Rect_s32 *_clip_re
 	clip_rect = *_clip_rect;
 	padding = *_padding;
 	last_placed_rect = { paint_rect.x, paint_rect.y, padding.horizontal - padding.rects, padding.vertical - padding.rects };
-	layout = LAYOUT_LEFT | LAYOUT_VERTICALLY;
 }
 
 struct Rect_Context : Context {
@@ -489,8 +481,22 @@ void Rect_Context::place_rect(Rect_s32 *placing_rect)
 		placing_rect->y = last_placed_rect.y;
 
 		last_placed_rect = *placing_rect;
+	} else if (layout & LAYOUT_HORIZONTALLY_CENTER) {
+		placing_rect->x = last_placed_rect.right() + padding.rects;
+		place_in_middle(&clip_rect, placing_rect, Y_AXIS);
+
+		last_placed_rect = *placing_rect;
 	}
 }
+
+struct Tree_State {
+	Context *window_context = NULL;
+	Rect_Context context;
+	s32 tree_level_depth = -1;
+	Ordered_Tree<Gui_Tree_Node>::Node *parent_node = NULL;
+	Ordered_Tree<Gui_Tree_Node> *current_tree = NULL;
+	Array<u32> level_node_count_stack;
+};
 
 struct Window_Context : Rect_Context {
 	Gui_Window *window = NULL;
@@ -574,7 +580,7 @@ struct Gui_Manager {
 		Rect_s32 window_rect;
 	} pre_setup;
 
-	Array<Context *> context_list;
+	Array<Context *> context_stack;
 
 	Image cross_icon_image;
 	Texture2D up_texture;
@@ -692,11 +698,6 @@ struct Gui_Manager {
 
 	bool begin_column(const char *column_name);
 	void end_column();
-
-	bool begin_tree_list(const char *name);
-	bool begin_tree_node(Gui_Tree_Node_State *tree_node_state);
-	void end_tree_node();
-	void end_tree_list();
 
 	void add_text(const char *text, Alignment alignment);
 	void add_image(Texture2D *texture, Alignment alignment);
@@ -873,8 +874,8 @@ inline Gui_Window *Gui_Manager::get_window_by_index(Array<u32> *window_indices, 
 
 Context *Gui_Manager::get_context()
 {
-	assert(!context_list.is_empty());
-	return context_list.last();;
+	assert(!context_stack.is_empty());
+	return context_stack.last();;
 }
 
 void Gui_Manager::setup_active_window(Gui_Window *window)
@@ -898,11 +899,18 @@ void Gui_Manager::update_active_and_hot_state(Gui_ID gui_id, Rect_s32 *rect)
 void Gui_Manager::update_active_and_hot_state(Gui_Window *window, u32 rect_gui_id, Rect_s32 *rect)
 {
 	Gui_ID window_gui_id = window->gui_id;
-	if (window->type == WINDOW_TYPE_CHILD) {
-		window_gui_id = get_parent_window(window)->gui_id;
-	}
+	//if (window->type == WINDOW_TYPE_CHILD) {
+	//	window_gui_id = get_parent_window(window)->gui_id;
+	//}
 	if (hover_window == window_gui_id) {
 		update_active_and_hot_state(rect_gui_id, rect);
+	} else {
+		if (window->type == WINDOW_TYPE_CHILD) {
+			window_gui_id = get_parent_window(window)->gui_id;
+		}
+		if (hover_window == window_gui_id) {
+			update_active_and_hot_state(rect_gui_id, rect);
+		}
 	}
 }
 
@@ -1301,7 +1309,6 @@ bool Gui_Manager::begin_tree(const char *name)
 		ASSERT_MSG(tree_node_debug_counter > 0, "You forgot to use 'gui::begin_node_tree'.");
 		ASSERT_MSG(tree_node_debug_counter < 0, "You forgot to use 'gui::end_node_tree'.");
 	}
-	tree_debug_counter++;
 #endif
 	Gui_Window_Theme tree_window_theme;
 	tree_window_theme.background_color = list_theme.background_color;
@@ -1321,18 +1328,23 @@ bool Gui_Manager::begin_tree(const char *name)
 	if (begin_child(name, WINDOW_SCROLL_BAR)) {
 		Gui_Window *window = get_parent_window(get_window());
 		Find_Result<Ordered_Tree<Gui_Tree_Node> *> find_result = find_in_array(window->trees, name, compare_function);
-		Ordered_Tree<Gui_Tree_Node> *tree = find_result.value;
+		Ordered_Tree<Gui_Tree_Node> *tree = find_result.data;
 		if (!find_result.found) {
 			tree = new Ordered_Tree<Gui_Tree_Node>();
 			tree->create_root_node({ name, GUI_TREE_NODE_OPEN });
 			window->trees.push(tree);
 		}
+		tree_state.window_context = get_context();
 		tree_state.current_tree = tree;
 		tree_state.parent_node = tree->root_node;
 		tree_state.level_node_count_stack.push(0);
 		tree_state.tree_level_depth = -1;
+#ifdef _DEBUG
+		tree_debug_counter++;
+#endif
 		return true;
 	}
+	gui::reset_window_theme();
 	return false;
 }
 
@@ -1349,6 +1361,7 @@ void Gui_Manager::end_tree()
 		ASSERT_MSG(tree_node_debug_counter < 0, "You forgot to use 'gui::end_node_tree'.");
 	}
 #endif
+	tree_state.window_context = NULL;
 	tree_state.current_tree = NULL;
 	tree_state.parent_node = NULL;
 	tree_state.level_node_count_stack.clear();
@@ -1375,12 +1388,12 @@ bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
 	if (!current_node) {
 		current_node = tree_state.current_tree->create_child_node(tree_state.parent_node, { name , GUI_TREE_NODE_NO_STATE }, level_node_counter);
 	}
-	
+	Context *context = tree_state.window_context;
 	Gui_Window *window = get_window();
 	Gui_Tree_Theme *theme = &tree_theme;
 	
 	Rect_s32 tree_node_rect = Rect_s32(0, 0, window->view_rect.width, theme->tree_node_height);
-	place_rect_in_window(window, &tree_node_rect, window->place_between_rects, window->horizontal_offset_from_sides, window->vertical_offset_from_sides);
+	context->place_rect(&tree_node_rect);
 	bool mouse_over = detect_intersection(&tree_node_rect);
 
 	Gui_Tree_Node_State node_state = current_node->data.state;
@@ -1405,13 +1418,13 @@ bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
 			}
 		}
 	}
+	s32 node_offset = tree_state.tree_level_depth * theme->tree_node_depth_offset;
+	s32 text_offset = (node_flags & GUI_TREE_NODE_FINAL) ? 0 : 20;
 	if (must_rect_be_drawn(&window->clip_rect, &tree_node_rect)) {
-		s32 offset = tree_state.tree_level_depth * theme->tree_node_depth_offset;
-		s32 text_offset = (node_flags & GUI_TREE_NODE_FINAL) ? 5 : 20;
 		Rect_s32 down_image_rect = { 0, 0, 15, 15 };
 		Rect_s32 node_text_rect = get_text_rect(name);
-		place_in_middle_and_by_left(&tree_node_rect, &down_image_rect, offset);
-		place_in_middle_and_by_left(&tree_node_rect, &node_text_rect, text_offset + offset);
+		place_in_middle_and_by_left(&tree_node_rect, &down_image_rect, node_offset);
+		place_in_middle_and_by_left(&tree_node_rect, &node_text_rect, text_offset + node_offset);
 
 		Render_Primitive_List *render_list = GET_RENDER_LIST();
 		Rect_s32 clip_rect = calculate_clip_rect(&window->clip_rect, &tree_node_rect);
@@ -1423,8 +1436,9 @@ bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
 			Texture2D *expand = (node_state & GUI_TREE_NODE_OPEN) ? &expand_down_texture : &expand_right_texture;
 			render_list->add_texture(&down_image_rect, expand);
 		}
-		
-		render_list->add_text(&node_text_rect, name);
+		if (!(node_flags & GUI_TREE_NODE_NOT_DISPLAY_NAME)) {
+			render_list->add_text(&node_text_rect, name);
+		}
 		render_list->pop_clip_rect();
 	}
 	last_drawn_rect = tree_node_rect;
@@ -1432,6 +1446,15 @@ bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
 	tree_state.level_node_count_stack.last() = level_node_counter + 1;
 	tree_state.level_node_count_stack.push(0);
 	tree_state.parent_node = current_node;
+
+	Padding padding;
+	padding.rects = 5;
+	Rect_s32 tree_node_context_rect = tree_node_rect;
+	tree_node_context_rect.offset_x(node_offset + text_offset);
+	tree_state.context.setup(LAYOUT_HORIZONTALLY_CENTER, &tree_node_context_rect, &tree_node_context_rect, &padding);
+
+	context_stack.push(&tree_state.context);
+
 #ifdef _DEBUG
 	tree_node_debug_counter++;
 #endif
@@ -1446,6 +1469,8 @@ void Gui_Manager::end_tree_node()
 	tree_state.level_node_count_stack.pop();
 	tree_state.parent_node = tree_state.parent_node->parent_node;
 	tree_state.tree_level_depth -= 1;
+
+	context_stack.pop();
 }
 
 template <typename T>
@@ -1965,44 +1990,6 @@ void Gui_Manager::end_column()
 	ASSERT_MSG(list_column_debug_counter == 0, "You forgot to use gui::begin_column");
 #endif
 	current_list_line.columns.push(current_list_column);
-}
-
-bool Gui_Manager::begin_tree_list(const char *name)
-{
-	Gui_Window_Theme window_theme;
-	window_theme.background_color = tree_list_theme.background_color;
-	window_theme.place_between_rects = 0;
-	window_theme.horizontal_offset_from_sides = 0;
-	window_theme.vertical_offset_from_sides = 0;
-	window_theme.rounded_border = 0;
-	window_theme.rounded_scrolling = 0;
-
-	gui::set_theme(&window_theme);
-
-	Size_s32 window_tree_size = tree_list_theme.window_size;
-	set_next_window_size(window_tree_size.width, window_tree_size.height);
-
-
-	if (begin_child(name, WINDOW_SCROLL_BAR)) {
-
-		return true;
-	}
-	return false;
-}
-
-void Gui_Manager::end_tree_list()
-{
-	end_child();
-	gui::reset_window_theme();
-}
-
-bool Gui_Manager::begin_tree_node(Gui_Tree_Node_State *tree_node_state)
-{
-	return false;
-}
-
-void Gui_Manager::end_tree_node()
-{
 }
 
 void Gui_Manager::add_text(const char *text, Alignment alignment)
@@ -2926,7 +2913,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	if (window->open) {
 		Padding padding = { window_theme.place_between_rects, window_theme.horizontal_offset_from_sides, window_theme.vertical_offset_from_sides };
 		window->context->setup(current_layout, window, &padding);
-		context_list.push(window->context);
+		context_stack.push(window->context);
 	}
 	return window->open;
 }
@@ -2968,7 +2955,7 @@ void Gui_Manager::end_window()
 		window_theme = Gui_Window_Theme();
 	}
 	window_stack.pop();
-	context_list.pop();
+	context_stack.pop();
 }
 
 void Gui_Manager::render_window(Gui_Window *window)
@@ -2977,7 +2964,7 @@ void Gui_Manager::render_window(Gui_Window *window)
 
 	Render_Primitive_List *render_list = GET_RENDER_LIST();
 	render_list->add_rect(&window->rect, window_theme.background_color, window_theme.rounded_border);
-#ifdef OUTLINE_ACTIVE_WINDOW
+#if OUTLINE_ACTIVE_WINDOW
 	if (active_window == window->gui_id) {
 		render_list->add_outlines(rect->x, rect->y, rect->width, rect->height, Color::Red, 3.0f, window_theme.rounded_border);
 	}
@@ -3110,7 +3097,7 @@ bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 		child_window->clip_rect = calculate_clip_rect(&parent_window->clip_rect, &child_window->view_rect);
 		Padding padding = { window_theme.place_between_rects, window_theme.horizontal_offset_from_sides, window_theme.vertical_offset_from_sides };
 		child_window->context->setup(current_layout, child_window, &padding);
-		context_list.push(child_window->context);
+		context_stack.push(child_window->context);
 
 		return true;
 	}
@@ -3156,7 +3143,7 @@ void Gui_Manager::end_child()
 
 	window->content_rect.set_size(0, 0);
 	window_stack.pop();
-	context_list.pop();
+	context_stack.pop();
 }
 
 void Gui_Manager::same_line()
@@ -3492,6 +3479,21 @@ Size_s32 gui::get_window_size()
 Gui_ID gui::get_last_tab_gui_id()
 {
 	return gui_manager.get_last_tab_gui_id();
+}
+
+static Gui_Layout temp_layout = 0;
+
+void gui::set_layout()
+{
+	Context *context = gui_manager.get_context();
+	temp_layout = context->layout;
+	context->layout = LAYOUT_HORIZONTALLY_CENTER;
+}
+
+void gui::reset_layout()
+{
+	Context *context = gui_manager.get_context();
+	context->layout = temp_layout;
 }
 
 void gui::make_tab_active(Gui_ID tab_gui_id)
