@@ -1419,7 +1419,7 @@ bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
 		}
 	}
 	s32 node_offset = tree_state.tree_level_depth * theme->tree_node_depth_offset;
-	s32 text_offset = (node_flags & GUI_TREE_NODE_FINAL) ? 0 : 20;
+	s32 text_offset = (node_flags & GUI_TREE_NODE_FINAL) ? 5 : 20;
 	if (must_rect_be_drawn(&window->clip_rect, &tree_node_rect)) {
 		Rect_s32 down_image_rect = { 0, 0, 15, 15 };
 		Rect_s32 node_text_rect = get_text_rect(name);
@@ -2229,7 +2229,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 				if ((event->char_key == '-') && (edit_field_state.data.len > 0) && (edit_field_state.data[0] == '-')) {
 					return;
 				}
-				//*update_editing_value = true;
+				*update_editing_value = true;
 				if (edit_field_state.caret_index_in_text == (edit_field_state.data.len - 1)) {
 					edit_field_state.data.append(event->char_key);
 				} else {
@@ -3574,6 +3574,12 @@ void gui::set_theme(Gui_Tab_Theme *gui_tab_theme)
 	gui_manager.tab_theme = *gui_tab_theme;
 }
 
+void gui::set_theme(Gui_Tree_Theme *gui_tree_theme)
+{
+	gui_manager.backup_tree_themes.push(gui_manager.tree_theme);
+	gui_manager.tree_theme = *gui_tree_theme;
+}
+
 void gui::set_theme(Gui_List_Theme *gui_list_theme)
 {
 	gui_manager.backup_list_theme = gui_manager.list_theme;
@@ -3606,6 +3612,11 @@ void gui::reset_edit_field_theme()
 void gui::reset_tab_theme()
 {
 	gui_manager.tab_theme = gui_manager.backup_tab_theme;
+}
+
+void gui::reset_tree_theme()
+{
+	gui_manager.tree_theme = gui_manager.backup_tree_themes.pop();
 }
 
 void gui::reset_list_theme()

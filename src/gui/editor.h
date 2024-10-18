@@ -47,24 +47,11 @@ struct Entity_Window : Editor_Window {
 	void draw();
 };
 
-struct Render_World_Window : Editor_Window {
-	bool debug_cascaded_shadows = false;
-	bool show_cascaded_shadow_frustums = false;
-	bool display_voxel_grid = false;
-	bool display_voxel_grid_bounds = false;
-	bool display_voxel_world = false;
-	Texture2D shadow_display_texture;
+struct Entity_Tree_Window : Editor_Window {
+	Gui_Window_Theme window_theme;
 
-	struct Draw_Cascade_Info {
-		Entity_Id entity_id;
-		u32 cascaded_shadow_map_index;
-		u32 shadow_cascade_index;
-	};
-	Array<Draw_Cascade_Info> frustum_entity_ids;
-	Array<String> rendering_types;
 
 	void init(Engine *engine);
-	void update();
 	void draw();
 };
 
@@ -154,6 +141,7 @@ struct Editor {
 	Key_Command_Bindings key_command_bindings;
 
 	Entity_Window entity_window;
+	Entity_Tree_Window entities_window;
 	Command_Window command_window;
 	Drop_Down_Entity_Window drop_down_entity_window;
 

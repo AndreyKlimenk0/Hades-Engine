@@ -211,6 +211,7 @@ namespace gui
 	void end_child();
 
 	void set_theme(Gui_Tab_Theme *gui_tab_theme);
+	void set_theme(Gui_Tree_Theme *gui_tree_theme);
 	void set_theme(Gui_List_Theme *gui_list_theme);
 	void set_theme(Gui_Window_Theme *gui_window_theme);
 	void set_theme(Gui_Text_Button_Theme *gui_button_theme);
@@ -219,6 +220,7 @@ namespace gui
 	void set_next_theme(Gui_Window_Theme *gui_window_theme);
 
 	void reset_tab_theme();
+	void reset_tree_theme();
 	void reset_list_theme();
 	void reset_window_theme();
 	void reset_button_theme();
