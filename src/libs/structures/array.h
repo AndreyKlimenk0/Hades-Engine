@@ -273,7 +273,7 @@ Find_Result<T> find_in_array(Array<T> &dynamic_array, const U &value, const F &c
 }
 
 template <typename T, typename F>
-Find_Result<T> *find_in_array(Array<T> &dynamic_array, const T &value, const F &compare_func)
+Find_Result<T> find_in_array(Array<T> &dynamic_array, const T &value, const F &compare_func)
 {
 	for (u32 i = 0; i < dynamic_array.count; i++) {
 		if (compare_func(dynamic_array[i], value)) {

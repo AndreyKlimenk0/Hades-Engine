@@ -646,6 +646,15 @@ void test_window()
 	//}
 }
 
+void test_string_edit_field()
+{
+	static String name;
+	if (begin_window("Test Edit field")) {
+		edit_field("Name", &name);
+		end_window();
+	}
+}
+
 void test_layout()
 {
 	if (begin_window("Test Layout")) {
@@ -664,12 +673,13 @@ void test_layout()
 void draw_test_gui()
 {
 	begin_frame();
-	test_window();
-	test_layout();
-	test_gui_context_layout();
-	draw_test_tab_window();
-	draw_test_list_window();
-	draw_test_main_window();
+	test_string_edit_field();
+	//test_window();
+	//test_layout();
+	//test_gui_context_layout();
+	//draw_test_tab_window();
+	//draw_test_list_window();
+	//draw_test_main_window();
 
 	gui::end_frame();
 }

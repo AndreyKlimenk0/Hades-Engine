@@ -131,6 +131,13 @@ struct Camera : Entity {
 	void handle_commands(Array<Entity_Command *> *entity_commands);
 };
 
+struct Group {
+	String name;
+	AABB AABB_box;
+	Boudning_Box_Type bounding_box_type;
+	Array<Entity> entities;
+};
+
 struct Game_World {
 	u32 light_hash = 0xffff;
 
