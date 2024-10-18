@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdlib.h>
 
 #include "editor.h"
 #include "../sys/sys.h"
@@ -1151,6 +1152,7 @@ void Editor::init(Engine *engine)
 	render_world = &engine->render_world;
 
 	entity_window.init(engine);
+	entities_window.init(engine);
 	command_window.init(engine);
 	drop_down_entity_window.init(engine);
 
@@ -1312,7 +1314,13 @@ void Editor::render()
 		Gui_Image_Button_Theme button_theme2 = button_theme;
 		button_theme2.rect_rounding = 0;
 		gui::set_theme(&button_theme2);
-		gui::image_button(&entities_icon_image);
+		if (gui::image_button(&entities_icon_image)) {
+			if (!entities_window.window_open) {
+				entities_window.open();
+			} else {
+				entities_window.close();
+			}
+		}
 		gui::reset_image_button_theme();
 		
 		gui::set_theme(&button_theme);
@@ -1323,8 +1331,15 @@ void Editor::render()
 	}
 	gui::reset_window_theme();
 
+	if (command_window.window_open) {
+		command_window.draw();
+	}
+
 	if (entity_window.window_open) {
 		entity_window.draw();
+	}
+	if (entities_window.window_open) {
+		entities_window.draw();
 	}
 	gui::end_frame();
 }
@@ -1484,6 +1499,63 @@ void Entity_Window::draw()
 				gui::radio_button("Draw bounding box", &temp);
 			}
 		}
+		gui::end_window();
+	}
+	gui::reset_window_theme();
+}
+
+void Entity_Tree_Window::init(Engine *engine)
+{
+	Editor_Window::init(engine);
+	set_size(400, 600);
+	Rect_s32 screen_rect = get_display_screen_rect();
+	place_rect_on_top_right(&screen_rect, &window_rect);
+
+	window_theme.rounded_border = 0;
+	window_theme.header_height = 40;
+	window_theme.background_color = Color(25);
+	window_theme.header_color = Color(30);
+}
+
+void Entity_Tree_Window::draw()
+{
+	Gui_Tree_Theme tree_theme;
+	tree_theme.window_size.width = window_rect.width - window_theme.horizontal_offset_from_sides * 2;
+
+	gui::set_theme(&window_theme);
+	gui::set_next_window_pos(window_rect.x, window_rect.y);
+	gui::set_next_window_size(window_rect.width, window_rect.height);
+	if (gui::begin_window("E", WINDOW_HEADER)) {
+		
+		gui::set_theme(&tree_theme);
+		if (gui::begin_tree("Entities tree")) {
+			if (gui::begin_tree_node("Light")) {
+				gui::end_tree_node();
+			}
+			if (gui::begin_tree_node("Camera")) {
+				for (u32 i = 0; i < game_world->cameras.count; i++) {
+					Camera *camera = &game_world->cameras[i];
+					String camera_name = to_string(get_entity_id(camera));
+					if (gui::begin_tree_node(camera_name, GUI_TREE_NODE_FINAL)) {
+						gui::end_tree_node();
+					}
+				}
+				gui::end_tree_node();
+			}
+			if (gui::begin_tree_node("Entity")) {
+				for (u32 i = 0; i < game_world->entities.count; i++) {
+					Entity *entity = &game_world->entities[i];
+					String entity_name = to_string(get_entity_id(entity));
+					if (gui::begin_tree_node(entity_name, GUI_TREE_NODE_FINAL)) {
+						gui::end_tree_node();
+					}
+				}
+				gui::end_tree_node();
+			}
+			gui::end_tree();
+		}
+		gui::reset_tree_theme();
+
 		gui::end_window();
 	}
 	gui::reset_window_theme();
