@@ -222,12 +222,6 @@ struct Gui_Window_Tab {
 	Placing_Info placing_info;
 };
 
-struct Gui_Window_Placing_Info {
-	s32 max_content_width;
-	Rect_s32 content_rect;
-	Rect_s32 last_placed_rect;
-};
-
 struct Window_Context;
 
 typedef u32 Gui_Tree_Node_State;
@@ -498,11 +492,19 @@ struct Tree_State {
 	Array<u32> level_node_count_stack;
 };
 
+struct Window_Placing_State {
+	s32 max_content_width = 0;
+	Rect_s32 content_rect;
+	Rect_s32 last_placed_rect;
+};
+
 struct Window_Context : Rect_Context {
 	Gui_Window *window = NULL;
 
 	void setup(Gui_Layout _layout_flags, Gui_Window *window, Padding *_padding);
 	void place_rect(Rect_s32 *placing_rect);
+	void set_placing_state(Window_Placing_State *placing_state);
+	Window_Placing_State get_placing_state();
 };
 
 void Window_Context::setup(Gui_Layout _layout_flags, Gui_Window *_window, Padding *_padding)
@@ -528,6 +530,23 @@ void Window_Context::place_rect(Rect_s32 *placing_rect)
 		window->max_content_width += placing_rect->width + padding.rects;
 		window->content_rect.width = math::max(window->max_content_width, window->content_rect.width);
 	}
+}
+
+void Window_Context::set_placing_state(Window_Placing_State *placing_state)
+{
+	last_placed_rect = placing_state->last_placed_rect;
+	window->content_rect = placing_state->content_rect;
+	window->max_content_width = placing_state->max_content_width;
+}
+
+Window_Placing_State Window_Context::get_placing_state()
+{
+	Window_Placing_State placing_state;
+	placing_state.last_placed_rect = last_placed_rect;
+	placing_state.content_rect = window->content_rect;
+	placing_state.max_content_width = window->max_content_width;
+
+	return placing_state;
 }
 
 struct Gui_Manager {
@@ -1748,6 +1767,7 @@ static const u32 QUICK_GO_MODE_TIME = 300; // time in milliseconds
 
 void Gui_Manager::end_list()
 {
+	Context *context = get_context();
 	Gui_Window *window = get_window();
 	Gui_ID list_gui_id = GET_LIST_GUI_ID();
 	update_active_and_hot_state(window, list_gui_id, &window->view_rect);
@@ -1768,13 +1788,13 @@ void Gui_Manager::end_list()
 	}
 
 	if (active_list == list_gui_id) {
-		Gui_Window_Placing_Info window_placing_info;
-		//window->get_placing_info(&window_placing_info);
+		Window_Context *window_context = static_cast<Window_Context *>(context);
+		Window_Placing_State window_placing_state = window_context->get_placing_state();
 
 		Array<Rect_s32> line_rects;
 		for (u32 i = 0; i < line_list.count; i++) {
 			Rect_s32 temp = { 0, 0, get_window_size().width, list_theme.line_height };
-			//place_rect_in_window(window, &temp, window->place_between_rects, window->horizontal_offset_from_sides, window->vertical_offset_from_sides);
+			context->place_rect(&temp);
 			line_rects.push(temp);
 		}
 		static bool run_quick_mode = false;
@@ -1824,14 +1844,26 @@ void Gui_Manager::end_list()
 			}
 		}
 
+		// To prevent a line blicking the code should select a line in the next frame bacause 
+		// after the call move_window_content a window content moves only at the next frame.
+		static u32 reset_index = 0;
+		static u32 select_index = 0;
+		static bool select_line_in_next_frame = false;
+		if (select_line_in_next_frame) {
+			select_line_in_next_frame = false;
+			*line_list[reset_index].state = 0;
+			*line_list[select_index].state = GUI_LIST_LINE_SELECTED;
+		}
+
 		if (selected_lines_count == 1) {
 			u32 line_index = 0;
 			if (was_click(KEY_ARROW_DOWN) || (run_quick_mode && Keys_State::is_key_down(KEY_ARROW_DOWN) && result)) {
 				for (; line_index < line_list.count; line_index++) {
 					Gui_List_Line *line = &line_list[line_index];
 					if ((*line->state & GUI_LIST_LINE_SELECTED) && (line_index != (line_list.count - 1))) {
-						*line->state = 0;
-						*line_list[line_index + 1].state = GUI_LIST_LINE_SELECTED;
+						select_line_in_next_frame = true;
+						reset_index = line_index;
+						select_index = line_index + 1;
 
 						if (line_rects[line_index + 1].bottom() > window->view_rect.bottom()) {
 							move_window_content(window, line_rects[line_index + 1].bottom() - window->view_rect.bottom(), MOVE_UP);
@@ -1845,8 +1877,9 @@ void Gui_Manager::end_list()
 				for (; line_index < line_list.count; line_index++) {
 					Gui_List_Line *line = &line_list[line_index];
 					if ((*line->state & GUI_LIST_LINE_SELECTED) && (line_index != 0)) {
-						*line->state = 0;
-						*line_list[line_index - 1].state = GUI_LIST_LINE_SELECTED;
+						select_line_in_next_frame = true;
+						reset_index = line_index;
+						select_index = line_index - 1;
 
 						if (line_rects[line_index - 1].y < window->view_rect.y) {
 							move_window_content(window, window->view_rect.y - line_rects[line_index - 1].y, MOVE_DOWN);
@@ -1857,9 +1890,9 @@ void Gui_Manager::end_list()
 				}
 			}
 		}
-		window_placing_info.content_rect.x = window->content_rect.x;
-		window_placing_info.content_rect.y = window->content_rect.y;
-		//window->set_placing_info(&window_placing_info);
+		window_placing_state.content_rect.x = window->content_rect.x;
+		window_placing_state.content_rect.y = window->content_rect.y;
+		window_context->set_placing_state(&window_placing_state);
 	}
 
 	if (list_theme.column_filter) {
@@ -1876,49 +1909,45 @@ void Gui_Manager::end_list()
 		if (*gui_list_line->state > (GUI_LIST_LINE_SELECTED | GUI_LIST_LINE_CLICKED_BY_ENTER_KEY)) {
 			*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
 		}
-		
 		if (*gui_list_line->state & GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE) {
 			*gui_list_line->state &= ~GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
 		}
-		
 		if (*gui_list_line->state & GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE) {
 			*gui_list_line->state &= ~GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE;
 		}
-		
 		if (*gui_list_line->state & GUI_LIST_LINE_CLICKED_BY_ENTER_KEY) {
 			*gui_list_line->state &= ~GUI_LIST_LINE_CLICKED_BY_ENTER_KEY;
 		}
-		Context *context = get_context();
-		context->place_rect(&line_rect);
 		
+		context->place_rect(&line_rect);
 		if (must_rect_be_drawn(&window->view_rect, &line_rect)) {
-			if (was_click(KEY_LMOUSE) && !Keys_State::is_key_down(KEY_CTRL)) {
+			bool mouse_hover = hot_item == list_gui_id;
+			if (mouse_hover && was_click(KEY_LMOUSE) && !Keys_State::is_key_down(KEY_CTRL)) {
 				update_list_line_state(gui_list_line->state, &line_rect, GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE);
 
-			} else if (was_click(KEY_RMOUSE) && !Keys_State::is_key_down(KEY_CTRL)) {
+			} else if (mouse_hover && was_click(KEY_RMOUSE) && !Keys_State::is_key_down(KEY_CTRL)) {
 				update_list_line_state(gui_list_line->state, &line_rect, GUI_LIST_LINE_CLICKED_BY_RIGHT_MOUSE);
 
+			} else if (mouse_hover && detect_intersection(&line_rect) && (key_bindings.was_binding_triggered(KEY_CTRL, KEY_LMOUSE))) {
+				*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
+				*gui_list_line->state |= GUI_LIST_LINE_SELECTED;
+				*gui_list_line->state |= GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
+			
 			} else if (was_click(KEY_ENTER) && (*gui_list_line->state && GUI_LIST_LINE_SELECTED)) {
 				*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
 				*gui_list_line->state |= GUI_LIST_LINE_SELECTED;
 				*gui_list_line->state |= GUI_LIST_LINE_CLICKED_BY_ENTER_KEY;
 
-			} else if (detect_intersection(&line_rect) && (key_bindings.was_binding_triggered(KEY_CTRL, KEY_LMOUSE))) {
-				*gui_list_line->state = GUI_LIST_LINE_RESET_STATE;
-				*gui_list_line->state |= GUI_LIST_LINE_SELECTED;
-				*gui_list_line->state |= GUI_LIST_LINE_CLICKED_BY_LEFT_MOUSE;
 			}
 
 			Color line_color = list_theme.line_color;
-			if (hot_item == list_gui_id) {
-				if (detect_intersection(&line_rect) && !(*gui_list_line->state & GUI_LIST_LINE_SELECTED)) {
-					line_color = list_theme.hover_line_color;
-				} else if (*gui_list_line->state & GUI_LIST_LINE_SELECTED) {
-					line_color = list_theme.picked_line_color;
-				}
+			if (*gui_list_line->state & GUI_LIST_LINE_SELECTED) {
+				line_color = list_theme.picked_line_color;
+			} else if (mouse_hover && detect_intersection(&line_rect)) {
+				line_color = list_theme.hover_line_color;
 			}
 			render_list->add_rect(&line_rect, line_color);
-
+			
 			for (u32 column_index = 0; column_index < gui_list_line->columns.count; column_index++) {
 				Gui_Line_Column *column = &gui_list_line->columns[column_index];
 				Rect_s32 *filter_column_rect = &list_column_rect_list[column_index];

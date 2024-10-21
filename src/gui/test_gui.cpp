@@ -241,147 +241,147 @@ void draw_test_list_window()
 		static Directory_Entry hades_dir;
 		static Directory_Entry dev_dir;
 
-		if (!node_list_init) {
-			node_list_init = true;
+		//if (!node_list_init) {
+		//	node_list_init = true;
 
-			dota_dir.name = "dota 2";
-			dota_dir.files.push("dota_file_1");
-			dota_dir.files.push("dota_file_2");
-			dota_dir.files.push("dota_file_3");
+		//	dota_dir.name = "dota 2";
+		//	dota_dir.files.push("dota_file_1");
+		//	dota_dir.files.push("dota_file_2");
+		//	dota_dir.files.push("dota_file_3");
 
-			cs_dir.name = "cs 2";
-			cs_dir.files.push("cs_file_1");
-			cs_dir.files.push("cs_file_2");
-			cs_dir.files.push("cs_file_3");
-			cs_dir.files.push("cs_file_5");
+		//	cs_dir.name = "cs 2";
+		//	cs_dir.files.push("cs_file_1");
+		//	cs_dir.files.push("cs_file_2");
+		//	cs_dir.files.push("cs_file_3");
+		//	cs_dir.files.push("cs_file_5");
 
-			call_of_duty_dir.name = "call_of_duty 2";
-			call_of_duty_dir.files.push("call_of_duty_file_1");
-			call_of_duty_dir.files.push("call_of_duty_file_12");
-			call_of_duty_dir.files.push("call_of_duty_file_13");
-			call_of_duty_dir.files.push("call_of_duty_file_14");
+		//	call_of_duty_dir.name = "call_of_duty 2";
+		//	call_of_duty_dir.files.push("call_of_duty_file_1");
+		//	call_of_duty_dir.files.push("call_of_duty_file_12");
+		//	call_of_duty_dir.files.push("call_of_duty_file_13");
+		//	call_of_duty_dir.files.push("call_of_duty_file_14");
 
-			game_dir.name = "games";
-			game_dir.files.push("game_file_1");
-			game_dir.files.push("game_file_2");
-			game_dir.files.push("game_file_3");
-			game_dir.files.push("game_file_4");
-			game_dir.dirs.push(&dota_dir);
-			game_dir.dirs.push(&cs_dir);
-			game_dir.dirs.push(&call_of_duty_dir);
+		//	game_dir.name = "games";
+		//	game_dir.files.push("game_file_1");
+		//	game_dir.files.push("game_file_2");
+		//	game_dir.files.push("game_file_3");
+		//	game_dir.files.push("game_file_4");
+		//	game_dir.dirs.push(&dota_dir);
+		//	game_dir.dirs.push(&cs_dir);
+		//	game_dir.dirs.push(&call_of_duty_dir);
 
 
-			doom_3_dir.name = "Doom 3 BFG";
-			doom_3_dir.files.push("doom_source_code_1");
-			doom_3_dir.files.push("doom_source_code_2");
-			doom_3_dir.files.push("doom_source_code_3");
-			doom_3_dir.files.push("doom_source_code_4");
-			doom_3_dir.files.push("doom_source_code_5");
-			doom_3_dir.files.push("doom_source_code_6");
-			doom_3_dir.files.push("doom_source_code_7");
-			doom_3_dir.files.push("doom_source_code_8");
-			doom_3_dir.files.push("doom_source_code_9");
+		//	doom_3_dir.name = "Doom 3 BFG";
+		//	doom_3_dir.files.push("doom_source_code_1");
+		//	doom_3_dir.files.push("doom_source_code_2");
+		//	doom_3_dir.files.push("doom_source_code_3");
+		//	doom_3_dir.files.push("doom_source_code_4");
+		//	doom_3_dir.files.push("doom_source_code_5");
+		//	doom_3_dir.files.push("doom_source_code_6");
+		//	doom_3_dir.files.push("doom_source_code_7");
+		//	doom_3_dir.files.push("doom_source_code_8");
+		//	doom_3_dir.files.push("doom_source_code_9");
 
-			imgui_dir.name = "imgui";
-			imgui_dir.files.push("imgui_source_code_1");
-			imgui_dir.files.push("imgui_source_code_2");
-			imgui_dir.files.push("imgui_source_code_3");
-			imgui_dir.files.push("imgui_source_code_4");
+		//	imgui_dir.name = "imgui";
+		//	imgui_dir.files.push("imgui_source_code_1");
+		//	imgui_dir.files.push("imgui_source_code_2");
+		//	imgui_dir.files.push("imgui_source_code_3");
+		//	imgui_dir.files.push("imgui_source_code_4");
 
-			source_dir.name = "source code";
-			source_dir.dirs.push(&doom_3_dir);
-			source_dir.dirs.push(&imgui_dir);
-			
-			hades_dir.name = "hades engine";
-			hades_dir.files.push("hades_source_code 1");
-			hades_dir.files.push("hades_source_code 2");
-			hades_dir.files.push("hades_source_code 3");
-			hades_dir.files.push("hades_source_code 4");
+		//	source_dir.name = "source code";
+		//	source_dir.dirs.push(&doom_3_dir);
+		//	source_dir.dirs.push(&imgui_dir);
+		//	
+		//	hades_dir.name = "hades engine";
+		//	hades_dir.files.push("hades_source_code 1");
+		//	hades_dir.files.push("hades_source_code 2");
+		//	hades_dir.files.push("hades_source_code 3");
+		//	hades_dir.files.push("hades_source_code 4");
 
-			dev_dir.name = "dev";
-			dev_dir.files.push("dev_file_11");
-			dev_dir.files.push("dev_file_12");
-			dev_dir.files.push("dev_file_13");
-			dev_dir.files.push("dev_file_14");
-			dev_dir.files.push("dev_file_15");
-			dev_dir.files.push("dev_file_16");
-			dev_dir.files.push("dev_file_17");
-			dev_dir.files.push("dev_file_18");
-			dev_dir.files.push("dev_file_19");
-			dev_dir.files.push("dev_file_20");
-			dev_dir.dirs.push(&source_dir);
-			dev_dir.dirs.push(&hades_dir);
+		//	dev_dir.name = "dev";
+		//	dev_dir.files.push("dev_file_11");
+		//	dev_dir.files.push("dev_file_12");
+		//	dev_dir.files.push("dev_file_13");
+		//	dev_dir.files.push("dev_file_14");
+		//	dev_dir.files.push("dev_file_15");
+		//	dev_dir.files.push("dev_file_16");
+		//	dev_dir.files.push("dev_file_17");
+		//	dev_dir.files.push("dev_file_18");
+		//	dev_dir.files.push("dev_file_19");
+		//	dev_dir.files.push("dev_file_20");
+		//	dev_dir.dirs.push(&source_dir);
+		//	dev_dir.dirs.push(&hades_dir);
 
-			dir_tree.name = "D";
-			dir_tree.dirs.push(&dev_dir);
-			dir_tree.dirs.push(&game_dir);
-		}
-		
-		display_directory_tree(&dir_tree);
+		//	dir_tree.name = "D";
+		//	dir_tree.dirs.push(&dev_dir);
+		//	dir_tree.dirs.push(&game_dir);
+		//}
+		//
+		//display_directory_tree(&dir_tree);
 
-		if (begin_tree("Test tree")) {
-			if (begin_tree_node("Node 1")) {
-				if (begin_tree_node("Node 11")) {
-					if (begin_tree_node("Node 111", GUI_TREE_NODE_FINAL)) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 112", GUI_TREE_NODE_FINAL)) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 113", GUI_TREE_NODE_FINAL)) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 114", GUI_TREE_NODE_FINAL)) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 115", GUI_TREE_NODE_FINAL)) {
-						end_tree_node();
-					}
-					end_tree_node();
-				}
-				if (begin_tree_node("Node 12")) {
-					if (begin_tree_node("Node 121")) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 122")) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 123")) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 124")) {
-						end_tree_node();
-					}
-					if (begin_tree_node("Node 125")) {
-						end_tree_node();
-					}
-					end_tree_node();
-				}
-				if (begin_tree_node("Node 13")) {
-					end_tree_node();
-				}
-				if (begin_tree_node("Node 14")) {
-					end_tree_node();
-				}
-				if (begin_tree_node("Node 15")) {
-					end_tree_node();
-				}
-				end_tree_node();
-			}
-			if (begin_tree_node("Node 2")) {
-				end_tree_node();
-			}
-			if (begin_tree_node("Node 3")) {
-				end_tree_node();
-			}
-			if (begin_tree_node("Node 4")) {
-				end_tree_node();
-			}
-			if (begin_tree_node("Node 5")) {
-				end_tree_node();
-			}
-			end_tree();
-		}
+		//if (begin_tree("Test tree")) {
+		//	if (begin_tree_node("Node 1")) {
+		//		if (begin_tree_node("Node 11")) {
+		//			if (begin_tree_node("Node 111", GUI_TREE_NODE_FINAL)) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 112", GUI_TREE_NODE_FINAL)) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 113", GUI_TREE_NODE_FINAL)) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 114", GUI_TREE_NODE_FINAL)) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 115", GUI_TREE_NODE_FINAL)) {
+		//				end_tree_node();
+		//			}
+		//			end_tree_node();
+		//		}
+		//		if (begin_tree_node("Node 12")) {
+		//			if (begin_tree_node("Node 121")) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 122")) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 123")) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 124")) {
+		//				end_tree_node();
+		//			}
+		//			if (begin_tree_node("Node 125")) {
+		//				end_tree_node();
+		//			}
+		//			end_tree_node();
+		//		}
+		//		if (begin_tree_node("Node 13")) {
+		//			end_tree_node();
+		//		}
+		//		if (begin_tree_node("Node 14")) {
+		//			end_tree_node();
+		//		}
+		//		if (begin_tree_node("Node 15")) {
+		//			end_tree_node();
+		//		}
+		//		end_tree_node();
+		//	}
+		//	if (begin_tree_node("Node 2")) {
+		//		end_tree_node();
+		//	}
+		//	if (begin_tree_node("Node 3")) {
+		//		end_tree_node();
+		//	}
+		//	if (begin_tree_node("Node 4")) {
+		//		end_tree_node();
+		//	}
+		//	if (begin_tree_node("Node 5")) {
+		//		end_tree_node();
+		//	}
+		//	end_tree();
+		//}
 
 		//static bool init_list = false;
 		//static Array<Gui_List_Line_State> list_line_states;
@@ -646,40 +646,14 @@ void test_window()
 	//}
 }
 
-void test_string_edit_field()
-{
-	static String name;
-	if (begin_window("Test Edit field")) {
-		edit_field("Name", &name);
-		end_window();
-	}
-}
-
-void test_layout()
-{
-	if (begin_window("Test Layout")) {
-		//button("Button 1");
-		//button("Button 2");
-		//button("Button 3");
-		set_layout();
-		button("Button 12");
-		button("Button 23");
-		button("Button 34");
-		reset_layout();
-		end_window();
-	}
-}
-
 void draw_test_gui()
 {
 	begin_frame();
-	test_string_edit_field();
 	//test_window();
-	//test_layout();
-	//test_gui_context_layout();
+	test_gui_context_layout();
 	//draw_test_tab_window();
-	//draw_test_list_window();
-	//draw_test_main_window();
+	draw_test_list_window();
+	draw_test_main_window();
 
 	gui::end_frame();
 }
