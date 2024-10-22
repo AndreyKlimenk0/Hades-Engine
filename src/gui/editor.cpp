@@ -741,7 +741,7 @@ void Drop_Down_Entity_Window::init(Engine *engine)
 
 	window_theme.background_color = Color(40, 40, 40);
 	window_theme.header_color = Color(36, 36, 36);
-	window_theme.place_between_rects = 0;
+	window_theme.rects_padding = 0;
 
 	buttons_theme.rect.set_size(window_size.width, 25);
 	buttons_theme.color = window_theme.background_color;
@@ -989,21 +989,21 @@ void Command_Window::init(Engine *engine)
 	command_window_rect.y = 200;
 
 	command_window_theme.background_color = Color(20);
-	command_window_theme.vertical_offset_from_sides = 14;
-	command_window_theme.horizontal_offset_from_sides = 10;
+	command_window_theme.vertical_padding = 14;
+	command_window_theme.horizontal_padding = 10;
 
-	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_offset_from_sides * 2, 30);
+	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_padding * 2, 30);
 	command_edit_field_theme.draw_label = false;
 	command_edit_field_theme.color = Color(30);
 	command_edit_field_theme.rounded_border = 0;
 
-	command_window_rect.height = command_edit_field_theme.rect.height + command_window_theme.vertical_offset_from_sides * 2;
+	command_window_rect.height = command_edit_field_theme.rect.height + command_window_theme.vertical_padding * 2;
 
 	list_theme.line_height = 30;
 	list_theme.column_filter = false;
-	list_theme.line_text_offset = command_window_theme.horizontal_offset_from_sides + command_edit_field_theme.text_shift;
+	list_theme.line_text_offset = command_window_theme.horizontal_padding + command_edit_field_theme.text_shift;
 	list_theme.window_size.width = command_window_rect_with_additional_info.width;
-	list_theme.window_size.height = command_window_rect_with_additional_info.height - command_edit_field_theme.rect.height - command_window_theme.vertical_offset_from_sides;
+	list_theme.window_size.height = command_window_rect_with_additional_info.height - command_edit_field_theme.rect.height - command_window_theme.vertical_padding;
 	list_theme.background_color = Color(20);
 	list_theme.line_color = Color(20);
 
@@ -1087,15 +1087,12 @@ void Command_Window::draw()
 
 		Array<String> command_args;
 		if (display_additional_info) {
-			Gui_Window_Theme window_theme;
-			window_theme.horizontal_offset_from_sides = 0;
-			gui::set_theme(&window_theme);
-
+			gui::set_window_padding(0);
 			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
 				run_command(current_displaying_command->command_name, command_args);
 				command_edit_field.free();
 			}
-			gui::reset_window_theme();
+			gui::set_window_padding(command_window_theme.horizontal_padding);
 		} else {
 			if (was_click(KEY_ENTER)) {
 				command_args.push(command_edit_field);
@@ -1286,9 +1283,9 @@ void Editor::render()
 	gui::begin_frame();
 
 	Gui_Window_Theme window_theme;
-	window_theme.place_between_rects = 1;
-	window_theme.horizontal_offset_from_sides = 0;
-	window_theme.vertical_offset_from_sides = 0;
+	window_theme.rects_padding = 1;
+	window_theme.horizontal_padding = 0;
+	window_theme.vertical_padding = 0;
 	window_theme.background_color = Color(0, 0, 0, 0);
 
 	Gui_Text_Button_Theme button_theme;
@@ -1520,7 +1517,7 @@ void Entity_Tree_Window::init(Engine *engine)
 void Entity_Tree_Window::draw()
 {
 	Gui_Tree_Theme tree_theme;
-	tree_theme.window_size.width = window_rect.width - window_theme.horizontal_offset_from_sides * 2;
+	tree_theme.window_size.width = window_rect.width - window_theme.horizontal_padding * 2;
 
 	gui::set_theme(&window_theme);
 	gui::set_next_window_pos(window_rect.x, window_rect.y);
