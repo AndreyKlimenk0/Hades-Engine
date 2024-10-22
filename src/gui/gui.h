@@ -180,9 +180,9 @@ struct Gui_Window_Theme {
 	s32 scroll_bar_size = 8;
 	s32 min_scroll_size = 10;
 	s32 mouse_wheel_spped = 30;
-	s32 place_between_rects = 12;
-	s32 vertical_offset_from_sides = 10;
-	s32 horizontal_offset_from_sides = 15;
+	s32 rects_padding = 12;
+	s32 vertical_padding = 10;
+	s32 horizontal_padding = 15;
 	float outlines_width = 1.0f;
 	Color header_color = Color(16, 16, 16);
 	Color background_color = Color(30, 30, 30);
@@ -210,6 +210,7 @@ namespace gui
 	bool begin_child(const char *name, Window_Style window_style = WINDOW_DEFAULT_STYLE);
 	void end_child();
 
+	void set_window_padding(s32 horizontal = -1, s32 vertical = -1, s32 rects = -1);
 	void set_theme(Gui_Tab_Theme *gui_tab_theme);
 	void set_theme(Gui_Tree_Theme *gui_tree_theme);
 	void set_theme(Gui_List_Theme *gui_list_theme);

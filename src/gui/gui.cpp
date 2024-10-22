@@ -1331,9 +1331,9 @@ bool Gui_Manager::begin_tree(const char *name)
 #endif
 	Gui_Window_Theme tree_window_theme;
 	tree_window_theme.background_color = list_theme.background_color;
-	tree_window_theme.place_between_rects = 0;
-	tree_window_theme.horizontal_offset_from_sides = 0;
-	tree_window_theme.vertical_offset_from_sides = 0;
+	tree_window_theme.rects_padding = 0;
+	tree_window_theme.horizontal_padding = 0;
+	tree_window_theme.vertical_padding = 0;
 	tree_window_theme.rounded_border = 0;
 	tree_window_theme.rounded_scrolling = 0;
 
@@ -1629,9 +1629,9 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 
 	Gui_Window_Theme window_theme;
 	window_theme.background_color = list_theme.background_color;
-	window_theme.place_between_rects = 0;
-	window_theme.horizontal_offset_from_sides = 0;
-	window_theme.vertical_offset_from_sides = 0;
+	window_theme.rects_padding = 0;
+	window_theme.horizontal_padding = 0;
+	window_theme.vertical_padding = 0;
 	window_theme.rounded_border = 0;
 	window_theme.rounded_scrolling = 0;
 
@@ -1648,14 +1648,6 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 	if (begin_child(name, WINDOW_SCROLL_BAR)) {
 		line_list.count = 0;
 		Gui_Window *window = get_window();
-
-		//static Gui_ID last_active_window = 0;
-		//if (detect_intersection(&window->view_rect) && (active_window != window->gui_id)) {
-		//	last_active_window = active_window;
-		//	active_window = window->gui_id;
-		//} else if (!detect_intersection(&window->view_rect) && (active_window == window->gui_id)) {
-		//	active_window = last_active_window;
-		//}
 
 		if (!list_theme.column_filter) {
 			picked_column = &columns[0];
@@ -2490,10 +2482,10 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		u32 text_layout = LAYOUT_LEFT;
 		if (active_list_box == list_box_gui_id) {
 			Gui_Window_Theme win_theme;
-			win_theme.horizontal_offset_from_sides = 0;
-			win_theme.vertical_offset_from_sides = 0;
+			win_theme.horizontal_padding = 0;
+			win_theme.vertical_padding = 0;
 			win_theme.outlines_width = 1.0f;
-			win_theme.place_between_rects = 0;
+			win_theme.rects_padding = 0;
 
 			Gui_Text_Button_Theme button_theme;
 			button_theme.rect.width = list_box_rect.width;
@@ -2940,7 +2932,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	window->clip_rect = window->view_rect;
 
 	if (window->open) {
-		Padding padding = { window_theme.place_between_rects, window_theme.horizontal_offset_from_sides, window_theme.vertical_offset_from_sides };
+		Padding padding = { window_theme.rects_padding, window_theme.horizontal_padding, window_theme.vertical_padding };
 		window->context->setup(current_layout, window, &padding);
 		context_stack.push(window->context);
 	}
@@ -2951,8 +2943,8 @@ void Gui_Manager::end_window()
 {
 	Gui_Window *window = get_window();
 
-	window->content_rect.width += window_theme.horizontal_offset_from_sides;
-	window->content_rect.height += window_theme.vertical_offset_from_sides;
+	window->content_rect.width += window_theme.horizontal_padding;
+	window->content_rect.height += window_theme.vertical_padding;
 
 	if (window->display_vertical_scrollbar) {
 		scrolling(window, Y_AXIS);
@@ -3124,7 +3116,7 @@ bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 		render_list->pop_clip_rect();
 
 		child_window->clip_rect = calculate_clip_rect(&parent_window->clip_rect, &child_window->view_rect);
-		Padding padding = { window_theme.place_between_rects, window_theme.horizontal_offset_from_sides, window_theme.vertical_offset_from_sides };
+		Padding padding = { window_theme.rects_padding, window_theme.horizontal_padding, window_theme.vertical_padding };
 		child_window->context->setup(current_layout, child_window, &padding);
 		context_stack.push(child_window->context);
 
@@ -3137,8 +3129,8 @@ void Gui_Manager::end_child()
 {
 	Gui_Window *window = get_window();
 
-	window->content_rect.width += window_theme.horizontal_offset_from_sides;
-	window->content_rect.height += window_theme.vertical_offset_from_sides;
+	window->content_rect.width += window_theme.horizontal_padding;
+	window->content_rect.height += window_theme.vertical_padding;
 
 	if (window->display_vertical_scrollbar) {
 		scrolling(window, Y_AXIS);
@@ -3494,11 +3486,11 @@ bool gui::mouse_over_element()
 Size_s32 gui::get_window_size()
 {
 	Size_s32 size = gui_manager.get_window()->view_rect.get_size();
-	s32 temp = gui_manager.window_theme.horizontal_offset_from_sides * 2;
+	s32 temp = gui_manager.window_theme.horizontal_padding * 2;
 	if (size.width > temp) {
 		size.width -= temp;
 	}
-	temp = gui_manager.window_theme.vertical_offset_from_sides * 2;
+	temp = gui_manager.window_theme.vertical_padding * 2;
 	if (size.height > temp) {
 		size.height -= temp;
 	}
@@ -3595,6 +3587,16 @@ void gui::set_theme(Gui_Edit_Field_Theme *gui_edit_field_theme)
 {
 	gui_manager.backup_edit_field_theme = gui_manager.edit_field_theme;
 	gui_manager.edit_field_theme = *gui_edit_field_theme;
+}
+
+void gui::set_window_padding(s32 horizontal, s32 vertical, s32 rects)
+{
+	Gui_Window_Theme *theme = &gui_manager.window_theme;
+	s32 rect_padding = rects < 0 ? theme->rects_padding : rects;
+	s32 vertical_padding = vertical < 0 ? theme->vertical_padding : vertical;
+	s32 horizontal_padding = horizontal < 0 ? theme->horizontal_padding : horizontal;
+	Context *context = gui_manager.get_context();
+	context->padding = Padding(rect_padding, horizontal_padding, vertical_padding);
 }
 
 void gui::set_theme(Gui_Tab_Theme *gui_tab_theme)
