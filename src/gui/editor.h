@@ -35,6 +35,7 @@ struct Editor_Window {
 	virtual void init(Engine *engine);
 	virtual void open();
 	virtual void close();
+	virtual void draw() = 0;
 
 	void set_position(s32 x, s32 y);
 	void set_size(s32 width, s32 height);
@@ -115,6 +116,21 @@ enum Editor_Mode_Type {
 	EDITOR_MODE_SCALE_ENTITY,
 };
 
+struct Left_Bar_Button {
+	Image image;
+	void (*callback)(Editor *editor) = NULL;
+};
+
+struct Left_Bar : Editor_Window {
+	Gui_Window_Theme window_theme;
+	Gui_Image_Button_Theme button_theme;
+	Array<Left_Bar_Button> left_bar_buttons;
+
+	void init(Engine *engine);
+	void draw();
+	void add_button(const char *image_name, void (*callback)(Editor *editor));
+};
+
 struct Editor {
 	Editor();
 	~Editor();
@@ -128,10 +144,6 @@ struct Editor {
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 
-	Image entity_icon_image; // should be released !!!
-	Image entities_icon_image;
-	Image rendering_icon_image;
-
 	struct Settings {
 		float camera_speed = 5.0f;
 		float camera_rotation_speed = 0.5f;
@@ -140,10 +152,14 @@ struct Editor {
 	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
 
+	Left_Bar left_buttons;
 	Entity_Window entity_window;
 	Entity_Tree_Window entities_window;
 	Command_Window command_window;
 	Drop_Down_Entity_Window drop_down_entity_window;
+
+	Array<Editor_Window *> windows;
+	Array<Editor_Window *> top_right_windows;
 
 	void init(Engine *engine);
 	void handle_events();

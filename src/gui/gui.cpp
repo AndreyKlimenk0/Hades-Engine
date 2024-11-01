@@ -49,6 +49,7 @@ const u32 LIST_BOX_HASH = fast_hash("list_box");
 const u32 EDIT_FIELD_HASH = fast_hash("edit_Field");
 const u32 SCROLL_BAR_HASH = fast_hash("scroll_bar");
 const u32 TAB_HASH = fast_hash("window_tab_hash");
+const u32 MENU_ITEM_HASH = fast_hash("menu_item_hash");
 
 const u32 VECTOR3_EDIT_FIELD_NUMBER = 3;
 
@@ -60,6 +61,7 @@ const u32 VECTOR3_EDIT_FIELD_NUMBER = 3;
 #define GET_IMAGE_BUTTON_GUI_ID() (window->gui_id + IMAGE_BUTTON_HASH + image_button_count)
 #define GET_SCROLL_BAR_GUI_ID() (window->gui_id + SCROLL_BAR_HASH)
 #define GET_TAB_GUI_ID() (window->gui_id + TAB_HASH + tab_count)
+#define GET_MENU_ITEM_GUI_ID() (window->gui_id + MENU_ITEM_HASH + menu_item_count)
 
 #define GET_RENDER_LIST() (&window->render_list)
 
@@ -72,6 +74,9 @@ const s32 TAB_BAR_HEIGHT = 30;
 
 const Rect_s32 DEFAULT_WINDOW_RECT = { 50, 50, 400, 400 };
 const Rect_s32 DEFAULT_CHILD_WINDOW_RECT = { 10, 10, 200, 200 };
+
+const String MENU_WINDOW_PREFIX = "Menu Window ";
+
 #define GET_DEFAULT_WINDOW_RECT(window_type) ((window_type == WINDOW_TYPE_PARENT) ? DEFAULT_WINDOW_RECT : DEFAULT_CHILD_WINDOW_RECT)
 
 inline bool detect_intersection(Rect_s32 *rect)
@@ -568,6 +573,7 @@ struct Gui_Manager {
 	u32 tab_count = 0;
 	u32 list_count = 0;
 	u32 button_count = 0;
+	u32 menu_item_count = 0;
 	u32 image_button_count = 0;
 	u32 radio_button_count = 0;
 	u32 list_box_count = 0;
@@ -597,6 +603,7 @@ struct Gui_Manager {
 
 	struct Pre_Setup {
 		Rect_s32 window_rect;
+		Array<Pair<String, bool>> windows_params;
 	} pre_setup;
 
 	Array<Context *> context_stack;
@@ -624,6 +631,9 @@ struct Gui_Manager {
 
 	Gui_Tree_Theme tree_theme;
 	Array<Gui_Tree_Theme> backup_tree_themes;
+	
+	Gui_Menu_Theme menu_theme;
+	Array<Gui_Menu_Theme> backup_menu_themes;
 
 	Gui_Tab_Theme tab_theme;
 	Gui_Tab_Theme backup_tab_theme;
@@ -664,9 +674,12 @@ struct Gui_Manager {
 	void remove_window_from_rendering_order(Gui_Window *window);
 	void move_window_on_rendering_order_top(Gui_Window *window);
 
-	bool begin_window(const char *name, Window_Style window_style);
+	bool begin_window(const char *name, Window_Style window_style, bool window_open = true);
 	void end_window();
 	void render_window(Gui_Window *window);
+	void open_window(const char *name);
+	void close_window(const char *name);
+
 	bool begin_child(const char *name, Window_Style window_style);
 	void end_child();
 
@@ -703,6 +716,11 @@ struct Gui_Manager {
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol), const Color &color, u32 index);
 
+	bool begin_menu(const char *name);
+	void end_menu();
+	bool menu_item(Image *image, const char *text, const char *shortcut = NULL, bool submenu = false);
+	void segment();
+
 	bool begin_tree(const char *name);
 	void end_tree();
 
@@ -731,6 +749,7 @@ struct Gui_Manager {
 	Gui_ID get_last_tab_gui_id();
 
 	Size_s32 get_window_size();
+	Size_s32 get_window_size_with_padding();
 	Rect_s32 get_win32_rect();
 	Rect_s32 get_text_rect(const char *text);
 	Rect_s32 get_parent_window_clip_rect(Gui_Window *window);
@@ -740,7 +759,7 @@ struct Gui_Manager {
 	Gui_Window *find_window(const char *name, u32 *window_index = NULL);
 	Gui_Window *find_window_in_order(const char *name, int *window_index);
 
-	Gui_Window *create_window(const char *name, Window_Type window_type, Window_Style window_style);
+	Gui_Window *create_window(const char *name, Window_Type window_type, Window_Style window_style, bool window_open);
 
 	Gui_Window *get_window_by_index(Array<u32> *window_indices, u32 index);
 
@@ -788,6 +807,17 @@ Size_s32 Gui_Manager::get_window_size()
 {
 	Gui_Window *window = get_window();
 	return window->view_rect.get_size();
+}
+
+Size_s32 Gui_Manager::get_window_size_with_padding()
+{
+	Gui_Window *window = get_window();
+	s32 horizontal_padding = window->context->padding.horizontal * 2;
+	s32 vertical_padding = window->context->padding.vertical * 2;
+	Size_s32 window_size = get_window_size();
+	s32 width = window_size.width > horizontal_padding ? window_size.width - horizontal_padding : 0;
+	s32 height = window_size.height > vertical_padding ? window_size.height - vertical_padding : 0;
+	return { width, height };
 }
 
 Rect_s32 Gui_Manager::get_win32_rect()
@@ -846,10 +876,20 @@ static bool find_saved_window_rect(const Pair<String, Rect_s32> &name_rect_pair,
 	return name_rect_pair.first == name;
 }
 
-Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type, Window_Style window_style)
+static bool find_window_pre_setup(const Pair<String, bool> &window_pre_setup, const String &name)
 {
+	return window_pre_setup.first == name;
+}
+
+Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type, Window_Style window_style, bool window_open)
+{
+	Find_Result<Pair<String, bool>> result1 = find_in_array(pre_setup.windows_params, name, find_window_pre_setup);
+	if (result1.found) {
+		window_open = result1.data.second;
+	}
+
 	Gui_Window window;
-	window.open = true;
+	window.open = window_open;
 	window.name = name;
 	window.gui_id = fast_hash(name);
 	window.type = window_type;
@@ -859,9 +899,9 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	offset += window_style & WINDOW_TAB_BAR ? tab_theme.tab_bar_height : 0;
 
 	Rect_s32 rect = GET_DEFAULT_WINDOW_RECT(window_type);
-	Find_Result<Pair<String, Rect_s32>> result = find_in_array(saved_windows_rects, name, find_saved_window_rect);
-	if (result.found) {
-		rect = result.data.second;
+	Find_Result<Pair<String, Rect_s32>> result2 = find_in_array(saved_windows_rects, name, find_saved_window_rect);
+	if (result2.found) {
+		rect = result2.data.second;
 	}
 	
 	window.rect = rect;
@@ -880,8 +920,9 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	window.index_in_windows_order = windows_order.count;
 	
 	windows.push(window);
-	windows_order.push(window.index_in_windows_array);
-
+	if (window_open) {
+		windows_order.push(window.index_in_windows_array);
+	}
 	return &windows.last();
 }
 
@@ -942,6 +983,7 @@ void Gui_Manager::remove_window_from_rendering_order(Gui_Window *window)
 			window->index_in_windows_order = i;
 		}
 	}
+	window->index_in_windows_order = -1;
 }
 
 void Gui_Manager::move_window_on_rendering_order_top(Gui_Window *window)
@@ -956,7 +998,6 @@ void Gui_Manager::move_window_on_rendering_order_top(Gui_Window *window)
 	}
 	window->index_in_windows_order = windows_order.count;
 	windows_order.push(window->index_in_windows_array);
-
 }
 
 inline bool must_rect_be_drawn(Rect_s32 *win_rect, Rect_s32 *item_rect)
@@ -1315,6 +1356,112 @@ bool Gui_Manager::edit_field(const char *name, const char *editing_value, u32 ma
 	edit_field_count++;
 	window->edit_field_count++;
 	return update_value;
+}
+
+bool Gui_Manager::begin_menu(const char *name)
+{
+	static bool close_window_in_next_frame = false;
+	static Gui_ID window_id = 0;
+
+	String menu_window_name = MENU_WINDOW_PREFIX + name;
+
+	if (close_window_in_next_frame) {
+	}
+	
+	Gui_Window_Theme menu_window_theme;
+	menu_window_theme.background_color = menu_theme.background_color;
+	menu_window_theme.rects_padding = menu_theme.rects_padding;
+	menu_window_theme.horizontal_padding = menu_theme.horizontal_padding;
+	menu_window_theme.vertical_padding = menu_theme.vertical_padding;
+
+	gui::set_theme(&menu_window_theme);
+	gui::set_next_window_size(menu_theme.menu_window_width, -1);
+	if (begin_window(menu_window_name, WINDOW_AUTO_HEIGHT, false)) {
+		Gui_Window *window = get_window();
+		if (window->gui_id == became_just_actived) {
+			window_id = 0;
+		} else if ((hot_item == window->gui_id) && (window_id != window->gui_id)) {
+			window_id = window->gui_id;
+		} else if ((hot_item != window->gui_id) && (window_id == window->gui_id)) {
+			close_window_in_next_frame = false;
+			window_id = 0;
+			close_window(menu_window_name);
+		}
+		return true;
+	}
+	gui::reset_window_theme();
+	return false;
+}
+
+bool Gui_Manager::menu_item(Image *image, const char *text, const char *shortcut, bool submenu)
+{
+	Context *context = get_context();
+	Gui_Window *window = get_window();
+
+	Rect_s32 menu_item_rect = { 0, 0, get_window_size_with_padding().width, menu_theme.menu_item_height };
+	context->place_rect(&menu_item_rect);
+
+	Gui_ID menu_item_gui_id = 0;
+	if (must_rect_be_drawn(&window->clip_rect, &menu_item_rect)) {
+		menu_item_gui_id = GET_MENU_ITEM_GUI_ID();
+		update_active_and_hot_state(window, menu_item_gui_id, &menu_item_rect);
+		
+		if ((became_just_actived != window->gui_id) && was_click(KEY_LMOUSE)) {
+			window->open = false;
+			remove_window_from_rendering_order(window);
+		}
+		Color menu_item_color = (hot_item == menu_item_gui_id) ? menu_theme.item_hover_color : menu_theme.background_color;
+
+		Rect_s32 image_rect = { 0, 0, 0, 0 };
+		s32 image_padding = 0;
+		if (image) {
+			image_rect.set(menu_theme.image_size);
+			place_in_middle_and_by_left(&menu_item_rect, &image_rect, menu_theme.image_padding);
+		}
+		if (image || menu_theme.layout_by_image) {
+			image_padding = menu_theme.image_padding + menu_theme.image_size.width;
+		}
+
+		Rect_s32 text_rect = get_text_rect(text);
+		place_in_middle_and_by_left(&menu_item_rect, &text_rect, menu_theme.text_padding + image_padding);
+
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		Rect_s32 clip_rect = calculate_clip_rect(&window->clip_rect, &menu_item_rect);
+		render_list->push_clip_rect(&clip_rect);
+		render_list->add_rect(&menu_item_rect, menu_item_color, 5);
+		if (image) {
+			render_list->add_texture(&image_rect, &image->texture);
+		}
+		render_list->add_text(&text_rect, text);
+		render_list->pop_clip_rect();
+
+	}
+	menu_item_count++;
+	return (hot_item == menu_item_gui_id) && was_click(KEY_LMOUSE);
+}
+
+void Gui_Manager::segment()
+{
+	Context *context = get_context();
+	Gui_Window *window = get_window();
+
+	Rect_s32 space_rect = { 0, 0, get_window_size_with_padding().width, menu_theme.vertical_segment_padding + (s32)menu_theme.segment_line_thickness};
+	context->place_rect(&space_rect);
+	if (must_rect_be_drawn(&window->clip_rect, &space_rect)) {
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		Rect_s32 clip_rect = calculate_clip_rect(&window->clip_rect, &space_rect);
+		render_list->push_clip_rect(&clip_rect);
+		Point_s32 p1 = Point_s32(window->view_rect.x + menu_theme.horizontal_segment_padding, space_rect.y + (menu_theme.vertical_segment_padding / 2));
+		Point_s32 p2 = Point_s32(window->view_rect.right() - menu_theme.horizontal_segment_padding, space_rect.y + (menu_theme.vertical_segment_padding / 2));
+		render_list->add_line(p1, p2, Color(45), menu_theme.segment_line_thickness);
+		render_list->pop_clip_rect();
+	}
+}
+
+void Gui_Manager::end_menu()
+{
+	end_window();
+	gui::reset_window_theme();
 }
 
 bool Gui_Manager::begin_tree(const char *name)
@@ -2754,6 +2901,7 @@ void Gui_Manager::new_frame()
 	tab_count = 0;
 	list_count = 0;
 	list_box_count = 0;
+	menu_item_count = 0;
 	edit_field_count = 0;
 	became_just_actived = 0;
 	hover_window = 0;
@@ -2805,15 +2953,16 @@ void Gui_Manager::end_frame()
 	}
 }
 
-bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
+bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool window_open)
 {
 	Gui_Window *window = find_window(name);
 	if (!window) {
-		window = create_window(name, WINDOW_TYPE_PARENT, window_style);
+		window = create_window(name, WINDOW_TYPE_PARENT, window_style, window_open);
 		setup_active_window(window);
 	}
 
 	if (!window->open) {
+		reset_window_params = 0;
 		return false;
 	}
 
@@ -2833,7 +2982,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	Rect_s32 *rect = &window->rect;
 
 	bool mouse_was_moved = (mouse_x_delta != 0) || (mouse_y_delta != 0);
-	if (mouse_was_moved && !active_scrolling && (resizing_window == 0) && (active_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
+	if ((window_style & WINDOW_MOVE) && mouse_was_moved && !active_scrolling && (resizing_window == 0) && (active_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
 		s32 min_window_position = 0;
 		if (window->style & WINDOW_OUTLINES) {
 			min_window_position = (s32)window_theme.outlines_width;
@@ -2841,6 +2990,14 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 		s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)Render_System::screen_width - rect->width);
 		s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)Render_System::screen_height - rect->height);
 		window->set_position(x, y);
+	}
+
+	if ((window_style & WINDOW_AUTO_WIDTH) && !((reset_window_params & SET_WINDOW_SIZE) && (pre_setup.window_rect.width > 0))) {
+		rect->width = prev_content_rect.width;
+	}
+
+	if ((window_style & WINDOW_AUTO_HEIGHT) && !((reset_window_params & SET_WINDOW_SIZE) && (pre_setup.window_rect.height > 0))) {
+		rect->height = prev_content_rect.height;
 	}
 
 	static Rect_Side rect_side;
@@ -2919,7 +3076,8 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	}
 
 	if (reset_window_params & SET_WINDOW_SIZE) {
-		rect->set_size(pre_setup.window_rect.width, pre_setup.window_rect.height);
+		rect->width = pre_setup.window_rect.width > 0 ? pre_setup.window_rect.width : rect->width;
+		rect->height = pre_setup.window_rect.height > 0 ? pre_setup.window_rect.height : rect->height;
 		reset_window_params &= ~SET_WINDOW_SIZE;
 	}
 
@@ -2927,6 +3085,9 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 		//backup_window_theme = window_theme;
 		//window_theme = future_window_theme;
 	}
+
+	window->content_rect.width += window_theme.horizontal_padding;
+	window->content_rect.height += window_theme.vertical_padding - window_theme.rects_padding;
 
 	render_window(window);
 	window->clip_rect = window->view_rect;
@@ -3044,6 +3205,29 @@ void Gui_Manager::render_window(Gui_Window *window)
 	}
 }
 
+void Gui_Manager::open_window(const char *name)
+{
+	Gui_Window *window = find_window(name);
+	if (window && !window->open) {
+		window->open = true;
+		setup_active_window(window);
+		move_window_on_rendering_order_top(window);
+	} else {
+		pre_setup.windows_params.push({ name, true });
+	}
+}
+
+void Gui_Manager::close_window(const char *name)
+{
+	Gui_Window *window = find_window(name);
+	if (window && window->open) {
+		window->open = false;
+		remove_window_from_rendering_order(window);
+	} else {
+		pre_setup.windows_params.push({ name, false });
+	}
+}
+
 bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 {
 	assert(!window_stack.is_empty());
@@ -3051,7 +3235,7 @@ bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 	Gui_Window *parent_window = get_window();
 	Gui_Window *child_window = find_window(name);
 	if (!child_window) {
-		child_window = create_window(name, WINDOW_TYPE_CHILD, window_style);
+		child_window = create_window(name, WINDOW_TYPE_CHILD, window_style, true);
 		//Windows array could be resized.
 		parent_window = get_window();
 		parent_window->child_windows.push(child_window->index_in_windows_array);
@@ -3380,6 +3564,41 @@ bool gui::edit_field(const char *name, Vector3 *vector, const char *x, const cha
 	return gui_manager.edit_field(name, vector, x, y, z);
 }
 
+bool gui::begin_menu(const char *name)
+{
+	return gui_manager.begin_menu(name);
+}
+
+bool gui::menu_item(const char *text, const char *shortcut, bool submenu)
+{
+	return gui_manager.menu_item(NULL, text, shortcut, submenu);
+}
+
+bool gui::menu_item(Image *image, const char *text, const char *shortcut, bool submenu)
+{
+	return gui_manager.menu_item(image, text, shortcut, submenu);
+}
+
+void gui::end_menu()
+{
+	gui_manager.end_menu();
+}
+
+void gui::segment()
+{
+	gui_manager.segment();
+}
+
+void gui::open_menu(const char *name)
+{
+	gui_manager.open_window(MENU_WINDOW_PREFIX + name);
+}
+
+void gui::close_menu(const char *name)
+{
+	gui_manager.close_window(MENU_WINDOW_PREFIX + name);
+}
+
 bool gui::begin_tree(const char *name)
 {
 	return gui_manager.begin_tree(name);
@@ -3549,6 +3768,16 @@ bool gui::begin_window(const char *name, Window_Style window_style)
 void gui::end_window()
 {
 	gui_manager.end_window();
+}
+
+void gui::open_window(const char *name)
+{
+	gui_manager.open_window(name);
+}
+
+void gui::close_window(const char *name)
+{
+	gui_manager.close_window(name);
 }
 
 bool gui::begin_child(const char *name, Window_Style window_style)

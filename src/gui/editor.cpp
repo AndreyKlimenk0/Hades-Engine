@@ -737,15 +737,16 @@ void Drop_Down_Entity_Window::init(Engine *engine)
 {
 	Editor_Window::init(engine);
 
-	window_size = { 220, 150 };
+	window_size = { 200, 22 * 5 + 2 * 5 };
 
-	window_theme.background_color = Color(40, 40, 40);
-	window_theme.header_color = Color(36, 36, 36);
+	window_theme.background_color = Color(24);
 	window_theme.rects_padding = 0;
+	window_theme.horizontal_padding = 5;
+	window_theme.vertical_padding = 5;
 
-	buttons_theme.rect.set_size(window_size.width, 25);
+	buttons_theme.rect.set_size(window_size.width - window_theme.horizontal_padding * 2, 22);
 	buttons_theme.color = window_theme.background_color;
-	//buttons_theme.aligment = LEFT_ALIGNMENT;
+	buttons_theme.text_layout = LAYOUT_LEFT;
 }
 
 void Drop_Down_Entity_Window::draw()
@@ -1113,45 +1114,23 @@ Editor::~Editor()
 {
 }
 
-void load_textures(Gpu_Device *gpu_device, Array<Pair<String, Texture2D *>> &textures)
-{
-	assert(gpu_device);
-
-	u8 *image_data = NULL;
-	u32 width = 0;
-	u32 height = 0;
-	String full_path;
-	Texture2D_Desc texture_desc;
-	for (u32 i = 0; i < textures.count; i++) {
-		build_full_path_to_editor_file(textures[i].first, full_path);
-		if (file_exists(full_path)) {
-			if (load_png_file(full_path, &image_data, &width, &height)) {
-				texture_desc.width = width;
-				texture_desc.height = height;
-				texture_desc.mip_levels = 1;
-				texture_desc.data = (void *)image_data;
-				gpu_device->create_texture_2d(&texture_desc, textures[i].second);
-				gpu_device->create_shader_resource_view(&texture_desc, textures[i].second);
-				DELETE_PTR(image_data);
-			}
-		} else {
-			print("load_textures: {} doesn't exist in the editor directory.", textures[i].first);
-		}
-	}
-}
-
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-
 void Editor::init(Engine *engine)
 {
 	render_sys = &engine->render_sys;
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
-	entity_window.init(engine);
-	entities_window.init(engine);
-	command_window.init(engine);
-	drop_down_entity_window.init(engine);
+	windows.push(&left_buttons);
+	windows.push(&entity_window);
+	windows.push(&entities_window);
+	windows.push(&command_window);
+	windows.push(&drop_down_entity_window);
+
+	for (u32 i = 0; i < windows.count; i++) {
+		windows[i]->init(engine);
+	}
+	
+	left_buttons.open();
 
 	if (game_world->cameras.is_empty()) {
 		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
@@ -1171,11 +1150,6 @@ void Editor::init(Engine *engine)
 	key_command_bindings.set("", KEY_RMOUSE); // Don't want to get annoyiny messages
 
 	key_bindings.bind(KEY_CTRL, KEY_C); // Command window keys binding
-
-	Pair<String, Image *> images[] = { { "entity2.png", &entity_icon_image }, { "entities.png", &entities_icon_image }, { "rendering.png", &rendering_icon_image } };
-	for (u32 i = 0; i < ARRAY_SIZE(images); i++) {
-		images[i].second->init_from_file(images[i].first, "editor");
-	}
 }
 
 void Editor::handle_events()
@@ -1278,65 +1252,74 @@ void Editor::picking()
 	}
 }
 
-void Editor::render()
+static void open_or_close_left_window(Editor *editor)
 {
-	gui::begin_frame();
 
-	Gui_Window_Theme window_theme;
+}
+
+void Left_Bar::init(Engine *engine)
+{
+	Editor_Window::init(engine);
+
 	window_theme.rects_padding = 1;
 	window_theme.horizontal_padding = 0;
 	window_theme.vertical_padding = 0;
 	window_theme.background_color = Color(0, 0, 0, 0);
 
-	Gui_Text_Button_Theme button_theme;
-	button_theme.rect = { 0, 0, 50, 50 };
+	button_theme.hover_color = Color(48);
+	button_theme.color = Color(40);
+	button_theme.button_size = { 42, 42 };
+	button_theme.rect_rounding = 0;
 
+	add_button("icons8-add-30.png", &open_or_close_left_window);
+	add_button("entity2.png", &open_or_close_left_window);
+	add_button("entities.png", &open_or_close_left_window);
+	add_button("rendering.png", &open_or_close_left_window);
+}
+
+template <typename T>
+inline bool index_first_or_last(u32 index, Array<T> &array)
+{
+	return (!array.is_empty() && (index == 0) || (index == (array.count - 1)));
+}
+
+void Left_Bar::draw()
+{
 	gui::set_theme(&window_theme);
 	gui::set_next_window_pos(10, 20);
-	gui::set_next_window_size(50, 170);
+	gui::set_next_window_size(50, 270);
 	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
-
-		Gui_Image_Button_Theme button_theme;
-		button_theme.hover_color = Color(48);
-		button_theme.color = Color(38);
-		gui::set_theme(&button_theme);
-		if (gui::image_button(&entity_icon_image)) {
-			if (!entity_window.window_open) {
-				entity_window.open();
-			} else {
-				entity_window.close();
+		for (u32 i = 0; i < left_bar_buttons.count; i++) {
+			Gui_Image_Button_Theme theme = button_theme;
+			if (index_first_or_last(i, left_bar_buttons)) {
+				theme.rect_rounding = 5;
 			}
-		}
-
-		Gui_Image_Button_Theme button_theme2 = button_theme;
-		button_theme2.rect_rounding = 0;
-		gui::set_theme(&button_theme2);
-		if (gui::image_button(&entities_icon_image)) {
-			if (!entities_window.window_open) {
-				entities_window.open();
-			} else {
-				entities_window.close();
+			gui::set_theme(&theme);
+			if (gui::image_button(&left_bar_buttons[i].image)) {
+				left_bar_buttons[i].callback(editor);
 			}
 		}
 		gui::reset_image_button_theme();
-		
-		gui::set_theme(&button_theme);
-		gui::image_button(&rendering_icon_image);
-		gui::reset_image_button_theme();
-
 		gui::end_window();
 	}
 	gui::reset_window_theme();
+}
 
-	if (command_window.window_open) {
-		command_window.draw();
+void Left_Bar::add_button(const char *image_name, void(*callback)(Editor *editor))
+{
+	Image left_bar_icon;
+	if (left_bar_icon.init_from_file(image_name, "editor")) {
+		left_bar_buttons.push({ left_bar_icon, callback });
 	}
+}
 
-	if (entity_window.window_open) {
-		entity_window.draw();
-	}
-	if (entities_window.window_open) {
-		entities_window.draw();
+void Editor::render()
+{
+	gui::begin_frame();
+	for (u32 i = 0; i < windows.count; i++) {
+		if (windows[i]->window_open) {
+			windows[i]->draw();
+		}
 	}
 	gui::end_frame();
 }
