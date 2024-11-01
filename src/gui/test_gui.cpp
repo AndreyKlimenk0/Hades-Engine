@@ -646,14 +646,70 @@ void test_window()
 	//}
 }
 
+void test_window_auto_size()
+{
+	if (begin_window("Check window")) {
+		if (button("Open menu")) {
+			open_menu("Test menu");
+		}
+		if (button("Close menu")) {
+			close_menu("Test menu");
+		}
+		if (button("Open menu2")) {
+			open_menu("Test menu2");
+		}
+		if (button("Close menu2")) {
+			close_menu("Test menu2");
+		}
+		end_window();
+	}
+	static bool init = false;
+	static Image up;
+	if (!init) {
+		init = true;
+		up.init_from_file("icons8-sun-22.png", "editor");
+	}
+	if (gui::begin_menu("Test menu")) {
+		gui::menu_item(&up, "Add entity");
+		gui::menu_item("Delete entity");
+		gui::menu_item("Copy entity");
+		gui::segment();
+		gui::menu_item("Move");
+		gui::menu_item("Animate");
+		gui::menu_item("Add animation");
+		gui::segment();
+		gui::menu_item("Select");
+		gui::menu_item("Convert to");
+		gui::menu_item("Set origin");
+		gui::end_menu();
+	}
+
+	set_next_window_pos(500, 100);
+	if (gui::begin_menu("Test menu2")) {
+		gui::menu_item(&up, "Light");
+		gui::menu_item("Shape");
+		gui::menu_item("Box");
+		gui::segment();
+		gui::menu_item("Move");
+		gui::menu_item("Animate");
+		gui::menu_item("Add animation");
+		gui::segment();
+		gui::menu_item("Ground");
+		gui::menu_item("Go");
+		gui::menu_item("Set origin");
+		gui::end_menu();
+	}
+}
+
 void draw_test_gui()
 {
 	begin_frame();
+	test_window_auto_size();
 	//test_window();
-	test_gui_context_layout();
+	//test_gui_context_layout();
 	//draw_test_tab_window();
-	draw_test_list_window();
-	draw_test_main_window();
+	//draw_test_list_window();
+	//draw_test_main_window();
 
 	gui::end_frame();
 }

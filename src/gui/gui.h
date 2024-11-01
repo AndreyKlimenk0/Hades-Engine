@@ -36,7 +36,10 @@ const Window_Style WINDOW_SCROLL_BAR = 0x4;
 const Window_Style WINDOW_RESIZABLE = 0x8;
 const Window_Style WINDOW_CLOSE_BUTTON = 0x10;
 const Window_Style WINDOW_TAB_BAR = 0x20;
-const Window_Style WINDOW_DEFAULT_STYLE = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON;
+const Window_Style WINDOW_AUTO_WIDTH = 0x40;
+const Window_Style WINDOW_AUTO_HEIGHT = 0x80;
+const Window_Style WINDOW_MOVE = 0x100;
+const Window_Style WINDOW_DEFAULT_STYLE = WINDOW_HEADER | WINDOW_OUTLINES | WINDOW_SCROLL_BAR | WINDOW_RESIZABLE | WINDOW_CLOSE_BUTTON | WINDOW_MOVE;
 
 const u32 GUI_ROUND_TOP_LEFT_RECT = 0x1;
 const u32 GUI_ROUND_TOP_RIGHT_RECT = 0x2;
@@ -172,6 +175,24 @@ struct Gui_Tree_List_Theme {
 	Size_s32 window_size = Size_s32(500, 300);
 };
 
+struct Gui_Menu_Theme {
+	bool layout_by_image = true;
+	s32 rects_padding = 0;
+	s32 horizontal_padding = 6;
+	s32 vertical_padding = 6;
+	s32 menu_window_width = 200;
+	s32 menu_item_height = 22;
+	s32 text_padding = 4;
+	s32 image_padding = 4;
+	s32 vertical_segment_padding = 5;
+	s32 horizontal_segment_padding = 10;
+	float segment_line_thickness = 1.5f;
+	Color background_color = Color(24);
+	Color item_hover_color = Color(40);
+	Size_s32 image_size = Size_s32(20, 20);
+	//Color item_hover_color = Color(51, 77, 128);
+};
+
 struct Gui_Window_Theme {
 	s32 header_height = 18;
 	s32 rounded_border = 6;
@@ -206,6 +227,9 @@ namespace gui
 
 	bool begin_window(const char *name, Window_Style window_style = WINDOW_DEFAULT_STYLE);
 	void end_window();
+
+	void open_window(const char *name);
+	void close_window(const char *name);
 
 	bool begin_child(const char *name, Window_Style window_style = WINDOW_DEFAULT_STYLE);
 	void end_child();
@@ -253,6 +277,14 @@ namespace gui
 	void edit_field(const char *name, float *value);
 	void edit_field(const char *name, String *string);
 	bool edit_field(const char *name, Vector3 *vector, const char *x = "X", const char *y = "Y", const char *z = "z");
+
+	bool begin_menu(const char *name);
+	bool menu_item(const char *text, const char *shortcut = NULL, bool submenu = false);
+	bool menu_item(Image *image, const char *text, const char *shortcut = NULL, bool submenu = false);
+	void end_menu();
+	void segment();
+	void open_menu(const char *name);
+	void close_menu(const char *name);
 
 	bool begin_tree(const char *name);
 	void end_tree();
