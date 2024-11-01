@@ -13,21 +13,38 @@ Image::~Image()
 {
 	width = 0;
 	height = 0;
+	file_name.free();
 	texture.release();
 }
 
-bool Image::init_from_file(const char *file_name, const char *data_directory_name)
+Image::Image(const Image &other)
 {
-	assert(file_name);
+	*this = other;
+}
+
+Image &Image::operator=(const Image &other)
+{
+	if (this != &other) {
+		width = other.width;
+		height = other.height;
+		file_name = other.file_name;
+		texture = other.texture;
+	}
+	return *this;
+}
+
+bool Image::init_from_file(const char *_file_name, const char *data_directory_name)
+{
+	assert(_file_name);
 	assert(data_directory_name);
 
 	String file_extension;
-	if (!extract_file_extension(file_name, file_extension) || (file_extension != "png")) {
+	if (!extract_file_extension(_file_name, file_extension) || (file_extension != "png")) {
 		return false;
 	}
 	String path_to_data_directory;
 	build_full_path_to_data_directory(data_directory_name, path_to_data_directory);
-	String full_path_to_image_file = join_paths(path_to_data_directory, file_name);
+	String full_path_to_image_file = join_paths(path_to_data_directory, _file_name);
 	if (!file_exists(full_path_to_image_file)) {
 		return false;
 	}
@@ -46,6 +63,7 @@ bool Image::init_from_file(const char *file_name, const char *data_directory_nam
 		gpu_device->create_texture_2d(&texture_desc, &texture);
 		gpu_device->create_shader_resource_view(&texture_desc, &texture);
 		
+		file_name = _file_name;
 		width = image_width;
 		height = image_height;
 		DELETE_PTR(image_data);

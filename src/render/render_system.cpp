@@ -13,7 +13,7 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
-#define TRUN_ON_RECT_CLIPPING 1
+#define TURN_ON_RECT_CLIPPING 1
 
 u32 Render_System::screen_width = 0;
 u32 Render_System::screen_height = 0;
@@ -175,14 +175,14 @@ Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d, Font *font, R
 
 void Render_Primitive_List::push_clip_rect(Rect_s32 *rect)
 {
-#if TRUN_ON_RECT_CLIPPING
+#if TURN_ON_RECT_CLIPPING
 	clip_rects.push(*rect);
 #endif
 }
 
 void Render_Primitive_List::pop_clip_rect()
 {
-#if TRUN_ON_RECT_CLIPPING
+#if TURN_ON_RECT_CLIPPING
 	if (clip_rects.count > 0) {
 		clip_rects.pop();
 	}
