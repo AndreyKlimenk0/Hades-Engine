@@ -920,7 +920,7 @@ Gui_Window *Gui_Manager::create_window(const char *name, Window_Type window_type
 	window.index_in_windows_order = windows_order.count;
 	
 	windows.push(window);
-	if (window_open) {
+	if (window_open && (window_type == WINDOW_TYPE_PARENT)) {
 		windows_order.push(window.index_in_windows_array);
 	}
 	return &windows.last();
