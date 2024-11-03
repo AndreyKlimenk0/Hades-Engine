@@ -22,17 +22,18 @@ typedef Enum_Helper<Geometry_Type> Geometry_Type_Helper;
 struct Editor_Window {
 	Editor_Window() {}
 	~Editor_Window() {}
-
-	bool window_open = false;
-
+	
 	Editor *editor = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 	Render_System *render_system = NULL;
 
+	bool window_open = false;
 	Rect_s32 window_rect;
+	String name;
 
 	virtual void init(Engine *engine);
+	virtual void init(const char *_name, Engine *engine);
 	virtual void open();
 	virtual void close();
 	virtual void draw() = 0;
@@ -41,27 +42,19 @@ struct Editor_Window {
 	void set_size(s32 width, s32 height);
 };
 
-struct Entity_Window : Editor_Window {
+struct Top_Right_Window : Editor_Window {
 	Gui_Window_Theme window_theme;
 
+	void init(const char *_name, Engine *engine);
+};
+
+struct Entity_Window : Top_Right_Window {
 	void init(Engine *engine);
 	void draw();
 };
 
-struct Entity_Tree_Window : Editor_Window {
-	Gui_Window_Theme window_theme;
-
-
-	void init(Engine *engine);
-	void draw();
-};
-
-struct Drop_Down_Entity_Window : Editor_Window {
-	Size_u32 window_size;
-	Point_s32 mouse_position; // When happens the right button mouse click by a picking entity, the variable stores current mouse position.
-
-	Gui_Window_Theme window_theme;
-	Gui_Text_Button_Theme buttons_theme;
+struct Entity_Tree_Window : Top_Right_Window {
+	Gui_Tree_Theme tree_theme;
 
 	void init(Engine *engine);
 	void draw();
@@ -116,21 +109,6 @@ enum Editor_Mode_Type {
 	EDITOR_MODE_SCALE_ENTITY,
 };
 
-struct Left_Bar_Button {
-	Image image;
-	void (*callback)(Editor *editor) = NULL;
-};
-
-struct Left_Bar : Editor_Window {
-	Gui_Window_Theme window_theme;
-	Gui_Image_Button_Theme button_theme;
-	Array<Left_Bar_Button> left_bar_buttons;
-
-	void init(Engine *engine);
-	void draw();
-	void add_button(const char *image_name, void (*callback)(Editor *editor));
-};
-
 struct Editor {
 	Editor();
 	~Editor();
@@ -143,11 +121,23 @@ struct Editor {
 	Render_System *render_sys = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
+	Point_s32 mouse_position;
 
 	struct Settings {
 		float camera_speed = 5.0f;
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
+
+	struct Left_Bar {
+		struct Images {
+			Image adding;
+			Image entity;
+			Image entities;
+			Image rendering;
+		} images;
+		Gui_Window_Theme window_theme;
+		Gui_Image_Button_Theme button_theme;
+	} left_bar;
 
 	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
@@ -156,17 +146,22 @@ struct Editor {
 	Entity_Window entity_window;
 	Entity_Tree_Window entities_window;
 	Command_Window command_window;
-	Drop_Down_Entity_Window drop_down_entity_window;
 
 	Array<Editor_Window *> windows;
 	Array<Editor_Window *> top_right_windows;
 
 	void init(Engine *engine);
+	void init_left_bar();
+
 	void handle_events();
 	void update();
 	void picking();
+	
 	void render();
+	void render_menus();
+	void render_left_bar();
 
+	void open_or_close_right_window(Editor_Window *window);
 	void convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands);
 	void convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands);
 };
