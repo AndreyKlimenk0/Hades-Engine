@@ -982,8 +982,8 @@ void Gui_Manager::remove_window_from_rendering_order(Gui_Window *window)
 			Gui_Window *window = get_window_by_index(&windows_order, i);
 			window->index_in_windows_order = i;
 		}
+		window->index_in_windows_order = -1;
 	}
-	window->index_in_windows_order = -1;
 }
 
 void Gui_Manager::move_window_on_rendering_order_top(Gui_Window *window)
@@ -1477,7 +1477,7 @@ bool Gui_Manager::begin_tree(const char *name)
 	}
 #endif
 	Gui_Window_Theme tree_window_theme;
-	tree_window_theme.background_color = list_theme.background_color;
+	tree_window_theme.background_color = tree_theme.background_color;
 	tree_window_theme.rects_padding = 0;
 	tree_window_theme.horizontal_padding = 0;
 	tree_window_theme.vertical_padding = 0;
@@ -1487,10 +1487,9 @@ bool Gui_Manager::begin_tree(const char *name)
 	const auto compare_function = [](Ordered_Tree<Gui_Tree_Node> *tree, const String &string) {
 		return tree->root_node ? tree->root_node->data.name == string : false;
 	};
-	gui::set_theme(&tree_window_theme);
 
-	Gui_Tree_Theme *theme = &tree_theme;
-	set_next_window_size(theme->window_size.width, theme->window_size.height);
+	gui::set_theme(&tree_window_theme);
+	set_next_window_size(tree_theme.window_size.width, tree_theme.window_size.height);
 	if (begin_child(name, WINDOW_SCROLL_BAR)) {
 		Gui_Window *window = get_parent_window(get_window());
 		Find_Result<Ordered_Tree<Gui_Tree_Node> *> find_result = find_in_array(window->trees, name, compare_function);
@@ -3922,6 +3921,7 @@ bool gui::were_events_handled()
 	for (u32 i = 0; i < gui_manager.windows_order.count; i++) {
 		Gui_Window *window = gui_manager.get_window_by_index(&gui_manager.windows_order, i);
 		if (detect_intersection(&window->rect)) {
+			print("Window intersection, name = {}, rect = {}", window->name.c_str(), &window->rect);
 			return true;
 		}
 	}

@@ -37,6 +37,28 @@ static const String str_entity_types[STR_ENTITY_TYPES_COUNT] = {
 	"Camera"
 };
 
+inline Rect_s32 get_display_screen_rect()
+{
+	return Rect_s32(0, 0, Render_System::screen_width, Render_System::screen_height);
+}
+
+inline void place_rect_on_top_right(Rect_s32 *src, Rect_s32 *dest)
+{
+	assert(src);
+	assert(dest);
+	assert(src->width >= dest->width);
+
+	dest->x = src->width - dest->width;
+	dest->y = 0;
+}
+
+static String to_string(Entity_Id entity_id)
+{
+	char *entity_index = to_string(entity_id.index);
+	defer(free_string(entity_index));
+	return str_entity_types[(u32)entity_id.type] + "#" + entity_index;
+}
+
 inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element)
 {
 	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
@@ -195,22 +217,30 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 
 void Editor_Window::init(Engine *engine)
 {
-	assert(engine);
-
 	editor = &engine->editor;
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 	render_system = &engine->render_sys;
 }
 
+void Editor_Window::init(const char *_name, Engine *engine)
+{
+	assert(engine);
+
+	name = _name;
+	Editor_Window::init(engine);
+}
+
 void Editor_Window::open()
 {
 	window_open = true;
+	gui::open_window(name);
 }
 
 void Editor_Window::close()
 {
 	window_open = false;
+	gui::close_window(name);
 }
 
 void Editor_Window::set_position(s32 x, s32 y)
@@ -223,558 +253,120 @@ void Editor_Window::set_size(s32 width, s32 height)
 	window_rect.set_size(width, height);
 }
 
-void Make_Entity_Window::init(Engine *engine)
+void Top_Right_Window::init(const char *_name, Engine *engine)
 {
-	Editor_Window::init(engine);
+	Editor_Window::init(_name, engine);
 
-	set_normal_enum_formatting();
-	entity_type_helper = MAKE_ENUM_HELPER(Entity_Type, ENTITY_TYPE_UNKNOWN, ENTITY_TYPE_ENTITY, ENTITY_TYPE_LIGHT, ENTITY_TYPE_GEOMETRY, ENTITY_TYPE_CAMERA);
-	entity_type_helper->get_string_enums(&entity_types);
-
-	light_type_helper = MAKE_ENUM_HELPER(Light_Type, SPOT_LIGHT_TYPE, POINT_LIGHT_TYPE, DIRECTIONAL_LIGHT_TYPE);
-	light_type_helper->get_string_enums(&light_types);
-
-	geometry_type_helper = MAKE_ENUM_HELPER(Geometry_Type, GEOMETRY_TYPE_BOX, GEOMETRY_TYPE_GRID, GEOMETRY_TYPE_SPHERE);
-	geometry_type_helper->get_string_enums(&geometry_types);
+	window_theme.rounded_border = 10;
+	window_theme.header_height = 25;
+	window_theme.background_color = Color(24);
+	window_theme.outlines_width = 2.0f;
 }
 
-void Make_Entity_Window::reset_state()
+void Entity_Window::init(Engine *engine)
 {
-	light_index = 0;
-	entity_index = 0;
-	geometry_index = 0;
-	box;
-	position = Vector3(0.0f, 0.0f, 0.0f);
-	direction = Vector3(0.2f, -1.0f, 0.2f);
-	color = Vector3(255.0, 255.0, 255.0);
-
-	camera_fields.position = Vector3::zero;
-	camera_fields.target = Vector3::base_z;
+	Top_Right_Window::init("Entity window", engine);
+	set_size(400, 600);
+	Rect_s32 screen_rect = get_display_screen_rect();
+	place_rect_on_top_right(&screen_rect, &window_rect);
 }
 
-void Make_Entity_Window::draw()
+void Entity_Window::draw()
 {
-	gui::edit_field("Position", &position);
-	gui::list_box(&entity_types, &entity_index);
+	static Entity_Id prev_entity_id;
+	static Vector3 scaling;
+	static Vector3 rotation;
+	static Vector3 position;
 
-	Entity_Type type = entity_type_helper->from_string(entity_types[entity_index]);
-
-	if (type == ENTITY_TYPE_LIGHT) {
-		gui::list_box(&light_types, &light_index);
-		Light_Type light_type = light_type_helper->from_string(light_types[light_index]);
-
-		if (light_type == DIRECTIONAL_LIGHT_TYPE) {
-			gui::edit_field("Direction", &direction);
-			gui::edit_field("Color", &color, "R", "G", "B");
-			if (gui::button("Make")) {
-				Color normalized_light_color = { (s32)color.x, (s32)color.y, (s32)color.y };
-				game_world->make_direction_light(direction, to_vector3(normalized_light_color));
-			}
-		}
-
-	} else if (type == ENTITY_TYPE_GEOMETRY) {
-		gui::list_box(&geometry_types, &geometry_index);
-		Geometry_Type geometry_type = geometry_type_helper->from_string(geometry_types[geometry_index]);
-
-		if (geometry_type == GEOMETRY_TYPE_BOX) {
-			gui::edit_field("Width", &box.width);
-			gui::edit_field("Height", &box.height);
-			gui::edit_field("Depth", &box.depth);
-
-			if (gui::button("Make")) {
-				Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&box);
-
-				Triangle_Mesh mesh;
-				make_box_mesh(&box, &mesh);
-				AABB aabb = make_AABB(&mesh);
-				game_world->attach_AABB(entity_id, &aabb);
-
-				Mesh_Id mesh_id;
-				render_world->add_triangle_mesh(&mesh, &mesh_id);
-				render_world->add_render_entity(entity_id, mesh_id);
-			}
-		} else if (geometry_type == GEOMETRY_TYPE_SPHERE) {
-			gui::edit_field("Radious", &sphere.radius);
-			gui::edit_field("Slice count", (s32 *)&sphere.slice_count);
-			gui::edit_field("Stack count", (s32 *)&sphere.stack_count);
-
-			if (gui::button("Make")) {
-				//Entity_Id entity_id = game_world->make_geometry_entity(position, geometry_type, (void *)&sphere);
-
-				//Triangle_Mesh mesh;
-				//make_sphere_mesh(&sphere, &mesh);
-
-				//char *mesh_name = format("Sphere", sphere.radius, sphere.slice_count, sphere.stack_count);
-				//Mesh_Idx mesh_idx;
-				//render_world->add_mesh(mesh_name, &mesh, &mesh_idx);
-
-				//Render_Entity_Textures render_entity_textures;
-				//render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				//render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				//render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
-				//render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				//render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-
-				//render_world->add_render_entity(RENDERING_TYPE_FORWARD_RENDERING, entity_id, mesh_idx, &render_entity_textures);
-
-				//free_string(mesh_name);
-			}
-		}
-	} else if (type == ENTITY_TYPE_CAMERA) {
-		gui::edit_field("Position", &camera_fields.position);
-		gui::edit_field("Target", &camera_fields.target);
-
-		if (gui::button("Make")) {
-			game_world->make_camera(camera_fields.position, camera_fields.target);
+	Entity *entity = game_world->get_entity(editor->picked_entity);
+	String str_entity_id;
+	if (entity) {
+		str_entity_id = to_string(get_entity_id(entity));
+		if (editor->picked_entity != prev_entity_id) {
+			scaling = entity->scaling;
+			rotation = entity->rotation;
+			position = entity->position;
 		}
 	}
-}
-
-void Game_World_Window::init(Engine *engine)
-{
-	Editor_Window::init(engine);
-
-	window_width_delta = 20;
-	world_entities_height = 200;
-	entity_info_height = 400;
-	window_style = WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES;
-
-	world_entities_window_theme.background_color = Color(40, 40, 40);
-	world_entities_window_theme.header_color = Color(36, 36, 36);
-	world_entities_window_theme.place_between_rects = 0;
-	world_entities_window_theme.horizontal_offset_from_sides = 0;
-	world_entities_window_theme.vertical_offset_from_sides = 0;
-
-	entity_info_window_theme.background_color = Color(40, 40, 40);
-	entity_info_window_theme.header_color = Color(36, 36, 36);
-	entity_info_window_theme.place_between_rects = 8;
-
-	buttons_theme.color = world_entities_window_theme.background_color;
-	buttons_theme.aligment = LEFT_ALIGNMENT;
-}
-
-void Game_World_Window::draw()
-{
-	Size_s32 window_size = gui::get_window_size();
-	gui::set_next_window_size(window_size.width - window_width_delta, world_entities_height);
-	gui::set_theme(&world_entities_window_theme);
-	if (gui::begin_child("World entities", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
-		buttons_theme.rect.width = window_size.width - window_width_delta;
-		gui::set_theme(&buttons_theme);
-
-		draw_entity_list("Entity", game_world->entities.count, ENTITY_TYPE_ENTITY);
-		draw_entity_list("Camera", game_world->cameras.count, ENTITY_TYPE_CAMERA);
-		draw_entity_list("Light", game_world->lights.count, ENTITY_TYPE_LIGHT);
-		draw_entity_list("Geometry", game_world->geometry_entities.count, ENTITY_TYPE_GEOMETRY);
-
-		gui::reset_button_theme();
-		gui::end_child();
+	window_theme.header_text = str_entity_id.c_str();
+	gui::set_theme(&window_theme);
+	gui::set_next_window_pos(window_rect.x, window_rect.y);
+	gui::set_next_window_size(window_rect.width, window_rect.height);
+	if (gui::begin_window(name, WINDOW_HEADER)) {
+		if (entity) {
+			gui::edit_field("Scaling", &scaling);
+			gui::edit_field("Rotation", &rotation);
+			if (gui::edit_field("Position", &position)) {
+				game_world->place_entity(entity, position);
+			}
+			if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
+				static bool temp;
+				gui::radio_button("Draw bounding box", &temp);
+			}
+		}
+		gui::end_window();
 	}
 	gui::reset_window_theme();
+}
 
-	gui::set_theme(&entity_info_window_theme);
-	gui::set_next_window_size(window_size.width - window_width_delta, entity_info_height);
-	if (gui::begin_child("Entity info", (WINDOW_DEFAULT_STYLE & ~WINDOW_OUTLINES))) {
-		Entity *entity = game_world->get_entity(editor->picked_entity);
-		if (entity) {
-			if (entity->type == ENTITY_TYPE_ENTITY) {
-				Vector3 entity_position = entity->position;
-				gui::edit_field("Scaling", &entity->scaling);
-				gui::edit_field("Rotation", &entity->rotation);
-				gui::edit_field("Position", &entity->position);
+void Entity_Tree_Window::init(Engine *engine)
+{
+	Top_Right_Window::init("Entity list window", engine);
+	set_size(400, 600);
+	Rect_s32 screen_rect = get_display_screen_rect();
+	place_rect_on_top_right(&screen_rect, &window_rect);
 
-			} else if (entity->type == ENTITY_TYPE_GEOMETRY) {
-				Geometry_Entity *geometry_entity = static_cast<Geometry_Entity *>(entity);
+	window_theme.horizontal_padding = 0;
+	window_theme.vertical_padding = 0;
 
-				Vector3 entity_position = geometry_entity->position;
-				gui::edit_field("Position", &entity_position);
-				if (entity_position != geometry_entity->position) {
-					game_world->place_entity(geometry_entity, entity_position);
-				}
+	tree_theme.background_color = Color(24);
+	tree_theme.tree_node_color = Color(24);
+	tree_theme.window_size.width = window_rect.width - window_theme.horizontal_padding * 2;
+	tree_theme.window_size.height = window_rect.height - 35;
+}
 
-				if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
-					gui::text("Geometry type: Box");
-					gui::edit_field("Width", &geometry_entity->box.width);
-					gui::edit_field("Height", &geometry_entity->box.height);
-					gui::edit_field("Depth", &geometry_entity->box.depth);
-				} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_SPHERE) {
-					gui::text("Geometry type: Sphere");
-					gui::edit_field("Radius", &geometry_entity->sphere.radius);
-					gui::edit_field("Slice Count", (s32 *)&geometry_entity->sphere.slice_count);
-					gui::edit_field("Stack Count", (s32 *)&geometry_entity->sphere.stack_count);
-				} else if (geometry_entity->geometry_type == GEOMETRY_TYPE_GRID) {
-					gui::text("Geometry type: Grid");
-					gui::edit_field("Width", &geometry_entity->grid.width);
-					gui::edit_field("Depth", &geometry_entity->grid.depth);
-					gui::edit_field("Rows count", (s32 *)&geometry_entity->grid.rows_count);
-					gui::edit_field("Columns count", (s32 *)&geometry_entity->grid.columns_count);
-				}
-			} else if (entity->type == ENTITY_TYPE_LIGHT) {
-				Light *light = static_cast<Light *>(entity);
-
-				if (light->type == DIRECTIONAL_LIGHT_TYPE) {
-					gui::text("Direction Light");
-					if (gui::edit_field("Direction", &light->direction) || gui::edit_field("Color", &light->color, "R", "G", "B")) {
-						render_world->update_lights();
+void Entity_Tree_Window::draw()
+{
+	gui::set_theme(&window_theme);
+	gui::set_next_window_pos(window_rect.x, window_rect.y);
+	gui::set_next_window_size(window_rect.width, window_rect.height);
+	if (gui::begin_window(name, WINDOW_HEADER)) {
+		gui::set_theme(&tree_theme);
+		if (gui::begin_tree("Entities tree")) {
+			if (gui::begin_tree_node("Light")) {
+				for (u32 i = 0; i < game_world->lights.count; i++) {
+					Light *light = &game_world->lights[i];
+					String light_name = to_string(get_entity_id(light));
+					if (gui::begin_tree_node(light_name, GUI_TREE_NODE_FINAL)) {
+						gui::end_tree_node();
 					}
 				}
-			} else if (entity->type == ENTITY_TYPE_CAMERA) {
-				Camera *camera = static_cast<Camera *>(entity);
-
-				gui::edit_field("Position", &camera->position);
-				gui::edit_field("Target", &camera->target);
-
-				if (gui::button("To origin")) {
-					camera->position = Vector3::zero;
-					camera->target = Vector3::base_z;
+				gui::end_tree_node();
+			}
+			if (gui::begin_tree_node("Camera")) {
+				for (u32 i = 0; i < game_world->cameras.count; i++) {
+					Camera *camera = &game_world->cameras[i];
+					String camera_name = to_string(get_entity_id(camera));
+					if (gui::begin_tree_node(camera_name, GUI_TREE_NODE_FINAL)) {
+						gui::end_tree_node();
+					}
 				}
-				if (!draw_frustum_states.key_in_table(camera->idx)) {
-					draw_frustum_states[camera->idx] = false;
+				gui::end_tree_node();
+			}
+			if (gui::begin_tree_node("Entity")) {
+				for (u32 i = 0; i < game_world->entities.count; i++) {
+					Entity *entity = &game_world->entities[i];
+					String entity_name = to_string(get_entity_id(entity));
+					if (gui::begin_tree_node(entity_name, GUI_TREE_NODE_FINAL)) {
+						gui::end_tree_node();
+					}
 				}
-
-				bool was_click = gui::radio_button("Draw frustum", &draw_frustum_states[camera->idx]);
-				//if (was_click && draw_frustum_states[camera->idx] && !find_render_entity(&render_world->line_render_entities, editor->picked_entity)) {
-				//	char *name = format(Render_System::screen_width, Render_System::screen_height, 1000, render_system->view.fov);
-				//	String_Id string_id = fast_hash(name);
-
-				//	Mesh_Idx mesh_idx;
-				//	if (!render_world->line_meshes.mesh_table.get(string_id, &mesh_idx)) {
-				//		Line_Mesh frustum_mesh;
-				//		make_frustum_mesh(render_system->view.fov, render_system->view.ratio, 1.0f, 1000.0f, &frustum_mesh);
-				//		render_world->add_mesh(name, &frustum_mesh, &mesh_idx);
-				//	}
-				//	free_string(name);
-
-				//	Render_Entity_Textures render_entity_textures;
-				//	render_entity_textures.ambient_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				//	render_entity_textures.normal_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				//	render_entity_textures.diffuse_texture_idx = render_world->render_entity_texture_storage.default_texture_idx;
-				//	render_entity_textures.specular_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-				//	render_entity_textures.displacement_texture_idx = render_world->render_entity_texture_storage.white_texture_idx;
-
-				//	render_world->add_render_entity(RENDERING_TYPE_LINES_RENDERING, editor->picked_entity, mesh_idx, &render_entity_textures, (void *)&Color::Red);
-
-				//} else if (was_click && !draw_frustum_states[camera->idx]) {
-				//	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				//	u32 render_entity_index = 0;
-				//	if (find_render_entity(&render_world->line_render_entities, editor->picked_entity, &render_entity_index)) {
-				//		render_world->line_render_entities.remove(render_entity_index);
-				//	}
-				//}
+				gui::end_tree_node();
 			}
+			gui::end_tree();
 		}
-		if (entity && (entity->bounding_box_type != BOUNDING_BOX_TYPE_UNKNOWN) && (entity->type != DIRECTIONAL_LIGHT_TYPE) && (entity->type != ENTITY_TYPE_UNKNOWN)) {
-			if (!draw_AABB_states.key_in_table(entity->idx)) {
-				draw_AABB_states[entity->idx] = false;
-			}
-			static Entity *last_picked_entity = NULL;
-			bool was_click = gui::radio_button("Draw AABB", &draw_AABB_states[entity->idx]);
-			if (was_click && draw_AABB_states[entity->idx]) {
-				if (entity) {
-					last_picked_entity = entity;
-					Line_Mesh AABB_mesh;
-					make_AABB_mesh(&entity->AABB_box.min, &entity->AABB_box.max, &AABB_mesh);
-					render_system->render_3d.set_mesh(&AABB_mesh);
-				}
-			} else if (was_click && !draw_AABB_states[entity->idx]) {
-				render_system->render_3d.reset_mesh();
-				last_picked_entity = NULL;
-			}
-			if (draw_AABB_states[entity->idx] && last_picked_entity) {
-				render_system->render_3d.draw_lines(last_picked_entity->position, Color::Red);
-			}
-		}
-		gui::end_child();
-	}
-	gui::reset_window_theme();
-}
+		gui::reset_tree_theme();
 
-bool Game_World_Window::draw_entity_list(const char *list_name, u32 list_count, Entity_Type type)
-{
-	for (u32 i = 0; i < list_count; i++) {
-		if (gui::button(list_name)) {
-			editor->picked_entity = Entity_Id(type, i);
-			return true;
-		}
-	}
-	return false;
-}
-
-void Render_World_Window::init(Engine *engine)
-{
-	Editor_Window::init(engine);
-	
-	rendering_types.push("Normal");
-	rendering_types.push("Voxel");
-}
-
-void Render_World_Window::update()
-{
-}
-
-inline Vector3 unpack_RGB8(u32 value)
-{
-	u32 r = (value & 0xff000000) >> 24;
-	u32 g = (value & 0x00ff0000) >> 16;
-	u32 b = (value & 0x0000ff00) >> 8;
-	return Vector3((float)r, (float)g, (float)b);
-	//return Vector3(float(value & 0xff000000), float(value & 0x00ff0000), float(value & 0x0000ff00));
-}
-
-void Render_World_Window::draw()
-{
-	static u32 render_type_index = 0;
-	static u32 prev_render_type_index = 0;
-	
-	gui::list_box(&rendering_types, &render_type_index);
-	if (render_type_index != prev_render_type_index) {
-		if (rendering_types[render_type_index] == "Normal") {
-			render_world->frame_render_passes.clear();
-			render_world->frame_render_passes.push(&render_world->render_passes.shadows);
-			render_world->frame_render_passes.push(&render_world->render_passes.forward_light);
-		
-		} else if (rendering_types[render_type_index] == "Voxel") {
-			render_world->frame_render_passes.clear();
-			render_world->frame_render_passes.push(&render_world->render_passes.voxelization);
-		}
-		prev_render_type_index = render_type_index;
-	}
-
-	if (gui::radio_button("Debug cascaded shadows", &debug_cascaded_shadows)) {
-		if (render_world->render_passes.forward_light.is_valid && render_world->render_passes.debug_cascade_shadows.is_valid) {
-			if (debug_cascaded_shadows) {
-				u32 forward_light_index = 0;
-				if (get_render_pass_index("Forward_Light", render_world->frame_render_passes, &forward_light_index)) {
-					render_world->frame_render_passes[forward_light_index] = &render_world->render_passes.debug_cascade_shadows;
-				} else {
-					print("Render_World_Window::draw: Failed turn on cascaded shadows debuging. Forward light pass was not found.");
-				}
-			} else {
-				u32 debug_cascaded_shadows = 0;
-				if (get_render_pass_index("Debug_Cascade_Shadows", render_world->frame_render_passes, &debug_cascaded_shadows)) {
-					render_world->frame_render_passes[debug_cascaded_shadows] = &render_world->render_passes.forward_light;
-				} else {
-					print("Render_World_Window::draw: Failed turn off cascaded shadows debuging. Debug cascaded shadows pass was not found.");
-				}
-			}
-		} else {
-			print("Render_World_Window::draw: Cascaded shadows debuging doesn't work because the render passes is not valid.");
-		}
-	}
-
-	if (gui::radio_button("Dispaly voxel world", &display_voxel_world)) {
-		if (display_voxel_world) {
-			render_world->frame_render_passes.remove(0);
-			render_world->frame_render_passes.remove(0);
-		} else {
-			render_world->frame_render_passes.clear();
-			render_world->frame_render_passes.push(&render_world->render_passes.shadows);
-			render_world->frame_render_passes.push(&render_world->render_passes.forward_light);
-			render_world->frame_render_passes.push(&render_world->render_passes.voxelization);
-		}
-	}
-	if (display_voxel_world) {
-		Array<Voxel> voxels;
-		voxels.reserve(render_world->voxel_grid.ceil_count());
-		memset((void *)voxels.items, 0, voxels.get_size());
-		render_world->voxels_sb.read(&voxels);
-
-		if (!voxels.is_empty()) {
-			auto matrix = make_look_to_matrix(render_world->voxel_grid_center, Vector3::base_z);
-			Size_f32 s = render_world->voxel_grid.ceil_size;
-			Box box = { s.width, s.height, s.depth };
-			Triangle_Mesh tri_mesh;
-			make_box_mesh(&box, &tri_mesh);
-
-			Vertex_Mesh mesh;
-			mesh.vertices.reserve(tri_mesh.vertices.count);
-			mesh.indices.reserve(tri_mesh.indices.count);
-
-			for (u32 i = 0; i < tri_mesh.vertices.count; i++) {
-				mesh.vertices[i] = tri_mesh.vertices[i].position;
-			}
-			mesh.indices = tri_mesh.indices;
-
-			render_system->render_3d.set_mesh(&mesh);
-
-			Size_s32 voxel_grid_size = (Size_s32)render_world->voxel_grid.grid_size / 2;
-
-			for (u32 i = 0; i < voxels.count; i++) {
-				if (voxels[i].occlusion == 0) {
-					continue;
-				}
-				Point_s32 index = (Point_s32)convert_1d_to_3d_index(i, render_world->voxel_grid.grid_size.height, render_world->voxel_grid.grid_size.depth);
-				index = index - Point_s32(voxel_grid_size);
-
-				Point_s32 ceil_size = Point_s32((Size_s32)render_world->voxel_grid.ceil_size);
-
-				Vector3 offset = ((index * ceil_size) + (ceil_size / 2)).to_vector3();
-				Vector3 voxel_center = (offset)*inverse(&matrix);
-
-				u32 packed_color = voxels[i].packed_color;
-				Vector3 values = unpack_RGB8(voxels[i].packed_color);
-				values /= 255.0f;
-				Color color = Color(values.x, values.y, values.z);
-				render_system->render_3d.draw_triangles(voxel_center, color);
-			}
-			render_system->render_3d.reset_mesh();
-		}
-		render_world->voxels_sb.reset<Voxel>();
-	}
-
-	gui::radio_button("Dispaly Voxel Grid", &display_voxel_grid);
-	gui::radio_button("Display voxel grid bounds", &display_voxel_grid_bounds);
-
-	if (display_voxel_grid_bounds) {
-		Vector3 max = render_world->voxel_grid.total_size().to_vector3() * 0.5f;
-		Vector3 min = -max;
-
-		Size_f32 size = render_world->voxel_grid.total_size();
-		Box box = { size.width, size.height, size.depth };
-		Triangle_Mesh tri_mesh;
-		make_box_mesh(&box, &tri_mesh);
-
-		Line_Mesh mesh;
-		//mesh.vertices.reserve(tri_mesh.vertices.count);
-		//mesh.indices.reserve(tri_mesh.indices.count);
-		//for (int i = 0; i < tri_mesh.vertices.count; i++) {
-		//	mesh.vertices[i] = tri_mesh.vertices[i].position;
-		//}
-		////mesh.indices = tri_mesh.indices;
-		//for (int i = 0, j = tri_mesh.indices.count - 1; i < tri_mesh.indices.count; i++, j--) {
-		//	mesh.indices[i] = tri_mesh.indices[j];
-		//}
-		make_AABB_mesh(&min, &max, &mesh);
-		
-		render_system->render_3d.set_mesh(&mesh);
-		render_system->render_3d.draw_lines(render_world->voxel_grid_center, Color(Color::Green.get_rgb(), 0.3f));
-		render_system->render_3d.reset_mesh();
-
-		Line_Mesh camera_AABB;
-		Vector3 temp_max = { 5.0f, 5.0f, 5.0f };
-		Vector3 temp_min = -temp_max;
-		make_AABB_mesh(&temp_min, &temp_max, &camera_AABB);
-		
-		auto view_pos = render_world->voxel_grid_center;
-		view_pos.z -= max.z;
-
-		render_system->render_3d.set_mesh(&camera_AABB);
-		render_system->render_3d.draw_lines(view_pos, Color::Green);
-		render_system->render_3d.reset_mesh();
-	}
-
-	if (display_voxel_grid) {
-		Array<Voxel> voxels;
-		voxels.reserve(render_world->voxel_grid.ceil_count());
-		memset((void *)voxels.items, 0, voxels.get_size());
-		render_world->voxels_sb.read(&voxels);
-
-		if (!voxels.is_empty()) {
-			auto matrix = make_look_to_matrix(render_world->voxel_grid_center, Vector3::base_z);
-			Vector3 max = render_world->voxel_grid.ceil_size.to_vector3() * 0.5f;
-			Vector3 min = -max;
-
-			Line_Mesh mesh;
-			make_AABB_mesh(&min, &max, &mesh);
-
-			render_system->render_3d.set_mesh(&mesh);
-			
-			Size_s32 voxel_grid_size = (Size_s32)render_world->voxel_grid.grid_size / 2;
-
-			for (u32 i = 0; i < voxels.count; i++) {
-				if (voxels[i].occlusion == 0) {
-					continue;
-				}
-				Point_s32 index = (Point_s32)convert_1d_to_3d_index(i, render_world->voxel_grid.grid_size.height, render_world->voxel_grid.grid_size.depth);
-				index = index - Point_s32(voxel_grid_size);
-
-				Point_s32 ceil_size = Point_s32((Size_s32)render_world->voxel_grid.ceil_size);
-
-				Vector3 offset = ((index * ceil_size) + (ceil_size / 2)).to_vector3();
-				Vector3 voxel_center = (offset) * inverse(&matrix);
-
-				render_system->render_3d.draw_lines(voxel_center, Color::Red);
-			}
-			render_system->render_3d.reset_mesh();
-		}
-		render_world->voxels_sb.reset<Voxel>();
-	}
-
-	Array<String> strings;
-	for (u32 i = 0; i < game_world->cameras.count; i++) {
-		strings.push("Camera");
-	}
-	static u32 index = 0;
-	static u32 prev_index = 1;
-
-	gui::list_box(&strings, &index);
-	bool was_update = false;
-	if (index != prev_index) {
-		Entity_Id camera_id = Entity_Id(ENTITY_TYPE_CAMERA, index);
-		editor->editor_camera_id = camera_id;
-		render_world->set_camera_for_rendering(camera_id);
-		prev_index = index;
-		was_update = true;
-	}
-
-	static u32 index2 = 0;
-	static u32 prev_index2 = 1;
-
-	gui::list_box(&strings, &index2);
-
-	if (index2 != prev_index2) {
-		Entity_Id camera_id = Entity_Id(ENTITY_TYPE_CAMERA, index2);
-		render_world->set_camera_for_debuging(camera_id);
-		prev_index2 = index2;
-	} else if (was_update) {
-		Entity_Id camera_id = Entity_Id(ENTITY_TYPE_CAMERA, index);
-		render_world->set_camera_for_debuging(camera_id);
-		prev_index2 = index;
-	}
-}
-
-void Drop_Down_Entity_Window::init(Engine *engine)
-{
-	Editor_Window::init(engine);
-
-	window_size = { 200, 22 * 5 + 2 * 5 };
-
-	window_theme.background_color = Color(24);
-	window_theme.rects_padding = 0;
-	window_theme.horizontal_padding = 5;
-	window_theme.vertical_padding = 5;
-
-	buttons_theme.rect.set_size(window_size.width - window_theme.horizontal_padding * 2, 22);
-	buttons_theme.color = window_theme.background_color;
-	buttons_theme.text_layout = LAYOUT_LEFT;
-}
-
-void Drop_Down_Entity_Window::draw()
-{
-	gui::set_next_window_size(window_size.width, window_size.height);
-	gui::set_next_window_pos(mouse_position.x, mouse_position.y);
-	gui::set_theme(&window_theme);
-
-	if (gui::begin_window("Actions", NO_WINDOW_STYLE)) {
-		gui::set_theme(&buttons_theme);
-
-		gui::button("Scale");
-		gui::button("Rotate");
-		if (gui::button("Move")) {
-			set_cursor(CURSOR_TYPE_MOVE);
-			editor->editor_mode = EDITOR_MODE_MOVE_ENTITY;
-			close();
-		}
-		gui::button("Copy");
-		if (gui::button("Delete")) {
-			game_world->delete_entity(editor->picked_entity);
-			u32 render_entity_index = render_world->delete_render_entity(editor->picked_entity);
-			render_world->render_passes.outlining.delete_render_entity_index(render_entity_index);
-
-			editor->picked_entity.reset();
-			close();
-		}
-		gui::reset_button_theme();
 		gui::end_window();
 	}
 	gui::reset_window_theme();
@@ -971,7 +563,7 @@ Command_Window::~Command_Window()
 
 void Command_Window::init(Engine *engine)
 {
-	Editor_Window::init(engine);
+	Editor_Window::init("Command window", engine);
 
 	displaying_command(MAIN_COMMAND_NAME, display_all_commands);
 	current_displaying_command = &displaying_commands.last();
@@ -1060,6 +652,8 @@ void Command_Window::displaying_command(const char *command_name, Key modified_k
 void Command_Window::draw()
 {
 	assert(current_displaying_command);
+	
+	IF_THEN(!window_open, return);
 
 	if (was_click(KEY_ESC)) {
 		if (current_displaying_command->command_name == MAIN_COMMAND_NAME) {
@@ -1079,7 +673,7 @@ void Command_Window::draw()
 	gui::set_theme(&command_window_theme);
 
 	IF_THEN(window_just_open, gui::make_next_ui_element_active());
-	if (gui::begin_window("Command window", 0)) {
+	if (gui::begin_window(name, 0)) {
 
 		gui::set_theme(&command_edit_field_theme);
 		IF_THEN(window_just_open || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
@@ -1120,17 +714,20 @@ void Editor::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
-	windows.push(&left_buttons);
 	windows.push(&entity_window);
 	windows.push(&entities_window);
 	windows.push(&command_window);
-	windows.push(&drop_down_entity_window);
+
+	top_right_windows.push(&entity_window);
+	top_right_windows.push(&entities_window);
 
 	for (u32 i = 0; i < windows.count; i++) {
 		windows[i]->init(engine);
 	}
-	
-	left_buttons.open();
+
+	for (u32 i = 0; i < top_right_windows.count; i++) {
+		top_right_windows[i]->close();
+	}
 
 	if (game_world->cameras.is_empty()) {
 		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
@@ -1150,6 +747,26 @@ void Editor::init(Engine *engine)
 	key_command_bindings.set("", KEY_RMOUSE); // Don't want to get annoyiny messages
 
 	key_bindings.bind(KEY_CTRL, KEY_C); // Command window keys binding
+
+	init_left_bar();
+}
+
+void Editor::init_left_bar()
+{
+	left_bar.window_theme.rects_padding = 1;
+	left_bar.window_theme.horizontal_padding = 0;
+	left_bar.window_theme.vertical_padding = 0;
+	left_bar.window_theme.background_color = Color(0, 0, 0, 0);
+
+	left_bar.button_theme.hover_color = Color(48);
+	left_bar.button_theme.color = Color(40);
+	left_bar.button_theme.button_size = { 42, 42 };
+	left_bar.button_theme.rect_rounding = 0;
+
+	left_bar.images.adding.init_from_file("icons8-add-30.png", "editor");
+	left_bar.images.entity.init_from_file("entity2.png", "editor");
+	left_bar.images.entities.init_from_file("entities.png", "editor");
+	left_bar.images.rendering.init_from_file("rendering.png", "editor");
 }
 
 void Editor::handle_events()
@@ -1177,11 +794,6 @@ void Editor::update()
 			command_window.close();
 		} else {
 			command_window.open();
-		}
-	}
-	if (!gui::were_events_handled() && were_key_events()) {
-		if (drop_down_entity_window.window_open) {
-			drop_down_entity_window.close();
 		}
 	}
 	picking();
@@ -1232,8 +844,8 @@ void Editor::picking()
 			Ray_Entity_Intersection::Result intersection_result;
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 				if (picked_entity == intersection_result.entity_id) {
-					drop_down_entity_window.open();
-					drop_down_entity_window.mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
+					gui::open_menu("Actions on entity");
+					mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
 				}
 			}
 		} else if (was_click(KEY_LMOUSE)) {
@@ -1252,76 +864,98 @@ void Editor::picking()
 	}
 }
 
-static void open_or_close_left_window(Editor *editor)
+void Editor::render_menus()
 {
+	gui::set_next_window_pos(53, 20);
+	if (gui::begin_menu("Adding entity")) {
+		if (gui::menu_item("Direction light")) {
+			//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
+			game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+		}
+		if (gui::menu_item("Point light")) {
+		}
+		gui::segment();
+		if (gui::menu_item("Box")) {
+		}
+		if (gui::menu_item("Sphere")) {
+		}
+		if (gui::menu_item("Plane")) {
+		}
+		gui::end_menu();
+	}
 
+	gui::set_next_window_pos(mouse_position.x, mouse_position.y);
+	if (gui::begin_menu("Actions on entity")) {
+		if (gui::menu_item("Scale")) {
+		}
+		if (gui::menu_item("Rotate")) {
+		}
+		if (gui::menu_item("Translate")) {
+			set_cursor(CURSOR_TYPE_MOVE);
+			editor_mode = EDITOR_MODE_MOVE_ENTITY;
+		}
+		gui::segment();
+		if (gui::menu_item("Copy")) {
+
+		}
+		if (gui::menu_item("Delete")) {
+			game_world->delete_entity(picked_entity);
+			u32 render_entity_index = render_world->delete_render_entity(picked_entity);
+			render_world->render_passes.outlining.delete_render_entity_index(render_entity_index);
+		}
+		gui::end_menu();
+	}
 }
 
-void Left_Bar::init(Engine *engine)
+void Editor::render_left_bar()
 {
-	Editor_Window::init(engine);
-
-	window_theme.rects_padding = 1;
-	window_theme.horizontal_padding = 0;
-	window_theme.vertical_padding = 0;
-	window_theme.background_color = Color(0, 0, 0, 0);
-
-	button_theme.hover_color = Color(48);
-	button_theme.color = Color(40);
-	button_theme.button_size = { 42, 42 };
-	button_theme.rect_rounding = 0;
-
-	add_button("icons8-add-30.png", &open_or_close_left_window);
-	add_button("entity2.png", &open_or_close_left_window);
-	add_button("entities.png", &open_or_close_left_window);
-	add_button("rendering.png", &open_or_close_left_window);
-}
-
-template <typename T>
-inline bool index_first_or_last(u32 index, Array<T> &array)
-{
-	return (!array.is_empty() && (index == 0) || (index == (array.count - 1)));
-}
-
-void Left_Bar::draw()
-{
-	gui::set_theme(&window_theme);
+	gui::set_theme(&left_bar.window_theme);
 	gui::set_next_window_pos(10, 20);
 	gui::set_next_window_size(50, 270);
 	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
-		for (u32 i = 0; i < left_bar_buttons.count; i++) {
-			Gui_Image_Button_Theme theme = button_theme;
-			if (index_first_or_last(i, left_bar_buttons)) {
-				theme.rect_rounding = 5;
-			}
-			gui::set_theme(&theme);
-			if (gui::image_button(&left_bar_buttons[i].image)) {
-				left_bar_buttons[i].callback(editor);
-			}
+		gui::set_theme(&left_bar.button_theme);
+		
+		if (gui::image_button(&left_bar.images.adding)) {
+			gui::open_menu("Adding entity");
 		}
+		if (gui::image_button(&left_bar.images.entity)) {
+			open_or_close_right_window(&entity_window);
+		}
+		if (gui::image_button(&left_bar.images.entities)) {
+			open_or_close_right_window(&entities_window);
+		}
+		if (gui::image_button(&left_bar.images.rendering)) {
+		}
+
 		gui::reset_image_button_theme();
-		gui::end_window();
 	}
 	gui::reset_window_theme();
-}
-
-void Left_Bar::add_button(const char *image_name, void(*callback)(Editor *editor))
-{
-	Image left_bar_icon;
-	if (left_bar_icon.init_from_file(image_name, "editor")) {
-		left_bar_buttons.push({ left_bar_icon, callback });
-	}
 }
 
 void Editor::render()
 {
 	gui::begin_frame();
+	render_menus();
+	render_left_bar();
 	for (u32 i = 0; i < windows.count; i++) {
-		if (windows[i]->window_open) {
-			windows[i]->draw();
-		}
+		windows[i]->draw();
 	}
 	gui::end_frame();
+}
+
+void Editor::open_or_close_right_window(Editor_Window *window)
+{
+	Editor_Window *top_right_window = NULL;
+	For(top_right_windows, top_right_window) {
+		if (top_right_window != window) {
+			top_right_window->close();
+		}
+	}
+	if (!window->window_open) {
+		window->open();
+	} else {
+		window->close();
+	}
 }
 
 void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands)
@@ -1409,134 +1043,4 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 			print("Editor::convert_editor_commands_to_entity_commands: For the editor command {} there is no a entity command.", command);
 		}
 	}
-}
-
-inline Rect_s32 get_display_screen_rect()
-{
-	return Rect_s32(0, 0, Render_System::screen_width, Render_System::screen_height);
-}
-
-inline void place_rect_on_top_right(Rect_s32 *src, Rect_s32 *dest)
-{
-	assert(src);
-	assert(dest);
-	assert(src->width >= dest->width);
-
-	dest->x = src->width - dest->width;
-	dest->y = 0;
-}
-
-void Entity_Window::init(Engine *engine)
-{
-	Editor_Window::init(engine);
-	set_size(400, 600);
-	Rect_s32 screen_rect = get_display_screen_rect();
-	place_rect_on_top_right(&screen_rect, &window_rect);
-
-	window_theme.rounded_border = 0;
-	window_theme.header_height = 40;
-	window_theme.background_color = Color(25);
-	window_theme.header_color = Color(30);
-}
-
-static String to_string(Entity_Id entity_id)
-{
-	char *entity_index = to_string(entity_id.index);
-	defer(free_string(entity_index));
-	return str_entity_types[(u32)entity_id.type] + "#" + entity_index;
-}
-
-void Entity_Window::draw()
-{
-	static Entity_Id prev_entity_id;
-	static Vector3 scaling;
-	static Vector3 rotation;
-	static Vector3 position;
-
-	Entity *entity = game_world->get_entity(editor->picked_entity);
-	String str_entity_id;
-	if (entity) {
-		str_entity_id = to_string(get_entity_id(entity));
-		if (editor->picked_entity != prev_entity_id) {
-			scaling = entity->scaling;
-			rotation = entity->rotation;
-			position = entity->position;
-		}
-	}
-	window_theme.header_text = str_entity_id.c_str();
-	gui::set_theme(&window_theme);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	if (gui::begin_window("Entity window", WINDOW_HEADER)) {
-		if (entity) {
-			gui::edit_field("Scaling", &scaling);
-			gui::edit_field("Rotation", &rotation);
-			if (gui::edit_field("Position", &position)) {
-				game_world->place_entity(entity, position);
-			}
-			if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
-				static bool temp;
-				gui::radio_button("Draw bounding box", &temp);
-			}
-		}
-		gui::end_window();
-	}
-	gui::reset_window_theme();
-}
-
-void Entity_Tree_Window::init(Engine *engine)
-{
-	Editor_Window::init(engine);
-	set_size(400, 600);
-	Rect_s32 screen_rect = get_display_screen_rect();
-	place_rect_on_top_right(&screen_rect, &window_rect);
-
-	window_theme.rounded_border = 0;
-	window_theme.header_height = 40;
-	window_theme.background_color = Color(25);
-	window_theme.header_color = Color(30);
-}
-
-void Entity_Tree_Window::draw()
-{
-	Gui_Tree_Theme tree_theme;
-	tree_theme.window_size.width = window_rect.width - window_theme.horizontal_padding * 2;
-
-	gui::set_theme(&window_theme);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	if (gui::begin_window("E", WINDOW_HEADER)) {
-		
-		gui::set_theme(&tree_theme);
-		if (gui::begin_tree("Entities tree")) {
-			if (gui::begin_tree_node("Light")) {
-				gui::end_tree_node();
-			}
-			if (gui::begin_tree_node("Camera")) {
-				for (u32 i = 0; i < game_world->cameras.count; i++) {
-					Camera *camera = &game_world->cameras[i];
-					String camera_name = to_string(get_entity_id(camera));
-					if (gui::begin_tree_node(camera_name, GUI_TREE_NODE_FINAL)) {
-						gui::end_tree_node();
-					}
-				}
-				gui::end_tree_node();
-			}
-			if (gui::begin_tree_node("Entity")) {
-				for (u32 i = 0; i < game_world->entities.count; i++) {
-					Entity *entity = &game_world->entities[i];
-					String entity_name = to_string(get_entity_id(entity));
-					if (gui::begin_tree_node(entity_name, GUI_TREE_NODE_FINAL)) {
-						gui::end_tree_node();
-					}
-				}
-				gui::end_tree_node();
-			}
-			gui::end_tree();
-		}
-		gui::reset_tree_theme();
-
-		gui::end_window();
-	}
-	gui::reset_window_theme();
 }
