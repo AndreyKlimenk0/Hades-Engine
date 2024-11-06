@@ -222,6 +222,7 @@
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\font.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
+    <ClCompile Include="src\render\new_render_api.cpp" />
     <ClCompile Include="src\render\render_api.cpp" />
     <ClCompile Include="src\render\render_helpers.cpp" />
     <ClCompile Include="src\render\render_passes.cpp" />
@@ -431,6 +432,7 @@
     <ClInclude Include="src\render\hlsl.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
+    <ClInclude Include="src\render\new_render_api.h" />
     <ClInclude Include="src\render\render_api.h" />
     <ClInclude Include="src\render\render_helpers.h" />
     <ClInclude Include="src\render\render_pass.h" />
