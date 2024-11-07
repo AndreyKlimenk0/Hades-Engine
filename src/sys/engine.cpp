@@ -13,6 +13,8 @@
 
 #include "../gui/test_gui.h"
 
+#include "../render/new_render_api.h"
+
 #define DRAW_TEST_GUI 0
 
 static Engine *engine = NULL;
@@ -59,42 +61,28 @@ void Engine::init_base()
 
 void Engine::init(Win32_Window *window)
 {
-	BEGIN_TASK("Initialize engine");
+	const u32 buffer_count = 2;
 
-	font_manager.init();
+	d3d12::Gpu_Device gpu_device;
+	d3d12::Swap_Chain swap_chain;
+
+	if (!gpu_device.init()) {
+		return;
+	}
+	Command_Queue command_queue;
+	gpu_device.create_command_queue(command_queue);
 	
-	BEGIN_TASK("Initialize render_system");
-	render_sys.init(window);
-	END_TASK();
-	
-	shader_manager.init(&render_sys.gpu_device);
-	
-	render_sys.init_input_layouts(&shader_manager);
-	render_sys.render_2d.init(&render_sys, &shader_manager);
-	render_sys.render_3d.init(&render_sys, &shader_manager);
+	swap_chain.init(buffer_count, window->width, window->height, window->handle, command_queue);
 
-	gui::init_gui(this);
-	
-	editor.init(this);
+	Descriptor_Heap back_buffers_desc_heap;
+	gpu_device.create_rtv_descriptor_heap(2, back_buffers_desc_heap);
 
-	game_world.init();
-	render_world.init(this);
+	ComPtr<ID3D12Resource> back_buffer_rtvs[buffer_count];
 
-	current_level_name = DEFAULT_LEVEL_NAME + LEVEL_EXTENSION;
-	Variable_Service *system = var_service.find_namespace("system");
-	system->attach("load_level", &current_level_name);
-
-	BEGIN_TASK("Load level");
-	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
-	END_TASK();
-
-	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
-
-	init_performance_displaying();
-	
-	engine->is_initialized = true;
-
-	END_TASK()
+	for (u32 i = 0; i < buffer_count; i++) {
+		swap_chain.get_buffer(i, back_buffer_rtvs[i]);
+		gpu_device.device->CreateRenderTargetView(back_buffer_rtvs[i].Get(), nullptr, );
+	}
 }
 
 void Engine::frame()
@@ -111,36 +99,6 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
-	gui::handle_events();
-
-	editor.handle_events();
-
-	file_tracking_sys.update();
-
-	editor.update();
-
-	render_world.update();
-
-	render_sys.new_frame();
-
-	END_TASK();
-
-	BEGIN_TASK("Render world");
-	render_world.render();
-	END_TASK();
-
-#if DRAW_TEST_GUI
-	draw_test_gui();
-#else
-	editor.render();
-#endif
-	display_performance(fps, frame_time);
-
-	BEGIN_TASK("Render system end frame");
-
-	render_sys.end_frame();
-
-	END_TASK();
 
 	clear_event_queue();
 
