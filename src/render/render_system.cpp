@@ -370,7 +370,7 @@ void Render_Primitive_List::add_line(const Point_s32 &first_point, const Point_s
 
 	Vector2 temp1 = first_point.to_vector2();
 	Vector2 temp2 = second_point.to_vector2();
-	float line_width = (float)find_distance(&temp1, &temp2);
+	float line_width = (float)find_distance(temp1, temp2);
 	String hash = String(line_width + thickness);
 
 	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
@@ -423,16 +423,10 @@ void Render_Primitive_List::add_circle(int x, int y, u32 radius, const Color &co
 	if (!primitive) {
 		return;
 	}
-
-	Vector2 offset = { (float)radius, (float)radius };
-	Matrix4 scale_matrix = make_scale_matrix((float)radius);
-	Matrix4 translation_matrix = make_translation_matrix(&offset);
-
-	primitive->add_point(Vector2((float)radius, (float)radius));
-
+	primitive->add_point(Vector2::zero);
 	for (u32 i = range.start; i < range.end; i++) {
 		float angle = degrees_to_radians((float)i);
-		Vector2 point = Vector2(math::cos(angle), math::sin(angle)) * scale_matrix * translation_matrix;
+		Vector2 point = Vector2(math::cos(angle), math::sin(angle)) * radius;
 		primitive->add_point(point);
 	}
 	primitive->make_triangle_polygon();
@@ -441,7 +435,7 @@ void Render_Primitive_List::add_circle(int x, int y, u32 radius, const Color &co
 
 void Render_Primitive_List::add_outline_circle(int x, int y, u32 radius, float thickness, const Color &color)
 {
-	String hash = "filled_circle" + String(x) + String(y);
+	String hash = "filled_outline_circle" + String(x) + String(y);
 	Vector2 position = { (float)x, (float)y };
 	Matrix4 transform_matrix = make_translation_matrix(&position);
 
@@ -450,18 +444,14 @@ void Render_Primitive_List::add_outline_circle(int x, int y, u32 radius, float t
 		return;
 	}
 
-	Vector2 offset = { (float)radius, (float)radius };
-	Matrix4 scale_matrix = make_scale_matrix((float)radius);
-	Matrix4 translation_matrix = make_translation_matrix(&offset);
-
 	for (u32 i = 0; i < 360; i++) {
 		float angle = degrees_to_radians((float)i);
-		Vector2 outer_point = Vector2(math::cos(angle), math::sin(angle)) * scale_matrix * translation_matrix;
+		Vector2 outer_point = Vector2(math::cos(angle), math::sin(angle)) * radius;
 		primitive->add_point(outer_point);
 	}
 	for (u32 i = 0; i < 360; i++) {
 		float angle = degrees_to_radians((float)i);
-		Vector2 inner_point = Vector2(math::cos(angle), math::sin(angle)) * scale_matrix * translation_matrix;
+		Vector2 inner_point = Vector2(math::cos(angle), math::sin(angle)) * radius;
 		inner_point.x -= math::cos(angle) * thickness;
 		inner_point.y -= math::sin(angle) * thickness;
 

@@ -2343,7 +2343,7 @@ void Gui_Manager::handle_events(bool *update_editing_value, bool *update_next_ti
 			}
 			if (event->is_key_down(KEY_BACKSPACE)) {
 				if (edit_field_state.caret_index_in_text > -1) {
-					//*update_editing_value = true;
+					*update_editing_value = true;
 					char c = edit_field_state.data[edit_field_state.caret_index_in_text];
 					edit_field_state.data.remove(edit_field_state.caret_index_in_text);
 
@@ -3631,6 +3631,14 @@ bool gui::element_clicked(Key key)
 	return gui_manager.element_clicked(key);
 }
 
+bool gui::element_double_clicked(Key key)
+{
+	if (detect_intersection(&gui_manager.last_drawn_rect) && was_double_click(key)) {
+		return true;
+	}
+	return false;
+}
+
 bool gui::begin_list(const char *name, Gui_List_Column filters[], u32 filter_count)
 {
 	return gui_manager.begin_list(name, filters, filter_count);
@@ -3733,6 +3741,11 @@ void gui::reset_layout()
 {
 	Context *context = gui_manager.get_context();
 	context->layout = temp_layout;
+}
+
+Render_Primitive_List *gui::get_render_primitive_list()
+{
+	return &gui_manager.get_window()->render_list;
 }
 
 void gui::make_tab_active(Gui_ID tab_gui_id)
@@ -3921,7 +3934,6 @@ bool gui::were_events_handled()
 	for (u32 i = 0; i < gui_manager.windows_order.count; i++) {
 		Gui_Window *window = gui_manager.get_window_by_index(&gui_manager.windows_order, i);
 		if (detect_intersection(&window->rect)) {
-			print("Window intersection, name = {}, rect = {}", window->name.c_str(), &window->rect);
 			return true;
 		}
 	}

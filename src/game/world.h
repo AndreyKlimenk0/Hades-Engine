@@ -139,7 +139,6 @@ struct Group {
 };
 
 struct Game_World {
-	u32 light_hash = 0xffff;
 
 	Array<Entity> entities;
 	Array<Camera> cameras;
@@ -154,6 +153,7 @@ struct Game_World {
 	void attach_AABB(Entity_Id entity_id, AABB *bounding_box);
 	void move_entity(Entity *entity, const Vector3 &displacement);
 	void place_entity(Entity *entity, const Vector3 &position);
+	void update_light_direction(Light *light, const Vector3 &direction);
 
 	Entity *get_entity(Entity_Id entity_id);
 	Camera *get_camera(Entity_Id entity_id);

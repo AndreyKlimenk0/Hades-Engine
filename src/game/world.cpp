@@ -95,7 +95,6 @@ Entity_Id Game_World::make_geometry_entity(const Vector3 &position, Geometry_Typ
 	return get_entity_id(&geometry_entity);
 }
 
-#define UPDATE_LIGHT_HASH() light_hash += (u32)light.light_type + 1
 
 Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vector3 &color)
 {
@@ -105,8 +104,6 @@ Entity_Id Game_World::make_direction_light(const Vector3 &direction, const Vecto
 	light.color = color;
 	light.light_type = DIRECTIONAL_LIGHT_TYPE;;
 	light.idx = lights.count;
-
-	UPDATE_LIGHT_HASH();
 
 	lights.push(light);
 	return get_entity_id(&light);
@@ -120,8 +117,6 @@ Entity_Id Game_World::make_point_light(const Vector3 &position, const Vector3 &c
 	light.light_type = POINT_LIGHT_TYPE;
 	light.range = range;
 	light.idx = lights.count;
-
-	UPDATE_LIGHT_HASH();
 
 	lights.push(light);
 	return get_entity_id(&light);
@@ -137,8 +132,6 @@ Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &di
 	light.radius = radius;
 	light.idx = lights.count;
 
-	UPDATE_LIGHT_HASH();
-
 	lights.push(light);
 	return get_entity_id(&light);
 }
@@ -149,7 +142,6 @@ void Game_World::init()
 
 void Game_World::release_all_resources()
 {
-	light_hash = 0;
 	entities.clear();
 	cameras.clear();
 	lights.clear();
@@ -225,6 +217,12 @@ void Game_World::place_entity(Entity *entity, const Vector3 &position)
 		entity->AABB_box.min += position;
 		entity->AABB_box.max += position;
 	}
+}
+
+void Game_World::update_light_direction(Light *light, const Vector3 &direction)
+{
+	//light->direction = normalize(direction);
+	light->direction = direction;
 }
 
 Entity_Id::Entity_Id()

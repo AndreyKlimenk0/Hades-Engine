@@ -83,3 +83,8 @@ bool detect_intersection(Ray *ray, AABB *aabb, Vector3 *intersection_point)
 	}
 	return true;
 }
+
+bool detect_intersection(float radius, const Vector2 &circle_center, const Vector2 &test_point)
+{
+	return find_distance(circle_center, test_point) <= radius;
+}
