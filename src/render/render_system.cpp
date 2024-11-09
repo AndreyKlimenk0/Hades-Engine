@@ -426,7 +426,7 @@ void Render_Primitive_List::add_circle(int x, int y, u32 radius, const Color &co
 	primitive->add_point(Vector2::zero);
 	for (u32 i = range.start; i < range.end; i++) {
 		float angle = degrees_to_radians((float)i);
-		Vector2 point = Vector2(math::cos(angle), math::sin(angle)) * radius;
+		Vector2 point = Vector2(math::cos(angle), math::sin(angle)) * (float)radius;
 		primitive->add_point(point);
 	}
 	primitive->make_triangle_polygon();
@@ -446,12 +446,12 @@ void Render_Primitive_List::add_outline_circle(int x, int y, u32 radius, float t
 
 	for (u32 i = 0; i < 360; i++) {
 		float angle = degrees_to_radians((float)i);
-		Vector2 outer_point = Vector2(math::cos(angle), math::sin(angle)) * radius;
+		Vector2 outer_point = Vector2(math::cos(angle), math::sin(angle)) * (float)radius;
 		primitive->add_point(outer_point);
 	}
 	for (u32 i = 0; i < 360; i++) {
 		float angle = degrees_to_radians((float)i);
-		Vector2 inner_point = Vector2(math::cos(angle), math::sin(angle)) * radius;
+		Vector2 inner_point = Vector2(math::cos(angle), math::sin(angle)) * (float)radius;
 		inner_point.x -= math::cos(angle) * thickness;
 		inner_point.y -= math::sin(angle) * thickness;
 
