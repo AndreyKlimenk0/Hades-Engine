@@ -200,7 +200,7 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 			float most_small_distance = FLT_MAX;
 			for (u32 i = 0; i < intersected_entities.count; i++) {
 				// A ray origin equals to a camera position.
-				float intersection_point_camera_distance = find_distance(&picking_ray->origin, &intersected_entities[i].intersection_point);
+				float intersection_point_camera_distance = find_distance(picking_ray->origin, intersected_entities[i].intersection_point);
 				if (intersection_point_camera_distance < most_small_distance) {
 					most_near_entity_to_camera = i;
 					most_small_distance = intersection_point_camera_distance;
@@ -213,6 +213,14 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 		return true;
 	}
 	return false;
+}
+
+Editor_Window::Editor_Window()
+{
+}
+
+Editor_Window::~Editor_Window()
+{
 }
 
 void Editor_Window::init(Engine *engine)
@@ -271,12 +279,63 @@ void Entity_Window::init(Engine *engine)
 	place_rect_on_top_right(&screen_rect, &window_rect);
 }
 
+void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbit_radius, const Point_s32 &position, Light *light, Render_Primitive_List *render_list)
+{
+	Vector2 mouse_position = Vector2((float)Mouse_State::x, (float)Mouse_State::y);
+
+	render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
+	render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
+
+	Vector2 sun_position = normalize(&Vector2(light->direction.x, light->direction.z));
+	sun_position *= (float)orbit_radius;
+	sun_position.y *= -1.0f;
+	sun_position += position.to_vector2();
+
+	render_list->add_circle((s32)sun_position.x, (s32)sun_position.y, sun_radius, Color(121, 121, 121));
+
+	static bool update_light_direction = false;
+	if (was_key_just_pressed(KEY_LMOUSE) && detect_intersection((float)sun_radius, sun_position, mouse_position)) {
+		update_light_direction = true;
+	}
+	if (update_light_direction && was_key_just_released(KEY_LMOUSE)) {
+		update_light_direction = false;
+	}
+	if (update_light_direction) {
+		Vector2 new_light_direction = normalize(mouse_position - position.to_vector2());
+		new_light_direction.y *= -1.0f;
+
+		//game_world->update_light_direction(light, Vector3(vec2.x, light->direction.y, vec2.y));
+		light->direction.x = new_light_direction.x;
+		light->direction.z = new_light_direction.y;
+		render_world->update_light(light);
+	}
+}
+
+void Entity_Window::display_light(Light *light)
+{
+	if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
+		if (gui::edit_field("Direction", &light->direction)) {
+			game_world->update_light_direction(light, light->direction);
+			render_world->update_light(light);
+		}
+		gui::edit_field("Color", &light->color);
+
+		Render_Primitive_List *render_list = gui::get_render_primitive_list();
+		u32 middle = window_rect.x + window_rect.width / 2;
+		display_sun_earth(70, 20, 100, Point_s32(middle, 220), light, render_list);
+
+		//render_list->add_circle(window_rect.x + 100, 100, 70, Color(121, 121, 121));
+		//render_list->add_outline_circle(window_rect.x + 100, 100, 100, 2.0f, Color(51, 77, 128));
+	}
+}
+
 void Entity_Window::draw()
 {
 	static Entity_Id prev_entity_id;
 	static Vector3 scaling;
 	static Vector3 rotation;
 	static Vector3 position;
+	static Vector3 direction;
 
 	Entity *entity = game_world->get_entity(editor->picked_entity);
 	String str_entity_id;
@@ -286,6 +345,10 @@ void Entity_Window::draw()
 			scaling = entity->scaling;
 			rotation = entity->rotation;
 			position = entity->position;
+			if (entity->type == ENTITY_TYPE_LIGHT) {
+				Light *light = static_cast<Light *>(entity);
+				direction = light->direction;
+			}
 		}
 	}
 	window_theme.header_text = str_entity_id.c_str();
@@ -294,14 +357,19 @@ void Entity_Window::draw()
 	gui::set_next_window_size(window_rect.width, window_rect.height);
 	if (gui::begin_window(name, WINDOW_HEADER)) {
 		if (entity) {
-			gui::edit_field("Scaling", &scaling);
-			gui::edit_field("Rotation", &rotation);
-			if (gui::edit_field("Position", &position)) {
-				game_world->place_entity(entity, position);
-			}
-			if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
-				static bool temp;
-				gui::radio_button("Draw bounding box", &temp);
+			if (entity->type == ENTITY_TYPE_LIGHT) {
+				Light *light = static_cast<Light *>(entity);
+				display_light(light);
+			} else {
+				gui::edit_field("Scaling", &scaling);
+				gui::edit_field("Rotation", &rotation);
+				if (gui::edit_field("Position", &position)) {
+					game_world->place_entity(entity, position);
+				}
+				if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
+					static bool temp;
+					gui::radio_button("Draw bounding box", &temp);
+				}
 			}
 		}
 		gui::end_window();
@@ -311,7 +379,7 @@ void Entity_Window::draw()
 
 void Entity_Tree_Window::init(Engine *engine)
 {
-	Top_Right_Window::init("Entity list window", engine);
+	Top_Right_Window::init("Entity list", engine);
 	set_size(400, 600);
 	Rect_s32 screen_rect = get_display_screen_rect();
 	place_rect_on_top_right(&screen_rect, &window_rect);
@@ -325,6 +393,39 @@ void Entity_Tree_Window::init(Engine *engine)
 	tree_theme.window_size.height = window_rect.height - 35;
 }
 
+template <typename T>
+void Entity_Tree_Window::draw_entity_list(Array<T> &entity_list, const char *name)
+{
+	if (gui::begin_tree_node(name)) {
+		for (u32 i = 0; i < entity_list.count; i++) {
+			T *entity = &entity_list[i];
+			Entity_Id entity_id = get_entity_id(entity);
+			String str_entity_id = to_string(entity_id);
+			if (gui::begin_tree_node(str_entity_id, GUI_TREE_NODE_FINAL)) {
+				if (gui::element_clicked(KEY_LMOUSE) || gui::element_double_clicked(KEY_LMOUSE)) {
+					if ((entity_id.type != ENTITY_TYPE_LIGHT) && (entity_id.type != ENTITY_TYPE_CAMERA)) {
+						Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
+						outlining_pass->reset_render_entity_indices();
+						u32 index = 0;
+						Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, entity_id, &index);
+						if (render_entity) {
+							editor->picked_entity = entity_id;
+							outlining_pass->add_render_entity_index(index);
+						}
+					} else {
+						editor->picked_entity = entity_id;
+					}
+				}
+				if (gui::element_double_clicked(KEY_LMOUSE)) {
+					editor->open_or_close_right_window(&editor->entity_window);
+				}
+				gui::end_tree_node();
+			}
+		}
+		gui::end_tree_node();
+	}
+}
+
 void Entity_Tree_Window::draw()
 {
 	gui::set_theme(&window_theme);
@@ -333,36 +434,9 @@ void Entity_Tree_Window::draw()
 	if (gui::begin_window(name, WINDOW_HEADER)) {
 		gui::set_theme(&tree_theme);
 		if (gui::begin_tree("Entities tree")) {
-			if (gui::begin_tree_node("Light")) {
-				for (u32 i = 0; i < game_world->lights.count; i++) {
-					Light *light = &game_world->lights[i];
-					String light_name = to_string(get_entity_id(light));
-					if (gui::begin_tree_node(light_name, GUI_TREE_NODE_FINAL)) {
-						gui::end_tree_node();
-					}
-				}
-				gui::end_tree_node();
-			}
-			if (gui::begin_tree_node("Camera")) {
-				for (u32 i = 0; i < game_world->cameras.count; i++) {
-					Camera *camera = &game_world->cameras[i];
-					String camera_name = to_string(get_entity_id(camera));
-					if (gui::begin_tree_node(camera_name, GUI_TREE_NODE_FINAL)) {
-						gui::end_tree_node();
-					}
-				}
-				gui::end_tree_node();
-			}
-			if (gui::begin_tree_node("Entity")) {
-				for (u32 i = 0; i < game_world->entities.count; i++) {
-					Entity *entity = &game_world->entities[i];
-					String entity_name = to_string(get_entity_id(entity));
-					if (gui::begin_tree_node(entity_name, GUI_TREE_NODE_FINAL)) {
-						gui::end_tree_node();
-					}
-				}
-				gui::end_tree_node();
-			}
+			draw_entity_list(game_world->lights, "Lights");
+			draw_entity_list(game_world->cameras, "Cameras");
+			draw_entity_list(game_world->entities, "Entities");
 			gui::end_tree();
 		}
 		gui::reset_tree_theme();
@@ -714,8 +788,8 @@ void Editor::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
-	windows.push(&entity_window);
 	windows.push(&entities_window);
+	windows.push(&entity_window);
 	windows.push(&command_window);
 
 	top_right_windows.push(&entity_window);
@@ -817,7 +891,7 @@ void Editor::picking()
 		Ray_Entity_Intersection::Result intersection_result;
 		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result) && (picked_entity == intersection_result.entity_id)) {
 			moving_entity_info.moving_entity = true;
-			moving_entity_info.distance = find_distance(&camera->position, &intersection_result.intersection_point);
+			moving_entity_info.distance = find_distance(camera->position, intersection_result.intersection_point);
 			moving_entity_info.ray_entity_intersection_point = intersection_result.intersection_point;
 		} else {
 			editor_mode = EDITOR_MODE_COMMON;
@@ -870,7 +944,8 @@ void Editor::render_menus()
 	if (gui::begin_menu("Adding entity")) {
 		if (gui::menu_item("Direction light")) {
 			//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
-			game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+			Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+			render_world->add_light(entity_id);
 		}
 		if (gui::menu_item("Point light")) {
 		}

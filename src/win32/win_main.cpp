@@ -136,6 +136,14 @@ LRESULT CALLBACK Win32_Window::procedure(HWND hwnd, UINT message, WPARAM wparam,
 			push_event(EVENT_TYPE_CHAR, (int)wparam, 0);
 			break;
 		}
+		case WM_LBUTTONDBLCLK: {
+			push_event(EVENT_TYPE_DOUBLE_CLICK, 1, 0);
+			break;
+		}
+		case WM_RBUTTONDBLCLK: {
+			push_event(EVENT_TYPE_DOUBLE_CLICK, 0, 1);
+			break;
+		}
 	}
 	return DefWindowProc(hwnd, message, wparam, lparam);
 }
