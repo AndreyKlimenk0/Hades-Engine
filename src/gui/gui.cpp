@@ -2736,7 +2736,7 @@ void Gui_Manager::core_button(const char *name, bool *left_mouse_click, bool *ri
 	button_count++;
 }
 
-void Gui_Manager::init(Engine *engine, const char *font_name, u32 font_size)
+void Gui_Manager::init(Engine *engine)
 {
 	render_2d = &engine->render_sys.render_2d;
 
@@ -3498,7 +3498,7 @@ Gui_ID Gui_Manager::get_last_tab_gui_id()
 
 static Gui_Manager gui_manager;
 
-void gui::init_gui(Engine *engine, const char *font_name, u32 font_size)
+void gui::init_gui(Engine *engine)
 {
 	gui_manager.init(engine);
 }
