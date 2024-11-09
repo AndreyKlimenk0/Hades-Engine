@@ -17,8 +17,6 @@ enum Entity_Type : u32 {
 	ENTITY_TYPE_LIGHT,
 	ENTITY_TYPE_GEOMETRY,
 	ENTITY_TYPE_CAMERA,
-
-	ENTITY_TYPES_COUNT
 };
 
 struct Entity_Id {
@@ -133,8 +131,14 @@ struct Camera : Entity {
 	void handle_commands(Array<Entity_Command *> *entity_commands);
 };
 
+struct Group {
+	String name;
+	AABB AABB_box;
+	Boudning_Box_Type bounding_box_type;
+	Array<Entity> entities;
+};
+
 struct Game_World {
-	u32 light_hash = 0xffff;
 
 	Array<Entity> entities;
 	Array<Camera> cameras;
@@ -142,7 +146,6 @@ struct Game_World {
 	Array<Geometry_Entity> geometry_entities;
 
 	void init();
-	void shutdown();
 	void release_all_resources();
 
 	void delete_entity(Entity_Id entity_id);
@@ -150,6 +153,7 @@ struct Game_World {
 	void attach_AABB(Entity_Id entity_id, AABB *bounding_box);
 	void move_entity(Entity *entity, const Vector3 &displacement);
 	void place_entity(Entity *entity, const Vector3 &position);
+	void update_light_direction(Light *light, const Vector3 &direction);
 
 	Entity *get_entity(Entity_Id entity_id);
 	Camera *get_camera(Entity_Id entity_id);

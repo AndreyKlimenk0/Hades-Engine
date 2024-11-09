@@ -1,8 +1,9 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "../number_types.h"
 
@@ -15,38 +16,38 @@ struct Array {
 	Array(u32 _size = 8);
 	~Array();
 
-	T* items = NULL;
+	T *items = NULL;
 	u32 count;
 	u32 size;
 
-	Array(const Array<T>& other);
-	Array<T>& operator=(const Array<T>& other);
-	
-	T& operator[](u32 i);
+	Array(const Array<T> &other);
+	Array<T> &operator=(const Array<T> &other);
+
+	T &operator[](u32 i);
 	const T &operator[](u32 i) const;
 
 	void clear();
 	void resize(u32 _size);
 	void remove(u32 index);
 	void reserve(u32 _count);
-	void set_pointer_to_item(T* ptr, u32 index);
-	void set_pointer_to_item(T** ptr, u32 index);
-	
+	void set_pointer_to_item(T *ptr, u32 index);
+	void set_pointer_to_item(T **ptr, u32 index);
+
 	bool is_empty();
-	bool find(const T& item);
-	
-	u32 push(const T& item);
+	bool find(const T &item);
+
+	u32 push(const T &item);
 	u32 get_size();
-	T& pop();
-	T& get(u32 index);
-	T& first();
-	T& last();
+	T &pop();
+	T &get(u32 index);
+	T &first();
+	T &last();
 };
 
 template <typename T>
-inline void merge(Array<T>* dst, Array<T>* src);
+inline void merge(Array<T> *dst, Array<T> *src);
 template <typename T>
-inline void free_memory(Array<T*>* array);
+inline void free_memory(Array<T *> *array);
 
 template <typename T>
 Array<T>::Array(u32 _size)
@@ -67,13 +68,13 @@ Array<T>::~Array()
 }
 
 template<typename T>
-inline Array<T>::Array(const Array<T>& other)
+inline Array<T>::Array(const Array<T> &other)
 {
 	*this = other;
 }
 
 template<typename T>
-inline Array<T>& Array<T>::operator=(const Array<T>& other)
+inline Array<T> &Array<T>::operator=(const Array<T> &other)
 {
 	count = other.count;
 	size = other.size;
@@ -86,7 +87,7 @@ inline Array<T>& Array<T>::operator=(const Array<T>& other)
 }
 
 template <typename T>
-inline T& Array<T>::operator[](u32 i)
+inline T &Array<T>::operator[](u32 i)
 {
 	assert(size > i);
 	return items[i];
@@ -121,7 +122,7 @@ inline void Array<T>::resize(u32 new_size)
 		return;
 	}
 
-	T* temp_array = items;
+	T *temp_array = items;
 	items = new T[new_size];
 
 	for (u32 i = 0; i < count; i++) {
@@ -135,24 +136,14 @@ inline void Array<T>::resize(u32 new_size)
 template<typename T>
 inline void Array<T>::remove(u32 index)
 {
-	assert(count > index);
-
-	T* new_data = new T[size];
-
-	void* first_part_dest_str = new_data;
-	void* first_part_src_str = items;
-
-	memcpy(first_part_dest_str, first_part_src_str, sizeof(T) * index);
-
-	void* second_part_dest_str = &new_data[index];
-	void* second_part_src_str = &items[index + 1];
-
-	memcpy(second_part_dest_str, second_part_src_str, sizeof(T) * (count - index - 1));
-
-	delete[] items;
-
-	count -= 1;
-	items = new_data;
+	if (index < count) {
+		u32 offset = index + 1;
+		for (; offset < count; offset++) {
+			items[offset - 1] = items[offset];
+		}
+		memset((void *)&items[count - 1], 0, sizeof(T));
+		count -= 1;
+	}
 }
 
 template <typename T>
@@ -166,7 +157,7 @@ inline void Array<T>::reserve(u32 _count)
 }
 
 template <typename T>
-inline void Array<T>::set_pointer_to_item(T* ptr, u32 index)
+inline void Array<T>::set_pointer_to_item(T *ptr, u32 index)
 {
 	assert(count > index);
 
@@ -174,7 +165,7 @@ inline void Array<T>::set_pointer_to_item(T* ptr, u32 index)
 }
 
 template <typename T>
-inline void Array<T>::set_pointer_to_item(T** ptr, u32 index)
+inline void Array<T>::set_pointer_to_item(T **ptr, u32 index)
 {
 	assert(count > index);
 	*ptr = &items[index];
@@ -189,7 +180,7 @@ inline bool Array<T>::is_empty()
 }
 
 template<typename T>
-inline bool Array<T>::find(const T& item)
+inline bool Array<T>::find(const T &item)
 {
 	for (u32 i = 0; i < count; i++) {
 		if (item == items[i]) {
@@ -200,7 +191,7 @@ inline bool Array<T>::find(const T& item)
 }
 
 template <typename T>
-inline u32 Array<T>::push(const T& item)
+inline u32 Array<T>::push(const T &item)
 {
 	if (count >= size) {
 		resize(size * 2);
@@ -216,52 +207,80 @@ inline u32 Array<T>::get_size()
 }
 
 template <typename T>
-inline T& Array<T>::get(u32 index)
+inline T &Array<T>::get(u32 index)
 {
 	return items[index];
 }
 
 template<typename T>
-inline T& Array<T>::first()
+inline T &Array<T>::first()
 {
 	assert(count > 0);
 	return items[0];
 }
 
 template<typename T>
-inline T& Array<T>::last()
+inline T &Array<T>::last()
 {
 	assert(count > 0);
 	return items[count - 1];
 }
 
 template <typename T>
-inline T& Array<T>::pop()
+inline T &Array<T>::pop()
 {
 	assert(count > 0);
 	return items[--count];
 }
 
 template <typename T>
-inline void merge(Array<T>* dst, Array<T>* src)
+inline void merge(Array<T> *dst, Array<T> *src)
 {
 	if ((dst->count + src->count) > dst->size) {
 		dst->resize(dst->count + src->count);
 	}
-	memcpy((void*)&dst->items[dst->count], (void*)src->items, sizeof(T) * src->count);
+	memcpy((void *)&dst->items[dst->count], (void *)src->items, sizeof(T) * src->count);
 	dst->count += src->count;
 }
 
 template <typename T>
-inline void free_memory(Array<T*>* array)
+inline void free_memory(Array<T *> *array)
 {
 	for (u32 i = 0; i < array->count; i++) {
-		T* ptr = array->get(i);
+		T *ptr = array->get(i);
 		if (ptr) {
 			delete ptr;
 			ptr = NULL;
 		}
 	}
+}
+
+template <typename T>
+struct Find_Result {
+	bool found;
+	u32 index;
+	T data;
+};
+template <typename T, typename U, typename F>
+Find_Result<T> find_in_array(Array<T> &dynamic_array, const U &value, const F &compare_func)
+{
+	for (u32 i = 0; i < dynamic_array.count; i++) {
+		if (compare_func(dynamic_array[i], value)) {
+			return Find_Result<T>(true, i, dynamic_array[i]);
+		}
+	}
+	return Find_Result<T>(false, UINT32_MAX, T());
+}
+
+template <typename T, typename F>
+Find_Result<T> find_in_array(Array<T> &dynamic_array, const T &value, const F &compare_func)
+{
+	for (u32 i = 0; i < dynamic_array.count; i++) {
+		if (compare_func(dynamic_array[i], value)) {
+			return Find_Result<T>(true, i, dynamic_array[i]);
+		}
+	}
+	return Find_Result<T>(false, UINT32_MAX, T());
 }
 
 #endif

@@ -37,9 +37,10 @@ struct Vector2 : XMFLOAT2 {
 inline float dot(const Vector2 &first_vector, const Vector2 &second_vector);
 inline float length(const Vector2 &vector);
 inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2);
-inline float find_distance(Vector2 *first_vector2, Vector2 *second_vector2);
+inline float find_distance(const Vector2 &first_vector2, const Vector2 &second_vector2);
 inline Vector2 negate(Vector2 *vector);
 inline Vector2 normalize(Vector2 *vector);
+inline Vector2 normalize(const Vector2 &vector);
 inline Vector2 cross(const Vector2 &first_vector, const Vector2 &second_vector);
 inline Vector2 floor(const Vector2 &vector);
 
@@ -81,7 +82,7 @@ struct Vector3 : XMFLOAT3 {
 inline float dot(const Vector3 &first_vector, const Vector3 &second_vector);
 inline float length(const Vector3 &vector);
 inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3);
-inline float find_distance(Vector3 *first_vector3, Vector3 *second_vector3);
+inline float find_distance(const Vector3 &first_vector3, const Vector3 &second_vector3);
 inline Vector3 negate(Vector3 *vector);
 inline Vector3 normalize(Vector3 *vector);
 inline Vector3 normalize(const Vector3 &vector);
@@ -121,7 +122,7 @@ struct Vector4 : XMFLOAT4 {
 inline float dot(const Vector4 &first_vector, const Vector4 &second_vector);
 inline float length(const Vector4 &vector);
 inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4);
-inline float find_distance(Vector4 *first_vector4, Vector4 *second_vector4);
+inline float find_distance(const Vector4 &first_vector4, const Vector4 &second_vector4);
 
 inline Vector3 to_vector3(const Vector4 &vector);
 inline Vector4 negate(Vector4 *vector);
@@ -254,10 +255,10 @@ inline float get_angle(Vector2 *first_vector2, Vector2 *second_vector2)
 	XMVECTOR second = XMLoadFloat2(second_vector2);
 	return XMVectorGetX(XMVector2AngleBetweenVectors(first, second));
 }
-inline float find_distance(Vector2 *first_vector2, Vector2 *second_vector2)
+inline float find_distance(const Vector2 &first_vector2, const Vector2 &second_vector2)
 {
-	XMVECTOR first = XMLoadFloat2(first_vector2);
-	XMVECTOR second = XMLoadFloat2(second_vector2);
+	XMVECTOR first = XMLoadFloat2(&first_vector2);
+	XMVECTOR second = XMLoadFloat2(&second_vector2);
 	XMVECTOR temp = XMVectorSubtract(first, second);
 	return XMVectorGetX(XMVector2Length(temp));
 }
@@ -271,6 +272,12 @@ inline Vector2 negate(Vector2 *vector2)
 inline Vector2 normalize(Vector2 *vector2)
 {
 	XMVECTOR vector = XMLoadFloat2(vector2);
+	return XMVector2Normalize(vector);
+}
+
+inline Vector2 normalize(const Vector2 &vector2)
+{
+	XMVECTOR vector = XMLoadFloat2(&vector2);
 	return XMVector2Normalize(vector);
 }
 
@@ -443,10 +450,10 @@ inline float get_angle(Vector3 *first_vector3, Vector3 *second_vector3)
 	XMVECTOR second = XMLoadFloat3(second_vector3);
 	return XMVectorGetX(XMVector3AngleBetweenVectors(first, second));
 }
-inline float find_distance(Vector3 *first_vector3, Vector3 *second_vector3)
+inline float find_distance(const Vector3 &first_vector3, const Vector3 &second_vector3)
 {
-	XMVECTOR first = XMLoadFloat3(first_vector3);
-	XMVECTOR second = XMLoadFloat3(second_vector3);
+	XMVECTOR first = XMLoadFloat3(&first_vector3);
+	XMVECTOR second = XMLoadFloat3(&second_vector3);
 	XMVECTOR temp = XMVectorSubtract(first, second);
 	return XMVectorGetX(XMVector3Length(temp));
 }
@@ -650,10 +657,10 @@ inline float get_angle(Vector4 *first_vector4, Vector4 *second_vector4)
 	XMVECTOR second = XMLoadFloat4(second_vector4);
 	return XMVectorGetX(XMVector4AngleBetweenVectors(first, second));
 }
-inline float find_distance(Vector4 *first_vector4, Vector4 *second_vector4)
+inline float find_distance(const Vector4 &first_vector4, const Vector4 &second_vector4)
 {
-	XMVECTOR first = XMLoadFloat4(first_vector4);
-	XMVECTOR second = XMLoadFloat4(second_vector4);
+	XMVECTOR first = XMLoadFloat4(&first_vector4);
+	XMVECTOR second = XMLoadFloat4(&second_vector4);
 	XMVECTOR temp = XMVectorSubtract(first, second);
 	return XMVectorGetX(XMVector4Length(temp));
 }
