@@ -6,8 +6,9 @@
 #include "../game/world.h"
 #include "../libs/str.h"
 #include "../libs/os/input.h"
-#include "../libs/structures/array.h"
 #include "../libs/key_binding.h"
+#include "../libs/image/image.h"
+#include "../libs/structures/array.h"
 #include "../libs/math/structures.h"
 #include "../render/render_world.h"
 
@@ -19,101 +20,49 @@ typedef Enum_Helper<Light_Type> Light_Type_Helper;
 typedef Enum_Helper<Geometry_Type> Geometry_Type_Helper;
 
 struct Editor_Window {
-	Editor_Window() {}
-	~Editor_Window() {}
-
-	bool window_open = false;
-
+	Editor_Window();
+	virtual ~Editor_Window();
+	
 	Editor *editor = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
 	Render_System *render_system = NULL;
 
+	bool window_open = false;
+	Rect_s32 window_rect;
+	String name;
+
 	virtual void init(Engine *engine);
+	virtual void init(const char *_name, Engine *engine);
 	virtual void open();
 	virtual void close();
+	virtual void draw() = 0;
+
+	void set_position(s32 x, s32 y);
+	void set_size(s32 width, s32 height);
 };
 
-struct Make_Entity_Window : Editor_Window {
-	Make_Entity_Window();
-	~Make_Entity_Window();
-
-	u32 light_index;
-	u32 entity_index;
-	u32 geometry_index;
-	Box box;
-	Sphere sphere;
-	// Light entity
-	Vector3 position;
-	Vector3 direction;
-	Vector3 color;
-
-	struct Camera_Fields {
-		Vector3 position;
-		Vector3 target;
-	} camera_fields;
-
-	Light_Type_Helper *light_type_helper = NULL;
-	Entity_Type_Helper *entity_type_helper = NULL;
-	Geometry_Type_Helper *geometry_type_helper = NULL;
-
-	Array<String> light_types;
-	Array<String> entity_types;
-	Array<String> geometry_types;
-
-	void init(Engine *engine);
-	void reset_state();
-	void draw();
-};
-
-struct Game_World_Window : Editor_Window {
-	s32 window_width_delta;
-	s32 world_entities_height;
-	s32 entity_info_height;
-	Window_Style window_style;
-
-	Gui_Window_Theme world_entities_window_theme;
-	Gui_Window_Theme entity_info_window_theme;
-	Gui_Text_Button_Theme buttons_theme;
-
-	Hash_Table<u32, bool> draw_AABB_states;
-	Hash_Table<u32, bool> draw_frustum_states;
-
-	void init(Engine *engine);
-	void draw();
-	bool draw_entity_list(const char *list_name, u32 list_count, Entity_Type type);
-};
-
-struct Render_World_Window : Editor_Window {
-	bool debug_cascaded_shadows = false;
-	bool show_cascaded_shadow_frustums = false;
-	bool display_voxel_grid = false;
-	bool display_voxel_grid_bounds = false;
-	bool display_voxel_world = false;
-	Texture2D shadow_display_texture;
-
-	struct Draw_Cascade_Info {
-		Entity_Id entity_id;
-		u32 cascaded_shadow_map_index;
-		u32 shadow_cascade_index;
-	};
-	Array<Draw_Cascade_Info> frustum_entity_ids;
-	Array<String> rendering_types;
-
-	void init(Engine *engine);
-	void update();
-	void draw();
-};
-
-struct Drop_Down_Entity_Window : Editor_Window {
-	Size_u32 window_size;
-	Point_s32 mouse_position; // When happens the right button mouse click by a picked entity, the variable stores current mouse position.
-
+struct Top_Right_Window : Editor_Window {
 	Gui_Window_Theme window_theme;
-	Gui_Text_Button_Theme buttons_theme;
+
+	void init(const char *_name, Engine *engine);
+};
+
+struct Entity_Window : Top_Right_Window {
+	void init(Engine *engine);
+	void display_light(Light *light);
+	void display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbit_radius, const Point_s32 &position, Light *light, Render_Primitive_List *render_list);
+	void draw();
+};
+
+struct Entity_Tree_Window : Top_Right_Window {
+	Gui_Tree_Theme tree_theme;
 
 	void init(Engine *engine);
 	void draw();
+	
+	template <typename T>
+	void draw_entity_list(Array<T> &entity_list, const char *name);
 };
 
 struct Displaying_Command {
@@ -121,10 +70,6 @@ struct Displaying_Command {
 	String str_key_binding;
 
 	bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context) = NULL;
-};
-
-struct Displaying_Info {
-	String command_name;
 };
 
 struct Command_Window : Editor_Window {
@@ -173,8 +118,6 @@ struct Editor {
 	Editor();
 	~Editor();
 
-	bool draw_make_entity_window = false;
-	bool draw_drop_down_entity_window = false;
 	Editor_Mode_Type editor_mode = EDITOR_MODE_COMMON;
 
 	Entity_Id picked_entity;
@@ -183,29 +126,47 @@ struct Editor {
 	Render_System *render_sys = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
-
-	Gui_ID game_world_tab_gui_id;
+	Point_s32 mouse_position;
 
 	struct Settings {
 		float camera_speed = 5.0f;
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 
+	struct Left_Bar {
+		struct Images {
+			Image adding;
+			Image entity;
+			Image entities;
+			Image rendering;
+		} images;
+		Gui_Window_Theme window_theme;
+		Gui_Image_Button_Theme button_theme;
+	} left_bar;
+
 	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
 
+	Left_Bar left_buttons;
+	Entity_Window entity_window;
+	Entity_Tree_Window entities_window;
 	Command_Window command_window;
-	Make_Entity_Window make_entity_window;
-	Game_World_Window game_world_window;
-	Render_World_Window render_world_window;
-	Drop_Down_Entity_Window drop_down_entity_window;
+
+	Array<Editor_Window *> windows;
+	Array<Editor_Window *> top_right_windows;
 
 	void init(Engine *engine);
+	void init_left_bar();
+
 	void handle_events();
 	void update();
 	void picking();
+	
 	void render();
+	void render_menus();
+	void render_left_bar();
 
+	void open_or_close_right_window(Editor_Window *window);
 	void convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands);
 	void convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands);
 };

@@ -39,8 +39,8 @@ static void display_performance(s64 fps, s64 frame_time)
 	u32 text_width = performance_font->get_text_width(test2);
 
 	s32 x = Render_System::screen_width - text_width - 10;
-	render_list.add_text(x, 5, test);
-	render_list.add_text(x, 20, test2);
+	render_list.add_text(100, 5, test);
+	render_list.add_text(180, 5, test2);
 
 	free_string(test);
 	free_string(test2);

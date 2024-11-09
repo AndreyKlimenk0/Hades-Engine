@@ -15,7 +15,15 @@ template <typename... Args>
 void print(Args... args)
 {
 	char *formatted_string = format(args...);
-	append_text_to_console_buffer(formatted_string);
+	append_text_to_console_buffer(formatted_string, true);
+	if (formatted_string) { delete formatted_string; }
+}
+
+template <typename... Args>
+void print_same_line(Args... args)
+{
+	char *formatted_string = format(args...);
+	append_text_to_console_buffer(formatted_string, false);
 	if (formatted_string) { delete formatted_string; }
 }
 
@@ -26,7 +34,7 @@ void loop_print(Args... args)
 {
 	char *formatted_string = format(args...);
 	if (is_string_unique(formatted_string)) {
-		append_text_to_console_buffer(formatted_string);
+		append_text_to_console_buffer(formatted_string, true);
 	}
 	if (formatted_string) { delete formatted_string; }
 }

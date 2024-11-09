@@ -323,6 +323,8 @@ void Render_World::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
 
+	ZeroMemory(&frame_info, sizeof(CB_Frame_Info));
+
 	triangle_meshes.init(&render_sys->gpu_device);
 
 	init_shadow_rendering();
@@ -371,6 +373,7 @@ void Render_World::init_shadow_rendering()
 	shadow_cascade_ranges.push({ 15, 150 });
 	shadow_cascade_ranges.push({ 150, 500 });
 	shadow_cascade_ranges.push({ 500, 1000 });
+	shadow_cascade_ranges.push({ 1000, 5000 });
 
 	jittering_tile_size = 16;
 	jittering_filter_size = 8;
@@ -449,6 +452,9 @@ void Render_World::release_all_resources()
 
 void Render_World::release_render_entities_resources()
 {
+	light_info_list.clear();
+	shader_lights.clear();
+
 	render_entity_world_matrices.clear();
 	light_view_matrices.clear();
 	cascaded_view_projection_matrices.clear();
@@ -469,11 +475,6 @@ void Render_World::release_render_entities_resources()
 void Render_World::update()
 {
 	update_render_entities();
-
-	if (light_hash != game_world->light_hash) {
-		light_hash = game_world->light_hash;
-		update_lights();
-	}
 
 	Camera *camera = game_world->get_camera(render_camera.camera_id);
 	Camera *camera_info = game_world->get_camera(render_camera.camera_info_id);
@@ -522,14 +523,21 @@ void Render_World::update_global_illumination()
 	back_to_front_voxel_view_matrix = make_look_to_matrix(back_to_front_view_position, Vector3::base_z);
 }
 
-void Render_World::update_lights()
+void Render_World::add_light(Entity_Id light_id)
 {
-	frame_info.light_count = game_world->lights.count;
+	Light *light = (Light *)game_world->get_entity(light_id);
+	if (!light) {
+		return;
+	}
+	frame_info.light_count++;
 
-	Array<Hlsl_Light> shader_lights;
+	Light_Info light_info;
+	light_info.light_id = get_entity_id(light);
+	light_info.cascade_shadows_index = cascaded_shadows_list.count;
+	light_info.cascaded_shadows_info_index = cascaded_shadows_info_list.count;
+	light_info.hlsl_light_index = shader_lights.count;
 
-	Light *light = NULL;
-	For(game_world->lights, light) {
+	if (add_shadow(light)) {
 		Hlsl_Light hlsl_light;
 		hlsl_light.position = light->position;
 		hlsl_light.direction = normalize(&light->direction);
@@ -537,10 +545,12 @@ void Render_World::update_lights()
 		hlsl_light.radius = light->radius;
 		hlsl_light.range = light->range;
 		hlsl_light.light_type = light->light_type;
-		add_shadow(light);
+
 		shader_lights.push(hlsl_light);
+		lights_struct_buffer.update(&shader_lights);
+
+		light_info_list.push(light_info);
 	}
-	lights_struct_buffer.update(&shader_lights);
 }
 
 void Render_World::add_render_entity(Entity_Id entity_id, Mesh_Id mesh_id, void *args)
@@ -570,6 +580,8 @@ u32 Render_World::delete_render_entity(Entity_Id entity_id)
 
 bool Render_World::add_shadow(Light *light)
 {
+	u32 cascaded_shadows_info_index = cascaded_shadows_info_list.count;
+
 	Cascaded_Shadows_Info cascaded_shadows_info;
 	cascaded_shadows_info.light_direction = light->direction;
 	cascaded_shadows_info.shadow_map_start_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count;
@@ -594,6 +606,34 @@ bool Render_World::add_shadow(Light *light)
 	}
 	cascaded_shadows_list.push(cascaded_shadows);
 	return true;
+}
+
+static bool find_cascade_shadows(const Light_Info &light_info, const Entity_Id &light_id)
+{
+	return light_info.light_id == light_id;
+}
+
+void Render_World::update_light(Light *light)
+{
+	Find_Result<Light_Info> result = find_in_array(light_info_list, get_entity_id(light), find_cascade_shadows);
+	if (result.found) {
+		Light_Info light_info = result.data;
+		cascaded_shadows_list[light_info.cascade_shadows_index].light_direction = light->direction;
+		
+		cascaded_shadows_info_list[light_info.cascaded_shadows_info_index].light_direction = light->direction;
+		cascaded_shadows_info_sb.update(&cascaded_shadows_info_list);
+
+		Hlsl_Light *hlsl_light = &shader_lights[light_info.hlsl_light_index];
+		hlsl_light->position = light->position;
+		hlsl_light->direction = normalize(&light->direction);
+		hlsl_light->color = light->color;
+		hlsl_light->radius = light->radius;
+		hlsl_light->range = light->range;
+		hlsl_light->light_type = light->light_type;
+		lights_struct_buffer.update(&shader_lights);
+	} else {
+		print("Render_World::update_cascade_shadows: A cascade shadows was not found. Can not update The cascade shadows");
+	}
 }
 
 void Render_World::update_shadows()

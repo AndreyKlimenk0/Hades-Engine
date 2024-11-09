@@ -69,7 +69,7 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 	}
 }
 
-inline void make_render_entities(File *level_file, Game_World *game_world, Render_World *render_world)
+inline void init_render_world(File *level_file, Game_World *game_world, Render_World *render_world)
 {
 	assert(level_file);
 	assert(game_world);
@@ -86,6 +86,10 @@ inline void make_render_entities(File *level_file, Game_World *game_world, Rende
 				render_world->add_render_entity(entity->first, mesh_id);
 			}
 		}
+	}
+
+	for (u32 i = 0; i < game_world->lights.count; i++) {
+		render_world->add_light(get_entity_id(&game_world->lights[i]));
 	}
 }
 
@@ -157,7 +161,7 @@ void init_game_and_render_world_from_level(const char *level_name, Game_World *g
 	if (level_file.open(full_path_to_level_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
 		load_game_entities(&level_file, game_world);
 		load_saved_meshes(&level_file, render_world);
-		make_render_entities(&level_file, game_world, render_world);
+		init_render_world(&level_file, game_world, render_world);
 	}
 }
 
