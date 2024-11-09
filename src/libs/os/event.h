@@ -10,6 +10,7 @@ enum Event_Type {
 	EVENT_TYPE_MOUSE_WHEEL,
 	EVENT_TYPE_KEY,
 	EVENT_TYPE_CHAR,
+	EVENT_TYPE_DOUBLE_CLICK,
 };
 
 struct Event {
@@ -36,6 +37,7 @@ bool were_key_events();
 bool was_click(Key key);
 bool was_key_just_pressed(Key key);
 bool was_key_just_released(Key key);
+bool was_double_click(Key key);
 
 Queue<Event> *get_event_queue();
 

@@ -20,8 +20,8 @@ typedef Enum_Helper<Light_Type> Light_Type_Helper;
 typedef Enum_Helper<Geometry_Type> Geometry_Type_Helper;
 
 struct Editor_Window {
-	Editor_Window() {}
-	~Editor_Window() {}
+	Editor_Window();
+	virtual ~Editor_Window();
 	
 	Editor *editor = NULL;
 	Game_World *game_world = NULL;
@@ -50,6 +50,8 @@ struct Top_Right_Window : Editor_Window {
 
 struct Entity_Window : Top_Right_Window {
 	void init(Engine *engine);
+	void display_light(Light *light);
+	void display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbit_radius, const Point_s32 &position, Light *light, Render_Primitive_List *render_list);
 	void draw();
 };
 
@@ -58,6 +60,9 @@ struct Entity_Tree_Window : Top_Right_Window {
 
 	void init(Engine *engine);
 	void draw();
+	
+	template <typename T>
+	void draw_entity_list(Array<T> &entity_list, const char *name);
 };
 
 struct Displaying_Command {

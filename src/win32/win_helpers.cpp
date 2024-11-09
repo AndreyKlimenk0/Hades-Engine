@@ -54,6 +54,7 @@ bool create_win32_window(HINSTANCE hinstance, Win32_Window *window, s32 window_w
 	wc.hInstance = hinstance;
 	wc.lpszClassName = CLASS_NAME;
 	wc.hCursor = LoadCursor(hinstance, MAKEINTRESOURCE(32512));
+	wc.style = CS_DBLCLKS;
 
 	RegisterClass(&wc);
 

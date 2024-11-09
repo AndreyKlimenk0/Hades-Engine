@@ -173,11 +173,17 @@ inline Size_u32 Voxel_Grid::total_size()
 	return grid_size * ceil_size;
 }
 
+struct Light_Info {
+	Entity_Id light_id;
+	u32 cascade_shadows_index;
+	u32 cascaded_shadows_info_index;
+	u32 hlsl_light_index;
+};
+
 struct Render_World {
 	Game_World *game_world = NULL;
 	Render_System *render_sys = NULL;
 
-	u32 light_hash;
 	u32 cascaded_shadow_map_count = 0;
 	u32 jittering_tile_size = 0;
 	u32 jittering_filter_size = 0;
@@ -205,6 +211,8 @@ struct Render_World {
 	Array<Cascaded_Shadows> cascaded_shadows_list;
 	Array<Cascaded_Shadows_Info> cascaded_shadows_info_list;
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
+	Array<Light_Info> light_info_list;
+	Array<Hlsl_Light> shader_lights;
 
 	Array<Render_Pass *> frame_render_passes;
 
@@ -238,13 +246,14 @@ struct Render_World {
 	void release_render_entities_resources();
 
 	void update();
-	void update_lights();
 	void update_shadows();
 	void update_render_entities();
 	void update_global_illumination();
 
 	void add_render_entity(Entity_Id entity_id, Mesh_Id mesh_id, void *args = NULL);
 	bool add_shadow(Light *light);
+	void add_light(Entity_Id light_id);
+	void update_light(Light *light);
 
 	u32 delete_render_entity(Entity_Id entity_id);
 

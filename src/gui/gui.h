@@ -10,6 +10,7 @@
 
 struct Engine;
 struct Texture2D;
+struct Render_Primitive_List;
 
 typedef u32 Gui_ID;
 typedef u32 Window_Style;
@@ -293,6 +294,7 @@ namespace gui
 
 	bool tree_node_selected();
 	bool element_clicked(Key key);
+	bool element_double_clicked(Key key);
 	bool mouse_over_element();
 
 	bool begin_list(const char *name, Gui_List_Column filters[], u32 filter_count);
@@ -318,5 +320,7 @@ namespace gui
 
 	void set_layout();
 	void reset_layout();
+
+	Render_Primitive_List *get_render_primitive_list();
 }
 #endif

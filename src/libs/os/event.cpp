@@ -7,6 +7,9 @@
 #include "event.h"
 #include "../../sys/sys.h"
 
+static bool left_mouse_double_click = false;
+static bool right_mouse_double_click = false;
+
 static bool at_least_one_key_event_pushed = false;
 
 static bool click_key_states[INPUT_KEYS_NUMBER];
@@ -83,6 +86,14 @@ void push_event(Event_Type type, int first_value, int second_value)
 			event.mouse_wheel_delta = first_value;
 			break;
 		}
+		case EVENT_TYPE_DOUBLE_CLICK: {
+			if (first_value > 0) {
+				event.key_info.key = KEY_LMOUSE;
+			} else if (second_value > 0) {
+				event.key_info.key = KEY_RMOUSE;
+			}
+			break;
+		}
 	}
 	event_queue.push(event);
 }
@@ -92,6 +103,8 @@ void run_event_loop()
 	Async_Input::new_frame();
 
 	at_least_one_key_event_pushed = false;
+	left_mouse_double_click = false;
+	right_mouse_double_click = false;
 	memset((void *)just_pressed_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
 	memset((void *)just_released_keys, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
 	memset((void *)click_key_states, 0, sizeof(bool) * INPUT_KEYS_NUMBER);
@@ -117,6 +130,15 @@ void run_event_loop()
 			Mouse_State::y = event.mouse_info.y;
 		} else if (event.type == EVENT_TYPE_MOUSE_WHEEL) {
 			Async_Input::add_mouse_wheel(event.mouse_wheel_delta);
+		
+		} else if (event.type == EVENT_TYPE_DOUBLE_CLICK) {
+			if (event.key_info.key == KEY_LMOUSE) {
+				left_mouse_double_click = true;
+			} else if (event.key_info.key == KEY_RMOUSE) {
+				right_mouse_double_click = true;
+			} else {
+				print("run_event_loop: Can recognize a key of a double key event.");
+			}
 		}
 	}
 }
@@ -149,6 +171,17 @@ bool was_key_just_pressed(Key key)
 bool was_key_just_released(Key key)
 {
 	return just_released_keys[key];
+}
+
+bool was_double_click(Key key)
+{
+	if (key == KEY_LMOUSE) {
+		return left_mouse_double_click;
+	} else if (key == KEY_RMOUSE) {
+		return right_mouse_double_click;
+	} else {
+		return false;
+	}
 }
 
 bool Event::is_key_up(Key key)
