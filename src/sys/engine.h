@@ -15,6 +15,11 @@
 #include "../libs/number_types.h"
 
 struct Engine {
+	struct Swap_Chain_Present {
+		u32 sync_interval = 0;
+		u32 flags = 0;
+	} swap_chain_present;
+
 	bool is_initialized = false;
 	String current_level_name;
 	
