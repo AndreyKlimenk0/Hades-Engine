@@ -12,8 +12,9 @@ struct Win32_Window {
 	static LRESULT CALLBACK procedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 
-bool create_win32_window(HINSTANCE hinstance, Win32_Window *window, s32 window_width, s32 window_height);
 void get_window_size(HWND window, int *width, int *height);
+bool create_win32_window(HINSTANCE hinstance, Win32_Window *window, s32 window_width, s32 window_height);
+HANDLE create_event_handle();
 
 enum Cursor_Type {
 	CURSOR_TYPE_ARROW,
