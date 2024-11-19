@@ -90,6 +90,34 @@ void d3d12::Gpu_Device::release()
     device.Reset();
 }
 
+void d3d12::Gpu_Device::create_fence(Fence &fence)
+{
+    HR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.ReleaseAndGetAddressOf())));
+}
+
+D3D12_COMMAND_LIST_TYPE command_list_type_to_D3D12(Command_List_Type command_list_type) 
+{
+    switch (command_list_type) {
+        case COMMAND_LIST_TYPE_DIRECT:
+            return D3D12_COMMAND_LIST_TYPE_DIRECT;
+        case COMMAND_LIST_TYPE_BUNDLE:
+            return D3D12_COMMAND_LIST_TYPE_BUNDLE;
+        case COMMAND_LIST_TYPE_COMPUTE:
+            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        case COMMAND_LIST_TYPE_COPY:
+            return D3D12_COMMAND_LIST_TYPE_COPY;
+        default:
+            assert(false);
+    }
+    return (D3D12_COMMAND_LIST_TYPE)0;
+}
+
+
+void d3d12::Gpu_Device::create_command_allocator(Command_List_Type command_list_type, Command_Allocator &command_allocator)
+{
+    HR(device->CreateCommandAllocator(command_list_type_to_D3D12(command_list_type), IID_PPV_ARGS(command_allocator.ReleaseAndGetAddressOf())));
+}
+
 void d3d12::Gpu_Device::create_command_queue(Command_Queue &command_queue)
 {
     // Should I reset command queue before creating ?
@@ -100,6 +128,18 @@ void d3d12::Gpu_Device::create_command_queue(Command_Queue &command_queue)
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
     HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&command_queue)));
+}
+
+void d3d12::Gpu_Device::create_command_list(const GPU_Pipeline_State &pipeline_state, Graphics_Command_List &command_list)
+{
+    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_list.command_allocator.Get(), pipeline_state.Get(), IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
+    command_list.close();
+}
+
+void d3d12::Gpu_Device::create_command_list(Graphics_Command_List &command_list)
+{
+    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_list.command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
+    command_list.close();
 }
 
 void d3d12::Gpu_Device::create_rtv_descriptor_heap(u32 descriptor_count, Descriptor_Heap &descriptor_heap)
@@ -117,7 +157,7 @@ void d3d12::Gpu_Device::create_rtv_descriptor_heap(u32 descriptor_count, Descrip
     descriptor_heap.cpu_handle = descriptor_heap.heap->GetCPUDescriptorHandleForHeapStart();
 }
 
-void d3d12::Swap_Chain::init(u32 buffer_count, u32 width, u32 height, HWND handle, const ComPtr<ID3D12CommandQueue> &command_queue)
+void d3d12::Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, const ComPtr<ID3D12CommandQueue> &command_queue)
 {
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc;
     ZeroMemory(&swap_chain_desc, sizeof(DXGI_SWAP_CHAIN_DESC1));
@@ -131,6 +171,7 @@ void d3d12::Swap_Chain::init(u32 buffer_count, u32 width, u32 height, HWND handl
     swap_chain_desc.Scaling = DXGI_SCALING_STRETCH;
     swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     swap_chain_desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+    swap_chain_desc.Flags = (allow_tearing && check_tearing_support()) ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
     u32 factory_flags = 0;
 #ifdef _DEBUG
@@ -152,8 +193,18 @@ void d3d12::Swap_Chain::release()
     dxgi_swap_chain.Reset();
 }
 
+u32 d3d12::Swap_Chain::get_current_back_buffer_index()
+{
+    return dxgi_swap_chain->GetCurrentBackBufferIndex();
+}
+
 void d3d12::Swap_Chain::resize(u32 width, u32 height)
 {
+}
+
+void d3d12::Swap_Chain::present(u32 sync_interval, u32 flags)
+{
+    HR(dxgi_swap_chain->Present(sync_interval, flags));
 }
 
 void d3d12::Swap_Chain::get_buffer(u32 buffer_index, GPU_Resource &resource)
@@ -187,4 +238,39 @@ D3D12_CPU_DESCRIPTOR_HANDLE Descriptor_Heap::get_cpu_heap_descriptro_handle(u32 
     assert(descriptor_index <= descriptor_count);
 
     return { cpu_handle.ptr + (increment_size * descriptor_index) };
+}
+
+Graphics_Command_List::Graphics_Command_List()
+{
+}
+
+Graphics_Command_List::~Graphics_Command_List()
+{
+}
+
+void Graphics_Command_List::set_command_allocator(Command_Allocator &_command_allocator)
+{
+    command_allocator = _command_allocator;
+}
+
+void Graphics_Command_List::close()
+{
+    HR(command_list->Close());
+}
+
+#include <dxgi1_5.h>
+
+bool check_tearing_support()
+{
+    BOOL allow_tearing = FALSE;
+    ComPtr<IDXGIFactory4> factory4;
+    HRESULT result = CreateDXGIFactory1(IID_PPV_ARGS(&factory4));
+    if (SUCCEEDED(result)) {
+        ComPtr<IDXGIFactory5> factory5;
+        result = factory4.As(&factory5);
+        if (SUCCEEDED(result)) {
+            result = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+        }
+    }
+    return SUCCEEDED(result) && allow_tearing;
 }
