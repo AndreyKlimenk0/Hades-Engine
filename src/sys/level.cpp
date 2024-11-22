@@ -1,7 +1,9 @@
 #include <assert.h>
 
 #include "sys.h"
+#include "vars.h"
 #include "level.h"
+#include "engine.h"
 #include "../libs/mesh_loader.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -52,20 +54,28 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 		mesh_name.append(unified_strings[i]);
 	}
 
+	Variable_Service *variable_service = Engine::get_variable_service();
+	Variable_Service *models_loading = variable_service->find_namespace("models_loading");
+	Models_Loading_Options loading_options;
+	models_loading->attach("scene_logging", &loading_options.scene_logging);
+	models_loading->attach("assimp_logging", &loading_options.assimp_logging);
+	models_loading->attach("scaling_value", &loading_options.scaling_value);
+	models_loading->attach("use_scaling_value", &loading_options.use_scaling_value);
+
 	for (u32 i = 0; i < mesh_names.count; i++) {
 		String full_path_to_mesh_file;
 		build_full_path_to_model_file(mesh_names[i].c_str(), full_path_to_mesh_file);
 
-		Array<Mesh_Data> submeshes_data;
-		if (load_triangle_mesh(full_path_to_mesh_file, submeshes_data)) {
+		Array<Loading_Model *> loaded_models;
+		if (load_models_from_file(full_path_to_mesh_file, loaded_models, &loading_options)) {
 			render_world->triangle_meshes.loaded_meshes.push(mesh_names[i].c_str());
-			Mesh_Data *mesh_data = NULL;
-			For(submeshes_data, mesh_data) {
+			Loading_Model *model = NULL;
+			For(loaded_models, model) {
 				Mesh_Id mesh_id;
-				render_world->add_triangle_mesh(&mesh_data->mesh, &mesh_id);
+				render_world->add_triangle_mesh(&model->mesh, &mesh_id);
 			}
+			free_memory(&loaded_models);
 		}
-
 	}
 }
 

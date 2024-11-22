@@ -129,7 +129,7 @@ struct Editor {
 	Point_s32 mouse_position;
 
 	struct Settings {
-		float camera_speed = 5.0f;
+		float camera_speed = 50.0f;
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 

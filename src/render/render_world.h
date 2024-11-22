@@ -85,9 +85,9 @@ struct Mesh_Storate {
 
 	void allocate_gpu_memory();
 	bool add_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
-	bool add_texture(const char *texture_name, Texture_Idx *texture_idx);
+	bool add_texture(const char *texture_name, const char *full_path_to_texture_file, Texture_Idx *texture_idx);
 	bool update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh);
-	Texture_Idx find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture);
+	Texture_Idx find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture_Idx default_texture);
 
 	Mesh_Textures *get_mesh_textures(u32 index);
 	Texture2D *get_texture(Texture_Idx texture_idx);
