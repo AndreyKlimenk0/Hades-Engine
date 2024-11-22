@@ -1,11 +1,14 @@
 :/system
 window_width 1900
 window_height 980
-#load_level "normal_displacment_mapping.hl"
+create_entities_for_meshes true
+#load_level "half.hl"
 
-:/log
-log_mesh_info false
-log_assimp_info false
+:/models_loading
+scene_logging false
+assimp_logging false
+scaling_value 1.0
+use_scaling_value true
 
 :/gui
 font_name "FiraCode-Regular"

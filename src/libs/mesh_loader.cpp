@@ -12,6 +12,12 @@
 #include <assimp/LogStream.hpp>
 #include <assimp/DefaultLogger.hpp>
 
+static s32 unknown_model_name_count = 0;
+static String current_file_name;
+static const char *FOUR_SPACES = "    ";
+static Models_Loading_Options loading_options;
+
+
 struct Assimp_Logger : Assimp::LogStream {
 	void write(const char *message)
 	{
@@ -19,7 +25,29 @@ struct Assimp_Logger : Assimp::LogStream {
 	}
 };
 
-static const char *FOUR_SPACES = "    ";
+static void begin_load_models()
+{
+	unknown_model_name_count = 0;
+	current_file_name.free();
+	loading_options.scene_logging = false;
+	loading_options.assimp_logging = false;
+	loading_options.use_scaling_value = false;
+}
+
+inline Vector3 to_vector3(aiVector3t<float> &vector)
+{
+	return Vector3(vector.x, vector.y, vector.z);
+}
+
+inline Matrix4 to_matrix4(aiMatrix4x4 &matrix)
+{
+	return Matrix4(matrix.a1, matrix.a2, matrix.a3, matrix.a4, matrix.b1, matrix.b2, matrix.b3, matrix.b4, matrix.c1, matrix.c2, matrix.c3, matrix.c4, matrix.d1, matrix.d2, matrix.d3, matrix.d4);
+}
+
+inline char *get_unique_name(aiMesh *mesh)
+{
+	return format("{}_{}_{}_{}", mesh->mName.C_Str(), mesh->mNumVertices, mesh->mNumFaces, mesh->mPrimitiveTypes);
+}
 
 inline void print_texture_info(aiMaterial *material, aiTextureType texture_type, const char *texture_label, const char *spaces)
 {
@@ -38,17 +66,7 @@ inline void print_texture_info(aiMaterial *material, aiTextureType texture_type,
 	}
 }
 
-inline Vector3 to_vector3(aiVector3t<float> &vector)
-{
-	return Vector3(vector.x, vector.y, vector.z);
-}
-
-inline Matrix4 to_matrix4(aiMatrix4x4 &matrix)
-{
-	return Matrix4(matrix.a1, matrix.a2, matrix.a3, matrix.a4, matrix.b1, matrix.b2, matrix.b3, matrix.b4, matrix.c1, matrix.c2, matrix.c3, matrix.c4, matrix.d1, matrix.d2, matrix.d3, matrix.d4);
-}
-
-void print_nodes(aiScene *scene, aiNode *node, u32 node_level = 0)
+void print_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_node_matrix, u32 node_level = 0)
 {
 	assert(scene);
 	assert(node);
@@ -57,6 +75,8 @@ void print_nodes(aiScene *scene, aiNode *node, u32 node_level = 0)
 	for (u32 i = 0; i < node_level; i++) {
 		spaces.append(FOUR_SPACES);
 	}
+
+	aiMatrix4x4 transformation_matrix = node->mTransformation * parent_node_matrix;
 
 	aiVector3t<float> scaling;
 	aiVector3t<float> rotation;
@@ -67,13 +87,26 @@ void print_nodes(aiScene *scene, aiNode *node, u32 node_level = 0)
 	Vector3 r = to_vector3(rotation);
 	Vector3 p = to_vector3(position);
 
+	transformation_matrix.Decompose(scaling, rotation, position);
+
+	Vector3 s1 = to_vector3(scaling);
+	Vector3 r1 = to_vector3(rotation);
+	Vector3 p1 = to_vector3(position);
+
 	print("{}aiNode:", spaces);
 	print("{}    Name:", spaces, node->mName.C_Str());
 	print("{}    Child nodes number:", spaces, node->mNumChildren);
 	print("{}    Meshes number:", spaces, node->mNumMeshes);
+	
+	print("{}    Itself matrix", spaces);
 	print("{}    Scaling: {}", spaces, &s);
 	print("{}    Rotation: {}", spaces, &r);
 	print("{}    Position: {}", spaces, &p);
+
+	print("{}    Inherited matrix", spaces);
+	print("{}    Scaling: {}", spaces, &s1);
+	print("{}    Rotation: {}", spaces, &r1);
+	print("{}    Position: {}", spaces, &p1);
 
 	if (node->mNumMeshes > 0) {
 		for (u32 i = 0; i < node->mNumMeshes; i++) {
@@ -119,7 +152,7 @@ void print_nodes(aiScene *scene, aiNode *node, u32 node_level = 0)
 	}
 
 	for (u32 i = 0; i < node->mNumChildren; i++) {
-		print_nodes(scene, node->mChildren[i], node_level + 1);
+		print_nodes(scene, node->mChildren[i], transformation_matrix, node_level + 1);
 	}
 }
 
@@ -130,7 +163,8 @@ inline void decompose_matrix(aiMatrix4x4 &matrix, Vector3 &s, Vector3 &r, Vector
 	aiVector3t<float> position;
 	matrix.Decompose(scaling, rotation, position);
 
-	s = to_vector3(scaling);
+
+	s = loading_options.use_scaling_value ? Vector3(loading_options.scaling_value, loading_options.scaling_value, loading_options.scaling_value) : to_vector3(scaling);
 	r = to_vector3(rotation);
 	p = to_vector3(position);
 }
@@ -165,9 +199,11 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)
 			vertex.normal.y = ai_mesh->mNormals[i].y;
 			vertex.normal.z = ai_mesh->mNormals[i].z;
 		}
-		vertex.tangent.x = ai_mesh->mTangents[i].x;
-		vertex.tangent.y = ai_mesh->mTangents[i].y;
-		vertex.tangent.z = ai_mesh->mTangents[i].z;
+		if (ai_mesh->HasTangentsAndBitangents()) {
+			vertex.tangent.x = ai_mesh->mTangents[i].x;
+			vertex.tangent.y = ai_mesh->mTangents[i].y;
+			vertex.tangent.z = ai_mesh->mTangents[i].z;
+		}
 
 		mesh->vertices.push(vertex);
 	}
@@ -182,7 +218,7 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)
 	}
 }
 
-inline void process_material(aiMaterial *material, Mesh_Data *mesh)
+inline void process_material(aiMaterial *material, Loading_Model *loading_model)
 {
 	float shininess = 0.0f;
 	float shininess_strength = 1.0f;
@@ -190,123 +226,117 @@ inline void process_material(aiMaterial *material, Mesh_Data *mesh)
 	material->Get(AI_MATKEY_SHININESS, shininess);
 	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
 
-	if (!get_texture_file_name(material, aiTextureType_NORMALS, mesh->mesh.normal_texture_name)) {
-		get_texture_file_name(material, aiTextureType_HEIGHT, mesh->mesh.normal_texture_name);
+	if (!get_texture_file_name(material, aiTextureType_NORMALS, loading_model->mesh.normal_texture_name)) {
+		get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->mesh.normal_texture_name);
 	}
-	get_texture_file_name(material, aiTextureType_DIFFUSE, mesh->mesh.diffuse_texture_name);
-	get_texture_file_name(material, aiTextureType_SPECULAR, mesh->mesh.specular_texture_name);
-	get_texture_file_name(material, aiTextureType_DISPLACEMENT, mesh->mesh.displacement_texture_name);
+	get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->mesh.diffuse_texture_name);
+	get_texture_file_name(material, aiTextureType_SPECULAR, loading_model->mesh.specular_texture_name);
+	get_texture_file_name(material, aiTextureType_DISPLACEMENT, loading_model->mesh.displacement_texture_name);
 }
 
-inline void process_nodes(String &file_name, aiScene *scene, aiNode *node, Array<Mesh_Data> &meshes, Hash_Table<u32, aiMesh *> &mesh_cache)
+inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Hash_Table<String, Loading_Model *> &models_cache)
 {
+	aiMatrix4x4 transform_matrix = node->mTransformation * parent_matrix;
+
 	for (u32 i = 0; i < node->mNumMeshes; i++) {
 		u32 mesh_index = node->mMeshes[i];
-		if (scene->mMeshes[mesh_index]->mName.length > 0) {
-
-			aiMesh *mesh = NULL;
-			if (!mesh_cache.get(mesh_index, &mesh)) {
-				mesh = scene->mMeshes[mesh_index];
-
-				u32 import_mesh_index = meshes.push(Mesh_Data());
-				Mesh_Data *temp = &meshes[import_mesh_index];
-				temp->mesh.name = mesh->mName.C_Str();
-				temp->mesh.file_name = file_name;
-
-				Mesh_Data::Transformation transformation_matrix;
-				decompose_matrix(node->mTransformation, transformation_matrix.scaling, transformation_matrix.rotation, transformation_matrix.translation);
-				temp->mesh_instances.push(transformation_matrix);
-
-				process_mesh(mesh, &temp->mesh);
-				if (scene->HasMaterials()) {
-					aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-					process_material(material, &meshes.last());
-				}
-			}
+		
+		String mesh_name;
+		aiMesh *assimp_mesh = scene->mMeshes[mesh_index];
+		if (assimp_mesh->mName.length > 0) {
+			mesh_name.move(get_unique_name(assimp_mesh));
+		} else {
+			char *temp = format("{}_{}_{}_{}_{}", current_file_name, assimp_mesh->mNumVertices, assimp_mesh->mNumFaces, assimp_mesh->mPrimitiveTypes, unknown_model_name_count++);
+			mesh_name.move(temp);
+			print("process_nodes: A model doesn't have a name. A name was generated for it.");
 		}
+		
+		Loading_Model *loading_model = NULL;
+		if (!models_cache.get(mesh_name, loading_model)) {
+			loading_model = new Loading_Model();
+			loading_model->mesh.name = mesh_name;
+			loading_model->mesh.file_name = current_file_name;
+
+			process_mesh(assimp_mesh, &loading_model->mesh);
+
+			if (scene->HasMaterials()) {
+				aiMaterial *material = scene->mMaterials[assimp_mesh->mMaterialIndex];
+				process_material(material, loading_model);
+			}
+			models_cache.set(mesh_name, loading_model);
+			models.push(loading_model);
+		}
+		Loading_Model::Transformation transformation;
+		transformation.scaling = Vector3(1.0f, 1.0f, 1.0f);
+		transformation.rotation = Vector3(0.0f, 0.0f, 0.0f);
+		transformation.translation = Vector3(0.0f, 0.0f, 0.0f);
+		decompose_matrix(transform_matrix, transformation.scaling, transformation.rotation, transformation.translation);
+		loading_model->instances.push(transformation);	
 	}
 	for (u32 i = 0; i < node->mNumChildren; i++) {
-		process_nodes(file_name, scene, node->mChildren[i], meshes, mesh_cache);
+		process_nodes(scene, node->mChildren[i], transform_matrix, models, models_cache);
 	}
 }
 
-static bool print_assimp_log_info = false;
-static bool print_scene_info = false;
-
-void setup_3D_file_loading_log(bool print_loading_info, bool print_external_lib_log)
-{
-	print_scene_info = print_loading_info;
-	print_assimp_log_info = print_external_lib_log;
-}
-
-bool load_triangle_mesh(const char *full_path_to_mesh_file, Array<Mesh_Data> &submeshes)
+bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Models_Loading_Options *options)
 {
 	s64 start = milliseconds_counter();
+	begin_load_models();
+
+	if (options) {
+		loading_options = *options;
+	}
 
 	String file_name;
-	extract_file_name(full_path_to_mesh_file, file_name);
+	extract_file_name(full_path_to_model_file, file_name);
 
 	print("load: Started to load {}.", file_name);
 
-	if (!file_exists(full_path_to_mesh_file)) {
+	if (!file_exists(full_path_to_model_file)) {
 		print("load: Failed to load. {} does not exist in model folder.", file_name);
 		return false;
 	}
 
-	if (print_assimp_log_info) {
+	if (loading_options.assimp_logging) {
 		Assimp::DefaultLogger::create("", Assimp::Logger::VERBOSE);
 		Assimp::DefaultLogger::get()->attachStream(new Assimp_Logger(), Assimp::Logger::Debugging | Assimp::Logger::Info | Assimp::Logger::Err | Assimp::Logger::Warn);
-		defer(Assimp::DefaultLogger::kill());
 	}
-
 	Assimp::Importer importer;
-	aiScene *scene = (aiScene *)importer.ReadFile(full_path_to_mesh_file, aiProcessPreset_TargetRealtime_Fast | aiProcess_ConvertToLeftHanded);
+	aiScene *scene = (aiScene *)importer.ReadFile(full_path_to_model_file, aiProcessPreset_TargetRealtime_Fast | aiProcess_ConvertToLeftHanded);
+
+	bool result = true;
 	if (!scene) {
 		print("load: Failed to load a scene from {}.", file_name);
-		return false;
+		result = false;
 	}
-
-	if (!scene->mRootNode) {
+	
+	if (scene && !scene->mRootNode) {
 		print("load: Failed to load a scene from {}.", file_name);
-		return false;
+		result = false;
 	}
+	
+	if (result) {
+		if (loading_options.scene_logging) {
+			print_nodes(scene, scene->mRootNode, aiMatrix4x4());
+		}
 
-	if (print_scene_info) {
-		print_nodes(scene, scene->mRootNode);
+		current_file_name = file_name;
+		models.resize(scene->mNumMeshes);
+
+		Hash_Table<String, Loading_Model *> model_cache;
+		process_nodes(scene, scene->mRootNode, aiMatrix4x4(), models, model_cache);
+
+		print("load: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
 	}
-	Hash_Table<u32, aiMesh *> mesh_cache;
-	process_nodes(file_name, scene, scene->mRootNode, submeshes, mesh_cache);
+	Assimp::DefaultLogger::kill();
 
-	print("load: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
-	return true;
+	return result;
 }
 
-Mesh_Data::Mesh_Data()
+Loading_Model::Loading_Model()
 {
 }
 
-Mesh_Data::~Mesh_Data()
+Loading_Model::~Loading_Model()
 {
-}
-
-Mesh_Data::Mesh_Data(const Mesh_Data &other)
-{
-	*this = other;
-}
-
-Mesh_Data &Mesh_Data::operator=(const Mesh_Data &other)
-{
-	if (this != &other) {
-		mesh_instances = other.mesh_instances;
-		mesh.name = other.mesh.name;
-		mesh.file_name = other.mesh.file_name;
-		mesh.vertices = other.mesh.vertices;
-		mesh.indices = other.mesh.indices;
-
-		mesh.normal_texture_name = other.mesh.normal_texture_name;
-		mesh.diffuse_texture_name = other.mesh.diffuse_texture_name;
-		mesh.specular_texture_name = other.mesh.specular_texture_name;
-		mesh.displacement_texture_name = other.mesh.displacement_texture_name;
-	}
-	return *this;
 }

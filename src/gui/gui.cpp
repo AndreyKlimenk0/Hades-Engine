@@ -12,7 +12,6 @@
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/str.h"
-#include "../libs/image/png.h"
 #include "../libs/key_binding.h"
 #include "../libs/math/functions.h"
 #include "../libs/structures/tree.h"
@@ -2824,15 +2823,7 @@ void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
 	String full_path;
 	for (u32 i = 0; i < TEXTURE_COUNT; i++) {
 		build_full_path_to_editor_file(pairs[i].name, full_path);
-		if (load_png_file(full_path, &image_data, &width, &height)) {
-			texture_desc.width = width;
-			texture_desc.height = height;
-			texture_desc.data = (void *)image_data;
-			gpu_device->create_texture_2d(&texture_desc, pairs[i].texture);
-			gpu_device->create_shader_resource_view(&texture_desc, pairs[i].texture);
-			DELETE_PTR(image_data);
-		} else {
-			print("Gui_Manager::load_and_init_textures: Failed to load {}.", pairs[i].name);
+		if (!create_texture2d_from_file(full_path, *pairs[i].texture)) {
 			*pairs[i].texture = default_texture;
 		}
 	}

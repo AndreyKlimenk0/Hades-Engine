@@ -116,6 +116,12 @@ void build_full_path_to_texture_file(const char *file_name, String &full_path)
 	full_path = value + "\\" + file_name;
 }
 
+void build_full_path_to_texture_file(const char *file_name, const String &subdirectory, String &full_path)
+{
+	String &value = os_path.data_dir_paths["texture"];
+	full_path = value + "\\" + subdirectory + "\\" + file_name;
+}
+
 void build_full_path_to_editor_file(const char *file_name, String &full_path)
 {
 	String &value = os_path.data_dir_paths["editor"];

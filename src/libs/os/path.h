@@ -11,6 +11,7 @@ bool build_full_path_to_data_directory(const char *directory_name, String &full_
 void build_full_path_to_level_file(const char *file_name, String &full_path);
 void build_full_path_to_gui_file(const char *file_name, String &full_path);
 void build_full_path_to_texture_file(const char *file_name, String &full_path);
+void build_full_path_to_texture_file(const char *file_name, const String &subdirectory, String &full_path);
 void build_full_path_to_editor_file(const char *file_name, String &full_path);
 void build_full_path_to_shader_file(const char *file_name, String &full_path);
 void build_full_path_to_source_shader_file(const char *file_name, String &full_path);

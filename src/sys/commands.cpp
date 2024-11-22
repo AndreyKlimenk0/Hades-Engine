@@ -1,11 +1,15 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "commands.h"
 #include "../game/world.h"
+
 #include "../sys/sys.h"
+#include "../sys/vars.h"
 #include "../sys/level.h"
 #include "../sys/engine.h"
+
 #include "../libs/str.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -17,34 +21,38 @@ static void load_meshes(Array<String> &mesh_names)
 {
 	Game_World *game_world = Engine::get_game_world();
 	Render_World *render_world = Engine::get_render_world();
+	Variable_Service *variable_service = Engine::get_variable_service();
+	
+	Variable_Service *models_loading = variable_service->find_namespace("models_loading");
+	Models_Loading_Options loading_options;
+	models_loading->attach("scene_logging", &loading_options.scene_logging);
+	models_loading->attach("assimp_logging", &loading_options.assimp_logging);
+	models_loading->attach("scaling_value", &loading_options.scaling_value);
+	models_loading->attach("use_scaling_value", &loading_options.use_scaling_value);
 
 	for (u32 i = 0; i < mesh_names.count; i++) {
 		String full_path_to_mesh;
 		build_full_path_to_model_file(mesh_names[i], full_path_to_mesh);
 
-		Array<Mesh_Data> submeshes_data;
-		if (load_triangle_mesh(full_path_to_mesh, submeshes_data)) {
+		Array<Loading_Model *> loaded_models;
+		if (load_models_from_file(full_path_to_mesh, loaded_models, &loading_options)) {
 			render_world->triangle_meshes.loaded_meshes.push(mesh_names[i]);
 
-			Mesh_Data *mesh_data = NULL;
-			For(submeshes_data, mesh_data) {
+			Loading_Model *model = NULL;
+			For(loaded_models, model) {
 				Mesh_Id mesh_id;
-				if (render_world->add_triangle_mesh(&mesh_data->mesh, &mesh_id)) {
-					AABB mesh_AABB = make_AABB(&mesh_data->mesh);
-					if (mesh_data->mesh_instances.count > 0) {
-						for (u32 j = 0; j < mesh_data->mesh_instances.count; j++) {
-							Mesh_Data::Transformation temp = mesh_data->mesh_instances[j];
-							Entity_Id entity_id = game_world->make_entity(temp.scaling, temp.rotation, temp.translation);
-							game_world->attach_AABB(entity_id, &mesh_AABB);
-							render_world->add_render_entity(entity_id, mesh_id);
-						}
-					} else {
-						Entity_Id entity_id = game_world->make_entity(Vector3::one, Vector3::zero, Vector3::zero);
+				if (render_world->add_triangle_mesh(&model->mesh, &mesh_id)) {
+					AABB mesh_AABB = make_AABB(&model->mesh);
+					assert(model->instances.count > 0);
+					for (u32 j = 0; j < model->instances.count; j++) {
+						Loading_Model::Transformation transformation = model->instances[j];
+						Entity_Id entity_id = game_world->make_entity(transformation.scaling, transformation.rotation, transformation.translation);
 						game_world->attach_AABB(entity_id, &mesh_AABB);
 						render_world->add_render_entity(entity_id, mesh_id);
 					}
 				}
 			}
+			free_memory(&loaded_models);
 		}
 	}
 }

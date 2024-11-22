@@ -6,8 +6,8 @@
 #include "../sys/engine.h"
 
 #include "render_world.h"
-#include "../libs/image/png.h"
 #include "../libs/os/path.h"
+#include "../libs/os/file.h"
 #include "../libs/math/functions.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
@@ -174,7 +174,7 @@ void Mesh_Storate::allocate_gpu_memory()
 	vertex_struct_buffer.allocate<Vertex_PNTUV>(100000);
 }
 
-bool Mesh_Storate::add_texture(const char *texture_name, Texture_Idx *texture_idx)
+bool Mesh_Storate::add_texture(const char *texture_name, const char *full_path_to_texture_file, Texture_Idx *texture_idx)
 {
 	assert(texture_name);
 	assert(texture_idx);
@@ -186,32 +186,16 @@ bool Mesh_Storate::add_texture(const char *texture_name, Texture_Idx *texture_id
 		return false;
 	}
 
+	bool result = false;
 	String_Id string_id = fast_hash(texture_name);
 	if (!texture_table.get(string_id, texture_idx)) {
-		u32 width;
-		u32 height;
-		u8 *data = NULL;
-		String full_path_to_texture;
-		build_full_path_to_texture_file(texture_name, full_path_to_texture);
-		bool result = load_png_file(full_path_to_texture, &data, &width, &height);
-		if (result) {
-			Texture2D_Desc texture_desc;
-			texture_desc.width = width;
-			texture_desc.height = height;
-			texture_desc.data = data;
-			texture_desc.mip_levels = 0;
-
-			Texture2D texture;
-			gpu_device->create_texture_2d(&texture_desc, &texture);
-			gpu_device->create_shader_resource_view(&texture_desc, &texture);
-			render_pipeline->update_subresource(&texture, data, width * dxgi_format_size(texture_desc.format));
-			render_pipeline->generate_mips(texture.srv);
-
+		Texture2D texture;
+		if (create_texture2d_from_file(full_path_to_texture_file, texture, TEXTURE_LOADING_OPTION_GENERATE_MIPMAPS)) {
 			*texture_idx = textures.push(texture);
 			texture_table.set(string_id, *texture_idx);
+			return true;
 		}
-		DELETE_PTR(data);
-		return result;
+		return false;
 	}
 	return true;
 }
@@ -251,10 +235,10 @@ bool Mesh_Storate::add_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id)
 	}
 
 	Mesh_Textures mesh_textures;
-	mesh_textures.normal_idx = find_texture_or_get_default(triangle_mesh->normal_texture_name, default_textures.normal);
-	mesh_textures.diffuse_idx = find_texture_or_get_default(triangle_mesh->diffuse_texture_name, default_textures.diffuse);
-	mesh_textures.specular_idx = find_texture_or_get_default(triangle_mesh->specular_texture_name, default_textures.specular);
-	mesh_textures.displacement_idx = find_texture_or_get_default(triangle_mesh->displacement_texture_name, default_textures.displacement);
+	mesh_textures.normal_idx = find_texture_or_get_default(triangle_mesh->normal_texture_name, triangle_mesh->file_name, default_textures.normal);
+	mesh_textures.diffuse_idx = find_texture_or_get_default(triangle_mesh->diffuse_texture_name, triangle_mesh->file_name, default_textures.diffuse);
+	mesh_textures.specular_idx = find_texture_or_get_default(triangle_mesh->specular_texture_name, triangle_mesh->file_name, default_textures.specular);
+	mesh_textures.displacement_idx = find_texture_or_get_default(triangle_mesh->displacement_texture_name, triangle_mesh->file_name, default_textures.displacement);
 
 	mesh_id->textures_idx = meshes_textures.push(mesh_textures);
 
@@ -294,11 +278,25 @@ bool Mesh_Storate::update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh)
 	return false;
 }
 
-Texture_Idx Mesh_Storate::find_texture_or_get_default(String &texture_file_name, Texture_Idx default_texture)
+Texture_Idx Mesh_Storate::find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture_Idx default_texture)
 {
 	Texture_Idx texture_idx;
-	if (!texture_file_name.is_empty() && add_texture(texture_file_name, &texture_idx)) {
-		return texture_idx;
+	if (!texture_file_name.is_empty()) {
+		String full_path_to_texture_file;
+		if (!mesh_file_name.is_empty()) {
+			String base_file_name;
+			extract_base_file_name(mesh_file_name, base_file_name);
+
+			build_full_path_to_texture_file(texture_file_name, base_file_name, full_path_to_texture_file);
+			if (file_exists(full_path_to_texture_file) && add_texture(texture_file_name, full_path_to_texture_file, &texture_idx)) {
+				return texture_idx;
+			}
+		}
+		build_full_path_to_texture_file(texture_file_name, full_path_to_texture_file);
+		if (file_exists(full_path_to_texture_file) && add_texture(texture_file_name, full_path_to_texture_file, &texture_idx)) {
+			return texture_idx;
+		}
+		print(" Mesh_Storate::find_texture_or_get_default: The engine can not find texture {}.", texture_file_name);
 	}
 	return default_texture;
 }
