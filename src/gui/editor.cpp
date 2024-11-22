@@ -14,7 +14,6 @@
 #include "../libs/os/file.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
-#include "../libs/image/png.h"
 #include "../libs/math/vector.h"
 #include "../libs/math/3dmath.h"
 #include "../libs/math/functions.h"
@@ -361,7 +360,9 @@ void Entity_Window::draw()
 				Light *light = static_cast<Light *>(entity);
 				display_light(light);
 			} else {
-				gui::edit_field("Scaling", &scaling);
+				if (gui::edit_field("Scaling", &scaling)) {
+					entity->scaling = scaling;
+				}
 				gui::edit_field("Rotation", &rotation);
 				if (gui::edit_field("Position", &position)) {
 					game_world->place_entity(entity, position);

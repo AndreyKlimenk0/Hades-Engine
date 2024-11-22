@@ -54,13 +54,6 @@ void Engine::init_base()
 	init_os_path();
 	init_commands();
 	var_service.load("all.variables");
-	
-	bool log_mesh_info = false;
-	bool log_assimp_info = false;
-	Variable_Service *log = var_service.find_namespace("log");
-	ATTACH(log, log_mesh_info);
-	ATTACH(log, log_assimp_info);
-	setup_3D_file_loading_log(log_mesh_info, log_assimp_info);
 }
 
 void Engine::init(Win32_Window *window)
@@ -198,4 +191,9 @@ Render_System *Engine::get_render_system()
 Font_Manager *Engine::get_font_manager()
 {
 	return &engine->font_manager;
+}
+
+Variable_Service *Engine::get_variable_service()
+{
+	return &engine->var_service;
 }

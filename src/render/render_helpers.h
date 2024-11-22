@@ -19,5 +19,16 @@ struct R24U8 {
 	float get_unorm_value();
 };
 
+const u32 NO_TEXTURE_LOADING_OPTIONS = 0x0;
+const u32 TEXTURE_LOADING_OPTION_GENERATE_MIPMAPS = 0x1;
+
+struct Texture_Info {
+	u32 width = 0;
+	u32 height = 0;
+};
+
+bool create_texture2d_from_file(const char *full_path_to_texture_file, Texture2D &texture, u32 loading_flags = NO_TEXTURE_LOADING_OPTIONS);
+Texture_Info get_last_create_texture_info();
+
 #endif
 

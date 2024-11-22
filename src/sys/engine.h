@@ -42,6 +42,7 @@ struct Engine {
 	static Render_World *get_render_world();
 	static Render_System *get_render_system();
 	static Font_Manager *get_font_manager();
+	static Variable_Service *get_variable_service();
 };
 
 #endif

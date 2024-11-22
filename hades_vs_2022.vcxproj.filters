@@ -114,12 +114,6 @@
     <ClCompile Include="src\libs\geometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\libs\image\png.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\libs\image\spng.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\libs\structures\dict.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -747,12 +741,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\libs\number_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\libs\image\png.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\libs\image\spng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\libs\structures\array.h">

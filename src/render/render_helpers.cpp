@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <dxgi.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include "render_helpers.h"
 #include "../sys/sys.h"
@@ -112,6 +114,44 @@ void fill_texture(void *value, Texture2D *texture2d)
 	if (!result) {
 		print("fill_texture_with_value: Failed to fill a 2d texture.");
 	}
+}
+
+static Texture_Info last_create_texture_info;
+
+bool create_texture2d_from_file(const char *full_path_to_texture_file, Texture2D &texture, u32 loading_flags)
+{
+	s32 image_width = 0;
+	s32 image_height = 0;
+	s32 image_channels = 0;
+
+	u8 *image_data = stbi_load(full_path_to_texture_file, &image_width, &image_height, &image_channels, 4);
+	if (image_data) {
+		Gpu_Device *gpu_device = get_current_gpu_device();
+		Render_Pipeline *render_pipeline = get_current_render_pipeline();
+
+		Texture2D_Desc texture_desc;
+		texture_desc.width = image_width;
+		texture_desc.height = image_height;
+		texture_desc.mip_levels = (loading_flags & TEXTURE_LOADING_OPTION_GENERATE_MIPMAPS) ? 0 : 1;
+		texture_desc.data = (loading_flags & TEXTURE_LOADING_OPTION_GENERATE_MIPMAPS) ? NULL : (void *)image_data;
+
+		gpu_device->create_texture_2d(&texture_desc, &texture);
+		gpu_device->create_shader_resource_view(&texture_desc, &texture);
+		if (loading_flags & TEXTURE_LOADING_OPTION_GENERATE_MIPMAPS) {
+			render_pipeline->update_subresource(&texture, image_data, image_width * dxgi_format_size(texture_desc.format));
+			render_pipeline->generate_mips(texture.srv);
+		}
+		DELETE_PTR(image_data);
+		last_create_texture_info.width = image_width;
+		last_create_texture_info.height = image_height;
+		return true;
+	}
+	return false;
+}
+
+Texture_Info get_last_create_texture_info()
+{
+	return last_create_texture_info;
 }
 
 R24U8::R24U8(u32 r24u8_value)
