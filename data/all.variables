@@ -1,7 +1,7 @@
-:/rendering_settings
+:/rendering
 windowed true
 vsync false
-back_buffer_counter 2
+back_buffer_count 2
 
 :/system
 window_width 1900

@@ -62,31 +62,42 @@ void Engine::init_base()
 d3d12::Swap_Chain swap_chain;
 u32 back_buffer_index = 0;
 
-const u32 MAX_BACK_BUFFER_COUNT = 3;
+const u32 MAX_BACK_BUFFER_NUMBER = 3;
 
-struct Back_Buffer_Resources {
-	u64 fence_value
-};
+#include <windows.h>
+#include "../win32/win_helpers.h"
+
+
+Command_Allocator command_allocators[MAX_BACK_BUFFER_NUMBER];
+ComPtr<ID3D12Resource> back_buffers[MAX_BACK_BUFFER_NUMBER];
+Graphics_Command_List command_list;
+Command_Queue command_queue;
+Fence fence;
+HANDLE fence_event;
+Descriptor_Heap back_buffers_desc_heap;
+
+u64 frame_fence_value = 0;
+u64 frame_fence_values[MAX_BACK_BUFFER_NUMBER];
 
 void Engine::init(Win32_Window *window)
 {
 	bool windowed = true;
-	bool vsync = true;
-	s32 back_buffer_counter = 0;
+	bool vsync = false;
+	s32 back_buffer_count = 3;
 
-	Variable_Service *rendering_settings = var_service.find_namespace("rendering_settings");
+	Variable_Service *rendering_settings = var_service.find_namespace("rendering");
 	ATTACH(rendering_settings, vsync);
 	ATTACH(rendering_settings, windowed);
-	ATTACH(rendering_settings, back_buffer_counter);
-
-	const u32 buffer_count = 2;
+	ATTACH(rendering_settings, back_buffer_count);
 
 	d3d12::Gpu_Device gpu_device;
 
 	if (!gpu_device.init()) {
 		return;
 	}
-	Command_Queue command_queue;
+
+	gpu_device.create_fence(fence);
+
 	gpu_device.create_command_queue(command_queue);
 
 	bool allow_tearing = false;
@@ -96,24 +107,30 @@ void Engine::init(Win32_Window *window)
 		allow_tearing = true;
 	}
 
-	swap_chain.init(allow_tearing, buffer_count, window->width, window->height, window->handle, command_queue);
+	swap_chain.init(allow_tearing, back_buffer_count, window->width, window->height, window->handle, command_queue);
 
-	Descriptor_Heap back_buffers_desc_heap;
 	gpu_device.create_rtv_descriptor_heap(2, back_buffers_desc_heap);
 
-	ComPtr<ID3D12Resource> back_buffer_rtvs[buffer_count];
-	Command_Allocator command_allocators[buffer_count];
+	for (u32 i = 0; i < (u32)back_buffer_count; i++) {
+		swap_chain.get_buffer(i, back_buffers[i]);
+		gpu_device.device->CreateRenderTargetView(back_buffers[i].Get(), nullptr, back_buffers_desc_heap.get_cpu_heap_descriptor_handle(i));
 
-	for (u32 i = 0; i < buffer_count; i++) {
-		swap_chain.get_buffer(i, back_buffer_rtvs[i]);
-		gpu_device.device->CreateRenderTargetView(back_buffer_rtvs[i].Get(), nullptr, back_buffers_desc_heap.get_cpu_heap_descriptro_handle(i));
 		gpu_device.create_command_allocator(COMMAND_LIST_TYPE_DIRECT, command_allocators[i]);
 	}
-
 	back_buffer_index = swap_chain.get_current_back_buffer_index();
 
-	Graphics_Command_List command_list;
-	gpu_device.create_command_list(command_list);
+	gpu_device.create_command_list(command_allocators[back_buffer_index], command_list);
+
+	fence_event = create_event_handle(); // The event must be close on engine shutdown.
+
+}
+
+void wait_for_gpu(u64 fence_value, HANDLE fence_event)
+{
+	if (fence->GetCompletedValue() < fence_value) {
+		fence->SetEventOnCompletion(fence_value, fence_event);
+		WaitForSingleObject(fence_event, INFINITE);
+	}
 }
 
 void Engine::frame()
@@ -130,7 +147,27 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
+	command_allocators[back_buffer_index].reset();
+
+	command_list.reset(command_allocators[back_buffer_index]);
+
+	command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
+
+	command_list.clear_render_target_view(back_buffers_desc_heap.get_cpu_heap_descriptor_handle(back_buffer_index), Color::Red);
+
+	command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT));
+
+	command_list.close();
+
+	command_queue.execute_command_list(command_list);
+
+	frame_fence_values[back_buffer_index] = command_queue.signal(frame_fence_value, fence);
+
 	swap_chain.present(swap_chain_present.sync_interval, swap_chain_present.flags);
+
+	back_buffer_index = swap_chain.get_current_back_buffer_index();
+	
+	wait_for_gpu(frame_fence_values[back_buffer_index], fence_event);
 
 	clear_event_queue();
 
