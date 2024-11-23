@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <dxgi1_5.h>
+
 #include "../sys/sys.h"
 #include "../sys/utils.h"
 #include "../libs/number_types.h"
@@ -10,7 +12,7 @@
 inline char *to_string(const wchar_t *unicode_string)
 {
     char *new_string = NULL;
-    u32 unicode_string_len = wcslen(unicode_string);
+    u32 unicode_string_len = (u32)wcslen(unicode_string);
     if (unicode_string_len > 0) {
         u32 new_string_len = unicode_string_len + 1;
         new_string = new char[new_string_len];
@@ -115,7 +117,7 @@ D3D12_COMMAND_LIST_TYPE command_list_type_to_D3D12(Command_List_Type command_lis
 
 void d3d12::Gpu_Device::create_command_allocator(Command_List_Type command_list_type, Command_Allocator &command_allocator)
 {
-    HR(device->CreateCommandAllocator(command_list_type_to_D3D12(command_list_type), IID_PPV_ARGS(command_allocator.ReleaseAndGetAddressOf())));
+    HR(device->CreateCommandAllocator(command_list_type_to_D3D12(command_list_type), IID_PPV_ARGS(command_allocator.command_allocator.ReleaseAndGetAddressOf())));
 }
 
 void d3d12::Gpu_Device::create_command_queue(Command_Queue &command_queue)
@@ -127,18 +129,18 @@ void d3d12::Gpu_Device::create_command_queue(Command_Queue &command_queue)
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-    HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&command_queue)));
+    HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(command_queue.d3d12_command_queue.ReleaseAndGetAddressOf())));
 }
 
-void d3d12::Gpu_Device::create_command_list(const GPU_Pipeline_State &pipeline_state, Graphics_Command_List &command_list)
-{
-    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_list.command_allocator.Get(), pipeline_state.Get(), IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
-    command_list.close();
-}
+//void d3d12::Gpu_Device::create_command_list(const GPU_Pipeline_State &pipeline_state, Graphics_Command_List &command_list)
+//{
+//    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_list.command_allocator.Get(), pipeline_state.Get(), IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
+//    command_list.close();
+//}
 
-void d3d12::Gpu_Device::create_command_list(Graphics_Command_List &command_list)
+void d3d12::Gpu_Device::create_command_list(Command_Allocator &command_allocator, Graphics_Command_List &command_list)
 {
-    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_list.command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
+    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
     command_list.close();
 }
 
@@ -157,7 +159,7 @@ void d3d12::Gpu_Device::create_rtv_descriptor_heap(u32 descriptor_count, Descrip
     descriptor_heap.cpu_handle = descriptor_heap.heap->GetCPUDescriptorHandleForHeapStart();
 }
 
-void d3d12::Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, const ComPtr<ID3D12CommandQueue> &command_queue)
+void d3d12::Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, Command_Queue &command_queue)
 {
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc;
     ZeroMemory(&swap_chain_desc, sizeof(DXGI_SWAP_CHAIN_DESC1));
@@ -181,7 +183,7 @@ void d3d12::Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u3
     HR(CreateDXGIFactory2(factory_flags, IID_PPV_ARGS(&dxgi_factory)));
 
     ComPtr<IDXGISwapChain1> dxgi_swap_chain1;
-    HR(dxgi_factory->CreateSwapChainForHwnd(command_queue.Get(), handle, &swap_chain_desc, NULL, NULL, &dxgi_swap_chain1));
+    HR(dxgi_factory->CreateSwapChainForHwnd(command_queue.d3d12_command_queue.Get(), handle, &swap_chain_desc, NULL, NULL, &dxgi_swap_chain1));
 
     HR(dxgi_factory->MakeWindowAssociation(handle, DXGI_MWA_NO_ALT_ENTER));
 
@@ -232,7 +234,7 @@ void Descriptor_Heap::release()
     heap.Reset();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Descriptor_Heap::get_cpu_heap_descriptro_handle(u32 descriptor_index)
+D3D12_CPU_DESCRIPTOR_HANDLE Descriptor_Heap::get_cpu_heap_descriptor_handle(u32 descriptor_index)
 {
     assert(0 < increment_size);
     assert(descriptor_index <= descriptor_count);
@@ -248,9 +250,9 @@ Graphics_Command_List::~Graphics_Command_List()
 {
 }
 
-void Graphics_Command_List::set_command_allocator(Command_Allocator &_command_allocator)
+ID3D12CommandList *Graphics_Command_List::get_d3d12_command_list()
 {
-    command_allocator = _command_allocator;
+    return static_cast<ID3D12CommandList *>(command_list.Get());
 }
 
 void Graphics_Command_List::close()
@@ -258,7 +260,42 @@ void Graphics_Command_List::close()
     HR(command_list->Close());
 }
 
-#include <dxgi1_5.h>
+void Graphics_Command_List::reset(Command_Allocator &command_allocator)
+{
+    HR(command_list->Reset(command_allocator.command_allocator.Get(), NULL));
+}
+
+void Graphics_Command_List::clear_render_target_view(D3D12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle, const Color &color)
+{
+    float temp[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
+    command_list->ClearRenderTargetView(cpu_descriptor_handle, temp, 0, NULL);
+}
+
+static D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resource_state)
+{
+    switch (resource_state) {
+        case RESOURCE_STATE_RENDER_TARGET:
+            return D3D12_RESOURCE_STATE_RENDER_TARGET;
+        case RESOURCE_STATE_PRESENT:
+            return D3D12_RESOURCE_STATE_PRESENT;
+    }
+    assert(false);
+    return D3D12_RESOURCE_STATE_COMMON;
+}
+
+void Graphics_Command_List::resource_barrier(const Transition_Resource_Barrier &transition_resource_barrier)
+{
+    D3D12_RESOURCE_BARRIER d3d12_resource_barrier;
+    ZeroMemory(&d3d12_resource_barrier, sizeof(D3D12_RESOURCE_BARRIER));
+    d3d12_resource_barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    d3d12_resource_barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    d3d12_resource_barrier.Transition.pResource = transition_resource_barrier.resource.Get();
+    d3d12_resource_barrier.Transition.Subresource = transition_resource_barrier.subresource;
+    d3d12_resource_barrier.Transition.StateBefore = to_d3d12_resource_state(transition_resource_barrier.state_before);
+    d3d12_resource_barrier.Transition.StateAfter = to_d3d12_resource_state(transition_resource_barrier.state_after);
+    
+    command_list->ResourceBarrier(1, &d3d12_resource_barrier);
+}
 
 bool check_tearing_support()
 {
@@ -273,4 +310,41 @@ bool check_tearing_support()
         }
     }
     return SUCCEEDED(result) && allow_tearing;
+}
+
+void Command_Queue::execute_command_list(Command_List &command_list)
+{
+    ID3D12CommandList *command_lists[] = { command_list.get_d3d12_command_list() };
+    d3d12_command_queue->ExecuteCommandLists(1, command_lists);
+}
+
+u64 Command_Queue::signal(u64 &fence_value, const Fence &fence)
+{
+    u64 fence_value_for_signal = ++fence_value;
+    d3d12_command_queue->Signal(fence.Get(), fence_value_for_signal);
+    return fence_value_for_signal;
+}
+
+Transition_Resource_Barrier::Transition_Resource_Barrier() 
+    : subresource(0), resource(nullptr), state_before(RESOURCE_STATE_UNKNOWN), state_after(RESOURCE_STATE_UNKNOWN)
+{
+}
+
+Transition_Resource_Barrier::Transition_Resource_Barrier(GPU_Resource resource, Resource_State state_before, Resource_State state_after) 
+    : Transition_Resource_Barrier(0, resource, state_before, state_after)
+{
+}
+
+Transition_Resource_Barrier::Transition_Resource_Barrier(u32 subresource, GPU_Resource resource, Resource_State state_before, Resource_State state_after) 
+    : subresource(subresource), resource(resource), state_before(state_before), state_after(state_after)
+{
+}
+
+Transition_Resource_Barrier::~Transition_Resource_Barrier()
+{
+}
+
+void Command_Allocator::reset()
+{
+    command_allocator->Reset();
 }
