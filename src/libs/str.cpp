@@ -696,7 +696,7 @@ void String::move(char *string)
 
 	DELETE_ARRAY(data);
 	len = 0;
-	u32 temp = strlen(string);
+	u32 temp = (u32)strlen(string);
 	if (temp > 0) {
 		data = string;
 		len = temp;
