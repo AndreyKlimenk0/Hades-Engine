@@ -126,6 +126,9 @@
     <ClCompile Include="src\libs\image\image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\sys\profiling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\D3DX11.h">
@@ -768,6 +771,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\libs\structures\tree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\profiling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
