@@ -38,46 +38,45 @@ struct Transition_Resource_Barrier {
 	Resource_State state_after;
 };
 
-//template <typename T>
-//struct D3D12_Object {
-//	D3D12_Object();
-//	virtual ~D3D12_Object();
-//
-//	ComPtr<T> object;
-//	
-//	T *get();
-//	T **get_address();
-//	T **release_and_get_address();
-//};
-//
-//template<typename T>
-//inline D3D12_Object<T>::D3D12_Object()
-//{
-//}
-//
-//template<typename T>
-//inline D3D12_Object<T>::~D3D12_Object()
-//{
-//}
-//
-//template<typename T>
-//inline T *D3D12_Object<T>::get()
-//{
-//	return object.Get();
-//}
-//
-//template<typename T>
-//inline T **D3D12_Object<T>::get_address()
-//{
-//	return object.GetAddressOf();
-//}
-//
-//template<typename T>
-//inline T **D3D12_Object<T>::release_and_get_address()
-//{
-//	return object.ReleaseAndGetAddressOf();
-//}
+template <typename T>
+struct D3D12_Object {
+	D3D12_Object();
+	virtual ~D3D12_Object();
 
+	ComPtr<T> d3d12_object;
+	
+	T *get();
+	T **get_address();
+	T **release_and_get_address();
+};
+
+template<typename T>
+inline D3D12_Object<T>::D3D12_Object()
+{
+}
+
+template<typename T>
+inline D3D12_Object<T>::~D3D12_Object()
+{
+}
+
+template<typename T>
+inline T *D3D12_Object<T>::get()
+{
+	return d3d12_object.Get();
+}
+
+template<typename T>
+inline T **D3D12_Object<T>::get_address()
+{
+	return d3d12_object.GetAddressOf();
+}
+
+template<typename T>
+inline T **D3D12_Object<T>::release_and_get_address()
+{
+	return d3d12_object.ReleaseAndGetAddressOf();
+}
 
 struct Command_Allocator {
 	ComPtr<ID3D12CommandAllocator> command_allocator;
@@ -92,11 +91,11 @@ struct Command_List {
 	virtual ID3D12CommandList *get_d3d12_command_list() = 0;
 };
 
-struct Graphics_Command_List : Command_List {
+struct Graphics_Command_List : D3D12_Object<ID3D12GraphicsCommandList>, Command_List {
 	Graphics_Command_List();
 	~Graphics_Command_List();
 
-	ComPtr<ID3D12GraphicsCommandList> command_list;
+	//ComPtr<ID3D12GraphicsCommandList> command_list;
 
 	void close();
 	void reset(Command_Allocator &command_allocator);
@@ -106,8 +105,7 @@ struct Graphics_Command_List : Command_List {
 	ID3D12CommandList *get_d3d12_command_list();
 };
 
-struct Command_Queue {
-	ComPtr<ID3D12CommandQueue> d3d12_command_queue;
+struct Command_Queue : D3D12_Object<ID3D12CommandQueue> {
 
 	void execute_command_list(Command_List &command_list);
 	u64 signal(u64 &fence_value, const Fence &fence);
