@@ -129,7 +129,7 @@ void d3d12::Gpu_Device::create_command_queue(Command_Queue &command_queue)
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-    HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(command_queue.d3d12_command_queue.ReleaseAndGetAddressOf())));
+    HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(command_queue.release_and_get_address())));
 }
 
 //void d3d12::Gpu_Device::create_command_list(const GPU_Pipeline_State &pipeline_state, Graphics_Command_List &command_list)
@@ -140,7 +140,7 @@ void d3d12::Gpu_Device::create_command_queue(Command_Queue &command_queue)
 
 void d3d12::Gpu_Device::create_command_list(Command_Allocator &command_allocator, Graphics_Command_List &command_list)
 {
-    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.command_list.ReleaseAndGetAddressOf())));
+    HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.release_and_get_address())));
     command_list.close();
 }
 
@@ -171,7 +171,7 @@ void d3d12::Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u3
     swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swap_chain_desc.BufferCount = buffer_count;
     swap_chain_desc.Scaling = DXGI_SCALING_STRETCH;
-    swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swap_chain_desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
     swap_chain_desc.Flags = (allow_tearing && check_tearing_support()) ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
@@ -183,7 +183,7 @@ void d3d12::Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u3
     HR(CreateDXGIFactory2(factory_flags, IID_PPV_ARGS(&dxgi_factory)));
 
     ComPtr<IDXGISwapChain1> dxgi_swap_chain1;
-    HR(dxgi_factory->CreateSwapChainForHwnd(command_queue.d3d12_command_queue.Get(), handle, &swap_chain_desc, NULL, NULL, &dxgi_swap_chain1));
+    HR(dxgi_factory->CreateSwapChainForHwnd(command_queue.get(), handle, &swap_chain_desc, NULL, NULL, &dxgi_swap_chain1));
 
     HR(dxgi_factory->MakeWindowAssociation(handle, DXGI_MWA_NO_ALT_ENTER));
 
@@ -252,23 +252,23 @@ Graphics_Command_List::~Graphics_Command_List()
 
 ID3D12CommandList *Graphics_Command_List::get_d3d12_command_list()
 {
-    return static_cast<ID3D12CommandList *>(command_list.Get());
+    return static_cast<ID3D12CommandList *>(get());
 }
 
 void Graphics_Command_List::close()
 {
-    HR(command_list->Close());
+    HR(d3d12_object->Close());
 }
 
 void Graphics_Command_List::reset(Command_Allocator &command_allocator)
 {
-    HR(command_list->Reset(command_allocator.command_allocator.Get(), NULL));
+    HR(d3d12_object->Reset(command_allocator.command_allocator.Get(), NULL));
 }
 
 void Graphics_Command_List::clear_render_target_view(D3D12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle, const Color &color)
 {
     float temp[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
-    command_list->ClearRenderTargetView(cpu_descriptor_handle, temp, 0, NULL);
+    d3d12_object->ClearRenderTargetView(cpu_descriptor_handle, temp, 0, NULL);
 }
 
 static D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resource_state)
@@ -294,7 +294,7 @@ void Graphics_Command_List::resource_barrier(const Transition_Resource_Barrier &
     d3d12_resource_barrier.Transition.StateBefore = to_d3d12_resource_state(transition_resource_barrier.state_before);
     d3d12_resource_barrier.Transition.StateAfter = to_d3d12_resource_state(transition_resource_barrier.state_after);
     
-    command_list->ResourceBarrier(1, &d3d12_resource_barrier);
+    d3d12_object->ResourceBarrier(1, &d3d12_resource_barrier);
 }
 
 bool check_tearing_support()
@@ -315,13 +315,13 @@ bool check_tearing_support()
 void Command_Queue::execute_command_list(Command_List &command_list)
 {
     ID3D12CommandList *command_lists[] = { command_list.get_d3d12_command_list() };
-    d3d12_command_queue->ExecuteCommandLists(1, command_lists);
+    d3d12_object->ExecuteCommandLists(1, command_lists);
 }
 
 u64 Command_Queue::signal(u64 &fence_value, const Fence &fence)
 {
     u64 fence_value_for_signal = ++fence_value;
-    d3d12_command_queue->Signal(fence.Get(), fence_value_for_signal);
+    d3d12_object->Signal(fence.Get(), fence_value_for_signal);
     return fence_value_for_signal;
 }
 
