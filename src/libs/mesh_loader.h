@@ -1,37 +1,49 @@
 #ifndef MESH_LOADER_H
 #define MESH_LOADER_H
 
-#include "math/vector.h"
-#include "structures/array.h"
+#include "number_types.h"
 #include "../render/mesh.h"
+#include "structures/array.h"
 
-#define DISALLOW_COPY_AND_ASSIGN(Type_Name)	\
-    Type_Name(const Type_Name &other) = delete;       \
-	Type_Name &operator=(const Type_Name &other) = delete  \
 
-struct Loading_Model {
-	Loading_Model();
-	~Loading_Model();
-
-	struct Transformation {
-		Vector3 scaling;
-		Vector3 rotation; // stores angles in radians
-		Vector3 translation;
-	};
-	Triangle_Mesh mesh;
-	Array<Transformation> instances;
-
-	DISALLOW_COPY_AND_ASSIGN(Loading_Model);
+struct Loading_Models_Info {
+	u32 model_count = 0;
+	u32 total_vertex_count = 0;
+	u32 total_index_count = 0;
 };
 
-struct Models_Loading_Options {
+struct Loading_Models_Options {
 	bool scene_logging;
 	bool assimp_logging;
 	bool use_scaling_value;
 	float scaling_value;
 };
 
-bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Models_Loading_Options *options = NULL);
+struct Scene_Loader {
+	Scene_Loader();
+	~Scene_Loader();
+
+	struct Loading_Options {
+		bool scene_logging;
+		bool assimp_logging;
+		bool use_scaling_value;
+		float scaling_value;
+	};
+	
+	struct Loading_Info {
+		u32 models_count = 0;
+		u32 total_vertex_count = 0;
+		u32 total_index_count = 0;
+	};
+
+	Array<Loading_Model *> &models;
+
+	void reset();
+	bool load_models_from_scene(const char *full_path_to_model_file);
+	//bool load_scene(const char *full_path_to_model_file);
+};
+
+bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Loading_Models_Info *loading_models_info = NULL, Loading_Models_Options *options = NULL);
 
 #endif
 

@@ -5,8 +5,9 @@
 #include "render_system.h"
 #include "render_helpers.h"
 
-#include "../sys/engine.h"
 #include "../sys/sys.h"
+#include "../sys/engine.h"
+#include "../sys/profiling.h"
 #include "../libs/utils.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -838,7 +839,9 @@ void Render_System::end_frame()
 
 	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
 
+	BEGIN_TASK("Swap chain");
 	HR(swap_chain.dxgi_swap_chain->Present(0, 0));
+	END_TASK();
 
 	end_mark_rendering_event();
 

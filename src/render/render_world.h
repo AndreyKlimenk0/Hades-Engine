@@ -46,7 +46,7 @@ struct Mesh_Textures {
 	Texture_Idx displacement_idx;
 };
 
-struct Mesh_Storate {
+struct Model_Storage {
 	struct Mesh_Instance {
 		u32 vertex_count = 0;
 		u32 index_count = 0;
@@ -71,7 +71,7 @@ struct Mesh_Storate {
 	Array<Texture2D> textures;
 	Array<Mesh_Instance> mesh_instances;
 	Array<Mesh_Textures> meshes_textures;
-	Array<String> loaded_meshes;
+	Array<String> loaded_models_files;
 
 	Hash_Table<String_Id, Mesh_Id> mesh_table;
 	Hash_Table<String_Id, Texture_Idx> texture_table;
@@ -83,8 +83,13 @@ struct Mesh_Storate {
 	void init(Gpu_Device *gpu_device);
 	void release_all_resources();
 
+	void add_models_file(const char *file_name);
+
 	void allocate_gpu_memory();
-	bool add_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
+	void reserve_memory_for_new_models(u32 mesh_count, u32 total_vertex_count, u32 total_index_count);
+	
+	void add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, Mesh_Id>> &result);
+
 	bool add_texture(const char *texture_name, const char *full_path_to_texture_file, Texture_Idx *texture_idx);
 	bool update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh);
 	Texture_Idx find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture_Idx default_texture);
@@ -93,12 +98,12 @@ struct Mesh_Storate {
 	Texture2D *get_texture(Texture_Idx texture_idx);
 };
 
-inline Mesh_Textures *Mesh_Storate::get_mesh_textures(u32 index)
+inline Mesh_Textures *Model_Storage::get_mesh_textures(u32 index)
 {
 	return &meshes_textures[index];
 }
 
-inline Texture2D *Mesh_Storate::get_texture(Texture_Idx texture_idx)
+inline Texture2D *Model_Storage::get_texture(Texture_Idx texture_idx)
 {
 	return &textures[texture_idx];
 }
@@ -216,7 +221,7 @@ struct Render_World {
 
 	Array<Render_Pass *> frame_render_passes;
 
-	Mesh_Storate triangle_meshes;
+	Model_Storage model_storage;
 
 	Texture2D shadow_atlas;
 	Texture3D jittering_samples;
@@ -263,9 +268,10 @@ struct Render_World {
 	void set_camera_for_debuging(Entity_Id camera_info_id);
 
 	bool get_shadow_atls_viewport(Viewport *viewport);
-	bool add_triangle_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
 
 	Vector3 get_light_position(Vector3 light_direction);
+
+	Model_Storage *get_model_storage();
 };
 #endif
 

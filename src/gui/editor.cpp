@@ -174,10 +174,10 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 					}
 				} else {
 					Mesh_Id mesh_id = render_world->game_render_entities[i].mesh_id;
-					Mesh_Storate::Mesh_Instance mesh_instance = render_world->triangle_meshes.mesh_instances[mesh_id.instance_idx];
+					Model_Storage::Mesh_Instance mesh_instance = render_world->model_storage.mesh_instances[mesh_id.instance_idx];
 
-					Vertex_PNTUV *vertices = &render_world->triangle_meshes.unified_vertices[mesh_instance.vertex_offset];
-					u32 *indices = &render_world->triangle_meshes.unified_indices[mesh_instance.index_offset];
+					Vertex_PNTUV *vertices = &render_world->model_storage.unified_vertices[mesh_instance.vertex_offset];
+					u32 *indices = &render_world->model_storage.unified_indices[mesh_instance.index_offset];
 
 					Matrix4 entity_world_matrix = get_world_matrix(entity);
 
