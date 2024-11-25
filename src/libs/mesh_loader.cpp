@@ -15,8 +15,8 @@
 static s32 unknown_model_name_count = 0;
 static String current_file_name;
 static const char *FOUR_SPACES = "    ";
-static Models_Loading_Options loading_options;
-
+static Loading_Models_Options loading_options;
+static Loading_Models_Info loading_info;
 
 struct Assimp_Logger : Assimp::LogStream {
 	void write(const char *message)
@@ -32,6 +32,10 @@ static void begin_load_models()
 	loading_options.scene_logging = false;
 	loading_options.assimp_logging = false;
 	loading_options.use_scaling_value = false;
+
+	loading_info.model_count = 0;
+	loading_info.total_vertex_count = 0;
+	loading_info.total_index_count = 0;
 }
 
 inline Vector3 to_vector3(aiVector3t<float> &vector)
@@ -163,7 +167,6 @@ inline void decompose_matrix(aiMatrix4x4 &matrix, Vector3 &s, Vector3 &r, Vector
 	aiVector3t<float> position;
 	matrix.Decompose(scaling, rotation, position);
 
-
 	s = loading_options.use_scaling_value ? Vector3(loading_options.scaling_value, loading_options.scaling_value, loading_options.scaling_value) : to_vector3(scaling);
 	r = to_vector3(rotation);
 	p = to_vector3(position);
@@ -216,6 +219,10 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)
 			mesh->indices.push(face.mIndices[j]);
 		}
 	}
+
+	loading_info.model_count++;
+	loading_info.total_vertex_count += mesh->vertices.count;
+	loading_info.total_index_count += mesh->indices.count;
 }
 
 inline void process_material(aiMaterial *material, Loading_Model *loading_model)
@@ -226,12 +233,12 @@ inline void process_material(aiMaterial *material, Loading_Model *loading_model)
 	material->Get(AI_MATKEY_SHININESS, shininess);
 	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
 
-	if (!get_texture_file_name(material, aiTextureType_NORMALS, loading_model->mesh.normal_texture_name)) {
-		get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->mesh.normal_texture_name);
+	if (!get_texture_file_name(material, aiTextureType_NORMALS, loading_model->normal_texture_name)) {
+		get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->normal_texture_name);
 	}
-	get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->mesh.diffuse_texture_name);
-	get_texture_file_name(material, aiTextureType_SPECULAR, loading_model->mesh.specular_texture_name);
-	get_texture_file_name(material, aiTextureType_DISPLACEMENT, loading_model->mesh.displacement_texture_name);
+	get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->diffuse_texture_name);
+	get_texture_file_name(material, aiTextureType_SPECULAR, loading_model->specular_texture_name);
+	get_texture_file_name(material, aiTextureType_DISPLACEMENT, loading_model->displacement_texture_name);
 }
 
 inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Hash_Table<String, Loading_Model *> &models_cache)
@@ -243,6 +250,7 @@ inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &paren
 		
 		String mesh_name;
 		aiMesh *assimp_mesh = scene->mMeshes[mesh_index];
+
 		if (assimp_mesh->mName.length > 0) {
 			mesh_name.move(get_unique_name(assimp_mesh));
 		} else {
@@ -253,32 +261,28 @@ inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &paren
 		
 		Loading_Model *loading_model = NULL;
 		if (!models_cache.get(mesh_name, loading_model)) {
-			loading_model = new Loading_Model();
-			loading_model->mesh.name = mesh_name;
-			loading_model->mesh.file_name = current_file_name;
-
+			loading_model = new Loading_Model(mesh_name, current_file_name);
 			process_mesh(assimp_mesh, &loading_model->mesh);
-
+			
 			if (scene->HasMaterials()) {
 				aiMaterial *material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-				process_material(material, loading_model);
+				process_material(scene->mMaterials[assimp_mesh->mMaterialIndex], loading_model);
 			}
+			
 			models_cache.set(mesh_name, loading_model);
 			models.push(loading_model);
-		}
+		}		
 		Loading_Model::Transformation transformation;
-		transformation.scaling = Vector3(1.0f, 1.0f, 1.0f);
-		transformation.rotation = Vector3(0.0f, 0.0f, 0.0f);
-		transformation.translation = Vector3(0.0f, 0.0f, 0.0f);
 		decompose_matrix(transform_matrix, transformation.scaling, transformation.rotation, transformation.translation);
 		loading_model->instances.push(transformation);	
 	}
+	
 	for (u32 i = 0; i < node->mNumChildren; i++) {
 		process_nodes(scene, node->mChildren[i], transform_matrix, models, models_cache);
 	}
 }
 
-bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Models_Loading_Options *options)
+bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Loading_Models_Info *loading_models_info, Loading_Models_Options *options)
 {
 	s64 start = milliseconds_counter();
 	begin_load_models();
@@ -328,15 +332,12 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 
 		print("load: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
 	}
+
+	if (loading_models_info) {
+		*loading_models_info = loading_info;
+	}
+
 	Assimp::DefaultLogger::kill();
 
 	return result;
-}
-
-Loading_Model::Loading_Model()
-{
-}
-
-Loading_Model::~Loading_Model()
-{
 }

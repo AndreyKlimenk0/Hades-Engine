@@ -1,14 +1,15 @@
 #include <assert.h>
 
-#include "../win32/win_time.h"
 #include "engine.h"
 #include "commands.h"
+#include "profiling.h"
 #include "../gui/gui.h"
 #include "../sys/level.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/os/event.h"
 #include "../libs/mesh_loader.h"
+#include "../win32/win_time.h"
 
 #include "../gui/test_gui.h"
 
@@ -58,9 +59,13 @@ void Engine::init_base()
 
 void Engine::init(Win32_Window *window)
 {
+	BEGIN_TASK("Initialize engine");
+
 	font_manager.init();
 	
+	BEGIN_TASK("Initialize render_system");
 	render_sys.init(window);
+	END_TASK();
 	
 	shader_manager.init(&render_sys.gpu_device);
 	
@@ -79,23 +84,30 @@ void Engine::init(Win32_Window *window)
 	Variable_Service *system = var_service.find_namespace("system");
 	system->attach("load_level", &current_level_name);
 
+	BEGIN_TASK("Load level");
 	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
+	END_TASK();
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
 	init_performance_displaying();
 	
 	engine->is_initialized = true;
+
+	END_TASK()
 }
 
 void Engine::frame()
 {
+	BEGIN_FRAME();
+
 	static s64 fps = 60;
 	static s64 frame_time = 1000;
 
 	s64 start_time = milliseconds_counter();
 	s64 ticks_counter = cpu_ticks_counter();
 
+	BEGIN_TASK("Update");
 	pump_events();
 	run_event_loop();
 
@@ -111,7 +123,11 @@ void Engine::frame()
 
 	render_sys.new_frame();
 
+	END_TASK();
+
+	BEGIN_TASK("Render world");
 	render_world.render();
+	END_TASK();
 
 #if DRAW_TEST_GUI
 	draw_test_gui();
@@ -120,12 +136,18 @@ void Engine::frame()
 #endif
 	display_performance(fps, frame_time);
 
+	BEGIN_TASK("Render system end frame");
+
 	render_sys.end_frame();
+
+	END_TASK();
 
 	clear_event_queue();
 
 	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
 	frame_time = milliseconds_counter() - start_time;
+	
+	END_FRAME();
 }
 
 void Engine::shutdown()
