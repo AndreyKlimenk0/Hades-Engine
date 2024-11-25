@@ -4,12 +4,14 @@
 #include "vars.h"
 #include "level.h"
 #include "engine.h"
-#include "../libs/mesh_loader.h"
+#include "profiling.h"
+
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "../libs/mesh_loader.h"
+#include "../libs/math/structures.h"
 #include "../libs/structures/array.h"
 #include "../libs/structures/hash_table.h"
-#include "../libs/math/structures.h"
 
 inline bool operator==(const Mesh_Id &first, const Mesh_Id &second)
 {
@@ -56,7 +58,8 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 
 	Variable_Service *variable_service = Engine::get_variable_service();
 	Variable_Service *models_loading = variable_service->find_namespace("models_loading");
-	Models_Loading_Options loading_options;
+
+	Loading_Models_Options loading_options;
 	models_loading->attach("scene_logging", &loading_options.scene_logging);
 	models_loading->attach("assimp_logging", &loading_options.assimp_logging);
 	models_loading->attach("scaling_value", &loading_options.scaling_value);
@@ -66,15 +69,22 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 		String full_path_to_mesh_file;
 		build_full_path_to_model_file(mesh_names[i].c_str(), full_path_to_mesh_file);
 
+		Loading_Models_Info info;
 		Array<Loading_Model *> loaded_models;
-		if (load_models_from_file(full_path_to_mesh_file, loaded_models, &loading_options)) {
-			render_world->triangle_meshes.loaded_meshes.push(mesh_names[i].c_str());
-			Loading_Model *model = NULL;
-			For(loaded_models, model) {
-				Mesh_Id mesh_id;
-				render_world->add_triangle_mesh(&model->mesh, &mesh_id);
+		if (load_models_from_file(full_path_to_mesh_file, loaded_models, &info, &loading_options)) {
+			begin_time_stamp();
+			Model_Storage *model_storage = render_world->get_model_storage();
+			
+			Array<Pair<Loading_Model *, Mesh_Id>> result;
+			model_storage->reserve_memory_for_new_models(info.model_count, info.total_vertex_count, info.total_index_count);
+			model_storage->add_models(loaded_models, result);
+
+			if (!result.is_empty()) {
+				model_storage->add_models_file(mesh_names[i]);
 			}
 			free_memory(&loaded_models);
+
+			print("load_saved_meshes: {} was loaded in render world for {}ms", mesh_names[i].c_str(), delta_time_in_milliseconds());
 		}
 	}
 }
@@ -92,7 +102,7 @@ inline void init_render_world(File *level_file, Game_World *game_world, Render_W
 		Pair<Entity_Id, String_Id> *entity = &level_render_entities[i];
 		if (game_world->get_entity(entity->first)) {
 			Mesh_Id mesh_id;
-			if (render_world->triangle_meshes.mesh_table.get(entity->second, &mesh_id)) {
+			if (render_world->model_storage.mesh_table.get(entity->second, &mesh_id)) {
 				render_world->add_render_entity(entity->first, mesh_id);
 			}
 		}
@@ -119,14 +129,14 @@ inline void save_render_entities(File *level_file, Render_World *render_world)
 	assert(level_file);
 	assert(render_world);
 
-	if ((render_world->triangle_meshes.mesh_table.count == 0) || (render_world->game_render_entities.is_empty())) {
+	if ((render_world->model_storage.mesh_table.count == 0) || (render_world->game_render_entities.is_empty())) {
 		print("save_render_entitties: Render entities can be saved in a level file. There is no meshes or render entities in the render world.");
 		return;
 	}
 
 	Hash_Table<Mesh_Id, String_Id> table;
-	for (u32 i = 0; i < render_world->triangle_meshes.mesh_table.count; i++) {
-		Hash_Node<String_Id, Mesh_Id> *node = render_world->triangle_meshes.mesh_table.get_node(i);
+	for (u32 i = 0; i < render_world->model_storage.mesh_table.count; i++) {
+		Hash_Node<String_Id, Mesh_Id> *node = render_world->model_storage.mesh_table.get_node(i);
 		table.set(node->value, node->key);
 	}
 
@@ -185,7 +195,7 @@ void save_game_and_render_world_in_level(const char *level_name, Game_World *gam
 	File level_file;
 	if (level_file.open(full_path_to_level_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
 		save_game_entities(&level_file, game_world);
-		save_loaded_mesh_names(&level_file, render_world->triangle_meshes.loaded_meshes);
+		save_loaded_mesh_names(&level_file, render_world->model_storage.loaded_models_files);
 		save_render_entities(&level_file, render_world);
 	}
 }

@@ -1,6 +1,8 @@
 #ifndef PROFILING_H
 #define PROFILING_H
 
+#include "../libs/number_types.h"
+
 #ifdef VTUNE_PROFILING
 #include <ittnotify.h>
 __itt_domain *get_default_domain();
@@ -14,5 +16,9 @@ __itt_domain *get_default_domain();
 #define BEGIN_FRAME()
 #define END_FRAME()
 #endif
+
+void begin_time_stamp();
+s64 delta_time_in_milliseconds();
+s64 delta_time_in_fps();
 
 #endif
