@@ -1216,11 +1216,11 @@ void Swap_Chain::init(Gpu_Device *gpu_device, Win32_Window *window)
 	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 	swap_chain_desc.SampleDesc = { 1, 0 };
 	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_UNORDERED_ACCESS;
-	swap_chain_desc.BufferCount = 1;
+	swap_chain_desc.BufferCount = 2;
 	swap_chain_desc.OutputWindow = window->handle;
 	swap_chain_desc.Windowed = true;
-	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-	swap_chain_desc.Flags = 0;
+	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+	swap_chain_desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 	ComPtr<IDXGIDevice> dxgi_device;
 	ComPtr<IDXGIAdapter> dxgi_adapter;
