@@ -56,7 +56,7 @@ static void load_meshes(Array<String> &mesh_names)
 				Loading_Model *loaded_model = pair.first;
 
 				AABB mesh_AABB = make_AABB(&loaded_model->mesh);
-				assert(model->instances.count > 0);
+				assert(loaded_model->instances.count > 0);
 
 				for (u32 k = 0; k < loaded_model->instances.count; k++) {
 					Loading_Model::Transformation transformation = loaded_model->instances[k];

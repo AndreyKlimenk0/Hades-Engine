@@ -815,6 +815,8 @@ void Render_System::resize(u32 window_width, u32 window_height)
 
 void Render_System::new_frame()
 {
+	swap_chain.get_back_buffer_as_texture(&back_buffer_texture);
+
 	begin_mark_rendering_event(L"Frame rendering");
 
 	render_pipeline.clear_render_target_view(voxel_render_target.rtv, Color::Red);
@@ -840,7 +842,7 @@ void Render_System::end_frame()
 	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
 
 	BEGIN_TASK("Swap chain");
-	HR(swap_chain.dxgi_swap_chain->Present(0, 0));
+	HR(swap_chain.dxgi_swap_chain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
 	END_TASK();
 
 	end_mark_rendering_event();
