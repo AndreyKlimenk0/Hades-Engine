@@ -15,6 +15,7 @@ struct Win32_Window {
 void get_window_size(HWND window, int *width, int *height);
 bool create_win32_window(HINSTANCE hinstance, Win32_Window *window, s32 window_width, s32 window_height);
 HANDLE create_event_handle();
+void close_event_handle(HANDLE handle);
 
 enum Cursor_Type {
 	CURSOR_TYPE_ARROW,

@@ -68,7 +68,7 @@ struct Model_Storage {
 
 	Array<Vertex_PNTUV> unified_vertices;
 	Array<u32> unified_indices;
-	Array<Texture2D> textures;
+	//Array<Texture2D> textures;
 	Array<Mesh_Instance> mesh_instances;
 	Array<Mesh_Textures> meshes_textures;
 	Array<String> loaded_models_files;
@@ -76,11 +76,11 @@ struct Model_Storage {
 	Hash_Table<String_Id, Mesh_Id> mesh_table;
 	Hash_Table<String_Id, Texture_Idx> texture_table;
 
-	Gpu_Struct_Buffer vertex_struct_buffer;
-	Gpu_Struct_Buffer index_struct_buffer;
-	Gpu_Struct_Buffer mesh_struct_buffer;
+	//Gpu_Struct_Buffer vertex_struct_buffer;
+	//Gpu_Struct_Buffer index_struct_buffer;
+	//Gpu_Struct_Buffer mesh_struct_buffer;
 
-	void init(Gpu_Device *gpu_device);
+	//void init(Gpu_Device *gpu_device);
 	void release_all_resources();
 
 	void add_models_file(const char *file_name);
@@ -95,7 +95,7 @@ struct Model_Storage {
 	Texture_Idx find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture_Idx default_texture);
 
 	Mesh_Textures *get_mesh_textures(u32 index);
-	Texture2D *get_texture(Texture_Idx texture_idx);
+	//Texture2D *get_texture(Texture_Idx texture_idx);
 };
 
 inline Mesh_Textures *Model_Storage::get_mesh_textures(u32 index)
@@ -103,10 +103,10 @@ inline Mesh_Textures *Model_Storage::get_mesh_textures(u32 index)
 	return &meshes_textures[index];
 }
 
-inline Texture2D *Model_Storage::get_texture(Texture_Idx texture_idx)
-{
-	return &textures[texture_idx];
-}
+//inline Texture2D *Mesh_Storate::get_texture(Texture_Idx texture_idx)
+//{
+//	return &textures[texture_idx];
+//}
 
 struct Shadow_Cascade_Range {
 	u32 start = 0;
@@ -129,7 +129,7 @@ struct Cascaded_Shadow_Map {
 	float cascade_depth;
 	u32 view_projection_matrix_index;
 	Vector3 view_position;
-	Viewport viewport;
+	//Viewport viewport;
 	Matrix4 view_projection_matrix;
 
 	void init(float fov, float aspect_ratio, Shadow_Cascade_Range *shadow_cascade_range);
@@ -223,23 +223,23 @@ struct Render_World {
 
 	Model_Storage model_storage;
 
-	Texture2D shadow_atlas;
-	Texture3D jittering_samples;
+	//Texture2D shadow_atlas;
+	//Texture3D jittering_samples;
 
-	Gpu_Buffer frame_info_cbuffer;
+	//Gpu_Buffer frame_info_cbuffer;
 
-	Gpu_RWStruct_Buffer voxels_sb;
-	Gpu_Struct_Buffer lights_struct_buffer;
-	Gpu_Struct_Buffer cascaded_shadows_info_sb;
-	Gpu_Struct_Buffer world_matrices_struct_buffer;
-	Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
+	//Gpu_RWStruct_Buffer voxels_sb;
+	//Gpu_Struct_Buffer lights_struct_buffer;
+	//Gpu_Struct_Buffer cascaded_shadows_info_sb;
+	//Gpu_Struct_Buffer world_matrices_struct_buffer;
+	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
 	struct Render_Passes {
-		Shadows_Pass shadows;
-		Forwar_Light_Pass forward_light;
-		Debug_Cascade_Shadows_Pass debug_cascade_shadows;
-		Outlining_Pass outlining;
-		Voxelization voxelization;
+		//Shadows_Pass shadows;
+		//Forwar_Light_Pass forward_light;
+		//Debug_Cascade_Shadows_Pass debug_cascade_shadows;
+		//Outlining_Pass outlining;
+		//Voxelization voxelization;
 
 		void get_all_passes(Array<Render_Pass *> *render_passes_list);
 	} render_passes;
@@ -267,7 +267,8 @@ struct Render_World {
 	void set_camera_for_rendering(Entity_Id camera_id);
 	void set_camera_for_debuging(Entity_Id camera_info_id);
 
-	bool get_shadow_atls_viewport(Viewport *viewport);
+	//bool get_shadow_atls_viewport(Viewport *viewport);
+	bool add_triangle_mesh(Triangle_Mesh *triangle_mesh, Mesh_Id *mesh_id);
 
 	Vector3 get_light_position(Vector3 light_direction);
 
