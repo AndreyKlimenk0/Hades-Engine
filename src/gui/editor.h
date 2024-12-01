@@ -90,7 +90,7 @@ struct Render_World_Window : Editor_Window {
 	bool display_voxel_grid = false;
 	bool display_voxel_grid_bounds = false;
 	bool display_voxel_world = false;
-	Texture2D shadow_display_texture;
+	//Texture2D shadow_display_texture;
 
 	struct Draw_Cascade_Info {
 		Entity_Id entity_id;

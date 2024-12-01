@@ -75,3 +75,8 @@ HANDLE create_event_handle()
 {
 	return CreateEvent(NULL, FALSE, FALSE, NULL);
 }
+
+void close_event_handle(HANDLE handle)
+{
+	CloseHandle(handle);
+}

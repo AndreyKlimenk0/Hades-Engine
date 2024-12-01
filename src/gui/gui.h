@@ -7,7 +7,6 @@
 #include "../libs/structures/array.h"
 
 struct Engine;
-struct Texture2D;
 
 typedef u32 Gui_ID;
 typedef u32 Window_Style;
@@ -172,7 +171,7 @@ namespace gui
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
-	bool image_button(u32 width, u32 height, Texture2D *texture);
+	//bool image_button(u32 width, u32 height, Texture2D *texture);
 
 	bool add_tab(const char *tab_name);
 
@@ -180,7 +179,7 @@ namespace gui
 
 	void list_box(Array<String> *array, u32 *item_index);
 
-	void image(Texture2D *texture, s32 width = -1, s32 height = -1);
+	//void image(Texture2D *texture, s32 width = -1, s32 height = -1);
 
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
@@ -202,8 +201,8 @@ namespace gui
 	void end_column();
 
 	void add_text(const char *text, Alignment alignment);
-	void add_image(Texture2D *texture, Alignment alignment);
-	void add_image_button(Texture2D *texture, Alignment alignment);
+	//void add_image(Texture2D *texture, Alignment alignment);
+	//void add_image_button(Texture2D *texture, Alignment alignment);
 
 	Size_s32 get_window_size();
 	Gui_ID get_last_tab_gui_id();

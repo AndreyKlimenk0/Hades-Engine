@@ -63,9 +63,6 @@
     <ClCompile Include="src\render\font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\render_api.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\render\render_helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -129,7 +126,7 @@
     <ClCompile Include="src\render\mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\new_render_api.cpp">
+    <ClCompile Include="src\render\render_api.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -662,9 +659,6 @@
     <ClInclude Include="src\render\model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\render_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\render\render_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -776,7 +770,7 @@
     <ClInclude Include="src\libs\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\new_render_api.h">
+    <ClInclude Include="src\render\render_api.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
