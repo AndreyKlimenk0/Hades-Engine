@@ -88,7 +88,7 @@ static void load_level(Array<String> &command_args)
 			game_world->release_all_resources();
 
 			render_world->release_render_entities_resources();
-			render_world->model_storage.init(get_current_gpu_device());
+			//render_world->triangle_meshes.init(get_current_gpu_device());
 
 			init_game_and_render_world_from_level(engine->current_level_name, game_world, render_world);
 		} else {
@@ -112,7 +112,7 @@ static void create_level(Array<String> &command_args)
 		game_world->release_all_resources();
 		
 		render_world->release_render_entities_resources();
-		render_world->model_storage.init(get_current_gpu_device());
+		//render_world->triangle_meshes.init(get_current_gpu_device());
 
 		Entity_Id camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
 		engine->render_world.set_camera_for_rendering(camera_id);
