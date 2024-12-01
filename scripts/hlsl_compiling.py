@@ -7,6 +7,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join("data", "shaders")
 PDB_FILES_DIR = os.path.join("build", "shader", "debug");
 HLSH_DIR = "hlsl"
+HLSL_VERSION = "5_0"
 
 
  # fxc /E vs_main /Od /Zi /T vs_5_0 /Fo PixelShader1.fxc demo.hlsl
@@ -45,7 +46,8 @@ shader_files = [
     Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER),
-    Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER)
+    Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("draw_box.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER)
 ]
 
 
@@ -62,11 +64,11 @@ def get_entry_point(shader_type: Shader_Type) -> str:
 
 def get_profile(shader_type: Shader_Type) -> str:
     shader_entry_points = { 
-        Shader_Type.VERTEX_SHADER : "vs_5_0",
-        Shader_Type.COMPUTE_SHADER : "cs_5_0",
-        Shader_Type.DOMAIN_SHADER : "ds_5_0",
-        Shader_Type.GEOMETRY_SHADER : "gs_5_0",
-        Shader_Type.PIXEL_SHADER : "ps_5_0",
+        Shader_Type.VERTEX_SHADER : "vs_" + HLSL_VERSION,
+        Shader_Type.COMPUTE_SHADER : "cs_" + HLSL_VERSION,
+        Shader_Type.DOMAIN_SHADER : "ds_" + HLSL_VERSION,
+        Shader_Type.GEOMETRY_SHADER : "gs_" + HLSL_VERSION,
+        Shader_Type.PIXEL_SHADER : "ps_" + HLSL_VERSION,
     }
 
     return shader_entry_points[shader_type]
