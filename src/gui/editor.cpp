@@ -19,7 +19,6 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
-#include "../render/render_api.h"
 #include "../render/render_world.h"
 #include "../render/render_passes.h"
 #include "../render/render_system.h"

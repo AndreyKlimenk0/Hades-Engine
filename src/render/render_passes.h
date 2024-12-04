@@ -2,7 +2,6 @@
 #define RENDER_PASS_H
 
 #include "hlsl.h"
-#include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/color.h"
 #include "../libs/number_types.h"
