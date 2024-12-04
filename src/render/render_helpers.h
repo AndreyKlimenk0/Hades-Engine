@@ -1,7 +1,7 @@
 #ifndef RENDER_HELPERS_H
 #define RENDER_HELPERS_H
 
-#include "render_api.h"
+#include <dxgi1_4.h>
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 
