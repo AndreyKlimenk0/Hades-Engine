@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <d3d12.h>
 
-#include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"

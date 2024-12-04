@@ -13,7 +13,6 @@
 
 #include "../gui/test_gui.h"
 
-#include "../render/render_api.h"
 
 #define DRAW_TEST_GUI 0
 
@@ -59,6 +58,13 @@ void Engine::init_base()
 	var_service.load("all.variables");
 }
 
+#include "../render/render_api/base.h"
+#include "../render/render_api/swap_chain.h"
+#include "../render/render_api/command.h"
+#include "../render/render_api/fence.h"
+#include "../render/render_api/resource.h"
+#include "../render/render_api/descriptor_heap.h"
+
 Swap_Chain swap_chain;
 u32 back_buffer_index = 0;
 
@@ -75,11 +81,11 @@ Graphics_Command_List command_list;
 
 Command_Allocator copy_command_allocator;
 Command_Queue copy_command_queue;
-Graphics_Command_List copy_command_list;
+Copy_Command_List copy_command_list;
 
 Fence fence;
 HANDLE fence_event;
-Descriptor_Heap back_buffers_desc_heap;
+RT_Descriptor_Heap render_target_desc_heap;
 ComPtr<ID3D12RootSignature> signature;
 ComPtr<ID3D12PipelineState> pipeline;
 
@@ -155,14 +161,6 @@ D3D12_INPUT_LAYOUT_DESC Gpu_Input_Layout::d3d12_input_layout()
 	return { input_elements.items, input_elements.count };
 }
 
-void wait_for_gpu(Fence &local_fence, u64 fence_value, HANDLE fence_event)
-{
-	if (local_fence->GetCompletedValue() < fence_value) {
-		local_fence->SetEventOnCompletion(fence_value, fence_event);
-		WaitForSingleObject(fence_event, INFINITE);
-	}
-}
-
 void Engine::init(Win32_Window *window)
 {
 	bool windowed = true;
@@ -178,17 +176,17 @@ void Engine::init(Win32_Window *window)
 
 	Gpu_Device gpu_device;
 
-	if (!gpu_device.init()) {
+	if (!create_d3d12_gpu_device(gpu_device)) {
 		return;
 	}
 
-	gpu_device.create_fence(fence);
+	fence.create(gpu_device);
 
-	gpu_device.create_command_queue(COMMAND_LIST_TYPE_DIRECT, command_queue);
+	command_queue.create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
 	
-	gpu_device.create_command_queue(COMMAND_LIST_TYPE_COPY, copy_command_queue);
-	gpu_device.create_command_allocator(COMMAND_LIST_TYPE_COPY, copy_command_allocator);
-	gpu_device.create_command_list(COMMAND_LIST_TYPE_COPY, copy_command_allocator, copy_command_list);
+	copy_command_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
+	copy_command_allocator.create(gpu_device, COMMAND_LIST_TYPE_COPY);
+	copy_command_list.create(gpu_device, copy_command_allocator);
 
 	bool allow_tearing = false;
 	if (!vsync && windowed && check_tearing_support()) {
@@ -199,17 +197,17 @@ void Engine::init(Win32_Window *window)
 
 	swap_chain.init(allow_tearing, back_buffer_count, window->width, window->height, window->handle, command_queue);
 
-	gpu_device.create_rtv_descriptor_heap(2, back_buffers_desc_heap);
+	render_target_desc_heap.create(gpu_device, back_buffer_count);
 
 	for (u32 i = 0; i < (u32)back_buffer_count; i++) {
 		swap_chain.get_buffer(i, back_buffers[i]);
-		gpu_device.device->CreateRenderTargetView(back_buffers[i].get(), nullptr, back_buffers_desc_heap.get_cpu_descriptor_heap_handle(i));
-
-		gpu_device.create_command_allocator(COMMAND_LIST_TYPE_DIRECT, command_allocators[i]);
+		render_target_desc_heap.place_decriptor(i, back_buffers[i]);
+		
+		command_allocators[i].create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
 	}
 	back_buffer_index = swap_chain.get_current_back_buffer_index();
 
-	gpu_device.create_command_list(COMMAND_LIST_TYPE_DIRECT, command_allocators[back_buffer_index], command_list);
+	command_list.create(gpu_device, command_allocators[back_buffer_index]);
 
 	fence_event = create_event_handle(); // The event must be close on engine shutdown.
 
@@ -224,39 +222,39 @@ void Engine::init(Win32_Window *window)
 
 	//gpu_device.device->CreateCommittedResource();
 
-	Texture2D_Desc depth_texture_desc;
-	depth_texture_desc.width = window->width;
-	depth_texture_desc.width = window->height;
-	depth_texture_desc.format = DXGI_FORMAT_D32_FLOAT;
-	depth_texture_desc.options = ALLOW_DEPTH_STENCIL;
+	//Texture2D_Desc depth_texture_desc;
+	//depth_texture_desc.width = window->width;
+	//depth_texture_desc.width = window->height;
+	//depth_texture_desc.format = DXGI_FORMAT_D32_FLOAT;
+	//depth_texture_desc.options = ALLOW_DEPTH_STENCIL;
 
-	gpu_device.create_texture2d(depth_texture_desc, RESOURCE_STATE_DEPTH_WRITE, depth_texture);
-
-
-	gpu_device.create_commited_resource(sizeof(World_Matrix), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, world_matrix_buffer);
-	gpu_device.create_commited_resource(sizeof(View_Matrix), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, view_matrix_buffer);
-	gpu_device.create_commited_resource(sizeof(Perspective_Matrix), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, pers_matrix_buffer);
+	//gpu_device.create_texture2d(depth_texture_desc, RESOURCE_STATE_DEPTH_WRITE, depth_texture);
 
 
-	gpu_device.create_cbv_srv_uav_descriptor_heap(3, matrix_buffer_descriptor_heap);
+	//gpu_device.create_commited_resource(sizeof(World_Matrix), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, world_matrix_buffer);
+	//gpu_device.create_commited_resource(sizeof(View_Matrix), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, view_matrix_buffer);
+	//gpu_device.create_commited_resource(sizeof(Perspective_Matrix), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, pers_matrix_buffer);
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC world_matrix_cbuffer_view_desc;
-	world_matrix_cbuffer_view_desc.BufferLocation = world_matrix_buffer.get_gpu_virtual_address();
-	world_matrix_cbuffer_view_desc.SizeInBytes = sizeof(World_Matrix);
 
-	gpu_device.device->CreateConstantBufferView(&world_matrix_cbuffer_view_desc, matrix_buffer_descriptor_heap.get_cpu_descriptor_heap_handle(0));
+	//gpu_device.create_cbv_srv_uav_descriptor_heap(3, matrix_buffer_descriptor_heap);
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC view_matrix_cbuffer_view_desc;
-	view_matrix_cbuffer_view_desc.BufferLocation = view_matrix_buffer.get_gpu_virtual_address();
-	view_matrix_cbuffer_view_desc.SizeInBytes = sizeof(View_Matrix);
+	//D3D12_CONSTANT_BUFFER_VIEW_DESC world_matrix_cbuffer_view_desc;
+	//world_matrix_cbuffer_view_desc.BufferLocation = world_matrix_buffer.get_gpu_address();
+	//world_matrix_cbuffer_view_desc.SizeInBytes = sizeof(World_Matrix);
 
-	gpu_device.device->CreateConstantBufferView(&view_matrix_cbuffer_view_desc, matrix_buffer_descriptor_heap.get_cpu_descriptor_heap_handle(1));
+	//gpu_device.device->CreateConstantBufferView(&world_matrix_cbuffer_view_desc, matrix_buffer_descriptor_heap.get_cpu_descriptor_heap_handle(0));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC pers_matrix_cbuffer_view_desc;
-	pers_matrix_cbuffer_view_desc.BufferLocation = pers_matrix_buffer.get_gpu_virtual_address();
-	pers_matrix_cbuffer_view_desc.SizeInBytes = sizeof(Perspective_Matrix);
+	//D3D12_CONSTANT_BUFFER_VIEW_DESC view_matrix_cbuffer_view_desc;
+	//view_matrix_cbuffer_view_desc.BufferLocation = view_matrix_buffer.get_gpu_address();
+	//view_matrix_cbuffer_view_desc.SizeInBytes = sizeof(View_Matrix);
 
-	gpu_device.device->CreateConstantBufferView(&pers_matrix_cbuffer_view_desc, matrix_buffer_descriptor_heap.get_cpu_descriptor_heap_handle(2));
+	//gpu_device.device->CreateConstantBufferView(&view_matrix_cbuffer_view_desc, matrix_buffer_descriptor_heap.get_cpu_descriptor_heap_handle(1));
+
+	//D3D12_CONSTANT_BUFFER_VIEW_DESC pers_matrix_cbuffer_view_desc;
+	//pers_matrix_cbuffer_view_desc.BufferLocation = pers_matrix_buffer.get_gpu_address();
+	//pers_matrix_cbuffer_view_desc.SizeInBytes = sizeof(Perspective_Matrix);
+
+	//gpu_device.device->CreateConstantBufferView(&pers_matrix_cbuffer_view_desc, matrix_buffer_descriptor_heap.get_cpu_descriptor_heap_handle(2));
 
 
 	D3D12_DESCRIPTOR_RANGE1 world_matrix_range;
@@ -304,7 +302,7 @@ void Engine::init(Win32_Window *window)
 	ComPtr<ID3DBlob> signatureBlob;
 	ComPtr<ID3DBlob> errors;
 	D3D12SerializeVersionedRootSignature(&root_signature_desc, &signatureBlob, &errors);
-	HR(gpu_device.device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(signature.ReleaseAndGetAddressOf())));
+	//HR(gpu_device.device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(signature.ReleaseAndGetAddressOf())));
 
 	static Gpu_Input_Layout input_layout;
 	input_layout.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
@@ -312,8 +310,8 @@ void Engine::init(Win32_Window *window)
 
 	Shader *shader = &shader_manager.shaders.draw_box;
 
-	D12_Rasterizer_Desc rasterizer_desc;
-	D12_Blend_Desc blend_desc;
+	//D12_Rasterizer_Desc rasterizer_desc;
+	//D12_Blend_Desc blend_desc;
 
 	const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
 	{
@@ -321,28 +319,28 @@ void Engine::init(Win32_Window *window)
 		{ "COLOR",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state;
-	ZeroMemory(&pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	pipeline_state.pRootSignature = signature.Get();
-	pipeline_state.InputLayout = { inputLayout , 2};
-	//pipeline_state.InputLayout = input_layout.d3d12_input_layout();
-	pipeline_state.VS = shader->vs_bytecode.d3d12_shader_bytecode();
-	pipeline_state.PS = shader->ps_bytecode.d3d12_shader_bytecode();
-	pipeline_state.RasterizerState = rasterizer_desc.d3d12_rasterizer_desc;
-	pipeline_state.BlendState = blend_desc.d3d12_blend_desc;
-	pipeline_state.SampleMask = UINT32_MAX;
-	pipeline_state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	pipeline_state.NumRenderTargets = 1;
-	pipeline_state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	pipeline_state.SampleDesc.Count = 1;
+	//D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state;
+	//ZeroMemory(&pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	//pipeline_state.pRootSignature = signature.Get();
+	//pipeline_state.InputLayout = { inputLayout , 2};
+	////pipeline_state.InputLayout = input_layout.d3d12_input_layout();
+	//pipeline_state.VS = shader->vs_bytecode.d3d12_shader_bytecode();
+	//pipeline_state.PS = shader->ps_bytecode.d3d12_shader_bytecode();
+	//pipeline_state.RasterizerState = rasterizer_desc.d3d12_rasterizer_desc;
+	//pipeline_state.BlendState = blend_desc.d3d12_blend_desc;
+	//pipeline_state.SampleMask = UINT32_MAX;
+	//pipeline_state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	//pipeline_state.NumRenderTargets = 1;
+	//pipeline_state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//pipeline_state.SampleDesc.Count = 1;
 
-	HR(gpu_device.device->CreateGraphicsPipelineState(&pipeline_state, IID_PPV_ARGS(pipeline.ReleaseAndGetAddressOf())));
+	//HR(gpu_device.device->CreateGraphicsPipelineState(&pipeline_state, IID_PPV_ARGS(pipeline.ReleaseAndGetAddressOf())));
 
 
-	gpu_device.create_default_resource(sizeof(VertexP3C3) * 8, vertex_buffer);
-	gpu_device.create_default_resource(sizeof(u32) * 36, index_buffer);
+	//gpu_device.create_default_resource(sizeof(VertexP3C3) * 8, vertex_buffer);
+	//gpu_device.create_default_resource(sizeof(u32) * 36, index_buffer);
 
-	copy_command_list.reset(copy_command_allocator);
+	//copy_command_list.reset(copy_command_allocator);
 
 	
 		//GPU_Resource intermediate_resource1;
@@ -361,16 +359,16 @@ void Engine::init(Win32_Window *window)
 		//intermediate_resource2.unmap();
 
 		//copy_command_list.get()->CopyResource(index_buffer.get(), intermediate_resource2.get());
-	copy_command_list.close();
-	
-	copy_command_queue.execute_command_list(copy_command_list);
-	Fence temp_fence;
-	gpu_device.create_fence(temp_fence);
-	u64 value = 0;
-	u64 fence_value = copy_command_queue.signal(value, temp_fence);
-	HANDLE fence_handle = create_event_handle();
-	wait_for_gpu(temp_fence, fence_value, fence_handle);
-	close_event_handle(fence_handle);
+	//copy_command_list.close();
+	//
+	//copy_command_queue.execute_command_list(copy_command_list);
+	//Fence temp_fence;
+	//gpu_device.create_fence(temp_fence);
+	//u64 value = 0;
+	//u64 fence_value = copy_command_queue.signal(value, temp_fence);
+	//HANDLE fence_handle = create_event_handle();
+	//wait_for_gpu(temp_fence, fence_value, fence_handle);
+	//close_event_handle(fence_handle);
 }
 
 //struct Descriptor_Table_Range {
@@ -426,17 +424,15 @@ void Engine::frame()
 
 	command_allocators[back_buffer_index].reset();
 
-	command_list.reset(command_allocators[back_buffer_index], pipeline);
+	command_list.reset(command_allocators[back_buffer_index]);
 
 	command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
 
-	command_list.clear_render_target_view(back_buffers_desc_heap.get_cpu_descriptor_heap_handle(back_buffer_index), Color::Red);
+	command_list.clear_render_target_view(render_target_desc_heap.get_cpu_handle(back_buffer_index), Color::Red);
 
 	command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT));
 
-
 	//command_list.get()->SetGraphicsRootDescriptorTable(1, matrix_buffer_descriptor_heap.get_base_gpu_descriptor_handle());
-
 
 	command_list.close();
 
@@ -448,7 +444,7 @@ void Engine::frame()
 
 	back_buffer_index = swap_chain.get_current_back_buffer_index();
 	
-	wait_for_gpu(fence, frame_fence_values[back_buffer_index], fence_event);
+	fence.wait_for_gpu(frame_fence_values[back_buffer_index]);
 
 	clear_event_queue();
 
