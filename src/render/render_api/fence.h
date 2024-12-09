@@ -14,8 +14,8 @@ struct Fence : D3D12_Object<ID3D12Fence> {
 
 	HANDLE fence_handle;
 	
-	void create(Gpu_Device &device, u32 initial_value = 0);
-	void wait_for_gpu(u32 fence_value);
+	void create(Gpu_Device &device, u64 initial_value = 0);
+	void wait_for_gpu(u64 fence_value);
 };
 
 #endif

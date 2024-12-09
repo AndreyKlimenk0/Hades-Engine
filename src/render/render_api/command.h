@@ -8,6 +8,7 @@
 #include "d3d12_object.h"
 #include "pipeline_state.h"
 #include "resource_barrier.h"
+#include "descriptor_heap.h"
 
 #include "../../libs/color.h"
 #include "../../libs/number_types.h"
@@ -43,6 +44,7 @@ struct Graphics_Command_List : Command_List {
 	void reset(Command_Allocator &command_allocator);
 	void reset(Command_Allocator &command_allocator, Pipeline_State &pipeline_state);
 	void clear_render_target_view(D3D12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle, const Color &color);
+	void clear_depth_stencil_view(DS_Descriptor &descriptor, float depth = 1.0f, u8 stencil = 0);
 	void resource_barrier(const Resource_Barrier &resource_barrier);
 
 	void create(Gpu_Device &device, Command_Allocator &command_allocator);
@@ -54,6 +56,7 @@ struct Copy_Command_List : Command_List {
 	Copy_Command_List();
 	~Copy_Command_List();
 
+	void reset(Command_Allocator &command_allocator);
 	void create(Gpu_Device &device, Command_Allocator &command_allocator);
 	ID3D12CommandList *get_d3d12_command_list();
 };

@@ -3,6 +3,30 @@
 #include "descriptor_heap.h"
 #include "../../sys/utils.h"
 
+CPU_Descriptor::CPU_Descriptor()
+{
+}
+
+CPU_Descriptor::CPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle) : index(heap_index), cpu_handle(cpu_handle)
+{
+}
+
+CPU_Descriptor::~CPU_Descriptor()
+{
+}
+
+CPU_GPU_Descriptor::CPU_GPU_Descriptor()
+{
+}
+
+CPU_GPU_Descriptor::CPU_GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) : CPU_Descriptor(heap_index, cpu_handle), gpu_handle(gpu_handle)
+{
+}
+
+CPU_GPU_Descriptor::~CPU_GPU_Descriptor()
+{
+}
+
 static D3D12_DESCRIPTOR_HEAP_TYPE descriptor_heap_type_to_d3d12(Descriptor_Heap_Type descriptor_heap_type)
 {
     switch (descriptor_heap_type) {
@@ -80,7 +104,7 @@ Shader_Descriptor_Heap::~Shader_Descriptor_Heap()
 {
 }
 
-void Shader_Descriptor_Heap::place_cb_decriptor(u32 descriptor_index, GPU_Resource &resource)
+CB_Descriptor Shader_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
     D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
 
@@ -90,10 +114,15 @@ void Shader_Descriptor_Heap::place_cb_decriptor(u32 descriptor_index, GPU_Resour
     cbuffer_view_desc.SizeInBytes = resource_desc.Width;
 
     gpu_device->CreateConstantBufferView(&cbuffer_view_desc, get_cpu_handle(descriptor_index));
+
+    return CB_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-void Shader_Descriptor_Heap::place_sr_decriptor(u32 descriptor_index, GPU_Resource &resource)
+SR_Descriptor Shader_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
+    assert(0 < resource.count);
+    assert(0 < resource.stride);
+
     D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
 
     D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
@@ -124,14 +153,19 @@ void Shader_Descriptor_Heap::place_sr_decriptor(u32 descriptor_index, GPU_Resour
         }
     }
     gpu_device->CreateShaderResourceView(resource.get(), &shader_resource_view_desc, get_cpu_handle(descriptor_index));
+
+    return SR_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-void Shader_Descriptor_Heap::place_ua_decriptor(u32 descriptor_index, GPU_Resource &resource)
+UA_Descriptor Shader_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
+    assert(false);
+    return UA_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
 void Shader_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
 {
+    Descriptor_Heap::create(device, descriptors_number, DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 Sampler_Descriptor_Heap::Sampler_Descriptor_Heap() : Descriptor_Heap()
@@ -142,12 +176,15 @@ Sampler_Descriptor_Heap::~Sampler_Descriptor_Heap()
 {
 }
 
-void Sampler_Descriptor_Heap::place_decriptor(u32 descriptor_index, GPU_Resource &resource)
+Sampler_Descriptor Sampler_Descriptor_Heap::place_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
+    assert(false);
+    return Sampler_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
 void Sampler_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
 {
+    assert(false);
 }
 
 RT_Descriptor_Heap::RT_Descriptor_Heap() : Descriptor_Heap()
@@ -158,7 +195,7 @@ RT_Descriptor_Heap::~RT_Descriptor_Heap()
 {
 }
 
-void RT_Descriptor_Heap::place_decriptor(u32 descriptor_index, GPU_Resource &resource)
+RT_Descriptor RT_Descriptor_Heap::place_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
     D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
 
@@ -179,6 +216,8 @@ void RT_Descriptor_Heap::place_decriptor(u32 descriptor_index, GPU_Resource &res
         }
     }
     gpu_device->CreateRenderTargetView(resource.get(), &render_target_view_desc, get_cpu_handle(descriptor_index));
+
+    return RT_Descriptor(descriptor_index, get_cpu_handle(descriptor_index));
 }
 
 void RT_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
@@ -199,7 +238,7 @@ void DS_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
     Descriptor_Heap::create(device, descriptors_number, DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
-void DS_Descriptor_Heap::place_decriptor(u32 descriptor_index, GPU_Resource &resource)
+DS_Descriptor DS_Descriptor_Heap::place_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
     D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
 
@@ -219,4 +258,6 @@ void DS_Descriptor_Heap::place_decriptor(u32 descriptor_index, GPU_Resource &res
         }
     }
     gpu_device->CreateDepthStencilView(resource.get(), &depth_stencil_view_desc, get_cpu_handle(descriptor_index));
+
+    return DS_Descriptor(descriptor_index, get_cpu_handle(descriptor_index));
 }

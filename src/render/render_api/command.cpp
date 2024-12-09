@@ -65,6 +65,11 @@ void Graphics_Command_List::clear_render_target_view(D3D12_CPU_DESCRIPTOR_HANDLE
     d3d12_object->ClearRenderTargetView(cpu_descriptor_handle, temp, 0, NULL);
 }
 
+void Graphics_Command_List::clear_depth_stencil_view(DS_Descriptor &descriptor, float depth, u8 stencil)
+{
+    d3d12_object->ClearDepthStencilView(descriptor.cpu_handle, D3D12_CLEAR_FLAG_DEPTH, depth, stencil, 0, NULL);
+}
+
 void Graphics_Command_List::resource_barrier(const Resource_Barrier &resource_barrier)
 {
     D3D12_RESOURCE_BARRIER d3d12_resource_barrier = const_cast<Resource_Barrier &>(resource_barrier).d3d12_resource_barrier();
@@ -132,6 +137,11 @@ Copy_Command_List::Copy_Command_List()
 
 Copy_Command_List::~Copy_Command_List()
 {
+}
+
+void Copy_Command_List::reset(Command_Allocator &command_allocator)
+{
+    HR(d3d12_object->Reset(command_allocator.get(), NULL));
 }
 
 void Copy_Command_List::create(Gpu_Device &device, Command_Allocator &command_allocator)
