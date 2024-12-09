@@ -230,6 +230,7 @@
     <ClCompile Include="src\render\render_api\pipeline_state.cpp" />
     <ClCompile Include="src\render\render_api\resource.cpp" />
     <ClCompile Include="src\render\render_api\resource_barrier.cpp" />
+    <ClCompile Include="src\render\render_api\root_signature.cpp" />
     <ClCompile Include="src\render\render_api\swap_chain.cpp" />
     <ClCompile Include="src\render\render_helpers.cpp" />
     <ClCompile Include="src\render\render_passes.cpp" />
@@ -446,6 +447,7 @@
     <ClInclude Include="src\render\render_api\pipeline_state.h" />
     <ClInclude Include="src\render\render_api\resource.h" />
     <ClInclude Include="src\render\render_api\resource_barrier.h" />
+    <ClInclude Include="src\render\render_api\root_signature.h" />
     <ClInclude Include="src\render\render_api\swap_chain.h" />
     <ClInclude Include="src\render\render_helpers.h" />
     <ClInclude Include="src\render\render_pass.h" />

@@ -8,6 +8,47 @@
 #include "d3d12_object.h"
 #include "../../libs/number_types.h"
 
+struct CPU_Descriptor {
+	CPU_Descriptor();
+	CPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle);
+	virtual ~CPU_Descriptor();
+
+	u32 index = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
+};
+
+struct CPU_GPU_Descriptor : CPU_Descriptor {
+	CPU_GPU_Descriptor();
+	CPU_GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle);
+	virtual ~CPU_GPU_Descriptor();
+	
+	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle;
+};
+
+struct CB_Descriptor : CPU_GPU_Descriptor {
+	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+};
+
+struct SR_Descriptor : CPU_GPU_Descriptor {
+	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+};
+
+struct UA_Descriptor : CPU_GPU_Descriptor {
+	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+};
+
+struct Sampler_Descriptor : CPU_GPU_Descriptor {
+	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+};
+
+struct RT_Descriptor : CPU_Descriptor {
+	using CPU_Descriptor::CPU_Descriptor;
+};
+
+struct DS_Descriptor : CPU_Descriptor {
+	using CPU_Descriptor::CPU_Descriptor;
+};
+
 enum Descriptor_Heap_Type {
 	DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 	DESCRIPTOR_HEAP_TYPE_SAMPLER,
@@ -37,9 +78,9 @@ struct Shader_Descriptor_Heap : Descriptor_Heap {
 	Shader_Descriptor_Heap();
 	~Shader_Descriptor_Heap();
 
-	void place_cb_decriptor(u32 descriptor_index, GPU_Resource &resource);
-	void place_sr_decriptor(u32 descriptor_index, GPU_Resource &resource);
-	void place_ua_decriptor(u32 descriptor_index, GPU_Resource &resource);
+	CB_Descriptor place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource);
+	SR_Descriptor place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource);
+	UA_Descriptor place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	void create(Gpu_Device &device, u32 descriptors_number);
 };
 
@@ -47,7 +88,7 @@ struct Sampler_Descriptor_Heap : Descriptor_Heap {
 	Sampler_Descriptor_Heap();
 	~Sampler_Descriptor_Heap();
 
-	void place_decriptor(u32 descriptor_index, GPU_Resource &resource);
+	Sampler_Descriptor place_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	void create(Gpu_Device &device, u32 descriptors_number);
 };
 
@@ -56,7 +97,7 @@ struct RT_Descriptor_Heap : Descriptor_Heap {
 	~RT_Descriptor_Heap();
 
 	void create(Gpu_Device &device, u32 descriptors_number);
-	void place_decriptor(u32 descriptor_index, GPU_Resource &resource);
+	RT_Descriptor place_descriptor(u32 descriptor_index, GPU_Resource &resource);
 };
 
 struct DS_Descriptor_Heap : Descriptor_Heap {
@@ -64,7 +105,7 @@ struct DS_Descriptor_Heap : Descriptor_Heap {
 	~DS_Descriptor_Heap();
 
 	void create(Gpu_Device &device, u32 descriptors_number);
-	void place_decriptor(u32 descriptor_index, GPU_Resource &resource);
+	DS_Descriptor place_descriptor(u32 descriptor_index, GPU_Resource &resource);
 };
 
 #endif

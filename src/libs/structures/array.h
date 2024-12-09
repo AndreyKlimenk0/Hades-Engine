@@ -253,6 +253,7 @@ inline void free_memory(Array<T *> *array)
 			ptr = NULL;
 		}
 	}
+	array->clear();
 }
 
 template <typename T>
