@@ -3,8 +3,8 @@ window_width 1900
 window_height 980
 create_entities_for_meshes true
 
-load_level "scene_demo.hl"
-#155933
+#load_level "scene_demo.hl"
+
 
 :/models_loading
 scene_logging false
