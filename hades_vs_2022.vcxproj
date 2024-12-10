@@ -94,8 +94,8 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)bin</OutDir>
-    <IntDir>$(SolutionDir)build</IntDir>
+    <OutDir>$(SolutionDir)bin\debug</OutDir>
+    <IntDir>$(SolutionDir)build\debug</IntDir>
     <TargetName>hades</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,16 +108,16 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)bin</OutDir>
-    <IntDir>$(SolutionDir)build</IntDir>
+    <OutDir>$(SolutionDir)bin\release</OutDir>
+    <IntDir>$(SolutionDir)build\relese</IntDir>
     <TargetName>hades</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VTune profiling|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>D:\programs\Intel\vtune\2022.4.1\sdk\include;$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\programs\Intel\vtune\2022.4.1\sdk\lib64;$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)bin</OutDir>
-    <IntDir>$(SolutionDir)build</IntDir>
+    <OutDir>$(SolutionDir)bin\profiling</OutDir>
+    <IntDir>$(SolutionDir)build\profiling</IntDir>
     <TargetName>hades</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -135,6 +135,8 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -171,6 +173,8 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -185,6 +189,8 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;VTUNE_PROFILING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
