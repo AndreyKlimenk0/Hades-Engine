@@ -6,6 +6,7 @@
 #include "render_passes.h"
 #include "render_system.h"
 #include "render_helpers.h"
+#include "shader_manager.h"
 #include "../game/world.h"
 #include "../libs/color.h"
 #include "../libs/number_types.h"
@@ -13,6 +14,7 @@
 #include "../libs/math/matrix.h"
 #include "../libs/math/structures.h"
 #include "../libs/structures/array.h"
+#include "../libs/structures/hash_table.h"
 
 struct Engine;
 struct Render_Pass;

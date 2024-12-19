@@ -79,7 +79,8 @@ inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render
 
 inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix, Matrix4 &perspective_matrix, Ray *ray)
 {
-	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
+	Size_u32 window_size = Engine::get_render_system()->get_window_size();
+	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, window_size.width, window_size.height);
 	Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
 
 	Vector4 mouse_point_in_world = ndc_point * inverse(view_matrix * perspective_matrix);
@@ -891,7 +892,8 @@ void Command_Window::init(Engine *engine)
 	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
-	display.set_size(Render_System::screen_width, Render_System::screen_height);
+	Size_u32 window_size = Engine::get_render_system()->get_window_size();
+	display.set_size(window_size.width, window_size.height);
 
 	command_window_rect.set_size(600, 80);
 	command_window_rect_with_additional_info.set_size(600, 500);
