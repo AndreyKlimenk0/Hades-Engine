@@ -4,7 +4,7 @@
 #include "gui.h"
 
 #include "../render/font.h"
-#include "../render/render_system.h"
+#include "../render/renderer.h"
 
 #include "../sys/sys.h"
 #include "../sys/engine.h"
@@ -736,7 +736,8 @@ Size_s32 Gui_Manager::get_window_size()
 
 Rect_s32 Gui_Manager::get_win32_rect()
 {
-	return Rect_s32(0, 0, (s32)Render_System::screen_width, (s32)Render_System::screen_height);
+	Size_u32 window = Engine::get_render_system()->get_window_size();
+	return Rect_s32(0, 0, window.width, window.height);
 }
 
 Gui_Window *Gui_Manager::get_window()
@@ -2614,13 +2615,14 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 	Rect_s32 *rect = &window->rect;
 
 	bool mouse_was_moved = (mouse_x_delta != 0) || (mouse_y_delta != 0);
+	Size_u32 window_size = Engine::get_render_system()->get_window_size();
 	if (mouse_was_moved && !active_scrolling && (resizing_window == 0) && (active_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
 		s32 min_window_position = 0;
 		if (window->style & WINDOW_OUTLINES) {
 			min_window_position = (s32)window_theme.outlines_width;
 		}
-		s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)Render_System::screen_width - rect->width);
-		s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)Render_System::screen_height - rect->height);
+		s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)window_size.width - rect->width);
+		s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)window_size.height - rect->height);
 		window->set_position(x, y);
 		any_window_was_moved = true;
 	}
@@ -2670,12 +2672,12 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style)
 			}
 		}
 		if ((rect_side == RECT_SIDE_RIGHT) || (rect_side == RECT_SIDE_RIGHT_BOTTOM)) {
-			if ((rect->right() + mouse_x_delta) < (s32)Render_System::screen_width) {
+			if ((rect->right() + mouse_x_delta) < (s32)window_size.width) {
 				rect->width = math::max(rect->width + mouse_x_delta, MIN_WINDOW_WIDTH);
 			}
 		}
 		if ((rect_side == RECT_SIDE_BOTTOM) || (rect_side == RECT_SIDE_RIGHT_BOTTOM) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
-			if ((rect->bottom() + mouse_y_delta) < (s32)Render_System::screen_height) {
+			if ((rect->bottom() + mouse_y_delta) < (s32)window_size.height) {
 				rect->height = math::max(rect->height + mouse_y_delta, MIN_WINDOW_HEIGHT);
 			}
 			if (window->display_vertical_scrollbar) {

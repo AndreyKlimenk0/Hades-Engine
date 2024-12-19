@@ -46,6 +46,9 @@ struct Size3D {
 	Size3D<T> &operator*=(const Size3D<T> &other);
 	Size3D<T> &operator/=(const Size3D<T> &other);
 
+	void set(const T &_width, const T &_height);
+	void set(const T &_width, const T &_height, const T &_depth);
+
 	T find_area();
 	Vector2 to_vector2();
 	Vector3 to_vector3();
@@ -327,6 +330,22 @@ Size3D<T> &Size3D<T>::operator/=(const Size3D<T> &other)
 	depth /= other.depth;
 	return *this;
 }
+
+template<typename T>
+inline void Size3D<T>::set(const T &_width, const T &_height)
+{
+	width = _width;
+	height = _height;
+}
+
+template<typename T>
+inline void Size3D<T>::set(const T &_width, const T &_height, const T &_depth)
+{
+	width = _width;
+	height = _height;
+	depth = _depth;
+}
+
 
 template<typename T>
 inline T Size3D<T>::find_area()

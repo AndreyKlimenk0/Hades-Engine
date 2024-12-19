@@ -36,6 +36,43 @@ void Command_Allocator::create(Gpu_Device &device, Command_List_Type command_lis
     HR(device->CreateCommandAllocator(command_list_type_to_d3d12(command_list_type), IID_PPV_ARGS(release_and_get_address())));
 }
 
+Command_List::Command_List()
+{
+}
+
+Command_List::~Command_List()
+{
+}
+
+void Command_List::close()
+{
+    HR(d3d12_object->Close());
+}
+
+void Command_List::reset(u32 command_allocator_index)
+{
+    ID3D12CommandAllocator *temp = command_allocators[command_allocator_index].get();
+    HR(d3d12_object->Reset(temp, NULL));
+}
+
+void Command_List::reset(u32 command_allocator_index, Pipeline_State &pipeline_state)
+{
+    ID3D12CommandAllocator *temp = command_allocators[command_allocator_index].get();
+    HR(d3d12_object->Reset(temp, pipeline_state.get()));
+}
+
+void Command_List::create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type)
+{
+    assert(number_command_allocators > 0);
+
+    command_allocators.reserve(number_command_allocators);
+    for (u32 i = 0; i < number_command_allocators; i++) {
+        command_allocators[i].create(device, command_list_type);
+    }
+    device->CreateCommandList(0, command_list_type_to_d3d12(command_list_type), command_allocators.first().get(), NULL, IID_PPV_ARGS(release_and_get_address()));
+}
+
+
 Graphics_Command_List::Graphics_Command_List()
 {
 }
@@ -49,20 +86,10 @@ ID3D12CommandList *Graphics_Command_List::get_d3d12_command_list()
     return static_cast<ID3D12CommandList *>(get());
 }
 
-void Graphics_Command_List::reset(Command_Allocator &command_allocator)
-{
-    HR(d3d12_object->Reset(command_allocator.get(), NULL));
-}
-
-void Graphics_Command_List::reset(Command_Allocator &command_allocator, Pipeline_State &pipeline_state)
-{
-    HR(d3d12_object->Reset(command_allocator.get(), pipeline_state.get()));
-}
-
-void Graphics_Command_List::clear_render_target_view(D3D12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle, const Color &color)
+void Graphics_Command_List::clear_render_target_view(RT_Descriptor &descriptor, const Color &color)
 {
     float temp[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
-    d3d12_object->ClearRenderTargetView(cpu_descriptor_handle, temp, 0, NULL);
+    d3d12_object->ClearRenderTargetView(descriptor.cpu_handle, temp, 0, NULL);
 }
 
 void Graphics_Command_List::clear_depth_stencil_view(DS_Descriptor &descriptor, float depth, u8 stencil)
@@ -76,9 +103,29 @@ void Graphics_Command_List::resource_barrier(const Resource_Barrier &resource_ba
     d3d12_object->ResourceBarrier(1, &d3d12_resource_barrier);
 }
 
-void Graphics_Command_List::create(Gpu_Device &device, Command_Allocator &command_allocator)
+void Graphics_Command_List::set_vertex_buffer(GPU_Resource &resource)
 {
-    Command_List::create(device, COMMAND_LIST_TYPE_DIRECT, command_allocator);
+    D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
+    vertex_buffer_view.BufferLocation = resource.get_gpu_address();
+    vertex_buffer_view.SizeInBytes = resource.get_size();
+    vertex_buffer_view.StrideInBytes = resource.stride;
+    
+    d3d12_object->IASetVertexBuffers(0, 1, &vertex_buffer_view);
+}
+
+void Graphics_Command_List::set_index_buffer(GPU_Resource &resource)
+{
+    D3D12_INDEX_BUFFER_VIEW index_buffer_view;
+    index_buffer_view.BufferLocation = resource.get_gpu_address();
+    index_buffer_view.SizeInBytes = resource.get_size();
+    index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
+    
+    d3d12_object->IASetIndexBuffer(&index_buffer_view);
+}
+
+void Graphics_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
+{
+    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_DIRECT);
     close(); // Should Command_List::create call this function ?
 }
 
@@ -113,24 +160,6 @@ u64 Command_Queue::signal(u64 &fence_value, Fence &fence)
     return fence_value_for_signal;
 }
 
-Command_List::Command_List()
-{
-}
-
-Command_List::~Command_List()
-{
-}
-
-void Command_List::close()
-{
-    HR(d3d12_object->Close());
-}
-
-void Command_List::create(Gpu_Device &device, Command_List_Type command_list_type, Command_Allocator &command_allocator)
-{
-    device->CreateCommandList(0, command_list_type_to_d3d12(command_list_type), command_allocator.get(), NULL, IID_PPV_ARGS(release_and_get_address()));
-}
-
 Copy_Command_List::Copy_Command_List()
 {
 }
@@ -144,9 +173,9 @@ void Copy_Command_List::reset(Command_Allocator &command_allocator)
     HR(d3d12_object->Reset(command_allocator.get(), NULL));
 }
 
-void Copy_Command_List::create(Gpu_Device &device, Command_Allocator &command_allocator)
+void Copy_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
 {
-    Command_List::create(device, COMMAND_LIST_TYPE_COPY, command_allocator);
+    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_DIRECT);
     close(); // Should Command_List::create call this function ?
 }
 

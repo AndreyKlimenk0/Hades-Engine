@@ -59,3 +59,11 @@ Vector3 Color::get_rgb()
 {
 	return to_vector3(value);
 }
+
+void Color::store(float *color)
+{
+	color[0] = value.x;
+	color[1] = value.y;
+	color[2] = value.z;
+	color[3] = value.w;
+}

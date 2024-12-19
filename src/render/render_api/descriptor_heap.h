@@ -17,28 +17,28 @@ struct CPU_Descriptor {
 	D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
 };
 
-struct CPU_GPU_Descriptor : CPU_Descriptor {
-	CPU_GPU_Descriptor();
-	CPU_GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle);
-	virtual ~CPU_GPU_Descriptor();
+struct GPU_Descriptor : CPU_Descriptor {
+	GPU_Descriptor();
+	GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle);
+	virtual ~GPU_Descriptor();
 	
 	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle;
 };
 
-struct CB_Descriptor : CPU_GPU_Descriptor {
-	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+struct CB_Descriptor : GPU_Descriptor {
+	using GPU_Descriptor::GPU_Descriptor;
 };
 
-struct SR_Descriptor : CPU_GPU_Descriptor {
-	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+struct SR_Descriptor : GPU_Descriptor {
+	using GPU_Descriptor::GPU_Descriptor;
 };
 
-struct UA_Descriptor : CPU_GPU_Descriptor {
-	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+struct UA_Descriptor : GPU_Descriptor {
+	using GPU_Descriptor::GPU_Descriptor;
 };
 
-struct Sampler_Descriptor : CPU_GPU_Descriptor {
-	using CPU_GPU_Descriptor::CPU_GPU_Descriptor;
+struct Sampler_Descriptor : GPU_Descriptor {
+	using GPU_Descriptor::GPU_Descriptor;
 };
 
 struct RT_Descriptor : CPU_Descriptor {
@@ -74,9 +74,9 @@ struct Descriptor_Heap : D3D12_Object<ID3D12DescriptorHeap> {
 	D3D12_GPU_DESCRIPTOR_HANDLE get_base_gpu_handle();
 };
 
-struct Shader_Descriptor_Heap : Descriptor_Heap {
-	Shader_Descriptor_Heap();
-	~Shader_Descriptor_Heap();
+struct CBSRUA_Descriptor_Heap : Descriptor_Heap {
+	CBSRUA_Descriptor_Heap();
+	~CBSRUA_Descriptor_Heap();
 
 	CB_Descriptor place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	SR_Descriptor place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource);

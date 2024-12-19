@@ -415,7 +415,6 @@ Shader::~Shader()
 
 void Shader::free()
 {
-	Shader::free();
 	file_name.free();
 	types.clear();
 	vs_bytecode.free();

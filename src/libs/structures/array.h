@@ -45,8 +45,12 @@ struct Array {
 
 template <typename T>
 inline void merge(Array<T>* dst, Array<T>* src);
+
 template <typename T>
-inline void free_memory(Array<T*>* array);
+inline void free_memory(Array<T *> *array);
+
+template <typename T>
+inline void zero_memory(Array<T> *array);
 
 template <typename T>
 Array<T>::Array(u32 _size)
@@ -263,6 +267,14 @@ inline void free_memory(Array<T*>* array)
 		}
 	}
 	array->clear();
+}
+
+template<typename T>
+inline void zero_memory(Array<T> *array)
+{
+	if (array->size > 0) {
+		memset((void *)array->items, 0, sizeof(T) * array->size);
+	}
 }
 
 #endif

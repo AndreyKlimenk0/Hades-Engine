@@ -3,7 +3,7 @@
 #include "../../sys/sys.h"
 #include "../../sys/utils.h"
 
-void Swap_Chain::init(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, Command_Queue &command_queue)
+void Swap_Chain::create(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, Command_Queue &command_queue)
 {
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc;
     ZeroMemory(&swap_chain_desc, sizeof(DXGI_SWAP_CHAIN_DESC1));
