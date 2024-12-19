@@ -222,6 +222,7 @@
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\font.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
+    <ClCompile Include="src\render\renderer.cpp" />
     <ClCompile Include="src\render\render_api\command.cpp" />
     <ClCompile Include="src\render\render_api\base.cpp" />
     <ClCompile Include="src\render\render_api\descriptor_heap.cpp" />
@@ -232,6 +233,7 @@
     <ClCompile Include="src\render\render_api\resource_barrier.cpp" />
     <ClCompile Include="src\render\render_api\root_signature.cpp" />
     <ClCompile Include="src\render\render_api\swap_chain.cpp" />
+    <ClCompile Include="src\render\render_api\texture.cpp" />
     <ClCompile Include="src\render\render_helpers.cpp" />
     <ClCompile Include="src\render\render_passes.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
@@ -440,6 +442,7 @@
     <ClInclude Include="src\render\hlsl.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
+    <ClInclude Include="src\render\renderer.h" />
     <ClInclude Include="src\render\render_api\command.h" />
     <ClInclude Include="src\render\render_api\d3d12_object.h" />
     <ClInclude Include="src\render\render_api\base.h" />
@@ -449,6 +452,7 @@
     <ClInclude Include="src\render\render_api\resource_barrier.h" />
     <ClInclude Include="src\render\render_api\root_signature.h" />
     <ClInclude Include="src\render\render_api\swap_chain.h" />
+    <ClInclude Include="src\render\render_api\texture.h" />
     <ClInclude Include="src\render\render_helpers.h" />
     <ClInclude Include="src\render\render_pass.h" />
     <ClInclude Include="src\render\render_passes.h" />

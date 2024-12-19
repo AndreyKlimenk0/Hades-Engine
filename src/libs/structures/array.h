@@ -45,9 +45,13 @@ struct Array {
 };
 
 template <typename T>
-inline void merge(Array<T> *dst, Array<T> *src);
+inline void merge(Array<T>* dst, Array<T>* src);
+
 template <typename T>
 inline void free_memory(Array<T *> *array);
+
+template <typename T>
+inline void zero_memory(Array<T> *array);
 
 template <typename T>
 Array<T>::Array(u32 _size)
@@ -282,6 +286,14 @@ Find_Result<T> find_in_array(Array<T> &dynamic_array, const T &value, const F &c
 		}
 	}
 	return Find_Result<T>(false, UINT32_MAX, T());
+}
+
+template<typename T>
+inline void zero_memory(Array<T> *array)
+{
+	if (array->size > 0) {
+		memset((void *)array->items, 0, sizeof(T) * array->size);
+	}
 }
 
 #endif

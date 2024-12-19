@@ -15,15 +15,15 @@ CPU_Descriptor::~CPU_Descriptor()
 {
 }
 
-CPU_GPU_Descriptor::CPU_GPU_Descriptor()
+GPU_Descriptor::GPU_Descriptor()
 {
 }
 
-CPU_GPU_Descriptor::CPU_GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) : CPU_Descriptor(heap_index, cpu_handle), gpu_handle(gpu_handle)
+GPU_Descriptor::GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) : CPU_Descriptor(heap_index, cpu_handle), gpu_handle(gpu_handle)
 {
 }
 
-CPU_GPU_Descriptor::~CPU_GPU_Descriptor()
+GPU_Descriptor::~GPU_Descriptor()
 {
 }
 
@@ -96,15 +96,15 @@ D3D12_GPU_DESCRIPTOR_HANDLE Descriptor_Heap::get_base_gpu_handle()
     return get_gpu_handle(0);
 }
 
-Shader_Descriptor_Heap::Shader_Descriptor_Heap() : Descriptor_Heap()
+CBSRUA_Descriptor_Heap::CBSRUA_Descriptor_Heap() : Descriptor_Heap()
 {
 }
 
-Shader_Descriptor_Heap::~Shader_Descriptor_Heap()
+CBSRUA_Descriptor_Heap::~CBSRUA_Descriptor_Heap()
 {
 }
 
-CB_Descriptor Shader_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource)
+CB_Descriptor CBSRUA_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
     D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
 
@@ -118,7 +118,7 @@ CB_Descriptor Shader_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, 
     return CB_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-SR_Descriptor Shader_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource)
+SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
     assert(0 < resource.count);
     assert(0 < resource.stride);
@@ -157,13 +157,13 @@ SR_Descriptor Shader_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, 
     return SR_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-UA_Descriptor Shader_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource)
+UA_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource)
 {
     assert(false);
     return UA_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-void Shader_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
+void CBSRUA_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
 {
     Descriptor_Heap::create(device, descriptors_number, DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
@@ -184,7 +184,7 @@ Sampler_Descriptor Sampler_Descriptor_Heap::place_descriptor(u32 descriptor_inde
 
 void Sampler_Descriptor_Heap::create(Gpu_Device &device, u32 descriptors_number)
 {
-    assert(false);
+    Descriptor_Heap::create(device, descriptors_number, DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
 
 RT_Descriptor_Heap::RT_Descriptor_Heap() : Descriptor_Heap()
