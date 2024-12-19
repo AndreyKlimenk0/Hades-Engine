@@ -12,7 +12,7 @@ using Microsoft::WRL::ComPtr;
 struct Swap_Chain {
 	ComPtr<IDXGISwapChain3> dxgi_swap_chain;
 
-	void init(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, Command_Queue &command_queue);
+	void create(bool allow_tearing, u32 buffer_count, u32 width, u32 height, HWND handle, Command_Queue &command_queue);
 	void resize(u32 width, u32 height);
 	void present(u32 sync_interval, u32 flags);
 	void get_buffer(u32 buffer_index, GPU_Resource &resource);

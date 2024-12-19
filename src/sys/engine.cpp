@@ -19,7 +19,7 @@
 static Engine *engine = NULL;
 
 static Font *performance_font = NULL;
-static Render_Primitive_List render_list;
+//static Render_Primitive_List render_list;
 
 static const String DEFAULT_LEVEL_NAME = "unnamed_level";
 static const String LEVEL_EXTENSION = ".hl";
@@ -40,9 +40,9 @@ static void display_performance(s64 fps, s64 frame_time)
 	char *test2 = format("Frame time {} ms", frame_time);
 	u32 text_width = performance_font->get_text_width(test2);
 
-	s32 x = Render_System::screen_width - text_width - 10;
-	render_list.add_text(100, 5, test);
-	render_list.add_text(180, 5, test2);
+	//s32 x = Render_System::screen_width - text_width - 10;
+	//render_list.add_text(x, 5, test);
+	//render_list.add_text(x, 20, test2);
 
 	free_string(test);
 	free_string(test2);
@@ -67,135 +67,132 @@ void Engine::init_base()
 #include "../render/render_api/root_signature.h"
 #include "../render/render_api/pipeline_state.h"
 
-Swap_Chain swap_chain;
-u32 back_buffer_index = 0;
-
-const u32 MAX_BACK_BUFFER_NUMBER = 3;
 
 #include <windows.h>
 #include "../win32/win_helpers.h"
 
 
-Command_Allocator command_allocators[MAX_BACK_BUFFER_NUMBER];
-GPU_Resource back_buffers[MAX_BACK_BUFFER_NUMBER];
-Command_Queue command_queue;
-Graphics_Command_List command_list;
+//Command_Allocator command_allocators[MAX_BACK_BUFFER_NUMBER];
+//GPU_Resource back_buffers[MAX_BACK_BUFFER_NUMBER];
+//Command_Queue command_queue;
+//Graphics_Command_List command_list;
+//
+//Command_Allocator copy_command_allocator;
+//Command_Queue copy_command_queue;
+//Copy_Command_List copy_command_list;
+//
+//Fence fence;
+//HANDLE fence_event;
+//RT_Descriptor_Heap render_target_desc_heap;
+//DS_Descriptor_Heap depth_stencil_desc_heap;
+//Shader_Descriptor_Heap shader_visible_desc_heap;
+//Root_Signature box_shader_signature;
+//
+////ComPtr<ID3D12PipelineState> pipeline;
+//Pipeline_State pipeline;
+//
+//D3D12_RECT clip_rect;
+//D3D12_VIEWPORT viewport;
+//
+//DS_Descriptor depth_texture_descriptor;
+//GPU_Resource depth_texture;
+//
+//struct VertexP3C3 {
+//	Vector3 vertex;
+//	Vector3 color;
+//};
+//
+//static VertexP3C3 vertices[8] = {
+//	{ Vector3(-1.0f, -1.0f, -1.0f), Vector3(0.0f, 0.0f, 0.0f) }, // 0
+//	{ Vector3(-1.0f,  1.0f, -1.0f), Vector3(0.0f, 1.0f, 0.0f) }, // 1
+//	{ Vector3(1.0f,  1.0f, -1.0f), Vector3(1.0f, 1.0f, 0.0f) }, // 2
+//	{ Vector3(1.0f, -1.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f) }, // 3
+//	{ Vector3(-1.0f, -1.0f,  1.0f), Vector3(0.0f, 0.0f, 1.0f) }, // 4
+//	{ Vector3(-1.0f,  1.0f,  1.0f), Vector3(0.0f, 1.0f, 1.0f) }, // 5
+//	{ Vector3(1.0f,  1.0f,  1.0f), Vector3(1.0f, 1.0f, 1.0f) }, // 6
+//	{ Vector3(1.0f, -1.0f,  1.0f), Vector3(1.0f, 0.0f, 1.0f) }  // 7
+//};
+//
+//static u32 indices[36] =
+//{
+//	0, 1, 2, 0, 2, 3,
+//	4, 6, 5, 4, 7, 6,
+//	4, 5, 1, 4, 1, 0,
+//	3, 2, 6, 3, 6, 7,
+//	1, 5, 6, 1, 6, 2,
+//	4, 0, 3, 4, 3, 7
+//};
+//
+//
+//Buffer vertex_buffer;
+//Buffer index_buffer;
+//
+//u64 frame_fence_value = 0;
+//u64 frame_fence_values[MAX_BACK_BUFFER_NUMBER];
+//
+//Constant_Buffer world_matrix_buffer;
+//Constant_Buffer view_matrix_buffer;
+//Constant_Buffer pers_matrix_buffer;
+//
+//struct alignas(256) World_Matrix {
+//	Matrix4 world_matrix;
+//};
+//
+//struct alignas(256) View_Matrix {
+//	Matrix4 view_matrix;
+//};
+//
+//struct alignas(256) Perspective_Matrix {
+//	Matrix4 perspective_matrix;
+//};
+//
+//Descriptor_Heap matrix_buffer_descriptor_heap;
+//
+//struct Gpu_Input_Layout {
+//	u32 offset = 0;
+//	Array<D3D12_INPUT_ELEMENT_DESC> input_elements;
+//
+//	void add_layout(const char *semantic_name, DXGI_FORMAT format);
+//	D3D12_INPUT_LAYOUT_DESC d3d12_input_layout();
+//};
+//
+//void Gpu_Input_Layout::add_layout(const char *semantic_name, DXGI_FORMAT format)
+//{
+//	input_elements.push({ semantic_name, 0, format, 0, offset, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0});
+//	offset += dxgi_format_size(format);
+//}
+//
+//D3D12_INPUT_LAYOUT_DESC Gpu_Input_Layout::d3d12_input_layout()
+//{
+//	return { input_elements.items, input_elements.count };
+//}
 
-Command_Allocator copy_command_allocator;
-Command_Queue copy_command_queue;
-Copy_Command_List copy_command_list;
-
-Fence fence;
-HANDLE fence_event;
-RT_Descriptor_Heap render_target_desc_heap;
-DS_Descriptor_Heap depth_stencil_desc_heap;
-Shader_Descriptor_Heap shader_visible_desc_heap;
-Root_Signature box_shader_signature;
-
-ComPtr<ID3D12PipelineState> pipeline;
-
-D3D12_RECT clip_rect;
-D3D12_VIEWPORT viewport;
-
-DS_Descriptor depth_texture_descriptor;
-GPU_Resource depth_texture;
-
-struct VertexP3C3 {
-	Vector3 vertex;
-	Vector3 color;
-};
-
-static VertexP3C3 vertices[8] = {
-	{ Vector3(-1.0f, -1.0f, -1.0f), Vector3(0.0f, 0.0f, 0.0f) }, // 0
-	{ Vector3(-1.0f,  1.0f, -1.0f), Vector3(0.0f, 1.0f, 0.0f) }, // 1
-	{ Vector3(1.0f,  1.0f, -1.0f), Vector3(1.0f, 1.0f, 0.0f) }, // 2
-	{ Vector3(1.0f, -1.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f) }, // 3
-	{ Vector3(-1.0f, -1.0f,  1.0f), Vector3(0.0f, 0.0f, 1.0f) }, // 4
-	{ Vector3(-1.0f,  1.0f,  1.0f), Vector3(0.0f, 1.0f, 1.0f) }, // 5
-	{ Vector3(1.0f,  1.0f,  1.0f), Vector3(1.0f, 1.0f, 1.0f) }, // 6
-	{ Vector3(1.0f, -1.0f,  1.0f), Vector3(1.0f, 0.0f, 1.0f) }  // 7
-};
-
-static u32 indices[36] =
-{
-	0, 1, 2, 0, 2, 3,
-	4, 6, 5, 4, 7, 6,
-	4, 5, 1, 4, 1, 0,
-	3, 2, 6, 3, 6, 7,
-	1, 5, 6, 1, 6, 2,
-	4, 0, 3, 4, 3, 7
-};
-
-
-Buffer vertex_buffer;
-Buffer index_buffer;
-
-u64 frame_fence_value = 0;
-u64 frame_fence_values[MAX_BACK_BUFFER_NUMBER];
-
-Constant_Buffer world_matrix_buffer;
-Constant_Buffer view_matrix_buffer;
-Constant_Buffer pers_matrix_buffer;
-
-struct alignas(256) World_Matrix {
-	Matrix4 world_matrix;
-};
-
-struct alignas(256) View_Matrix {
-	Matrix4 view_matrix;
-};
-
-struct alignas(256) Perspective_Matrix {
-	Matrix4 perspective_matrix;
-};
-
-Descriptor_Heap matrix_buffer_descriptor_heap;
-
-struct Gpu_Input_Layout {
-	u32 offset = 0;
-	Array<D3D12_INPUT_ELEMENT_DESC> input_elements;
-
-	void add_layout(const char *semantic_name, DXGI_FORMAT format);
-	D3D12_INPUT_LAYOUT_DESC d3d12_input_layout();
-};
-
-void Gpu_Input_Layout::add_layout(const char *semantic_name, DXGI_FORMAT format)
-{
-	input_elements.push({ semantic_name, 0, format, 0, offset, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0});
-	offset += dxgi_format_size(format);
-}
-
-D3D12_INPUT_LAYOUT_DESC Gpu_Input_Layout::d3d12_input_layout()
-{
-	return { input_elements.items, input_elements.count };
-}
-
-void create_depth_texture(Gpu_Device &device, u32 width, u32 height, GPU_Resource &resource)
-{
-	D3D12_HEAP_PROPERTIES heap_properties = {};
-	ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
-	heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-	D3D12_RESOURCE_DESC resource_desc = {};
-	ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
-	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	resource_desc.Alignment = 0;
-	resource_desc.Width = width;
-	resource_desc.Height = height;
-	resource_desc.DepthOrArraySize = 1;
-	resource_desc.MipLevels = 1;
-	resource_desc.Format = DXGI_FORMAT_D32_FLOAT;
-	resource_desc.SampleDesc.Count = 1;
-	resource_desc.SampleDesc.Quality = 0;
-	resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE optimizedClearValue = {};
-	optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	optimizedClearValue.DepthStencil = { 1.0f, 0 };
-
-	device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &optimizedClearValue, IID_PPV_ARGS(resource.release_and_get_address()));
-}
+//void create_depth_texture(Gpu_Device &device, u32 width, u32 height, GPU_Resource &resource)
+//{
+//	D3D12_HEAP_PROPERTIES heap_properties = {};
+//	ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
+//	heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+//
+//	D3D12_RESOURCE_DESC resource_desc = {};
+//	ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
+//	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+//	resource_desc.Alignment = 0;
+//	resource_desc.Width = width;
+//	resource_desc.Height = height;
+//	resource_desc.DepthOrArraySize = 1;
+//	resource_desc.MipLevels = 1;
+//	resource_desc.Format = DXGI_FORMAT_D32_FLOAT;
+//	resource_desc.SampleDesc.Count = 1;
+//	resource_desc.SampleDesc.Quality = 0;
+//	resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+//	resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+//
+//	D3D12_CLEAR_VALUE optimizedClearValue = {};
+//	optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+//	optimizedClearValue.DepthStencil = { 1.0f, 0 };
+//
+//	device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &optimizedClearValue, IID_PPV_ARGS(resource.release_and_get_address()));
+//}
 
 void Engine::init(Win32_Window *window)
 {
@@ -210,147 +207,160 @@ void Engine::init(Win32_Window *window)
 
 	shader_manager.init();
 
-	Gpu_Device gpu_device;
+	render_sys.init(window, &var_service);
 
-	if (!create_d3d12_gpu_device(gpu_device)) {
-		return;
-	}
+	//Gpu_Device gpu_device;
 
-	ZeroMemory(&viewport, sizeof(D3D12_VIEWPORT));
-	viewport.Width = window->width;
-	viewport.Height = window->height;
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
+	//if (!create_d3d12_gpu_device(gpu_device)) {
+	//	return;
+	//}
 
-	ZeroMemory(&clip_rect, sizeof(D3D12_RECT));
-	clip_rect.right = window->width;
-	clip_rect.bottom = window->height;
+	//ZeroMemory(&viewport, sizeof(D3D12_VIEWPORT));
+	//viewport.Width = window->width;
+	//viewport.Height = window->height;
+	//viewport.MinDepth = 0.0f;
+	//viewport.MaxDepth = 1.0f;
 
-	fence.create(gpu_device);
+	//ZeroMemory(&clip_rect, sizeof(D3D12_RECT));
+	//clip_rect.right = window->width;
+	//clip_rect.bottom = window->height;
 
-	command_queue.create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
-	
-	copy_command_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
-	copy_command_allocator.create(gpu_device, COMMAND_LIST_TYPE_COPY);
-	copy_command_list.create(gpu_device, copy_command_allocator);
+	//fence.create(gpu_device);
 
-	bool allow_tearing = false;
-	if (!vsync && windowed && check_tearing_support()) {
-		swap_chain_present.sync_interval = 0;
-		swap_chain_present.flags = DXGI_PRESENT_ALLOW_TEARING;
-		allow_tearing = true;
-	}
+	//command_queue.create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
+	//
+	//copy_command_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
+	//copy_command_allocator.create(gpu_device, COMMAND_LIST_TYPE_COPY);
+	//copy_command_list.create(gpu_device, copy_command_allocator);
 
-	swap_chain.init(allow_tearing, back_buffer_count, window->width, window->height, window->handle, command_queue);
+	//bool allow_tearing = false;
+	//if (!vsync && windowed && check_tearing_support()) {
+	//	swap_chain_present.sync_interval = 0;
+	//	swap_chain_present.flags = DXGI_PRESENT_ALLOW_TEARING;
+	//	allow_tearing = true;
+	//}
 
-	render_target_desc_heap.create(gpu_device, back_buffer_count);
-	depth_stencil_desc_heap.create(gpu_device, 1);
-	shader_visible_desc_heap.create(gpu_device, 3);
+	//swap_chain.create(allow_tearing, back_buffer_count, window->width, window->height, window->handle, command_queue);
 
-	create_depth_texture(gpu_device, window->width, window->height, depth_texture);
+	//render_target_desc_heap.create(gpu_device, back_buffer_count);
+	//depth_stencil_desc_heap.create(gpu_device, 1);
+	//shader_visible_desc_heap.create(gpu_device, 3);
 
-	depth_texture_descriptor = depth_stencil_desc_heap.place_descriptor(0, depth_texture);
+	//create_depth_texture(gpu_device, window->width, window->height, depth_texture);
 
-	for (u32 i = 0; i < (u32)back_buffer_count; i++) {
-		swap_chain.get_buffer(i, back_buffers[i]);
-		render_target_desc_heap.place_descriptor(i, back_buffers[i]);
-		
-		command_allocators[i].create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
-	}
-	back_buffer_index = swap_chain.get_current_back_buffer_index();
+	//depth_texture_descriptor = depth_stencil_desc_heap.place_descriptor(0, depth_texture);
 
-	command_list.create(gpu_device, command_allocators[back_buffer_index]);
+	//for (u32 i = 0; i < (u32)back_buffer_count; i++) {
+	//	swap_chain.get_buffer(i, back_buffers[i]);
+	//	render_target_desc_heap.place_descriptor(i, back_buffers[i]);
+	//	
+	//	command_allocators[i].create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
+	//}
+	//back_buffer_index = swap_chain.get_current_back_buffer_index();
 
-	fence_event = create_event_handle(); // The event must be close on engine shutdown.
+	//command_list.create(gpu_device, command_allocators[back_buffer_index]);
 
-	world_matrix_buffer.create(gpu_device, sizeof(World_Matrix));
-	view_matrix_buffer.create(gpu_device, sizeof(View_Matrix));
-	pers_matrix_buffer.create(gpu_device, sizeof(Perspective_Matrix));
+	//fence_event = create_event_handle(); // The event must be close on engine shutdown.
 
-	world_matrix_buffer.get()->SetName(L"World matrix buffer");
-	view_matrix_buffer.get()->SetName(L"View matrix buffer");
-	pers_matrix_buffer.get()->SetName(L"Pers matrix buffer");
+	//world_matrix_buffer.create(gpu_device, sizeof(World_Matrix));
+	//view_matrix_buffer.create(gpu_device, sizeof(View_Matrix));
+	//pers_matrix_buffer.create(gpu_device, sizeof(Perspective_Matrix));
 
-	auto world_matrix = make_identity_matrix();
-	auto position = Vector3(0.0f, 0.0f, -10.0f);
-	auto direction = Vector3::base_z;
-	auto view_matrix = make_look_at_matrix(position, position + direction, Vector3::base_y);
-	auto perspective_matrix = make_perspective_matrix(90, 16.0f / 9.0f, 1.0f, 1000.0f);
+	//world_matrix_buffer.get()->SetName(L"World matrix buffer");
+	//view_matrix_buffer.get()->SetName(L"View matrix buffer");
+	//pers_matrix_buffer.get()->SetName(L"Pers matrix buffer");
 
-	world_matrix_buffer.update(world_matrix);
-	view_matrix_buffer.update(view_matrix);
-	pers_matrix_buffer.update(perspective_matrix);
+	//auto world_matrix = make_identity_matrix();
+	//auto position = Vector3(0.0f, 0.0f, -10.0f);
+	//auto direction = Vector3::base_z;
+	//auto view_matrix = make_look_at_matrix(position, position + direction, Vector3::base_y);
+	//auto perspective_matrix = make_perspective_matrix(90, 16.0f / 9.0f, 1.0f, 1000.0f);
 
-	auto world_matrix_cb_desc = shader_visible_desc_heap.place_cb_descriptor(0, world_matrix_buffer);
-	auto view_matrix_cb_desc = shader_visible_desc_heap.place_cb_descriptor(1, view_matrix_buffer);
-	auto pers_matrix_cb_desc = shader_visible_desc_heap.place_cb_descriptor(2, pers_matrix_buffer);
+	//world_matrix_buffer.update(world_matrix);
+	//view_matrix_buffer.update(view_matrix);
+	//pers_matrix_buffer.update(perspective_matrix);
 
-	box_shader_signature.begin_descriptor_table_parameter(0, VISIBLE_TO_VERTEX_SHADER);
-	box_shader_signature.add_descriptor_range(1, world_matrix_cb_desc);
-	box_shader_signature.add_descriptor_range(2, view_matrix_cb_desc);
-	box_shader_signature.add_descriptor_range(3, pers_matrix_cb_desc);
-	box_shader_signature.end_parameter();
+	//auto world_matrix_cb_desc = shader_visible_desc_heap.place_cb_descriptor(0, world_matrix_buffer);
+	//auto view_matrix_cb_desc = shader_visible_desc_heap.place_cb_descriptor(1, view_matrix_buffer);
+	//auto pers_matrix_cb_desc = shader_visible_desc_heap.place_cb_descriptor(2, pers_matrix_buffer);
 
-	box_shader_signature.create(gpu_device, ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS);
-	box_shader_signature.get()->SetName(L"Box shader_signature");
+	//box_shader_signature.begin_descriptor_table_parameter(0, VISIBLE_TO_VERTEX_SHADER);
+	//box_shader_signature.add_descriptor_range(1, world_matrix_cb_desc);
+	//box_shader_signature.add_descriptor_range(2, view_matrix_cb_desc);
+	//box_shader_signature.add_descriptor_range(3, pers_matrix_cb_desc);
+	//box_shader_signature.end_parameter();
 
-	static Gpu_Input_Layout input_layout;
-	input_layout.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
-	input_layout.add_layout("COLOR", DXGI_FORMAT_R32G32B32_FLOAT);
+	//box_shader_signature.create(gpu_device, ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS);
+	//box_shader_signature.get()->SetName(L"Box shader_signature");
 
-	Shader *shader = &shader_manager.shaders.draw_box;
+	//static Gpu_Input_Layout input_layout;
+	//input_layout.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
+	//input_layout.add_layout("COLOR", DXGI_FORMAT_R32G32B32_FLOAT);
 
-	D12_Rasterizer_Desc rasterizer_desc;
-	D12_Blend_Desc blend_desc;
+	//Shader *shader = &shader_manager.shaders.draw_box;
 
-	const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};
+	//Rasterization_Desc rasterizer_desc;
+	//Blending_Desc blend_desc;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state;
-	ZeroMemory(&pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	pipeline_state.pRootSignature = box_shader_signature.get();
-	pipeline_state.InputLayout = { inputLayout , 2};
-	//pipeline_state.InputLayout = input_layout.d3d12_input_layout();
-	pipeline_state.VS = shader->vs_bytecode.d3d12_shader_bytecode();
-	pipeline_state.PS = shader->ps_bytecode.d3d12_shader_bytecode();
-	pipeline_state.RasterizerState = rasterizer_desc.d3d12_rasterizer_desc;
-	pipeline_state.BlendState = blend_desc.d3d12_blend_desc;
-	pipeline_state.SampleMask = UINT32_MAX;
-	pipeline_state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	pipeline_state.NumRenderTargets = 1;
-	pipeline_state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	pipeline_state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	pipeline_state.SampleDesc.Count = 1;
+	//const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
+	//{
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	{ "COLOR",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//};
 
-	HR(gpu_device->CreateGraphicsPipelineState(&pipeline_state, IID_PPV_ARGS(pipeline.ReleaseAndGetAddressOf())));
+	//Render_Pipeline_Desc render_pipeline_desc;
+	//render_pipeline_desc.root_signature = &box_shader_signature;
+	//render_pipeline_desc.vertex_shader = shader;
+	//render_pipeline_desc.pixel_shader = shader;
+	//render_pipeline_desc.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
+	//render_pipeline_desc.add_layout("COLOR", DXGI_FORMAT_R32G32B32_FLOAT);
+	//render_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	//render_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	vertex_buffer.create(gpu_device, D3D12_HEAP_TYPE_DEFAULT, 8, sizeof(VertexP3C3));
-	index_buffer.create(gpu_device, D3D12_HEAP_TYPE_DEFAULT, 36, sizeof(u32));
+	//	//D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state;
+	//	//ZeroMemory(&pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	//	//pipeline_state.pRootSignature = box_shader_signature.get();
+	//	////pipeline_state.InputLayout = { inputLayout , 2};
+	//	//pipeline_state.InputLayout = input_layout.d3d12_input_layout();
+	//	//pipeline_state.VS = shader->vs_bytecode.d3d12_shader_bytecode();
+	//	//pipeline_state.PS = shader->ps_bytecode.d3d12_shader_bytecode();
+	//	//pipeline_state.RasterizerState = rasterizer_desc.d3d12_rasterizer_desc;
+	//	//pipeline_state.BlendState = blend_desc.d3d12_blend_desc;
+	//	//pipeline_state.SampleMask = UINT32_MAX;
+	//	//pipeline_state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	//	//pipeline_state.NumRenderTargets = 1;
+	//	//pipeline_state.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//	//pipeline_state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	//	//pipeline_state.SampleDesc.Count = 1;
 
-	Buffer intermediate_vertex_buffer;
-	Buffer intermediate_index_buffer;
-	intermediate_vertex_buffer.create(gpu_device, D3D12_HEAP_TYPE_UPLOAD, 8, sizeof(VertexP3C3));
-	intermediate_index_buffer.create(gpu_device, D3D12_HEAP_TYPE_UPLOAD, 36, sizeof(u32));
+	//	//HR(gpu_device->CreateGraphicsPipelineState(&pipeline_state, IID_PPV_ARGS(pipeline.ReleaseAndGetAddressOf())));
 
-	intermediate_vertex_buffer.update(vertices);
-	intermediate_index_buffer.update(indices);
+	//pipeline.create(gpu_device, render_pipeline_desc);
 
-	copy_command_list.reset(copy_command_allocator);
+	//vertex_buffer.create(gpu_device, D3D12_HEAP_TYPE_DEFAULT, 8, sizeof(VertexP3C3));
+	//index_buffer.create(gpu_device, D3D12_HEAP_TYPE_DEFAULT, 36, sizeof(u32));
 
-	copy_command_list.get()->CopyResource(vertex_buffer.get(), intermediate_vertex_buffer.get());
-	copy_command_list.get()->CopyResource(index_buffer.get(), intermediate_index_buffer.get());
+	//Buffer intermediate_vertex_buffer;
+	//Buffer intermediate_index_buffer;
+	//intermediate_vertex_buffer.create(gpu_device, D3D12_HEAP_TYPE_UPLOAD, 8, sizeof(VertexP3C3));
+	//intermediate_index_buffer.create(gpu_device, D3D12_HEAP_TYPE_UPLOAD, 36, sizeof(u32));
 
-	copy_command_list.close();
-	copy_command_queue.execute_command_list(copy_command_list);
+	//intermediate_vertex_buffer.update(vertices);
+	//intermediate_index_buffer.update(indices);
 
-	Fence copy_fence;
-	copy_fence.create(gpu_device);
-	u64 copy_fence_value = 0;
-	copy_command_queue.signal(copy_fence_value, copy_fence);
-	copy_fence.wait_for_gpu(copy_fence_value);
+	//copy_command_list.reset(copy_command_allocator);
+
+	//copy_command_list.get()->CopyResource(vertex_buffer.get(), intermediate_vertex_buffer.get());
+	//copy_command_list.get()->CopyResource(index_buffer.get(), intermediate_index_buffer.get());
+
+	//copy_command_list.close();
+	//copy_command_queue.execute_command_list(copy_command_list);
+
+	//Fence copy_fence;
+	//copy_fence.create(gpu_device);
+	//u64 copy_fence_value = 0;
+	//copy_command_queue.signal(copy_fence_value, copy_fence);
+	//copy_fence.wait_for_gpu(copy_fence_value);
 }
 
 #include "sys.h"
@@ -369,57 +379,48 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
-	command_allocators[back_buffer_index].reset();
+	render_sys.render();
 
-	command_list.reset(command_allocators[back_buffer_index]);
+	//command_allocators[back_buffer_index].reset();
 
-	command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
+	//command_list.reset(command_allocators[back_buffer_index]);
 
-	command_list.clear_render_target_view(render_target_desc_heap.get_cpu_handle(back_buffer_index), Color::LightSteelBlue);
-	command_list.clear_depth_stencil_view(depth_texture_descriptor);
+	//command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
 
-	//command_list.get()->SetGraphicsRootDescriptorTable(1, matrix_buffer_descriptor_heap.get_base_gpu_descriptor_handle());
+	//command_list.clear_render_target_view(render_target_desc_heap.get_cpu_handle(back_buffer_index), Color::LightSteelBlue);
+	//command_list.clear_depth_stencil_view(depth_texture_descriptor);
 
-	D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-	vertex_buffer_view.BufferLocation = vertex_buffer.get_gpu_address();
-	vertex_buffer_view.SizeInBytes = vertex_buffer.get_size();
-	vertex_buffer_view.StrideInBytes = vertex_buffer.stride;
+	//
+	//command_list.get()->SetGraphicsRootSignature(box_shader_signature.get());
+	//command_list.get()->SetPipelineState(pipeline.get());
+	//command_list.get()->SetDescriptorHeaps(1, shader_visible_desc_heap.get_address());
+	//command_list.get()->SetGraphicsRootDescriptorTable(0, shader_visible_desc_heap.get_base_gpu_handle());
+	//
+	//command_list.get()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//command_list.set_vertex_buffer(vertex_buffer);
+	//command_list.set_index_buffer(index_buffer);
+	//
+	//command_list.get()->RSSetViewports(1, &viewport);
+	//command_list.get()->RSSetScissorRects(1, &clip_rect);
+	//const auto temp = render_target_desc_heap.get_cpu_handle(back_buffer_index);
+	//const auto temp2 = depth_texture_descriptor.cpu_handle;
+	//command_list.get()->OMSetRenderTargets(1, &temp, FALSE, &temp2);
 
-	D3D12_INDEX_BUFFER_VIEW index_buffer_view;
-	index_buffer_view.BufferLocation = index_buffer.get_gpu_address();
-	index_buffer_view.SizeInBytes = index_buffer.get_size();
-	index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
-	
-	command_list.get()->SetGraphicsRootSignature(box_shader_signature.get());
-	command_list.get()->SetPipelineState(pipeline.Get());
-	command_list.get()->SetDescriptorHeaps(1, shader_visible_desc_heap.get_address());
-	command_list.get()->SetGraphicsRootDescriptorTable(0, shader_visible_desc_heap.get_base_gpu_handle());
-	
-	command_list.get()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	command_list.get()->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-	command_list.get()->IASetIndexBuffer(&index_buffer_view);
-	
-	command_list.get()->RSSetViewports(1, &viewport);
-	command_list.get()->RSSetScissorRects(1, &clip_rect);
-	const auto temp = render_target_desc_heap.get_cpu_handle(back_buffer_index);
-	const auto temp2 = depth_texture_descriptor.cpu_handle;
-	command_list.get()->OMSetRenderTargets(1, &temp, FALSE, &temp2);
+	//command_list.get()->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
-	command_list.get()->DrawIndexedInstanced(36, 1, 0, 0, 0);
+	//command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT));
+	//
+	//command_list.close();
 
-	command_list.resource_barrier(Transition_Resource_Barrier(back_buffers[back_buffer_index], RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT));
-	
-	command_list.close();
+	//command_queue.execute_command_list(command_list);
 
-	command_queue.execute_command_list(command_list);
+	//frame_fence_values[back_buffer_index] = command_queue.signal(frame_fence_value, fence);
 
-	frame_fence_values[back_buffer_index] = command_queue.signal(frame_fence_value, fence);
+	//swap_chain.present(swap_chain_present.sync_interval, swap_chain_present.flags);
 
-	swap_chain.present(swap_chain_present.sync_interval, swap_chain_present.flags);
-
-	back_buffer_index = swap_chain.get_current_back_buffer_index();
-	
-	fence.wait_for_gpu(frame_fence_values[back_buffer_index]);
+	//back_buffer_index = swap_chain.get_current_back_buffer_index();
+	//
+	//fence.wait_for_gpu(frame_fence_values[back_buffer_index]);
 
 	clear_event_queue();
 
