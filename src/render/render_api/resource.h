@@ -8,6 +8,28 @@
 #include "d3d12_object.h"
 #include "../../libs/number_types.h"
 
+enum GPU_Heap_Type {
+	GPU_HEAP_TYPE_DEFAULT,
+	GPU_HEAP_TYPE_UPLOAD,
+	GPU_HEAP_TYPE_READBACK
+};
+
+enum GPU_Heap_Content {
+	GPU_HEAP_CONTAIN_BUFFERS,
+	GPU_HEAP_CONTAIN_BUFFERS_AND_TEXTURES,
+	GPU_HEAP_CONTAIN_RT_DS_TEXTURES
+};
+
+struct GPU_Heap : D3D12_Object<ID3D12Heap> {
+	GPU_Heap();
+	~GPU_Heap();
+	
+	u32 offset = 0;
+
+	void create(Gpu_Device &device, u32 heap_size, GPU_Heap_Type heap_type, GPU_Heap_Content content);
+	D3D12_HEAP_DESC d3d12_heap_desc();
+};
+
 struct GPU_Resource : D3D12_Object<ID3D12Resource> {
 	GPU_Resource();
 	virtual ~GPU_Resource();
@@ -15,48 +37,10 @@ struct GPU_Resource : D3D12_Object<ID3D12Resource> {
 	u32 count = 0;
 	u32 stride = 0;
 
-	u8 *map();
-	void unmap();
+	void set_size(u32 number_items, u32 item_size);
 
 	u32 get_size();
 	u64 get_gpu_address();
 	D3D12_RESOURCE_DESC d3d12_resource_desc();
 };
-
-struct Constant_Buffer : GPU_Resource {
-	Constant_Buffer() {};
-	~Constant_Buffer() {};
-
-	void create(Gpu_Device &device, u32 size);
-	
-	template <typename T>
-	void update(const T &data);
-};
-
-template<typename T>
-inline void Constant_Buffer::update(const T &data)
-{
-	u8 *memory = map();
-	memcpy((void *)memory, (void *)&data, sizeof(T));
-	unmap();
-}
-
-struct Buffer : GPU_Resource {
-	Buffer() {};
-	~Buffer() {};
-
-	void create(Gpu_Device &device, D3D12_HEAP_TYPE heap_type, u32 number_items, u32 item_size);
-
-	template <typename T>
-	void update(const T *data);
-};
-
-template<typename T>
-inline void Buffer::update(const T *data)
-{
-	u8 *memory = map();
-	memcpy((void *)memory, (void *)data, get_size());
-	unmap();
-}
-
 #endif

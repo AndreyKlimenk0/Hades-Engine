@@ -1,3 +1,119 @@
+#include "render_world.h"
+#include "render_system.h"
+#include "render_passes.h"
+#include "shader_manager.h"
+
+struct alignas(256) World_Matrix {
+	Matrix4 world_matrix;
+};
+
+struct alignas(256) View_Matrix {
+	Matrix4 view_matrix;
+};
+
+struct alignas(256) Perspective_Matrix {
+	Matrix4 perspective_matrix;
+};
+
+void Box_Pass::setup_root_signature(Gpu_Device &device)
+{
+	root_signature.add_cb_descriptor_table_parameter(1, 0);
+	root_signature.add_cb_descriptor_table_parameter(2, 0);
+	root_signature.add_cb_descriptor_table_parameter(3, 0);
+	root_signature.create(device, ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS);
+	//root_signature.begin_descriptor_table_parameter(0, VISIBLE_TO_VERTEX_SHADER);
+	//root_signature.add_descriptor_range(1, world_matrix_cb_desc);
+	//root_signature.add_descriptor_range(2, view_matrix_cb_desc);
+	//root_signature.add_descriptor_range(3, pers_matrix_cb_desc);
+	//root_signature.end_parameter();
+}
+
+const u32 RENDER_TARGET_BACK_BUFFER = 0x1;
+
+void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_manager)
+{
+	Shader *shader = GET_SHADER(shader_manager, draw_box);
+
+	Render_Pipeline_Desc render_pipeline_desc;
+	render_pipeline_desc.root_signature = &root_signature;
+	render_pipeline_desc.vertex_shader = shader;
+	render_pipeline_desc.pixel_shader = shader;
+	render_pipeline_desc.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
+	render_pipeline_desc.add_layout("COLOR", DXGI_FORMAT_R32G32B32_FLOAT);
+	render_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	render_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
+	render_pipeline_desc.viewport.width = 1900;
+	render_pipeline_desc.viewport.height = 980;
+
+	pipeline_state.create(gpu_device, render_pipeline_desc);
+}
+
+void Box_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+{
+	world_matrix_buffer = pipeline_resource_storage->request_constant_buffer(sizeof(World_Matrix));
+	view_matrix_buffer = pipeline_resource_storage->request_constant_buffer(sizeof(World_Matrix));
+	pers_matrix_buffer = pipeline_resource_storage->request_constant_buffer(sizeof(World_Matrix));
+
+	setup_root_signature(device);
+	setup_pipeline(device, shader_manager);
+}
+
+void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args)
+{
+	Render_System *render_sys = (Render_System *)args;
+	Size_u32 window = render_sys->get_window_size();
+
+	render_command_buffer->apply(pipeline_state, RENDER_TARGET_BUFFER_BUFFER);
+	
+	D3D12_RECT clip_rect;
+	D3D12_VIEWPORT viewport;
+	
+	ZeroMemory(&viewport, sizeof(D3D12_VIEWPORT));
+	viewport.Width = (float)window.width;
+	viewport.Height = (float)window.height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+
+	ZeroMemory(&clip_rect, sizeof(D3D12_RECT));
+	clip_rect.right = window.width;
+	clip_rect.bottom = window.height;
+
+	auto world_matrix = make_identity_matrix();
+	auto position = Vector3(0.0f, 0.0f, -10.0f);
+	auto direction = Vector3::base_z;
+	auto view_matrix = make_look_at_matrix(position, position + direction, Vector3::base_y);
+	auto perspective_matrix = make_perspective_matrix(90, 16.0f / 9.0f, 1.0f, 1000.0f);
+
+	world_matrix_buffer->write((void *)&world_matrix, sizeof(Matrix4));
+	view_matrix_buffer->write((void *)&view_matrix, sizeof(Matrix4));
+	pers_matrix_buffer->write((void *)&perspective_matrix, sizeof(Matrix4));
+
+	auto &command_list = render_command_buffer->graphics_command_list;
+
+	//command_list.get()->SetGraphicsRootSignature(root_signature.get());
+	//command_list.get()->SetPipelineState(pipeline_state.get());
+	//command_list.get()->SetDescriptorHeaps(1, render_sys->descriptors_pool.cbsrua_descriptor_heap.get_address());
+
+	command_list.get()->SetGraphicsRootDescriptorTable(0, world_matrix_buffer->get_frame_resource()->cb_descriptor.gpu_handle);
+	command_list.get()->SetGraphicsRootDescriptorTable(1, view_matrix_buffer->get_frame_resource()->cb_descriptor.gpu_handle);
+	command_list.get()->SetGraphicsRootDescriptorTable(2, pers_matrix_buffer->get_frame_resource()->cb_descriptor.gpu_handle);
+	
+	//command_list.get()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	command_list.set_vertex_buffer(render_sys->vertex_buffer);
+	command_list.set_index_buffer(render_sys->index_buffer);
+
+	render_command_buffer->draw(36);
+	
+	//command_list.get()->RSSetViewports(1, &viewport);
+	//command_list.get()->RSSetScissorRects(1, &clip_rect);
+	//auto temp = render_sys->back_buffer_textures[render_sys->back_buffer_index].rt_descriptor.cpu_handle;
+	//const auto temp2 = render_sys->back_buffer_depth_texture.ds_descriptor.cpu_handle;
+	//command_list.get()->OMSetRenderTargets(1, &temp, FALSE, &temp2);
+
+	//command_list.get()->DrawIndexedInstanced(36, 1, 0, 0, 0);
+}
+
+
 //#include <assert.h>
 //
 //#include "hlsl.h"

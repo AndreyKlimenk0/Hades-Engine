@@ -1,6 +1,24 @@
 #include "command.h"
 #include "../../sys/utils.h"
 
+static D3D_PRIMITIVE_TOPOLOGY to_d3d_primitive_topology(Primitive_Type primitive_type)
+{
+    switch (primitive_type) {
+        case PRIMITIVE_TYPE_UNKNOWN:
+            return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+        case PRIMITIVE_TYPE_POINT:
+            return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+        case PRIMITIVE_TYPE_LINE:
+            return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+        case PRIMITIVE_TYPE_TRIANGLE:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        case PRIMITIVE_TYPE_PATCH:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+    }
+    assert(false);
+    return (D3D_PRIMITIVE_TOPOLOGY)0;
+}
+
 static D3D12_COMMAND_LIST_TYPE command_list_type_to_d3d12(Command_List_Type command_list_type)
 {
     switch (command_list_type) {
@@ -86,6 +104,37 @@ ID3D12CommandList *Graphics_Command_List::get_d3d12_command_list()
     return static_cast<ID3D12CommandList *>(get());
 }
 
+void Graphics_Command_List::set_primitive_type(Primitive_Type primitive_type)
+{
+    d3d12_object->IASetPrimitiveTopology(to_d3d_primitive_topology(primitive_type));
+}
+
+void Graphics_Command_List::set_viewport(const Viewport &viewport)
+{
+    D3D12_VIEWPORT d3d12_viewport;
+    ZeroMemory(&d3d12_viewport, sizeof(D3D12_VIEWPORT));
+    d3d12_viewport.TopLeftX = viewport.x;
+    d3d12_viewport.TopLeftY = viewport.y;
+    d3d12_viewport.Width = viewport.width;
+    d3d12_viewport.Height = viewport.height;
+    d3d12_viewport.MinDepth = viewport.min_depth;
+    d3d12_viewport.MaxDepth = viewport.max_depth;
+
+    d3d12_object->RSSetViewports(1, &d3d12_viewport);
+}
+
+void Graphics_Command_List::set_clip_rect(const Rect_u32 &clip_rect)
+{
+    D3D12_RECT d3d12_clip_rect;
+    ZeroMemory(&d3d12_clip_rect, sizeof(D3D12_RECT));
+    d3d12_clip_rect.left = clip_rect.x;
+    d3d12_clip_rect.top = clip_rect.y;
+    d3d12_clip_rect.right = clip_rect.width;
+    d3d12_clip_rect.bottom = clip_rect.height;
+
+    d3d12_object->RSSetScissorRects(1, &d3d12_clip_rect);
+}
+
 void Graphics_Command_List::clear_render_target_view(RT_Descriptor &descriptor, const Color &color)
 {
     float temp[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
@@ -168,14 +217,9 @@ Copy_Command_List::~Copy_Command_List()
 {
 }
 
-void Copy_Command_List::reset(Command_Allocator &command_allocator)
-{
-    HR(d3d12_object->Reset(command_allocator.get(), NULL));
-}
-
 void Copy_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
 {
-    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_DIRECT);
+    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_COPY);
     close(); // Should Command_List::create call this function ?
 }
 

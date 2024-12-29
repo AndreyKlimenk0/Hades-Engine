@@ -3,6 +3,65 @@
 #include "resource.h"
 #include "../../sys/utils.h"
 
+static D3D12_HEAP_TYPE to_d3d12_heap_type(GPU_Heap_Type type)
+{
+    switch (type) {
+        case GPU_HEAP_TYPE_DEFAULT:
+            return D3D12_HEAP_TYPE_DEFAULT;
+        case GPU_HEAP_TYPE_UPLOAD:
+            return D3D12_HEAP_TYPE_UPLOAD;
+        case GPU_HEAP_TYPE_READBACK:
+            return D3D12_HEAP_TYPE_READBACK;
+    }
+    assert(false);
+    return (D3D12_HEAP_TYPE)0;
+}
+
+static D3D12_HEAP_FLAGS to_d3d12_heap_flags(GPU_Heap_Content content)
+{
+    switch (content) {
+        case GPU_HEAP_CONTAIN_BUFFERS:
+            return D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+        case GPU_HEAP_CONTAIN_BUFFERS_AND_TEXTURES:
+            return D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+        case GPU_HEAP_CONTAIN_RT_DS_TEXTURES:
+            return D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
+    }
+    assert(false);
+    return (D3D12_HEAP_FLAGS)0;
+}
+
+GPU_Heap::GPU_Heap()
+{
+}
+
+GPU_Heap::~GPU_Heap()
+{
+}
+
+void GPU_Heap::create(Gpu_Device &device, u32 heap_size, GPU_Heap_Type heap_type, GPU_Heap_Content content)
+{
+    D3D12_HEAP_PROPERTIES heap_properties;
+    ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
+    heap_properties.Type = to_d3d12_heap_type(heap_type);
+    heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+    D3D12_HEAP_DESC heap_desc;
+    ZeroMemory(&heap_desc, sizeof(D3D12_HEAP_DESC));
+    heap_desc.SizeInBytes = heap_size;
+    heap_desc.Properties = heap_properties;
+    heap_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    heap_desc.Flags = to_d3d12_heap_flags(content);
+
+    HR(device->CreateHeap(&heap_desc, IID_PPV_ARGS(release_and_get_address())));
+}
+
+D3D12_HEAP_DESC GPU_Heap::d3d12_heap_desc()
+{
+    return d3d12_object->GetDesc();
+}
+
 GPU_Resource::GPU_Resource()
 {
 }
@@ -11,16 +70,10 @@ GPU_Resource::~GPU_Resource()
 {
 }
 
-u8 *GPU_Resource::map()
+void GPU_Resource::set_size(u32 number_items, u32 item_size)
 {
-    u8 *memory = NULL;
-    d3d12_object->Map(0, NULL, (void **)&memory);
-    return memory;
-}
-
-void GPU_Resource::unmap()
-{
-    d3d12_object->Unmap(0, NULL);
+    count = number_items;
+    stride = item_size;
 }
 
 u32 GPU_Resource::get_size()
@@ -36,60 +89,4 @@ GPU_Address GPU_Resource::get_gpu_address()
 D3D12_RESOURCE_DESC GPU_Resource::d3d12_resource_desc()
 {
     return d3d12_object->GetDesc();
-}
-
-void Constant_Buffer::create(Gpu_Device &device, u32 size)
-{
-    count = 1;
-    stride = size;
-
-    D3D12_HEAP_PROPERTIES heap_properties = {};
-    ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
-    heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-    D3D12_RESOURCE_DESC resource_desc = {};
-    ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
-    resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resource_desc.Alignment = 0;
-    resource_desc.Width = size;
-    resource_desc.Height = 1;
-    resource_desc.DepthOrArraySize = 1;
-    resource_desc.MipLevels = 1;
-    resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-    resource_desc.SampleDesc.Count = 1;
-    resource_desc.SampleDesc.Quality = 0;
-    resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-    HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(release_and_get_address())));
-}
-
-void Buffer::create(Gpu_Device &device, D3D12_HEAP_TYPE heap_type, u32 number_items, u32 item_size)
-{
-    assert((heap_type == D3D12_HEAP_TYPE_DEFAULT) || (heap_type == D3D12_HEAP_TYPE_UPLOAD));
-    
-    count = number_items;
-    stride = item_size;
-
-    D3D12_HEAP_PROPERTIES heap_properties = {};
-    ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
-    heap_properties.Type = heap_type;
-
-    D3D12_RESOURCE_DESC resource_desc = {};
-    ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
-    resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resource_desc.Alignment = 0;
-    resource_desc.Width = get_size();
-    resource_desc.Height = 1;
-    resource_desc.DepthOrArraySize = 1;
-    resource_desc.MipLevels = 1;
-    resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-    resource_desc.SampleDesc.Count = 1;
-    resource_desc.SampleDesc.Quality = 0;
-    resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-    auto resource_state = (heap_type == D3D12_HEAP_TYPE_DEFAULT) ? D3D12_RESOURCE_STATE_COMMON : D3D12_RESOURCE_STATE_GENERIC_READ;
-
-    HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, resource_state, NULL, IID_PPV_ARGS(release_and_get_address())));
 }

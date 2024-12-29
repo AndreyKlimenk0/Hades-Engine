@@ -1,13 +1,48 @@
 #ifndef RENDER_PASS_H
 #define RENDER_PASS_H
 
-#include "hlsl.h"
+//#include "hlsl.h"
+//#include "../libs/str.h"
+//#include "../libs/color.h"
+//#include "../libs/number_types.h"
+//#include "../libs/math/vector.h"
+//#include "../libs/math/matrix.h"
+//#include "../libs/math/structures.h"
+
+struct CPU_Buffer;
+struct Shader_Manager;
+struct Pipeline_Resource_Storage;
+struct Render_World;
+struct Render_Command_Buffer;
+
 #include "../libs/str.h"
-#include "../libs/color.h"
-#include "../libs/number_types.h"
-#include "../libs/math/vector.h"
-#include "../libs/math/matrix.h"
-#include "../libs/math/structures.h"
+#include "render_api/base.h"
+#include "render_api/command.h"
+#include "render_api/root_signature.h"
+#include "render_api/pipeline_state.h"
+
+struct Render_Pass {
+	Render_Pass() = default;
+	virtual ~Render_Pass() = default;
+
+	String name;
+	Root_Signature root_signature;
+	Pipeline_State pipeline_state;
+	
+	virtual void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage) = 0;
+	virtual void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL) = 0;
+};
+
+struct Box_Pass : Render_Pass {
+	CPU_Buffer *world_matrix_buffer;
+	CPU_Buffer *view_matrix_buffer;
+	CPU_Buffer *pers_matrix_buffer;
+
+	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
+	void setup_root_signature(Gpu_Device &device);
+	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
+};
 
 //struct Shader;
 //struct Gpu_Device;
