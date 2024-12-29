@@ -305,6 +305,18 @@ void Pipeline_State::create(Gpu_Device &device, Render_Pipeline_Desc &render_pip
 {
     assert(render_pipeline_desc.render_targets_formats.count > 0);
 
+    primitive_type = render_pipeline_desc.primitive_type;
+    root_signature = render_pipeline_desc.root_signature;
+    viewport = render_pipeline_desc.viewport;
+    if ((render_pipeline_desc.clip_rect.width == 0) && (render_pipeline_desc.clip_rect.height == 0)) {
+        clip_rect.x = static_cast<u32>(render_pipeline_desc.viewport.x);
+        clip_rect.y = static_cast<u32>(render_pipeline_desc.viewport.y);
+        clip_rect.width = static_cast<u32>(render_pipeline_desc.viewport.width);
+        clip_rect.height = static_cast<u32>(render_pipeline_desc.viewport.height);
+    } else {
+        clip_rect = render_pipeline_desc.clip_rect;
+    }
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphics_pipeline_state;
     ZeroMemory(&graphics_pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
     graphics_pipeline_state.pRootSignature= render_pipeline_desc.root_signature->get();

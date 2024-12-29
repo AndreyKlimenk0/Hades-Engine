@@ -14,6 +14,7 @@
 #include "../../libs/color.h"
 #include "../../libs/number_types.h"
 #include "../../libs/structures/array.h"
+#include "../../libs/math/structures.h"
 
 enum Command_List_Type {
 	COMMAND_LIST_TYPE_DIRECT,
@@ -48,6 +49,10 @@ struct Graphics_Command_List : Command_List {
 	Graphics_Command_List();
 	~Graphics_Command_List();
 
+	void set_primitive_type(Primitive_Type primitive_type);
+	void set_viewport(const Viewport &viewport);
+	void set_clip_rect(const Rect_u32 &clip_rect);
+
 	void clear_render_target_view(RT_Descriptor &descriptor, const Color &color);
 	void clear_depth_stencil_view(DS_Descriptor &descriptor, float depth = 1.0f, u8 stencil = 0);
 	void resource_barrier(const Resource_Barrier &resource_barrier);
@@ -64,7 +69,6 @@ struct Copy_Command_List : Command_List {
 	Copy_Command_List();
 	~Copy_Command_List();
 
-	void reset(Command_Allocator &command_allocator);
 	void create(Gpu_Device &device, u32 number_command_allocators);
 	ID3D12CommandList *get_d3d12_command_list();
 };
