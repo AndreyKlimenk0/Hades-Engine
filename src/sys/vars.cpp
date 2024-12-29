@@ -286,7 +286,7 @@ void Variable_Service::bind_integer(const char *variable_name, const char *strin
     Variable_Binding *binding = new Variable_Binding();
     binding->name = variable_name;
     binding->rvalue.type = INTEGER_VALUE;
-    binding->rvalue.integer = atoi(string);
+    binding->rvalue.integer = (s32)atoi(string);
     bindings.push(binding);
 }
 

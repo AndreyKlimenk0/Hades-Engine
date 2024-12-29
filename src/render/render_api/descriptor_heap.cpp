@@ -111,7 +111,7 @@ CB_Descriptor CBSRUA_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbuffer_view_desc;
     ZeroMemory(&cbuffer_view_desc, sizeof(D3D12_CONSTANT_BUFFER_VIEW_DESC));
     cbuffer_view_desc.BufferLocation = resource.get_gpu_address();
-    cbuffer_view_desc.SizeInBytes = resource_desc.Width;
+    cbuffer_view_desc.SizeInBytes = static_cast<u32>(resource_desc.Width);
 
     gpu_device->CreateConstantBufferView(&cbuffer_view_desc, get_cpu_handle(descriptor_index));
 

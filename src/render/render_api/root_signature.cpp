@@ -20,10 +20,8 @@ static D3D12_SHADER_VISIBILITY shader_visibility_to_d3d12(Shader_Visibility shad
 			return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
 		case VISIBLE_TO_MESH_SHADER:
 			return D3D12_SHADER_VISIBILITY_MESH;
-		default: {
-			assert(false);
-		}
 	}
+	assert(false);
 	return (D3D12_SHADER_VISIBILITY)0;
 }
 
@@ -77,6 +75,29 @@ void Root_Signature::create(Gpu_Device &device, u32 access_flags)
 	HR(device->CreateRootSignature(0, signature_blob->GetBufferPointer(), signature_blob->GetBufferSize(), IID_PPV_ARGS(release_and_get_address())));
 
 	free_memory(&parameters_descriptor_ranges);
+	free_memory(&ranges);
+}
+
+u32 Root_Signature::add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility)
+{
+	D3D12_DESCRIPTOR_RANGE1 *descriptor_range = new D3D12_DESCRIPTOR_RANGE1();
+	ZeroMemory(descriptor_range, sizeof(D3D12_DESCRIPTOR_RANGE1));
+	descriptor_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	descriptor_range->NumDescriptors = 1;
+	descriptor_range->BaseShaderRegister = shader_register;
+	descriptor_range->RegisterSpace = shader_space;
+	descriptor_range->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	ranges.push(descriptor_range);
+
+	D3D12_ROOT_PARAMETER1 parameter;
+	ZeroMemory(&parameter, sizeof(D3D12_ROOT_PARAMETER1));
+	parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	parameter.DescriptorTable.NumDescriptorRanges = 1;
+	parameter.DescriptorTable.pDescriptorRanges = ranges.last();
+	parameter.ShaderVisibility = shader_visibility_to_d3d12(shader_visibility);
+
+	return parameters.push(parameter);
 }
 
 void Root_Signature::begin_descriptor_table_parameter(u32 shader_register_space, Shader_Visibility shader_visibility)

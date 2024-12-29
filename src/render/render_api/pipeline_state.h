@@ -9,16 +9,9 @@
 #include "root_signature.h"
 #include "../../libs/number_types.h"
 #include "../../libs/structures/array.h"
+#include "../../libs/math/structures.h"
 
 struct Shader;
-
-enum Primitive_Type {
-	PRIMITIVE_TYPE_UNKNOWN,
-	PRIMITIVE_TYPE_POINT,
-	PRIMITIVE_TYPE_LINE,
-	PRIMITIVE_TYPE_TRIANGLE,
-	PRIMITIVE_TYPE_PATCH
-};
 
 enum Fill_Type {
 	FILL_TYPE_WIREFRAME,
@@ -135,6 +128,8 @@ struct Render_Pipeline_Desc {
 	DXGI_FORMAT depth_stencil_format;
 	Array<DXGI_FORMAT> render_targets_formats;
 	Array<D3D12_INPUT_ELEMENT_DESC> input_elements;
+	Viewport viewport;
+	Rect_u32 clip_rect;
 
 	void add_render_target(DXGI_FORMAT format);
 	void add_layout(const char *semantic_name, DXGI_FORMAT format);
@@ -144,6 +139,11 @@ struct Render_Pipeline_Desc {
 struct Pipeline_State : D3D12_Object<ID3D12PipelineState> {
 	Pipeline_State();
 	~Pipeline_State();
+
+	Primitive_Type primitive_type;
+	Root_Signature *root_signature = NULL;
+	Viewport viewport;
+	Rect_u32 clip_rect;
 
 	void create(Gpu_Device &device, Render_Pipeline_Desc &render_pipeline_desc);
 };

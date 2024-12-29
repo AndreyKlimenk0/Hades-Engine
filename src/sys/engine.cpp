@@ -97,31 +97,6 @@ void Engine::init_base()
 //DS_Descriptor depth_texture_descriptor;
 //GPU_Resource depth_texture;
 //
-//struct VertexP3C3 {
-//	Vector3 vertex;
-//	Vector3 color;
-//};
-//
-//static VertexP3C3 vertices[8] = {
-//	{ Vector3(-1.0f, -1.0f, -1.0f), Vector3(0.0f, 0.0f, 0.0f) }, // 0
-//	{ Vector3(-1.0f,  1.0f, -1.0f), Vector3(0.0f, 1.0f, 0.0f) }, // 1
-//	{ Vector3(1.0f,  1.0f, -1.0f), Vector3(1.0f, 1.0f, 0.0f) }, // 2
-//	{ Vector3(1.0f, -1.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f) }, // 3
-//	{ Vector3(-1.0f, -1.0f,  1.0f), Vector3(0.0f, 0.0f, 1.0f) }, // 4
-//	{ Vector3(-1.0f,  1.0f,  1.0f), Vector3(0.0f, 1.0f, 1.0f) }, // 5
-//	{ Vector3(1.0f,  1.0f,  1.0f), Vector3(1.0f, 1.0f, 1.0f) }, // 6
-//	{ Vector3(1.0f, -1.0f,  1.0f), Vector3(1.0f, 0.0f, 1.0f) }  // 7
-//};
-//
-//static u32 indices[36] =
-//{
-//	0, 1, 2, 0, 2, 3,
-//	4, 6, 5, 4, 7, 6,
-//	4, 5, 1, 4, 1, 0,
-//	3, 2, 6, 3, 6, 7,
-//	1, 5, 6, 1, 6, 2,
-//	4, 0, 3, 4, 3, 7
-//};
 //
 //
 //Buffer vertex_buffer;

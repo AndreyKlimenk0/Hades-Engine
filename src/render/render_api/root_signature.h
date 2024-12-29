@@ -33,6 +33,12 @@ const u32 ALLOW_MESH_SHADER_ACCESS = 0x80;
 
 typedef Array<D3D12_DESCRIPTOR_RANGE1> Descriptor_Ranges;
 
+enum Binding_Type {
+	BIND_RESOURCE_RESOURCE,
+	BIND_CONSTATNT_BUFFER,
+	BIND_UNORDERED_ACESS_RESOURCE,
+};
+
 struct Root_Signature : D3D12_Object<ID3D12RootSignature> {
 	Root_Signature();
 	~Root_Signature();
@@ -42,12 +48,17 @@ struct Root_Signature : D3D12_Object<ID3D12RootSignature> {
 	Descriptor_Ranges *descriptor_ranges = NULL;
 
 	Array<D3D12_ROOT_PARAMETER1> parameters;
+	Array<D3D12_DESCRIPTOR_RANGE1 *> ranges;
+
 	Array<Descriptor_Ranges *> parameters_descriptor_ranges;
 
 	void create(Gpu_Device &device, u32 access_flags);
 	//void cb_descriptor_paramater();
 	//void sr_descriptor_paramater();
 	//void ua_descriptor_paramater();
+
+	u32 add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility = VISIBLE_TO_ALL);
+
 	void begin_descriptor_table_parameter(u32 shader_register_space, Shader_Visibility shader_visibility);
 	void end_parameter();
 

@@ -7,8 +7,10 @@
 #include "../libs/structures/array.h"
 #include "../libs/math/structures.h"
 
+#include "render_passes.h"
 #include "render_api/base.h"
 #include "render_api/fence.h"
+#include "render_api/buffer.h"
 #include "render_api/texture.h"
 #include "render_api/resource.h"
 #include "render_api/descriptor_heap.h"
@@ -60,7 +62,7 @@ struct Descriptor_Heap_Pool {
 
 	u32 rt_descriptor_count = 0;
 	u32 ds_descriptor_count = 0;
-	u32 sr_descriptor_count = 0;
+	u32 cbsrua_descriptor_count = 0;
 	u32 samper_descriptor_count = 0;
 
 	RT_Descriptor_Heap rt_descriptor_heap;
@@ -68,24 +70,58 @@ struct Descriptor_Heap_Pool {
 	CBSRUA_Descriptor_Heap cbsrua_descriptor_heap;
 	Sampler_Descriptor_Heap sampler_descriptor_heap;
 
+	void allocate_cb_descriptor(Buffer &buffer);
+	void allocate_sr_descriptor(Buffer &buffer);
+	void allocate_ua_descriptor(Buffer &buffer);
+
 	void allocate_rt_descriptor(Texture &texture);
 	void allocate_ds_descriptor(Texture &texture);
 	void allocate_sr_descriptor(Texture &texture);
 	void allocate_pool(Gpu_Device &device, u32 descriptors_count);
 };
 
-#include "render_api/root_signature.h"
-#include "render_api/pipeline_state.h"
+struct CPU_Buffer {
+	u32 frame_index;
+	Array<Buffer *> buffers;
 
-struct Box_Pass {
-	String name;
-	Root_Signature root_signature;
-	Pipeline_State pipeline_state;
+	void begin_frame(u32 _frame_index);
+	void write(void *data, u32 data_size);
+	void create(Gpu_Device &device, GPU_Heap &heap, u32 frames_in_flight, u32 number_items, u32 items_size);
+	Buffer *get_frame_resource();
+};
 
-	void setup();
-	void setup_pipeline();
-	void setup_root_signature();
-	void render();
+struct Pipeline_Resource_Storage {
+	u32 back_buffer_count = 0;
+	u32 back_buffer_index = 0;
+
+	Descriptor_Heap_Pool *descriptor_heap_pool = NULL;
+
+	Array<Pair<CPU_Buffer *, u32>> cpu_buffers;
+
+	GPU_Heap buffers_heap;
+
+	void init(Gpu_Device &device, u32 _back_buffer_count, Descriptor_Heap_Pool *_descriptor_heap_pool);
+	void begin_frame(u32 _back_buffer_index);
+
+	CPU_Buffer *request_constant_buffer(u32 buffer_size);
+};
+
+const u32 RENDER_TARGET_BUFFER_BUFFER = 0x1;
+
+struct Render_Command_Buffer {
+	Copy_Command_List copy_command_list;
+	Graphics_Command_List graphics_command_list;
+	
+	Texture *back_buffer_texture = NULL;
+	Texture *back_buffer_depth_texture = NULL;
+	Descriptor_Heap_Pool *descriptors_pool = NULL;
+
+	void create(Gpu_Device &device, u32 frames_in_flight);
+	void apply(Pipeline_State &pipeline_state, u32 flags = 0);
+	void begin_frame(Texture *back_buffer);
+	void draw(u32 index_count);
+
+	Graphics_Command_List *get_graphics_command_list();
 };
 
 struct Render_System {
@@ -111,15 +147,29 @@ struct Render_System {
 	Command_Queue copy_queue;
 	Command_Queue compute_queue;
 	Command_Queue graphics_queue;
-	Graphics_Command_List command_list;
+	
+	Render_Command_Buffer command_buffer;
 
 	Texture back_buffer_depth_texture;
 	Array<Texture> back_buffer_textures;
 
 	Descriptor_Heap_Pool descriptors_pool;
+	Pipeline_Resource_Storage pipeline_resource_storage;
+
+	struct Render_Passes {
+		Box_Pass box;
+	} passes;
+
+	//Test data
+	Buffer vertex_buffer;
+	Buffer index_buffer;
+
+	Array<Render_Pass *> frame_passes;
 
 	void init(Win32_Window *win32_window, Variable_Service *variable_service);
 	void init_vars(Win32_Window *win32_window, Variable_Service *variable_service);
+	void init_passes();
+	void init_buffers();
 	void resize(u32 window_width, u32 window_height);
 
 	void render();

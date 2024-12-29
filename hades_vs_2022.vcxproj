@@ -223,6 +223,7 @@
     <ClCompile Include="src\render\font.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\renderer.cpp" />
+    <ClCompile Include="src\render\render_api\buffer.cpp" />
     <ClCompile Include="src\render\render_api\command.cpp" />
     <ClCompile Include="src\render\render_api\base.cpp" />
     <ClCompile Include="src\render\render_api\descriptor_heap.cpp" />
@@ -443,6 +444,7 @@
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\renderer.h" />
+    <ClInclude Include="src\render\render_api\buffer.h" />
     <ClInclude Include="src\render\render_api\command.h" />
     <ClInclude Include="src\render\render_api\d3d12_object.h" />
     <ClInclude Include="src\render\render_api\base.h" />

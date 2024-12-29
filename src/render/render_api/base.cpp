@@ -96,3 +96,17 @@ bool create_d3d12_gpu_device(Gpu_Device &device)
     }
     return result;
 }
+
+Viewport::Viewport()
+{
+}
+
+Viewport::Viewport(const Size_f32 &size)
+{
+    width = size.width;
+    height = size.height;
+}
+
+Viewport::~Viewport()
+{
+}
