@@ -39,6 +39,24 @@ enum Binding_Type {
 	BIND_UNORDERED_ACESS_RESOURCE,
 };
 
+enum Root_Parameter_Type {
+	ROOT_PARAMETER_CONSTANT_BUFFER,
+	ROOT_PARAMETER_SHADER_RESOURCE,
+	ROOT_PARAMETER_SAMPLER
+};
+
+struct Root_Paramter_Index {
+	u32 cb_parameter_index;
+	u32 sr_parameter_index;
+	u32 sampler_parameter_index;
+
+	void set_parameter_index(u32 parameter_index, Root_Parameter_Type parameter_type);
+	u32 get_parameter_index(Root_Parameter_Type parameter_type);
+};
+
+const u32 HLSL_REGISTRE_COUNT = 20;
+const u32 HLSL_SPACE_COUNT = 20;
+
 struct Root_Signature : D3D12_Object<ID3D12RootSignature> {
 	Root_Signature();
 	~Root_Signature();
@@ -49,15 +67,20 @@ struct Root_Signature : D3D12_Object<ID3D12RootSignature> {
 
 	Array<D3D12_ROOT_PARAMETER1> parameters;
 	Array<D3D12_DESCRIPTOR_RANGE1 *> ranges;
+	Array<D3D12_STATIC_SAMPLER_DESC> samplers;
 
 	Array<Descriptor_Ranges *> parameters_descriptor_ranges;
+	
+	Root_Paramter_Index parameter_index_table[HLSL_REGISTRE_COUNT][HLSL_SPACE_COUNT];
 
 	void create(Gpu_Device &device, u32 access_flags);
-	//void cb_descriptor_paramater();
-	//void sr_descriptor_paramater();
-	//void ua_descriptor_paramater();
 
-	u32 add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility = VISIBLE_TO_ALL);
+	void store_parameter_index(u32 parameter_index, u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type);
+	u32 get_parameter_index(u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type);
+
+	u32 add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	u32 add_sr_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	u32 add_sampler_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 
 	void begin_descriptor_table_parameter(u32 shader_register_space, Shader_Visibility shader_visibility);
 	void end_parameter();

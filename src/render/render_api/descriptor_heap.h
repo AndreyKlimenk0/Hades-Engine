@@ -4,6 +4,7 @@
 #include <d3d12.h>
 
 #include "base.h"
+#include "sampler.h"
 #include "resource.h"
 #include "d3d12_object.h"
 #include "../../libs/number_types.h"
@@ -78,18 +79,18 @@ struct CBSRUA_Descriptor_Heap : Descriptor_Heap {
 	CBSRUA_Descriptor_Heap();
 	~CBSRUA_Descriptor_Heap();
 
+	void create(Gpu_Device &device, u32 descriptors_number);
 	CB_Descriptor place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	SR_Descriptor place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	UA_Descriptor place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource);
-	void create(Gpu_Device &device, u32 descriptors_number);
 };
 
 struct Sampler_Descriptor_Heap : Descriptor_Heap {
 	Sampler_Descriptor_Heap();
 	~Sampler_Descriptor_Heap();
 
-	Sampler_Descriptor place_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	void create(Gpu_Device &device, u32 descriptors_number);
+	Sampler_Descriptor place_descriptor(u32 descriptor_index, Sampler &sampler);
 };
 
 struct RT_Descriptor_Heap : Descriptor_Heap {

@@ -1,4 +1,7 @@
+#include <assert.h>
+
 #include "command.h"
+#include "../render_helpers.h"
 #include "../../sys/utils.h"
 
 static D3D_PRIMITIVE_TOPOLOGY to_d3d_primitive_topology(Primitive_Type primitive_type)
@@ -172,6 +175,11 @@ void Graphics_Command_List::set_index_buffer(GPU_Resource &resource)
     d3d12_object->IASetIndexBuffer(&index_buffer_view);
 }
 
+void Graphics_Command_List::set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor)
+{
+    d3d12_object->SetGraphicsRootDescriptorTable(parameter_index, descriptor.gpu_handle);
+}
+
 void Graphics_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
 {
     Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_DIRECT);
@@ -226,4 +234,34 @@ void Copy_Command_List::create(Gpu_Device &device, u32 number_command_allocators
 ID3D12CommandList *Copy_Command_List::get_d3d12_command_list()
 {
     return static_cast<ID3D12CommandList *>(get());
+}
+
+void Copy_Command_List::copy_resources(GPU_Resource &dest, GPU_Resource &source)
+{
+    d3d12_object->CopyResource(dest.get(), source.get());
+}
+
+void Copy_Command_List::copy_texture(GPU_Resource &dest, GPU_Resource &source, Subresource_Info &subresource_info)
+{
+    D3D12_TEXTURE_COPY_LOCATION dest_texture_copy_location;
+    ZeroMemory(&dest_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+    dest_texture_copy_location.pResource = dest.get();
+    dest_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dest_texture_copy_location.SubresourceIndex = 0;
+
+    D3D12_SUBRESOURCE_FOOTPRINT source_texture_footprint;
+    ZeroMemory(&source_texture_footprint, sizeof(D3D12_SUBRESOURCE_FOOTPRINT));
+    source_texture_footprint.Width = subresource_info.width;
+    source_texture_footprint.Height = subresource_info.height;
+    source_texture_footprint.Depth = subresource_info.depth;
+    source_texture_footprint.Format = subresource_info.format;
+    source_texture_footprint.RowPitch = subresource_info.row_pitch;
+
+    D3D12_TEXTURE_COPY_LOCATION source_texture_copy_location;
+    ZeroMemory(&source_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+    source_texture_copy_location.pResource = source.get();
+    source_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    source_texture_copy_location.PlacedFootprint.Footprint = source_texture_footprint;
+    
+    d3d12_object->CopyTextureRegion(&dest_texture_copy_location, 0, 0, 0, &source_texture_copy_location, NULL);
 }

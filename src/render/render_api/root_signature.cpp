@@ -78,6 +78,22 @@ void Root_Signature::create(Gpu_Device &device, u32 access_flags)
 	free_memory(&ranges);
 }
 
+void Root_Signature::store_parameter_index(u32 parameter_index, u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type)
+{
+	assert(shader_register <= HLSL_REGISTRE_COUNT);
+	assert(shader_space <= HLSL_SPACE_COUNT);
+
+	parameter_index_table[shader_register][shader_space].set_parameter_index(parameter_index, parameter_type);
+}
+
+u32 Root_Signature::get_parameter_index(u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type)
+{
+	assert(shader_register <= HLSL_REGISTRE_COUNT);
+	assert(shader_space <= HLSL_SPACE_COUNT);
+
+	return parameter_index_table[shader_register][shader_space].get_parameter_index(parameter_type);
+}
+
 u32 Root_Signature::add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility)
 {
 	D3D12_DESCRIPTOR_RANGE1 *descriptor_range = new D3D12_DESCRIPTOR_RANGE1();
@@ -97,7 +113,57 @@ u32 Root_Signature::add_cb_descriptor_table_parameter(u32 shader_register, u32 s
 	parameter.DescriptorTable.pDescriptorRanges = ranges.last();
 	parameter.ShaderVisibility = shader_visibility_to_d3d12(shader_visibility);
 
-	return parameters.push(parameter);
+	u32 parameter_index = parameters.push(parameter);
+	store_parameter_index(parameter_index, shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER);
+	return parameter_index;
+}
+
+u32 Root_Signature::add_sr_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility)
+{
+	D3D12_DESCRIPTOR_RANGE1 *descriptor_range = new D3D12_DESCRIPTOR_RANGE1();
+	ZeroMemory(descriptor_range, sizeof(D3D12_DESCRIPTOR_RANGE1));
+	descriptor_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptor_range->NumDescriptors = 1;
+	descriptor_range->BaseShaderRegister = shader_register;
+	descriptor_range->RegisterSpace = shader_space;
+	descriptor_range->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	ranges.push(descriptor_range);
+
+	D3D12_ROOT_PARAMETER1 parameter;
+	ZeroMemory(&parameter, sizeof(D3D12_ROOT_PARAMETER1));
+	parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	parameter.DescriptorTable.NumDescriptorRanges = 1;
+	parameter.DescriptorTable.pDescriptorRanges = ranges.last();
+	parameter.ShaderVisibility = shader_visibility_to_d3d12(shader_visibility);
+
+	u32 parameter_index = parameters.push(parameter);
+	store_parameter_index(parameter_index, shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE);
+	return parameter_index;
+}
+
+u32 Root_Signature::add_sampler_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility)
+{
+	D3D12_DESCRIPTOR_RANGE1 *descriptor_range = new D3D12_DESCRIPTOR_RANGE1();
+	ZeroMemory(descriptor_range, sizeof(D3D12_DESCRIPTOR_RANGE1));
+	descriptor_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+	descriptor_range->NumDescriptors = 1;
+	descriptor_range->BaseShaderRegister = shader_register;
+	descriptor_range->RegisterSpace = shader_space;
+	descriptor_range->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	ranges.push(descriptor_range);
+
+	D3D12_ROOT_PARAMETER1 parameter;
+	ZeroMemory(&parameter, sizeof(D3D12_ROOT_PARAMETER1));
+	parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	parameter.DescriptorTable.NumDescriptorRanges = 1;
+	parameter.DescriptorTable.pDescriptorRanges = ranges.last();
+	parameter.ShaderVisibility = shader_visibility_to_d3d12(shader_visibility);
+
+	u32 parameter_index = parameters.push(parameter);
+	store_parameter_index(parameter_index, shader_register, shader_space, ROOT_PARAMETER_SAMPLER);
+	return parameter_index;
 }
 
 void Root_Signature::begin_descriptor_table_parameter(u32 shader_register_space, Shader_Visibility shader_visibility)
@@ -172,4 +238,39 @@ void Root_Signature::add_descriptor_range(u32 shader_register, Sampler_Descripto
 	descriptor_range.OffsetInDescriptorsFromTableStart = descriptor.index;
 
 	descriptor_ranges->push(descriptor_range);
+}
+
+void Root_Paramter_Index::set_parameter_index(u32 parameter_index, Root_Parameter_Type parameter_type)
+{
+	switch (parameter_type) {
+		case ROOT_PARAMETER_CONSTANT_BUFFER: {
+			cb_parameter_index = parameter_index;
+			break;
+		}
+		case ROOT_PARAMETER_SHADER_RESOURCE: {
+			sr_parameter_index = parameter_index;
+			break;
+		}
+		case ROOT_PARAMETER_SAMPLER: {
+			sampler_parameter_index = parameter_index;
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+}
+
+u32 Root_Paramter_Index::get_parameter_index(Root_Parameter_Type parameter_type)
+{
+	switch (parameter_type) {
+		case ROOT_PARAMETER_CONSTANT_BUFFER:
+			return cb_parameter_index;
+		case ROOT_PARAMETER_SHADER_RESOURCE:
+			return sr_parameter_index;
+		case ROOT_PARAMETER_SAMPLER:
+			return sampler_parameter_index;
+	}
+	assert(false);
+	return 0;
 }
