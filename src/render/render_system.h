@@ -11,6 +11,7 @@
 #include "render_api/base.h"
 #include "render_api/fence.h"
 #include "render_api/buffer.h"
+#include "render_api/sampler.h"
 #include "render_api/texture.h"
 #include "render_api/resource.h"
 #include "render_api/descriptor_heap.h"
@@ -77,7 +78,27 @@ struct Descriptor_Heap_Pool {
 	void allocate_rt_descriptor(Texture &texture);
 	void allocate_ds_descriptor(Texture &texture);
 	void allocate_sr_descriptor(Texture &texture);
+
+	Sampler_Descriptor allocate_sampler_descriptor(Sampler &sampler);
+
 	void allocate_pool(Gpu_Device &device, u32 descriptors_count);
+};
+
+struct GPU_Allocator {
+	GPU_Allocator() = default;
+	virtual ~GPU_Allocator() = default;
+	
+	GPU_Heap heap;
+	
+	virtual u64 allocate(u64 size, u64 alignment = 0) = 0;
+};
+
+struct GPU_Linear_Allocator : GPU_Allocator {
+	u64 heap_size = 0;
+	u64 heap_offset = 0;
+
+	void create(Gpu_Device &device, u64 heap_size_in_bytes, GPU_Heap_Type heap_type, GPU_Heap_Content content);
+	u64 allocate(u64 size, u64 alignment = 0);
 };
 
 struct CPU_Buffer {
@@ -86,7 +107,7 @@ struct CPU_Buffer {
 
 	void begin_frame(u32 _frame_index);
 	void write(void *data, u32 data_size);
-	void create(Gpu_Device &device, GPU_Heap &heap, u32 frames_in_flight, u32 number_items, u32 items_size);
+	void create(Gpu_Device &device, GPU_Allocator *allocator, u32 frames_in_flight, const Buffer_Desc &buffers_desc);
 	Buffer *get_frame_resource();
 };
 
@@ -94,11 +115,16 @@ struct Pipeline_Resource_Storage {
 	u32 back_buffer_count = 0;
 	u32 back_buffer_index = 0;
 
+	Sampler_Descriptor point_sampler_descriptor;
+	Sampler_Descriptor linear_sampler_descriptor;
+	Sampler_Descriptor anisotropic_sampler_descriptor;
+
 	Descriptor_Heap_Pool *descriptor_heap_pool = NULL;
 
-	Array<Pair<CPU_Buffer *, u32>> cpu_buffers;
+	Array<u32> cpu_buffers_sizes;
+	Array<CPU_Buffer *> cpu_buffers;
 
-	GPU_Heap buffers_heap;
+	GPU_Linear_Allocator buffers_allocator;
 
 	void init(Gpu_Device &device, u32 _back_buffer_count, Descriptor_Heap_Pool *_descriptor_heap_pool);
 	void begin_frame(u32 _back_buffer_index);
@@ -150,6 +176,8 @@ struct Render_System {
 	
 	Render_Command_Buffer command_buffer;
 
+	Texture texture;
+
 	Texture back_buffer_depth_texture;
 	Array<Texture> back_buffer_textures;
 
@@ -170,6 +198,7 @@ struct Render_System {
 	void init_vars(Win32_Window *win32_window, Variable_Service *variable_service);
 	void init_passes();
 	void init_buffers();
+	void init_texture();
 	void resize(u32 window_width, u32 window_height);
 
 	void render();

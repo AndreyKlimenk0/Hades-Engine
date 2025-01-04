@@ -176,9 +176,10 @@ Sampler_Descriptor_Heap::~Sampler_Descriptor_Heap()
 {
 }
 
-Sampler_Descriptor Sampler_Descriptor_Heap::place_descriptor(u32 descriptor_index, GPU_Resource &resource)
+Sampler_Descriptor Sampler_Descriptor_Heap::place_descriptor(u32 descriptor_index, Sampler &sampler)
 {
-    assert(false);
+    D3D12_SAMPLER_DESC sampler_desc = sampler.to_d3d12_sampler_desc();
+    gpu_device->CreateSampler(&sampler_desc, get_cpu_handle(descriptor_index));
     return Sampler_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 

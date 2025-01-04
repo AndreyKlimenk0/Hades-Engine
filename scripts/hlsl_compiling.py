@@ -7,7 +7,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join("data", "shaders")
 PDB_FILES_DIR = os.path.join("build", "shader", "debug");
 HLSH_DIR = "hlsl"
-HLSL_VERSION = "5_0"
+HLSL_VERSION = "5_1"
 
 
  # fxc /E vs_main /Od /Zi /T vs_5_0 /Fo PixelShader1.fxc demo.hlsl

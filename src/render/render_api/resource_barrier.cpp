@@ -1,20 +1,6 @@
 #include <assert.h>
 #include "resource_barrier.h"
 
-static D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resource_state)
-{
-    switch (resource_state) {
-        case RESOURCE_STATE_RENDER_TARGET:
-            return D3D12_RESOURCE_STATE_RENDER_TARGET;
-        case RESOURCE_STATE_PRESENT:
-            return D3D12_RESOURCE_STATE_PRESENT;
-        case RESOURCE_STATE_DEPTH_WRITE:
-            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-    }
-    assert(false);
-    return D3D12_RESOURCE_STATE_COMMON;
-}
-
 Transition_Resource_Barrier::Transition_Resource_Barrier()
     : subresource(0), resource(), state_before(RESOURCE_STATE_UNKNOWN), state_after(RESOURCE_STATE_UNKNOWN)
 {

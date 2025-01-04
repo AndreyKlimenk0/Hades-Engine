@@ -31,6 +31,20 @@ static D3D12_HEAP_FLAGS to_d3d12_heap_flags(GPU_Heap_Content content)
     return (D3D12_HEAP_FLAGS)0;
 }
 
+static D3D12_CLEAR_VALUE to_d3d12_clear_value(Clear_Value &clear_value, DXGI_FORMAT format)
+{
+    D3D12_CLEAR_VALUE d3d12_clear_value;
+    ZeroMemory(&d3d12_clear_value, sizeof(D3D12_CLEAR_VALUE));
+    d3d12_clear_value.Format = format;
+    if (clear_value.type == CLEAR_VALUE_COLOR) {
+        clear_value.color.store(d3d12_clear_value.Color);
+    } else if (clear_value.type == CLEAR_VALUE_DEPTH_STENCIL) {
+        d3d12_clear_value.DepthStencil.Depth = clear_value.depth;
+        d3d12_clear_value.DepthStencil.Stencil = clear_value.stencil;
+    }
+    return d3d12_clear_value;
+}
+
 GPU_Heap::GPU_Heap()
 {
 }
@@ -39,7 +53,7 @@ GPU_Heap::~GPU_Heap()
 {
 }
 
-void GPU_Heap::create(Gpu_Device &device, u32 heap_size, GPU_Heap_Type heap_type, GPU_Heap_Content content)
+void GPU_Heap::create(Gpu_Device &device, u64 heap_size, GPU_Heap_Type heap_type, GPU_Heap_Content content)
 {
     D3D12_HEAP_PROPERTIES heap_properties;
     ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
@@ -70,15 +84,35 @@ GPU_Resource::~GPU_Resource()
 {
 }
 
-void GPU_Resource::set_size(u32 number_items, u32 item_size)
+void GPU_Resource::create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value)
 {
-    count = number_items;
-    stride = item_size;
+    D3D12_HEAP_PROPERTIES heap_properties;
+    ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
+    heap_properties.Type = to_d3d12_heap_type(heap_type);
+
+    D3D12_CLEAR_VALUE *d3d12_clear_value = NULL;
+    D3D12_CLEAR_VALUE temp = to_d3d12_clear_value(clear_value, resource_desc.Format);
+    if ((resource_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) || (resource_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) {
+        d3d12_clear_value = &temp;
+    }
+
+    HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, to_d3d12_resource_state(resource_state), d3d12_clear_value, IID_PPV_ARGS(release_and_get_address())));
+}
+
+void GPU_Resource::create(Gpu_Device &device, GPU_Heap heap, u64 offset, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value)
+{
+    HR(device->CreatePlacedResource(heap.get(), offset, &resource_desc, to_d3d12_resource_state(resource_state), NULL, IID_PPV_ARGS(release_and_get_address())));
+}
+
+void GPU_Resource::set_size(u32 _count, u32 _stride)
+{
+    count = _count;
+    stride = _stride;
 }
 
 u32 GPU_Resource::get_size()
 {
-    return count * stride;
+    return stride * count;
 }
 
 GPU_Address GPU_Resource::get_gpu_address()

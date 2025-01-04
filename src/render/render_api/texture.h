@@ -2,6 +2,7 @@
 #ifndef RENDER_API_TEXTURE_H
 #define RENDER_API_TEXTURE_H
 
+#include "base.h"
 #include "resource.h"
 #include "descriptor_heap.h"
 
@@ -18,23 +19,6 @@ const u32 DEPTH_STENCIL_RESOURCE = 0x2;
 //const u32 VIDEO_ENCODE_REFERENCE_ONLY = 0x80,
 //const u32 RAYTRACING_ACCELERATION_STRUCTURE = 0x100;
 
-enum Clear_Value_Type {
-	CLEAR_VALUE_UNKNOWN,
-	CLEAR_VALUE_COLOR,
-	CLEAR_VALUE_DEPTH_STENCIL
-};
-
-struct Clear_Value {
-	Clear_Value();
-	Clear_Value(Color &_color);
-	Clear_Value(float _depht, u8 _stencil);
-	~Clear_Value();
-
-	Clear_Value_Type type;
-	float depth;
-	u8 stencil;
-	Color color;
-};
 
 struct Texture2D_Desc {
 	u32 width = 0;
@@ -53,7 +37,7 @@ struct Texture : GPU_Resource {
 	RT_Descriptor rt_descriptor;
 	DS_Descriptor ds_descriptor;
 
-	void create(Gpu_Device &device, Texture2D_Desc &desc);
+	void create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, Texture2D_Desc &desc);
 };
 
 #endif
