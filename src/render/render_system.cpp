@@ -13,6 +13,8 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
+#include "../sys/memory.h"
+
 
 //void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
 //{
@@ -25,21 +27,38 @@
 //}
 
 struct VertexP3C3 {
+	VertexP3C3() = default;
+	VertexP3C3(float x, float y, float z, float uvx, float uvy) : vertex(x, y, z), uv(uvx, uvy) {}
+	~VertexP3C3() = default;
 	Vector3 vertex;
-	Vector3 color;
+	Vector2 uv;
 };
 
 static VertexP3C3 vertices[8] = {
-	{ Vector3(-1.0f, -1.0f, -1.0f), Vector3(0.0f, 0.0f, 0.0f) }, // 0
-	{ Vector3(-1.0f,  1.0f, -1.0f), Vector3(0.0f, 1.0f, 0.0f) }, // 1
-	{ Vector3(1.0f,  1.0f, -1.0f), Vector3(1.0f, 1.0f, 0.0f) }, // 2
-	{ Vector3(1.0f, -1.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f) }, // 3
-	{ Vector3(-1.0f, -1.0f,  1.0f), Vector3(0.0f, 0.0f, 1.0f) }, // 4
-	{ Vector3(-1.0f,  1.0f,  1.0f), Vector3(0.0f, 1.0f, 1.0f) }, // 5
-	{ Vector3(1.0f,  1.0f,  1.0f), Vector3(1.0f, 1.0f, 1.0f) }, // 6
-	{ Vector3(1.0f, -1.0f,  1.0f), Vector3(1.0f, 0.0f, 1.0f) }  // 7
+	// Front face
+	{-0.5f, -0.5f,  0.5f, 0.0f, 0.0f}, // 0 - Bottom-left
+	{ 0.5f, -0.5f,  0.5f, 1.0f, 0.0f}, // 1 - Bottom-right
+	{ 0.5f,  0.5f,  0.5f, 1.0f, 1.0f}, // 2 - Top-right
+	{-0.5f,  0.5f,  0.5f, 0.0f, 1.0f}, // 3 - Top-left
+
+	// Back face
+	{-0.5f, -0.5f, -0.5f, 1.0f, 0.0f}, // 4 - Bottom-left
+	{ 0.5f, -0.5f, -0.5f, 0.0f, 0.0f}, // 5 - Bottom-right
+	{ 0.5f,  0.5f, -0.5f, 0.0f, 1.0f}, // 6 - Top-right
+	{-0.5f,  0.5f, -0.5f, 1.0f, 1.0f}  // 7 - Top-left
 };
 
+//static VertexP3C3 vertices[8] = {
+//	{ Vector3(-1.0f, -1.0f, -1.0f), Vector3(0.0f, 0.0f, 0.0f) }, // 0
+//	{ Vector3(-1.0f,  1.0f, -1.0f), Vector3(0.0f, 1.0f, 0.0f) }, // 1
+//	{ Vector3(1.0f,  1.0f, -1.0f), Vector3(1.0f, 1.0f, 0.0f) }, // 2
+//	{ Vector3(1.0f, -1.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f) }, // 3
+//	{ Vector3(-1.0f, -1.0f,  1.0f), Vector3(0.0f, 0.0f, 1.0f) }, // 4
+//	{ Vector3(-1.0f,  1.0f,  1.0f), Vector3(0.0f, 1.0f, 1.0f) }, // 5
+//	{ Vector3(1.0f,  1.0f,  1.0f), Vector3(1.0f, 1.0f, 1.0f) }, // 6
+//	{ Vector3(1.0f, -1.0f,  1.0f), Vector3(1.0f, 0.0f, 1.0f) }  // 7
+//};
+//
 static u32 indices[36] =
 {
 	0, 1, 2, 0, 2, 3,
@@ -86,6 +105,11 @@ void Descriptor_Heap_Pool::allocate_ds_descriptor(Texture &texture)
 void Descriptor_Heap_Pool::allocate_sr_descriptor(Texture &texture)
 {
 	texture.sr_descriptor = cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_count++, texture);
+}
+
+Sampler_Descriptor Descriptor_Heap_Pool::allocate_sampler_descriptor(Sampler &sampler)
+{
+	return sampler_descriptor_heap.place_descriptor(samper_descriptor_count++, sampler);
 }
 
 void Descriptor_Heap_Pool::allocate_pool(Gpu_Device &device, u32 descriptors_count)
@@ -141,7 +165,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
 	depth_texture_desc.clear_value = Clear_Value(1.0f, 0);
 
-	back_buffer_depth_texture.create(gpu_device, depth_texture_desc);
+	back_buffer_depth_texture.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_DEPTH_WRITE, depth_texture_desc);
 
 	descriptors_pool.allocate_ds_descriptor(back_buffer_depth_texture);
 
@@ -152,6 +176,8 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 	command_buffer.back_buffer_depth_texture = &back_buffer_depth_texture;
 	command_buffer.descriptors_pool = &descriptors_pool;
+
+	init_texture();
 }
 
 void Render_System::init_vars(Win32_Window *win32_window, Variable_Service *variable_service)
@@ -176,13 +202,13 @@ void Render_System::init_passes()
 
 void Render_System::init_buffers()
 {
-	vertex_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, 8, sizeof(VertexP3C3));
-	index_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, 36, sizeof(u32));
+	vertex_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COMMON, Buffer_Desc(8, sizeof(VertexP3C3)));
+	index_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COMMON, Buffer_Desc(36, sizeof(u32)));
 
 	Buffer intermediate_vertex_buffer;
 	Buffer intermediate_index_buffer;
-	intermediate_vertex_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, 8, sizeof(VertexP3C3));
-	intermediate_index_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, 36, sizeof(u32));
+	intermediate_vertex_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(8, sizeof(VertexP3C3)));
+	intermediate_index_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(36, sizeof(u32)));
 
 	void *temp_vertex_buffer = (void *)intermediate_vertex_buffer.map();
 	memcpy(temp_vertex_buffer, (void *)vertices, sizeof(VertexP3C3) * 8);
@@ -200,8 +226,95 @@ void Render_System::init_buffers()
 	copy_command_list.create(gpu_device, 1);
 	copy_command_list.reset(0);
 
-	copy_command_list.get()->CopyResource(vertex_buffer.get(), intermediate_vertex_buffer.get());
-	copy_command_list.get()->CopyResource(index_buffer.get(), intermediate_index_buffer.get());
+	copy_command_list.copy_resources(vertex_buffer, intermediate_vertex_buffer);
+	copy_command_list.copy_resources(index_buffer, intermediate_index_buffer);
+
+	copy_command_list.close();
+	copy_queue.execute_command_list(copy_command_list);
+	auto new_fence_value = copy_queue.signal(fence_value, fence);
+	fence.wait_for_gpu(new_fence_value);
+}
+
+#include "../libs/image/png.h"
+
+void upload_bitmap_in_buffer(u32 width, u32 height, u8 *data, DXGI_FORMAT format, Gpu_Device &device, Buffer &buffer)
+{
+	assert(data);
+	assert((width > 0) && (height > 0));
+
+	u32 row_pitch = width * dxgi_format_size(format);
+	u32 aligned_row_pitch = align_address<u32>(row_pitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+	u32 buffer_size = aligned_row_pitch * height;
+
+	buffer.create(device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(buffer_size));
+
+	u8 *pointer = buffer.map();
+	for (u32 y = 0; y < height; y++) {
+		u8 *buffer_row = pointer + y * aligned_row_pitch;
+		u8 *bitmap_row = data + y * row_pitch;
+		memcpy((void *)buffer_row, (void *)bitmap_row, row_pitch);
+	}
+	buffer.unmap();
+}
+
+void Render_System::init_texture()
+{
+	String path;
+	build_full_path_to_texture_file("entity.png", path);
+	u8 *buffer = NULL;
+	u32 width;
+	u32 height;
+	bool result = load_png_file(path, &buffer, &width, &height);
+	assert(result == true);
+
+	Texture2D_Desc texture_desc;
+	texture_desc.width = width;
+	texture_desc.height= height;
+	texture_desc.miplevels = 1;
+	texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	texture.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST, texture_desc);
+
+	descriptors_pool.allocate_sr_descriptor(texture);
+
+	Copy_Command_List copy_command_list;
+	copy_command_list.create(gpu_device, 1);
+	copy_command_list.reset(0);
+
+	Buffer temp_buffer;
+	if (0) {
+		//temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(megabytes_to_bytes<u32>(1)));
+
+		//u32 imageBytesPerRow = width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM);
+		//imageBytesPerRow = align_address<u32>(imageBytesPerRow, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+
+		//D3D12_SUBRESOURCE_DATA subresource_data = {};
+		//subresource_data.pData = (void *)buffer; // pointer to our image data
+		//subresource_data.RowPitch = imageBytesPerRow; // size of all our triangle vertex data
+		//subresource_data.SlicePitch = imageBytesPerRow * height; // also the size of our triangle vertex data
+
+		//UpdateSubresources(copy_command_list.get(), texture.get(), temp_buffer.get(), 0, 0, 1, &subresource_data);
+
+		//Subresource_Info subresource_info;
+		//subresource_info.width = width;
+		//subresource_info.height = height;
+		//subresource_info.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		//subresource_info.row_pitch = align_address<u32>(width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);;
+	} else {
+		Subresource_Info subresource_info;
+		subresource_info.width = width;
+		subresource_info.height = height;
+		subresource_info.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		subresource_info.row_pitch = align_address<u32>(width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);;
+
+		upload_bitmap_in_buffer(width, height, buffer, DXGI_FORMAT_R8G8B8A8_UNORM, gpu_device, temp_buffer);
+		copy_command_list.copy_texture(texture, temp_buffer, subresource_info);
+		//copy_command_list.resource_barrier(Transition_Resource_Barrier(back_buffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
+	}
+
+	Fence fence;
+	fence.create(gpu_device);
+	u64 fence_value = 0;
 
 	copy_command_list.close();
 	copy_queue.execute_command_list(copy_command_list);
@@ -260,36 +373,41 @@ void Pipeline_Resource_Storage::init(Gpu_Device &device, u32 _back_buffer_count,
 	back_buffer_count = _back_buffer_count;
 	descriptor_heap_pool = _descriptor_heap_pool;
 
-	u32 heap_size = 0;
-	for (u32 i = 0; i < cpu_buffers.count; i++) {
-		heap_size += cpu_buffers[i].second;
-	}
-
-	buffers_heap.create(device, heap_size * back_buffer_count * 10000, GPU_HEAP_TYPE_UPLOAD, GPU_HEAP_CONTAIN_BUFFERS);
+	Sampler point_sampler = Sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
+	Sampler linear_sampler = Sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
+	Sampler anisotropic_sampler = Sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
 	
+	point_sampler_descriptor = descriptor_heap_pool->allocate_sampler_descriptor(point_sampler);
+	linear_sampler_descriptor = descriptor_heap_pool->allocate_sampler_descriptor(linear_sampler);
+	anisotropic_sampler_descriptor = descriptor_heap_pool->allocate_sampler_descriptor(anisotropic_sampler);
+
+	buffers_allocator.create(device, megabytes_to_bytes<u64>(1), GPU_HEAP_TYPE_UPLOAD, GPU_HEAP_CONTAIN_BUFFERS);
+
 	for (u32 i = 0; i < cpu_buffers.count; i++) {
-		u32 buffer_size = cpu_buffers[i].second;
-		CPU_Buffer *cpu_buffer = cpu_buffers[i].first;
-		cpu_buffers[i].first->create(device, buffers_heap, back_buffer_count, 1, buffer_size);
+		u32 buffer_size = cpu_buffers_sizes[i];
+		CPU_Buffer *cpu_buffer = cpu_buffers[i];
+		cpu_buffer->create(device, &buffers_allocator, back_buffer_count, Buffer_Desc(buffer_size));
 		for (u32 j = 0; j < back_buffer_count; j++) {
 			descriptor_heap_pool->allocate_cb_descriptor(*cpu_buffer->buffers[j]);
 		}
 	}
+
+	cpu_buffers_sizes.clear();
 }
 
 void Pipeline_Resource_Storage::begin_frame(u32 _back_buffer_index)
 {
 	back_buffer_index = _back_buffer_index;
 	for (u32 i = 0; i < cpu_buffers.count; i++) {
-		cpu_buffers[i].first->begin_frame(back_buffer_index);
+		cpu_buffers[i]->begin_frame(back_buffer_index);
 	}
 }
 
 CPU_Buffer *Pipeline_Resource_Storage::request_constant_buffer(u32 buffer_size)
 {
-	CPU_Buffer *buffer = new CPU_Buffer();
-	cpu_buffers.push({ buffer, buffer_size });
-	return buffer;
+	cpu_buffers_sizes.push(buffer_size);
+	cpu_buffers.push(new CPU_Buffer());
+	return cpu_buffers.last();
 }
 
 void CPU_Buffer::begin_frame(u32 _frame_index)
@@ -305,12 +423,13 @@ void CPU_Buffer::write(void *data, u32 data_size)
 	buffer->unmap();
 }
 
-void CPU_Buffer::create(Gpu_Device &device, GPU_Heap &heap, u32 frames_in_flight, u32 number_items, u32 item_size)
+void CPU_Buffer::create(Gpu_Device &device, GPU_Allocator *allocator, u32 frames_in_flight, const Buffer_Desc &buffers_desc)
 {
 	buffers.reserve(frames_in_flight);
 	for (u32 i = 0; i < frames_in_flight; i++) {
+		u32 buffer_size = const_cast<Buffer_Desc &>(buffers_desc).get_size();
 		buffers[i] = new Buffer();
-		buffers[i]->create(device, heap, number_items, item_size);
+		buffers[i]->create(device, allocator->heap, allocator->allocate(buffer_size, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT), RESOURCE_STATE_GENERIC_READ, buffers_desc);
 	}
 }
 
@@ -328,9 +447,10 @@ void Render_Command_Buffer::apply(Pipeline_State &pipeline_state, u32 flags)
 {
 	graphics_command_list.get()->SetGraphicsRootSignature(pipeline_state.root_signature->get());
 	graphics_command_list.get()->SetPipelineState(pipeline_state.get());
-	
-	graphics_command_list.get()->SetDescriptorHeaps(1, descriptors_pool->cbsrua_descriptor_heap.get_address());
-	
+
+	ID3D12DescriptorHeap *descriptor_heaps[] = { descriptors_pool->cbsrua_descriptor_heap.get(), descriptors_pool->sampler_descriptor_heap.get()};
+	graphics_command_list.get()->SetDescriptorHeaps(2, descriptor_heaps);
+
 	graphics_command_list.set_primitive_type(pipeline_state.primitive_type);
 	graphics_command_list.set_viewport(pipeline_state.viewport);
 	graphics_command_list.set_clip_rect(pipeline_state.clip_rect);
@@ -354,4 +474,18 @@ void Render_Command_Buffer::draw(u32 index_count)
 Graphics_Command_List *Render_Command_Buffer::get_graphics_command_list()
 {
 	return &graphics_command_list;
+}
+
+void GPU_Linear_Allocator::create(Gpu_Device &device, u64 heap_size_in_bytes, GPU_Heap_Type heap_type, GPU_Heap_Content content)
+{
+	heap_size = heap_size_in_bytes;
+	heap.create(device, heap_size, heap_type, content);
+}
+
+u64 GPU_Linear_Allocator::allocate(u64 size, u64 alignment)
+{
+	assert((heap_offset + size + alignment) <= heap_size);
+	u64 offset = align_address(heap_offset, alignment);
+	heap_offset += size + alignment;
+	return offset;
 }

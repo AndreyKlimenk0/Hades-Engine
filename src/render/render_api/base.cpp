@@ -110,3 +110,47 @@ Viewport::Viewport(const Size_f32 &size)
 Viewport::~Viewport()
 {
 }
+
+D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resource_state)
+{
+    switch (resource_state) {
+        case RESOURCE_STATE_COMMON:
+            return D3D12_RESOURCE_STATE_COMMON;
+        case RESOURCE_STATE_GENERIC_READ:
+            return D3D12_RESOURCE_STATE_GENERIC_READ;
+        case RESOURCE_STATE_COPY_DEST:
+            return D3D12_RESOURCE_STATE_COPY_DEST;
+        case RESOURCE_STATE_COPY_SOURCE:
+            return D3D12_RESOURCE_STATE_COPY_SOURCE;
+        case RESOURCE_STATE_RENDER_TARGET:
+            return D3D12_RESOURCE_STATE_RENDER_TARGET;
+        case RESOURCE_STATE_PRESENT:
+            return D3D12_RESOURCE_STATE_PRESENT;
+        case RESOURCE_STATE_DEPTH_WRITE:
+            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    }
+    assert(false);
+    return (D3D12_RESOURCE_STATES)0;
+}
+
+
+Clear_Value::Clear_Value() : type(CLEAR_VALUE_UNKNOWN)
+{
+}
+
+Clear_Value::Clear_Value(Color &_color)
+{
+    type = CLEAR_VALUE_COLOR;
+    color = _color;
+}
+
+Clear_Value::Clear_Value(float _depth, u8 _stencil)
+{
+    type = CLEAR_VALUE_DEPTH_STENCIL;
+    depth = _depth;
+    stencil = _stencil;
+}
+
+Clear_Value::~Clear_Value()
+{
+}

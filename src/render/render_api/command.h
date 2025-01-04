@@ -59,10 +59,20 @@ struct Graphics_Command_List : Command_List {
 
 	void set_vertex_buffer(GPU_Resource &resource);
 	void set_index_buffer(GPU_Resource &resource);
+	
+	void set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor);
 
 	void create(Gpu_Device &device, u32 number_command_allocators);
 
 	ID3D12CommandList *get_d3d12_command_list();
+};
+
+struct Subresource_Info {
+	u32 width = 0;
+	u32 height = 0;
+	u32 depth = 1;
+	u32 row_pitch = 0;
+	DXGI_FORMAT format;
 };
 
 struct Copy_Command_List : Command_List {
@@ -71,6 +81,9 @@ struct Copy_Command_List : Command_List {
 
 	void create(Gpu_Device &device, u32 number_command_allocators);
 	ID3D12CommandList *get_d3d12_command_list();
+
+	void copy_resources(GPU_Resource &dest, GPU_Resource &source);
+	void copy_texture(GPU_Resource &dest, GPU_Resource &source, Subresource_Info &subresource_info);
 };
 
 struct Command_Queue : D3D12_Object<ID3D12CommandQueue> {

@@ -3,15 +3,9 @@
 
 #include <d3d12.h>
 
+#include "base.h"
 #include "resource.h"
 #include "../../libs/number_types.h"
-
-enum Resource_State {
-	RESOURCE_STATE_UNKNOWN,
-	RESOURCE_STATE_PRESENT,
-	RESOURCE_STATE_RENDER_TARGET,
-	RESOURCE_STATE_DEPTH_WRITE
-};
 
 struct Resource_Barrier {
 	Resource_Barrier() = default;

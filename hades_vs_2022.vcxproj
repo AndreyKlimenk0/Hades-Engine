@@ -233,6 +233,7 @@
     <ClCompile Include="src\render\render_api\resource.cpp" />
     <ClCompile Include="src\render\render_api\resource_barrier.cpp" />
     <ClCompile Include="src\render\render_api\root_signature.cpp" />
+    <ClCompile Include="src\render\render_api\sampler.cpp" />
     <ClCompile Include="src\render\render_api\swap_chain.cpp" />
     <ClCompile Include="src\render\render_api\texture.cpp" />
     <ClCompile Include="src\render\render_helpers.cpp" />
@@ -453,6 +454,7 @@
     <ClInclude Include="src\render\render_api\resource.h" />
     <ClInclude Include="src\render\render_api\resource_barrier.h" />
     <ClInclude Include="src\render\render_api\root_signature.h" />
+    <ClInclude Include="src\render\render_api\sampler.h" />
     <ClInclude Include="src\render\render_api\swap_chain.h" />
     <ClInclude Include="src\render\render_api\texture.h" />
     <ClInclude Include="src\render\render_helpers.h" />
@@ -468,6 +470,7 @@
     <ClInclude Include="src\sys\file_tracking.h" />
     <ClInclude Include="src\sys\level.h" />
     <ClInclude Include="src\sys\map.h" />
+    <ClInclude Include="src\sys\memory.h" />
     <ClInclude Include="src\sys\profiling.h" />
     <ClInclude Include="src\sys\sys.h" />
     <ClInclude Include="src\sys\sys_local.h" />
