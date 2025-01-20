@@ -27,12 +27,13 @@ struct Array {
 	const T &operator[](u32 i) const;
 
 	void clear();
+	void reset();
 	void resize(u32 _size);
 	void remove(u32 index);
-	void reserve(u32 _count);
-	void set_pointer_to_item(T *ptr, u32 index);
-	void set_pointer_to_item(T **ptr, u32 index);
-
+	void reserve(u32 _count, bool clear_array = false);
+	void set_pointer_to_item(T* ptr, u32 index);
+	void set_pointer_to_item(T** ptr, u32 index);
+	
 	bool is_empty();
 	bool find(const T &item);
 
@@ -116,6 +117,12 @@ inline void Array<T>::clear()
 	resize(size);
 }
 
+template<typename T>
+inline void Array<T>::reset()
+{
+	count = 0;
+}
+
 template <typename T>
 inline void Array<T>::resize(u32 new_size)
 {
@@ -151,9 +158,9 @@ inline void Array<T>::remove(u32 index)
 }
 
 template <typename T>
-inline void Array<T>::reserve(u32 _count)
+inline void Array<T>::reserve(u32 _count, bool clear_array)
 {
-	if (!is_empty()) {
+	if (clear_array && !is_empty()) {
 		clear();
 	}
 	resize(_count);

@@ -14,12 +14,18 @@ struct Shader_Manager;
 struct Pipeline_Resource_Storage;
 struct Render_World;
 struct Render_Command_Buffer;
+struct Render_System;
+struct Compute_Command_List;
 
 #include "../libs/str.h"
 #include "render_api/base.h"
 #include "render_api/command.h"
 #include "render_api/root_signature.h"
 #include "render_api/pipeline_state.h"
+
+//For generating mipmaps
+#include "render_api/texture.h"
+#include "../libs/structures/array.h"
 
 struct Render_Pass {
 	Render_Pass() = default;
@@ -43,6 +49,20 @@ struct Box_Pass : Render_Pass {
 	void setup_root_signature(Gpu_Device &device);
 	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
 };
+
+template <u32 N = 1>
+struct Compute_Pass {
+	Root_Signature root_signature;
+	Pipeline_State pipeline_states[N];
+};
+
+struct Generate_Mipmaps : Compute_Pass<4> {
+	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
+	void setup_root_signature(Gpu_Device &device);
+	void generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys);
+};
+
 
 //struct Shader;
 //struct Gpu_Device;

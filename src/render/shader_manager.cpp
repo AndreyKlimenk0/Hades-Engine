@@ -248,6 +248,10 @@ void Shader_Manager::init()
 	shader_table[shader_count++] = { "silhouette.hlsl", &shaders.silhouette };
 	shader_table[shader_count++] = { "voxelization.hlsl", &shaders.voxelization };
 	shader_table[shader_count++] = { "draw_box.hlsl", &shaders.draw_box };
+	shader_table[shader_count++] = { "generate_mips_linear.hlsl", &shaders.generate_mips_linear };
+	shader_table[shader_count++] = { "generate_mips_linear_odd.hlsl", &shaders.generate_mips_linear_odd };
+	shader_table[shader_count++] = { "generate_mips_linear_oddx.hlsl", &shaders.generate_mips_linear_oddx };
+	shader_table[shader_count++] = { "generate_mips_linear_oddy.hlsl", &shaders.generate_mips_linear_oddy };
 
 	for (u32 i = 0; i < shader_count; i++) {
 		shader_table[i].shader->file_name = shader_table[i].name;
@@ -378,8 +382,6 @@ void Shader_Manager::recompile_and_reload_shaders(Array<Shader *> &shaders)
 			extract_base_file_name(shader->file_name, base_file_name);
 
 			for (u32 i = 0; i < shader_types.count; i++) {
-				//create_shader(shader_types[i], (u8 *)compiled_shaders[i]->GetBufferPointer(), (u32)compiled_shaders[i]->GetBufferSize(), shader, gpu_device, true);
-
 				String output_shader_file_name;
 				make_output_shader_file_name(base_file_name.c_str(), shader_types[i], output_shader_file_name);
 

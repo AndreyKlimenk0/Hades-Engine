@@ -71,6 +71,10 @@ struct Shader_Manager {
 		Shader silhouette;
 		Shader voxelization;
 		Shader draw_box;
+		Shader generate_mips_linear;
+		Shader generate_mips_linear_odd;
+		Shader generate_mips_linear_oddx;
+		Shader generate_mips_linear_oddy;
 	} shaders;
 
 	void init();

@@ -61,27 +61,31 @@ struct Descriptor_Heap_Pool {
 	Descriptor_Heap_Pool();
 	~Descriptor_Heap_Pool();
 
-	u32 rt_descriptor_count = 0;
-	u32 ds_descriptor_count = 0;
-	u32 cbsrua_descriptor_count = 0;
-	u32 samper_descriptor_count = 0;
+	Array<u32> rt_descriptor_indices;
+	Array<u32> ds_descriptor_indices;
+	Array<u32> cbsrua_descriptor_indices;
+	Array<u32> sampler_descriptor_indices;
 
 	RT_Descriptor_Heap rt_descriptor_heap;
 	DS_Descriptor_Heap ds_descriptor_heap;
 	CBSRUA_Descriptor_Heap cbsrua_descriptor_heap;
 	Sampler_Descriptor_Heap sampler_descriptor_heap;
 
-	void allocate_cb_descriptor(Buffer &buffer);
-	void allocate_sr_descriptor(Buffer &buffer);
-	void allocate_ua_descriptor(Buffer &buffer);
-
-	void allocate_rt_descriptor(Texture &texture);
-	void allocate_ds_descriptor(Texture &texture);
-	void allocate_sr_descriptor(Texture &texture);
-
+	CB_Descriptor allocate_cb_descriptor(GPU_Resource *resource);
+	SR_Descriptor allocate_sr_descriptor(GPU_Resource *resource);
+	UA_Descriptor allocate_ua_descriptor(GPU_Resource *resource, u32 mip_level = 0);
+	RT_Descriptor allocate_rt_descriptor(GPU_Resource *resource);
+	DS_Descriptor allocate_ds_descriptor(GPU_Resource *resource);
 	Sampler_Descriptor allocate_sampler_descriptor(Sampler &sampler);
 
 	void allocate_pool(Gpu_Device &device, u32 descriptors_count);
+
+	void free(CB_Descriptor *descriptor);
+	void free(SR_Descriptor *descriptor);
+	void free(UA_Descriptor *descriptor);
+	void free(RT_Descriptor *descriptor);
+	void free(DS_Descriptor *descriptor);
+	void free(Sampler_Descriptor *descriptor);
 };
 
 struct GPU_Allocator {
@@ -136,6 +140,7 @@ const u32 RENDER_TARGET_BUFFER_BUFFER = 0x1;
 
 struct Render_Command_Buffer {
 	Copy_Command_List copy_command_list;
+	Compute_Command_List compute_command_list;
 	Graphics_Command_List graphics_command_list;
 	
 	Texture *back_buffer_texture = NULL;
@@ -192,6 +197,7 @@ struct Render_System {
 	Buffer vertex_buffer;
 	Buffer index_buffer;
 
+	Generate_Mipmaps generate_mipmaps;
 	Array<Render_Pass *> frame_passes;
 
 	void init(Win32_Window *win32_window, Variable_Service *variable_service);
