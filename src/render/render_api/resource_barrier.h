@@ -16,8 +16,8 @@ struct Resource_Barrier {
 
 struct Transition_Resource_Barrier : Resource_Barrier {
 	Transition_Resource_Barrier();
-	Transition_Resource_Barrier(GPU_Resource resource, Resource_State state_before, Resource_State state_after);
-	Transition_Resource_Barrier(u32 subresources, GPU_Resource resource, Resource_State state_before, Resource_State state_after);
+	Transition_Resource_Barrier(GPU_Resource &resource, Resource_State state_before, Resource_State state_after);
+	Transition_Resource_Barrier(u32 subresources, GPU_Resource &resource, Resource_State state_before, Resource_State state_after);
 	~Transition_Resource_Barrier();
 
 	u32 subresource;

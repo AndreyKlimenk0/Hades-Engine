@@ -157,9 +157,27 @@ SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, 
     return SR_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-UA_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource)
+UA_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource, u32 mip_level)
 {
-    assert(false);
+    D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
+
+    D3D12_UNORDERED_ACCESS_VIEW_DESC unordered_access_view_desc;
+    ZeroMemory(&unordered_access_view_desc, sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC));
+    unordered_access_view_desc.Format = resource_desc.Format;
+
+    switch (resource_desc.Dimension) {
+        case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
+            assert(resource_desc.DepthOrArraySize == 1);
+            unordered_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+            unordered_access_view_desc.Texture2D.MipSlice = mip_level;
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+    gpu_device->CreateUnorderedAccessView(resource.get(), NULL, &unordered_access_view_desc, get_cpu_handle(descriptor_index));
+
     return UA_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 

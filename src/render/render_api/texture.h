@@ -11,7 +11,7 @@
 
 //const u32 ALLOW_RENDER_TARGET = 0x1,
 const u32 DEPTH_STENCIL_RESOURCE = 0x2;
-//const u32 ALLOW_UNORDERED_ACCESS = 0x4,
+const u32 ALLOW_UNORDERED_ACCESS = 0x4;
 //const u32 DENY_SHADER_RESOURCE = 0x8,
 //const u32 ALLOW_CROSS_ADAPTER = 0x10,
 //const u32 ALLOW_SIMULTANEOUS_ACCESS = 0x20,
@@ -34,10 +34,12 @@ struct Texture : GPU_Resource {
 	~Texture();
 
 	SR_Descriptor sr_descriptor;
-	RT_Descriptor rt_descriptor;
+	UA_Descriptor ua_descriptor;
 	DS_Descriptor ds_descriptor;
+	RT_Descriptor rt_descriptor;
 
 	void create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, Texture2D_Desc &desc);
+	Texture2D_Desc get_texture2d_desc();
 };
 
 #endif

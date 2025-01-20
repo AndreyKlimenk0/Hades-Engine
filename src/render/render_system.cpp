@@ -77,47 +77,86 @@ Descriptor_Heap_Pool::~Descriptor_Heap_Pool()
 {
 }
 
-void Descriptor_Heap_Pool::allocate_cb_descriptor(Buffer &buffer)
+CB_Descriptor Descriptor_Heap_Pool::allocate_cb_descriptor(GPU_Resource *resource)
 {
-	buffer.cb_descriptor = cbsrua_descriptor_heap.place_cb_descriptor(cbsrua_descriptor_count++, buffer);
+	return cbsrua_descriptor_heap.place_cb_descriptor(cbsrua_descriptor_indices.pop(), *resource);
 }
 
-void Descriptor_Heap_Pool::allocate_sr_descriptor(Buffer &buffer)
+SR_Descriptor Descriptor_Heap_Pool::allocate_sr_descriptor(GPU_Resource *resource)
 {
-	buffer.sr_descriptor = cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_count++, buffer);
+	return cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_indices.pop(), *resource);
 }
 
-void Descriptor_Heap_Pool::allocate_ua_descriptor(Buffer &buffer)
+UA_Descriptor Descriptor_Heap_Pool::allocate_ua_descriptor(GPU_Resource *resource, u32 mip_level)
 {
-	buffer.ua_descriptor = cbsrua_descriptor_heap.place_ua_descriptor(cbsrua_descriptor_count++, buffer);
+	return cbsrua_descriptor_heap.place_ua_descriptor(cbsrua_descriptor_indices.pop(), *resource, mip_level);
 }
 
-void Descriptor_Heap_Pool::allocate_rt_descriptor(Texture &texture)
+RT_Descriptor Descriptor_Heap_Pool::allocate_rt_descriptor(GPU_Resource *resource)
 {
-	texture.rt_descriptor = rt_descriptor_heap.place_descriptor(rt_descriptor_count++, texture);
+	return rt_descriptor_heap.place_descriptor(rt_descriptor_indices.pop(), *resource);
 }
 
-void Descriptor_Heap_Pool::allocate_ds_descriptor(Texture &texture)
+DS_Descriptor Descriptor_Heap_Pool::allocate_ds_descriptor(GPU_Resource *resource)
 {
-	texture.ds_descriptor = ds_descriptor_heap.place_descriptor(ds_descriptor_count++, texture);
-}
-
-void Descriptor_Heap_Pool::allocate_sr_descriptor(Texture &texture)
-{
-	texture.sr_descriptor = cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_count++, texture);
+	return ds_descriptor_heap.place_descriptor(rt_descriptor_indices.pop(), *resource);
 }
 
 Sampler_Descriptor Descriptor_Heap_Pool::allocate_sampler_descriptor(Sampler &sampler)
 {
-	return sampler_descriptor_heap.place_descriptor(samper_descriptor_count++, sampler);
+	return sampler_descriptor_heap.place_descriptor(sampler_descriptor_indices.pop(), sampler);
 }
 
 void Descriptor_Heap_Pool::allocate_pool(Gpu_Device &device, u32 descriptors_count)
 {
-	cbsrua_descriptor_heap.create(device, 1000);
-	rt_descriptor_heap.create(device, 1000);
-	ds_descriptor_heap.create(device, 1000);
-	sampler_descriptor_heap.create(device, 1000);
+	cbsrua_descriptor_heap.create(device, descriptors_count);
+	rt_descriptor_heap.create(device, descriptors_count);
+	ds_descriptor_heap.create(device, descriptors_count);
+	sampler_descriptor_heap.create(device, descriptors_count);
+
+	rt_descriptor_indices.resize(descriptors_count);
+	ds_descriptor_indices.resize(descriptors_count);
+	cbsrua_descriptor_indices.resize(descriptors_count);
+	sampler_descriptor_indices.resize(descriptors_count);
+
+	u32 index = descriptors_count;
+	for (u32 i = 0; i < descriptors_count; i++) {
+		index -= 1;
+		rt_descriptor_indices.push(index);
+		ds_descriptor_indices.push(index);
+		cbsrua_descriptor_indices.push(index);
+		sampler_descriptor_indices.push(index);
+	}
+}
+
+void Descriptor_Heap_Pool::free(CB_Descriptor *descriptor)
+{
+	cbsrua_descriptor_indices.push(descriptor->index);
+}
+
+void Descriptor_Heap_Pool::free(SR_Descriptor *descriptor)
+{
+	cbsrua_descriptor_indices.push(descriptor->index);
+}
+
+void Descriptor_Heap_Pool::free(UA_Descriptor *descriptor)
+{
+	cbsrua_descriptor_indices.push(descriptor->index);
+}
+
+void Descriptor_Heap_Pool::free(Sampler_Descriptor *descriptor)
+{
+	sampler_descriptor_indices.push(descriptor->index);
+}
+
+void Descriptor_Heap_Pool::free(RT_Descriptor *descriptor)
+{
+	rt_descriptor_indices.push(descriptor->index);
+}
+
+void Descriptor_Heap_Pool::free(DS_Descriptor *descriptor)
+{
+	ds_descriptor_indices.push(descriptor->index);
 }
 
 void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_service)
@@ -154,7 +193,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 	for (u32 i = 0; i < back_buffer_count; i++) {
 		swap_chain.get_buffer(i, back_buffer_textures[i]);
-		descriptors_pool.allocate_rt_descriptor(back_buffer_textures[i]);
+		back_buffer_textures[i].rt_descriptor = descriptors_pool.allocate_rt_descriptor(&back_buffer_textures[i]);
 	}
 
 	Texture2D_Desc depth_texture_desc;
@@ -167,7 +206,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 	back_buffer_depth_texture.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_DEPTH_WRITE, depth_texture_desc);
 
-	descriptors_pool.allocate_ds_descriptor(back_buffer_depth_texture);
+	back_buffer_depth_texture.ds_descriptor = descriptors_pool.allocate_ds_descriptor(&back_buffer_depth_texture);
 
 	init_passes();
 	pipeline_resource_storage.init(gpu_device, back_buffer_count, &descriptors_pool);
@@ -198,6 +237,8 @@ void Render_System::init_passes()
 	for (u32 i = 0; i < frame_passes.count; i++) {
 		frame_passes[i]->init(gpu_device, shader_manager, &pipeline_resource_storage);
 	}
+
+	generate_mipmaps.init(gpu_device, shader_manager, &pipeline_resource_storage);
 }
 
 void Render_System::init_buffers()
@@ -257,10 +298,17 @@ void upload_bitmap_in_buffer(u32 width, u32 height, u8 *data, DXGI_FORMAT format
 	buffer.unmap();
 }
 
+u32 find_max_mip_map_level(u32 width, u32 height)
+{
+	return math::log2(math::max(width, height));
+}
+
 void Render_System::init_texture()
 {
 	String path;
-	build_full_path_to_texture_file("entity.png", path);
+	const char *texture_file = "entity.png";
+	//const char *texture_file = "entity501x501.png";
+	build_full_path_to_texture_file(texture_file, path);
 	u8 *buffer = NULL;
 	u32 width;
 	u32 height;
@@ -270,47 +318,28 @@ void Render_System::init_texture()
 	Texture2D_Desc texture_desc;
 	texture_desc.width = width;
 	texture_desc.height= height;
-	texture_desc.miplevels = 1;
+	texture_desc.miplevels = find_max_mip_map_level(width, height);
 	texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
 
 	texture.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST, texture_desc);
 
-	descriptors_pool.allocate_sr_descriptor(texture);
+	texture.sr_descriptor = descriptors_pool.allocate_sr_descriptor(&texture);
 
 	Copy_Command_List copy_command_list;
 	copy_command_list.create(gpu_device, 1);
 	copy_command_list.reset(0);
 
+	Subresource_Info subresource_info;
+	subresource_info.width = width;
+	subresource_info.height = height;
+	subresource_info.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	subresource_info.row_pitch = align_address<u32>(width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);;
+
 	Buffer temp_buffer;
-	if (0) {
-		//temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(megabytes_to_bytes<u32>(1)));
+	upload_bitmap_in_buffer(width, height, buffer, DXGI_FORMAT_R8G8B8A8_UNORM, gpu_device, temp_buffer);
 
-		//u32 imageBytesPerRow = width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM);
-		//imageBytesPerRow = align_address<u32>(imageBytesPerRow, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-
-		//D3D12_SUBRESOURCE_DATA subresource_data = {};
-		//subresource_data.pData = (void *)buffer; // pointer to our image data
-		//subresource_data.RowPitch = imageBytesPerRow; // size of all our triangle vertex data
-		//subresource_data.SlicePitch = imageBytesPerRow * height; // also the size of our triangle vertex data
-
-		//UpdateSubresources(copy_command_list.get(), texture.get(), temp_buffer.get(), 0, 0, 1, &subresource_data);
-
-		//Subresource_Info subresource_info;
-		//subresource_info.width = width;
-		//subresource_info.height = height;
-		//subresource_info.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		//subresource_info.row_pitch = align_address<u32>(width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);;
-	} else {
-		Subresource_Info subresource_info;
-		subresource_info.width = width;
-		subresource_info.height = height;
-		subresource_info.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		subresource_info.row_pitch = align_address<u32>(width * dxgi_format_size(DXGI_FORMAT_R8G8B8A8_UNORM), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);;
-
-		upload_bitmap_in_buffer(width, height, buffer, DXGI_FORMAT_R8G8B8A8_UNORM, gpu_device, temp_buffer);
-		copy_command_list.copy_texture(texture, temp_buffer, subresource_info);
-		//copy_command_list.resource_barrier(Transition_Resource_Barrier(back_buffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
-	}
+	copy_command_list.copy_texture(texture, temp_buffer, subresource_info);
 
 	Fence fence;
 	fence.create(gpu_device);
@@ -319,6 +348,20 @@ void Render_System::init_texture()
 	copy_command_list.close();
 	copy_queue.execute_command_list(copy_command_list);
 	auto new_fence_value = copy_queue.signal(fence_value, fence);
+	fence.wait_for_gpu(new_fence_value);
+
+	Array<Texture *> textures;
+	textures.push(&texture);
+
+	Compute_Command_List compute_command_list;
+	compute_command_list.create(gpu_device, 1);
+	compute_command_list.reset(0);
+	
+	generate_mipmaps.generate(&compute_command_list, textures, this);
+
+	compute_command_list.close();
+	compute_queue.execute_command_list(compute_command_list);
+	new_fence_value = compute_queue.signal(fence_value, fence);
 	fence.wait_for_gpu(new_fence_value);
 }
 
@@ -388,7 +431,7 @@ void Pipeline_Resource_Storage::init(Gpu_Device &device, u32 _back_buffer_count,
 		CPU_Buffer *cpu_buffer = cpu_buffers[i];
 		cpu_buffer->create(device, &buffers_allocator, back_buffer_count, Buffer_Desc(buffer_size));
 		for (u32 j = 0; j < back_buffer_count; j++) {
-			descriptor_heap_pool->allocate_cb_descriptor(*cpu_buffer->buffers[j]);
+			cpu_buffer->buffers[j]->cb_descriptor = descriptor_heap_pool->allocate_cb_descriptor(cpu_buffer->buffers[j]);
 		}
 	}
 
@@ -441,6 +484,7 @@ Buffer *CPU_Buffer::get_frame_resource()
 void Render_Command_Buffer::create(Gpu_Device &device, u32 frames_in_flight)
 {
 	graphics_command_list.create(device, frames_in_flight);
+	compute_command_list.create(device, frames_in_flight);
 }
 
 void Render_Command_Buffer::apply(Pipeline_State &pipeline_state, u32 flags)
