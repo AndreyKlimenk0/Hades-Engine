@@ -39,7 +39,9 @@ struct Command_List : D3D12_Object<ID3D12GraphicsCommandList> {
 
 	void close();
 	void reset(u32 command_allocator_index);
-	void reset(u32 command_allocator_index, Pipeline_State &pipeline_state);
+	
+	void set_pipeline_state(Pipeline_State &pipeline_state);
+	void set_descriptor_heaps(CBSRUA_Descriptor_Heap &cbsrua_descriptor_heap, Sampler_Descriptor_Heap &sampler_descriptor_heap);
 	
 	virtual void create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type);
 	virtual ID3D12CommandList *get_d3d12_command_list() = 0;
@@ -85,6 +87,30 @@ struct Copy_Command_List : Command_List {
 	void copy_resources(GPU_Resource &dest, GPU_Resource &source);
 	void copy_texture(GPU_Resource &dest, GPU_Resource &source, Subresource_Info &subresource_info);
 };
+
+struct Compute_Command_List : Command_List {
+	Compute_Command_List();
+	~Compute_Command_List();
+
+	template <typename T>
+	void set_constants(u32 parameter_index, const T &data);
+	void set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor);
+
+	void set_root_signature(Root_Signature &root_signature);
+
+	void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z = 1);
+
+	void create(Gpu_Device &device, u32 number_command_allocators);
+	ID3D12CommandList *get_d3d12_command_list();
+};
+
+template<typename T>
+inline void Compute_Command_List::set_constants(u32 parameter_index, const T &data)
+{
+	assert(sizeof(T) % 4 == 0);
+
+	d3d12_object->SetComputeRoot32BitConstants(parameter_index, sizeof(T) / 4, (void *)&data, 0);
+}
 
 struct Command_Queue : D3D12_Object<ID3D12CommandQueue> {
 	Command_Queue();

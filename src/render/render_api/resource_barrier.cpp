@@ -6,12 +6,12 @@ Transition_Resource_Barrier::Transition_Resource_Barrier()
 {
 }
 
-Transition_Resource_Barrier::Transition_Resource_Barrier(GPU_Resource resource, Resource_State state_before, Resource_State state_after)
+Transition_Resource_Barrier::Transition_Resource_Barrier(GPU_Resource &resource, Resource_State state_before, Resource_State state_after)
     : Transition_Resource_Barrier(0, resource, state_before, state_after)
 {
 }
 
-Transition_Resource_Barrier::Transition_Resource_Barrier(u32 subresource, GPU_Resource resource, Resource_State state_before, Resource_State state_after)
+Transition_Resource_Barrier::Transition_Resource_Barrier(u32 subresource, GPU_Resource &resource, Resource_State state_before, Resource_State state_after)
     : subresource(subresource), resource(resource), state_before(state_before), state_after(state_after)
 {
 }

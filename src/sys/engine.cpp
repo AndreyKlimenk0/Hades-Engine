@@ -402,7 +402,7 @@ void Engine::frame()
 	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
 	frame_time = milliseconds_counter() - start_time;
 	
-	print("Fps", fps);
+	//print("Fps", fps);
 }
 
 void Engine::shutdown()

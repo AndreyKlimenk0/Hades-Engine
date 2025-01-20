@@ -42,12 +42,14 @@ enum Binding_Type {
 enum Root_Parameter_Type {
 	ROOT_PARAMETER_CONSTANT_BUFFER,
 	ROOT_PARAMETER_SHADER_RESOURCE,
+	ROOT_PARAMETER_UNORDERED_ACESS_RESOURCE,
 	ROOT_PARAMETER_SAMPLER
 };
 
 struct Root_Paramter_Index {
 	u32 cb_parameter_index;
 	u32 sr_parameter_index;
+	u32 ua_parameter_index;
 	u32 sampler_parameter_index;
 
 	void set_parameter_index(u32 parameter_index, Root_Parameter_Type parameter_type);
@@ -73,13 +75,17 @@ struct Root_Signature : D3D12_Object<ID3D12RootSignature> {
 	
 	Root_Paramter_Index parameter_index_table[HLSL_REGISTRE_COUNT][HLSL_SPACE_COUNT];
 
-	void create(Gpu_Device &device, u32 access_flags);
+	void create(Gpu_Device &device, u32 access_flags = 0);
 
 	void store_parameter_index(u32 parameter_index, u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type);
 	u32 get_parameter_index(u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type);
 
+	u32 add_32bit_constants_parameter(u32 shader_register, u32 shader_space, u32 number_32bit_values, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+
 	u32 add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 	u32 add_sr_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	u32 add_ua_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	u32 add_ua_descriptor_table_parameter(u32 shader_register, u32 shader_space, u32 number_descriptors, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 	u32 add_sampler_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 
 	void begin_descriptor_table_parameter(u32 shader_register_space, Shader_Visibility shader_visibility);

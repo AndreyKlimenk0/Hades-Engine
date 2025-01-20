@@ -116,7 +116,7 @@ struct Depth_Stencil_Desc {
 	Stencil_Operation stencil_and_depth_passed;
 };
 
-struct Render_Pipeline_Desc {
+struct Graphics_Pipeline_Desc {
 	u32 layout_offset = 0;
 	Root_Signature *root_signature = NULL;
 	Shader *vertex_shader = NULL;
@@ -136,6 +136,11 @@ struct Render_Pipeline_Desc {
 	D3D12_INPUT_LAYOUT_DESC d3d12_input_layout();
 };
 
+struct Compute_Pipeline_Desc {
+	Root_Signature *root_signature = NULL;
+	Shader *compute_shader = NULL;
+};
+
 struct Pipeline_State : D3D12_Object<ID3D12PipelineState> {
 	Pipeline_State();
 	~Pipeline_State();
@@ -145,7 +150,8 @@ struct Pipeline_State : D3D12_Object<ID3D12PipelineState> {
 	Viewport viewport;
 	Rect_u32 clip_rect;
 
-	void create(Gpu_Device &device, Render_Pipeline_Desc &render_pipeline_desc);
+	void create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc);
+	void create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc);
 };
 
 #endif

@@ -82,7 +82,7 @@ struct CBSRUA_Descriptor_Heap : Descriptor_Heap {
 	void create(Gpu_Device &device, u32 descriptors_number);
 	CB_Descriptor place_cb_descriptor(u32 descriptor_index, GPU_Resource &resource);
 	SR_Descriptor place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource);
-	UA_Descriptor place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource);
+	UA_Descriptor place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource, u32 mip_level = 0);
 };
 
 struct Sampler_Descriptor_Heap : Descriptor_Heap {

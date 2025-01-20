@@ -1,7 +1,11 @@
+#include <limits.h>
+
+#include "../sys/sys.h"
 #include "render_world.h"
 #include "render_system.h"
 #include "render_passes.h"
 #include "shader_manager.h"
+
 
 struct alignas(256) World_Matrix {
 	Matrix4 world_matrix;
@@ -36,18 +40,18 @@ void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_man
 {
 	Shader *shader = GET_SHADER(shader_manager, draw_box);
 
-	Render_Pipeline_Desc render_pipeline_desc;
-	render_pipeline_desc.root_signature = &root_signature;
-	render_pipeline_desc.vertex_shader = shader;
-	render_pipeline_desc.pixel_shader = shader;
-	render_pipeline_desc.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
-	render_pipeline_desc.add_layout("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT);
-	render_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
-	render_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
-	render_pipeline_desc.viewport.width = 1900;
-	render_pipeline_desc.viewport.height = 980;
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = &root_signature;
+	graphics_pipeline_desc.vertex_shader = shader;
+	graphics_pipeline_desc.pixel_shader = shader;
+	graphics_pipeline_desc.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
+	graphics_pipeline_desc.add_layout("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT);
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
+	graphics_pipeline_desc.viewport.width = 1900;
+	graphics_pipeline_desc.viewport.height = 980;
 
-	pipeline_state.create(gpu_device, render_pipeline_desc);
+	pipeline_state.create(gpu_device, graphics_pipeline_desc);
 }
 
 void Box_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
@@ -92,6 +96,112 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World
 	render_command_buffer->draw(36);
 }
 
+struct Mipmaps_Info {
+	Mipmaps_Info() = default;
+	Mipmaps_Info(u32 source_mip_level, u32 number_mip_levels, float texel_width, float texel_height) : source_mip_level(source_mip_level), number_mip_levels(number_mip_levels), texel_size(texel_width, texel_height) {}
+	~Mipmaps_Info() = default;
+
+	u32 source_mip_level;
+	u32 number_mip_levels;
+	Vector2 texel_size;
+};
+
+
+void Generate_Mipmaps::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+{
+	setup_root_signature(device);
+	setup_pipeline(device, shader_manager);
+}
+
+void Generate_Mipmaps::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+{
+	Shader *shaders[4];
+	shaders[0] = GET_SHADER(shader_manager, generate_mips_linear);
+	shaders[1] = GET_SHADER(shader_manager, generate_mips_linear_oddx);
+	shaders[2] = GET_SHADER(shader_manager, generate_mips_linear_oddy);
+	shaders[3] = GET_SHADER(shader_manager, generate_mips_linear_odd);
+
+	for (u32 pipeline_index = 0; pipeline_index < 4; pipeline_index++) {
+		Compute_Pipeline_Desc compute_pipeline_desc;
+		compute_pipeline_desc.compute_shader = shaders[pipeline_index];
+		compute_pipeline_desc.root_signature = &root_signature;
+		pipeline_states[pipeline_index].create(device, compute_pipeline_desc);
+	}
+}
+
+void Generate_Mipmaps::setup_root_signature(Gpu_Device &device)
+{
+	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Mipmaps_Info));
+	root_signature.add_sr_descriptor_table_parameter(0, 0);
+	root_signature.add_ua_descriptor_table_parameter(0, 0, 4);
+	root_signature.add_sampler_descriptor_table_parameter(0, 0);
+
+	root_signature.create(device);
+}
+
+void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys)
+{
+	compute_command_list->set_root_signature(root_signature);
+	compute_command_list->set_descriptor_heaps(render_sys->descriptors_pool.cbsrua_descriptor_heap, render_sys->descriptors_pool.sampler_descriptor_heap);
+	compute_command_list->set_root_descriptor_table(3, render_sys->pipeline_resource_storage.linear_sampler_descriptor);
+	
+	Array<UA_Descriptor> unordered_access_descriptors;
+	unordered_access_descriptors.resize(12);
+
+	for (u32 i = 0; i < textures.count; i++) {
+		Texture *texture = textures[i];
+
+		Texture2D_Desc texture_desc = texture->get_texture2d_desc();
+		if ((texture_desc.width == 0) || (texture_desc.height == 0)) {
+			continue;
+		}
+
+		if (texture_desc.miplevels <= 1) {
+			continue;
+		}
+
+		for (u32 mip_level = 0; mip_level < texture_desc.miplevels; mip_level++) {
+			unordered_access_descriptors.push(render_sys->descriptors_pool.allocate_ua_descriptor(texture, mip_level));
+		}
+
+		u32 prev_pipeline_index = UINT_MAX;
+		for (u32 mip_level = 0; mip_level < texture_desc.miplevels - 1;) {
+			u32 source_width = texture_desc.width >> mip_level;
+			u32 source_height = texture_desc.height >> mip_level;
+			u32 dest_width = source_width >> 1;
+			u32 dest_height = source_height >> 1;
+
+			u32 pipeline_index = (source_width & 1) | (source_height & 1) << 1;
+			if (prev_pipeline_index != pipeline_index) {
+				prev_pipeline_index = pipeline_index;
+				compute_command_list->set_pipeline_state(pipeline_states[pipeline_index]);
+			}
+
+			uint32_t AdditionalMips;
+			_BitScanForward((unsigned long *)&AdditionalMips,
+							(dest_width == 1 ? dest_height : dest_width) | (dest_height == 1 ? dest_width : dest_height));
+			uint32_t number_mips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
+			if (mip_level + number_mips > texture_desc.miplevels)
+				number_mips = texture_desc.miplevels - mip_level;
+
+			if (dest_width == 0)
+				dest_width = 1;
+			if (dest_height == 0)
+				dest_height = 1;
+			
+			compute_command_list->set_constants(0, Mipmaps_Info(mip_level, number_mips, 1.0f / dest_width, 1.0f / dest_height));
+			compute_command_list->set_root_descriptor_table(1, texture->sr_descriptor);
+			compute_command_list->set_root_descriptor_table(2, unordered_access_descriptors[mip_level + 1]);
+			compute_command_list->dispatch(dest_width, dest_height);
+
+			mip_level += number_mips;
+		}
+		for (u32 i = 0; i < unordered_access_descriptors.count; i++) {
+			render_sys->descriptors_pool.free(&unordered_access_descriptors[i]);
+		}
+		unordered_access_descriptors.reset();
+	}
+}
 
 //#include <assert.h>
 //

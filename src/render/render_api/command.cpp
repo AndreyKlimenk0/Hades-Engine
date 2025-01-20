@@ -72,14 +72,20 @@ void Command_List::close()
 
 void Command_List::reset(u32 command_allocator_index)
 {
-    ID3D12CommandAllocator *temp = command_allocators[command_allocator_index].get();
-    HR(d3d12_object->Reset(temp, NULL));
+    Command_Allocator &command_allocator = command_allocators[command_allocator_index];
+    command_allocator.reset();
+    HR(d3d12_object->Reset(command_allocator.get(), NULL));
 }
 
-void Command_List::reset(u32 command_allocator_index, Pipeline_State &pipeline_state)
+void Command_List::set_pipeline_state(Pipeline_State &pipeline_state)
 {
-    ID3D12CommandAllocator *temp = command_allocators[command_allocator_index].get();
-    HR(d3d12_object->Reset(temp, pipeline_state.get()));
+    d3d12_object->SetPipelineState(pipeline_state.get());
+}
+
+void Command_List::set_descriptor_heaps(CBSRUA_Descriptor_Heap &cbsrua_descriptor_heap, Sampler_Descriptor_Heap &sampler_descriptor_heap)
+{
+    ID3D12DescriptorHeap *descriptor_heaps[] = { cbsrua_descriptor_heap.get(), sampler_descriptor_heap.get() };
+    d3d12_object->SetDescriptorHeaps(2, descriptor_heaps);
 }
 
 void Command_List::create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type)
@@ -92,7 +98,6 @@ void Command_List::create(Gpu_Device &device, u32 number_command_allocators, Com
     }
     device->CreateCommandList(0, command_list_type_to_d3d12(command_list_type), command_allocators.first().get(), NULL, IID_PPV_ARGS(release_and_get_address()));
 }
-
 
 Graphics_Command_List::Graphics_Command_List()
 {
@@ -264,4 +269,38 @@ void Copy_Command_List::copy_texture(GPU_Resource &dest, GPU_Resource &source, S
     source_texture_copy_location.PlacedFootprint.Footprint = source_texture_footprint;
     
     d3d12_object->CopyTextureRegion(&dest_texture_copy_location, 0, 0, 0, &source_texture_copy_location, NULL);
+}
+
+Compute_Command_List::Compute_Command_List()
+{
+}
+
+Compute_Command_List::~Compute_Command_List()
+{
+}
+
+void Compute_Command_List::set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor)
+{
+    d3d12_object->SetComputeRootDescriptorTable(parameter_index, descriptor.gpu_handle);
+}
+
+void Compute_Command_List::set_root_signature(Root_Signature &root_signature)
+{
+    d3d12_object->SetComputeRootSignature(root_signature.get());
+}
+
+void Compute_Command_List::dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z)
+{
+    d3d12_object->Dispatch(group_count_x, group_count_y, group_count_z);
+}
+
+void Compute_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
+{
+    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_COMPUTE);
+    close(); // Should Command_List::create call this function ?
+}
+
+ID3D12CommandList *Compute_Command_List::get_d3d12_command_list()
+{
+    return static_cast<ID3D12CommandList *>(get());
 }

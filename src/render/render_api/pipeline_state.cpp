@@ -277,18 +277,18 @@ Depth_Stencil_Desc::~Depth_Stencil_Desc()
 {
 }
 
-void Render_Pipeline_Desc::add_render_target(DXGI_FORMAT format)
+void Graphics_Pipeline_Desc::add_render_target(DXGI_FORMAT format)
 {
     render_targets_formats.push(format);
 }
 
-void Render_Pipeline_Desc::add_layout(const char *semantic_name, DXGI_FORMAT format)
+void Graphics_Pipeline_Desc::add_layout(const char *semantic_name, DXGI_FORMAT format)
 {
     input_elements.push({ semantic_name, 0, format, 0, layout_offset, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     layout_offset += dxgi_format_size(format);
 }
 
-D3D12_INPUT_LAYOUT_DESC Render_Pipeline_Desc::d3d12_input_layout()
+D3D12_INPUT_LAYOUT_DESC Graphics_Pipeline_Desc::d3d12_input_layout()
 {
     return { input_elements.items, input_elements.count };
 }
@@ -301,40 +301,50 @@ Pipeline_State::~Pipeline_State()
 {
 }
 
-void Pipeline_State::create(Gpu_Device &device, Render_Pipeline_Desc &render_pipeline_desc)
+void Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc)
 {
-    assert(render_pipeline_desc.render_targets_formats.count > 0);
+    assert(graphics_pipeline_desc.render_targets_formats.count > 0);
 
-    primitive_type = render_pipeline_desc.primitive_type;
-    root_signature = render_pipeline_desc.root_signature;
-    viewport = render_pipeline_desc.viewport;
-    if ((render_pipeline_desc.clip_rect.width == 0) && (render_pipeline_desc.clip_rect.height == 0)) {
-        clip_rect.x = static_cast<u32>(render_pipeline_desc.viewport.x);
-        clip_rect.y = static_cast<u32>(render_pipeline_desc.viewport.y);
-        clip_rect.width = static_cast<u32>(render_pipeline_desc.viewport.width);
-        clip_rect.height = static_cast<u32>(render_pipeline_desc.viewport.height);
+    primitive_type = graphics_pipeline_desc.primitive_type;
+    root_signature = graphics_pipeline_desc.root_signature;
+    viewport = graphics_pipeline_desc.viewport;
+    if ((graphics_pipeline_desc.clip_rect.width == 0) && (graphics_pipeline_desc.clip_rect.height == 0)) {
+        clip_rect.x = static_cast<u32>(graphics_pipeline_desc.viewport.x);
+        clip_rect.y = static_cast<u32>(graphics_pipeline_desc.viewport.y);
+        clip_rect.width = static_cast<u32>(graphics_pipeline_desc.viewport.width);
+        clip_rect.height = static_cast<u32>(graphics_pipeline_desc.viewport.height);
     } else {
-        clip_rect = render_pipeline_desc.clip_rect;
+        clip_rect = graphics_pipeline_desc.clip_rect;
     }
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC graphics_pipeline_state;
-    ZeroMemory(&graphics_pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-    graphics_pipeline_state.pRootSignature= render_pipeline_desc.root_signature->get();
-    graphics_pipeline_state.VS = render_pipeline_desc.vertex_shader->vs_bytecode.d3d12_shader_bytecode();
-    graphics_pipeline_state.PS = render_pipeline_desc.vertex_shader->ps_bytecode.d3d12_shader_bytecode();
-    graphics_pipeline_state.InputLayout = render_pipeline_desc.d3d12_input_layout();
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12_graphics_pipeline_state;
+    ZeroMemory(&d3d12_graphics_pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+    d3d12_graphics_pipeline_state.pRootSignature= graphics_pipeline_desc.root_signature->get();
+    d3d12_graphics_pipeline_state.VS = graphics_pipeline_desc.vertex_shader->vs_bytecode.d3d12_shader_bytecode();
+    d3d12_graphics_pipeline_state.PS = graphics_pipeline_desc.vertex_shader->ps_bytecode.d3d12_shader_bytecode();
+    d3d12_graphics_pipeline_state.InputLayout = graphics_pipeline_desc.d3d12_input_layout();
 
-    graphics_pipeline_state.BlendState = to_d3d12_blend_desc(render_pipeline_desc.render_targets_formats.count, render_pipeline_desc.blending_desc);
-    graphics_pipeline_state.RasterizerState = to_d3d12_rasterizer_desc(render_pipeline_desc.rasterization_desc);
-    graphics_pipeline_state.DepthStencilState = to_d3d12_depth_stencil_desc(render_pipeline_desc.depth_stencil_desc);
-    graphics_pipeline_state.SampleMask = UINT32_MAX;
-    graphics_pipeline_state.PrimitiveTopologyType = to_d3d12_primitive_topology_type(render_pipeline_desc.primitive_type);
-    graphics_pipeline_state.NumRenderTargets = render_pipeline_desc.render_targets_formats.count;
-    for (u32 i = 0; i < render_pipeline_desc.render_targets_formats.count; i++) {
-        graphics_pipeline_state.RTVFormats[i] = render_pipeline_desc.render_targets_formats[i];
+    d3d12_graphics_pipeline_state.BlendState = to_d3d12_blend_desc(graphics_pipeline_desc.render_targets_formats.count, graphics_pipeline_desc.blending_desc);
+    d3d12_graphics_pipeline_state.RasterizerState = to_d3d12_rasterizer_desc(graphics_pipeline_desc.rasterization_desc);
+    d3d12_graphics_pipeline_state.DepthStencilState = to_d3d12_depth_stencil_desc(graphics_pipeline_desc.depth_stencil_desc);
+    d3d12_graphics_pipeline_state.SampleMask = UINT32_MAX;
+    d3d12_graphics_pipeline_state.PrimitiveTopologyType = to_d3d12_primitive_topology_type(graphics_pipeline_desc.primitive_type);
+    d3d12_graphics_pipeline_state.NumRenderTargets = graphics_pipeline_desc.render_targets_formats.count;
+    for (u32 i = 0; i < graphics_pipeline_desc.render_targets_formats.count; i++) {
+        d3d12_graphics_pipeline_state.RTVFormats[i] = graphics_pipeline_desc.render_targets_formats[i];
     }
-    graphics_pipeline_state.DSVFormat = render_pipeline_desc.depth_stencil_format;
-    graphics_pipeline_state.SampleDesc.Count = 1;
+    d3d12_graphics_pipeline_state.DSVFormat = graphics_pipeline_desc.depth_stencil_format;
+    d3d12_graphics_pipeline_state.SampleDesc.Count = 1;
 
-    HR(device->CreateGraphicsPipelineState(&graphics_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
+    HR(device->CreateGraphicsPipelineState(&d3d12_graphics_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
+}
+
+void Pipeline_State::create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc)
+{
+    D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12_compute_pipeline_state;
+    ZeroMemory(&d3d12_compute_pipeline_state, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
+    d3d12_compute_pipeline_state.pRootSignature = compute_pipeline_desc.root_signature ? compute_pipeline_desc.root_signature->get() : NULL;
+    d3d12_compute_pipeline_state.CS = compute_pipeline_desc.compute_shader->cs_bytecode.d3d12_shader_bytecode();
+    
+    HR(device->CreateComputePipelineState(&d3d12_compute_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
 }

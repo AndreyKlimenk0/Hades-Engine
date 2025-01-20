@@ -32,3 +32,15 @@ void Texture::create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State
 
 	GPU_Resource::create(device, heap_type, resource_state, resource_desc, desc.clear_value);
 }
+
+Texture2D_Desc Texture::get_texture2d_desc()
+{
+	D3D12_RESOURCE_DESC d3d12_texture_desc = d3d12_resource_desc();
+	Texture2D_Desc texture_desc;
+	texture_desc.width = static_cast<u32>(d3d12_texture_desc.Width);
+	texture_desc.height = d3d12_texture_desc.Height;
+	texture_desc.miplevels = d3d12_texture_desc.MipLevels;
+	texture_desc.flags = d3d12_texture_desc.Flags;
+	texture_desc.format = d3d12_texture_desc.Format;
+	return texture_desc;
+}
