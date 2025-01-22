@@ -27,11 +27,6 @@ void Box_Pass::setup_root_signature(Gpu_Device &device)
 	root_signature.add_sr_descriptor_table_parameter(0, 0);
 	root_signature.add_sampler_descriptor_table_parameter(0, 0);
 	root_signature.create(device, ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS);
-	//root_signature.begin_descriptor_table_parameter(0, VISIBLE_TO_VERTEX_SHADER);
-	//root_signature.add_descriptor_range(1, world_matrix_cb_desc);
-	//root_signature.add_descriptor_range(2, view_matrix_cb_desc);
-	//root_signature.add_descriptor_range(3, pers_matrix_cb_desc);
-	//root_signature.end_parameter();
 }
 
 const u32 RENDER_TARGET_BACK_BUFFER = 0x1;
@@ -64,6 +59,34 @@ void Box_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline
 	setup_pipeline(device, shader_manager);
 }
 
+struct Binding_Helper {
+	Binding_Helper(Command_List *command_list, Root_Signature *root_signature);
+	~Binding_Helper() {};
+
+	Command_List *command_list = NULL;
+	Root_Signature *root_signature = NULL;
+	void set_root_descriptor_table(u32 shader_register, u32 shader_space, CB_Descriptor *base_decriptor);
+	void set_root_descriptor_table(u32 shader_register, u32 shader_space, SR_Descriptor *base_decriptor);
+	void set_root_descriptor_table(u32 shader_register, u32 shader_space, Sampler_Descriptor *base_decriptor);
+};
+
+Binding_Helper::Binding_Helper(Command_List *command_list, Root_Signature *root_signature) : command_list(command_list), root_signature(root_signature) {}
+
+void Binding_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, CB_Descriptor *base_decriptor)
+{
+	command_list->set_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER), *base_decriptor);
+}
+
+void Binding_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, SR_Descriptor *base_decriptor)
+{
+	command_list->set_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), *base_decriptor);
+}
+
+void Binding_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, Sampler_Descriptor *base_decriptor)
+{
+	command_list->set_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SAMPLER), *base_decriptor);
+}
+
 void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args)
 {
 	Render_System *render_sys = (Render_System *)args;
@@ -84,11 +107,13 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World
 
 	auto &command_list = render_command_buffer->graphics_command_list;
 
-	command_list.set_root_descriptor_table(root_signature.get_parameter_index(1, 0, ROOT_PARAMETER_CONSTANT_BUFFER), world_matrix_buffer->get_frame_resource()->cb_descriptor);
-	command_list.set_root_descriptor_table(root_signature.get_parameter_index(2, 0, ROOT_PARAMETER_CONSTANT_BUFFER), view_matrix_buffer->get_frame_resource()->cb_descriptor);
-	command_list.set_root_descriptor_table(root_signature.get_parameter_index(3, 0, ROOT_PARAMETER_CONSTANT_BUFFER), pers_matrix_buffer->get_frame_resource()->cb_descriptor);
-	command_list.set_root_descriptor_table(root_signature.get_parameter_index(0, 0, ROOT_PARAMETER_SAMPLER), render_sys->pipeline_resource_storage.linear_sampler_descriptor);
-	command_list.set_root_descriptor_table(root_signature.get_parameter_index(0, 0, ROOT_PARAMETER_SHADER_RESOURCE), render_sys->texture.sr_descriptor);
+	auto helper = Binding_Helper(&command_list, &root_signature);
+
+	helper.set_root_descriptor_table(1, 0, &world_matrix_buffer->get_frame_resource()->cb_descriptor);
+	helper.set_root_descriptor_table(2, 0, &view_matrix_buffer->get_frame_resource()->cb_descriptor);
+	helper.set_root_descriptor_table(3, 0, &pers_matrix_buffer->get_frame_resource()->cb_descriptor);
+	helper.set_root_descriptor_table(0, 0, &render_sys->pipeline_resource_storage.linear_sampler_descriptor);
+	helper.set_root_descriptor_table(0, 0, &render_sys->texture.sr_descriptor);
 
 	command_list.set_vertex_buffer(render_sys->vertex_buffer);
 	command_list.set_index_buffer(render_sys->index_buffer);
@@ -105,7 +130,6 @@ struct Mipmaps_Info {
 	u32 number_mip_levels;
 	Vector2 texel_size;
 };
-
 
 void Generate_Mipmaps::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
 {
@@ -196,12 +220,31 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 
 			mip_level += number_mips;
 		}
+
 		for (u32 i = 0; i < unordered_access_descriptors.count; i++) {
 			render_sys->descriptors_pool.free(&unordered_access_descriptors[i]);
 		}
 		unordered_access_descriptors.reset();
 	}
 }
+
+void Forwar_Light_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+{
+
+}
+
+void Forwar_Light_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+{
+}
+
+void Forwar_Light_Pass::setup_root_signature(Gpu_Device &device)
+{
+}
+
+void Forwar_Light_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args)
+{
+}
+
 
 //#include <assert.h>
 //
