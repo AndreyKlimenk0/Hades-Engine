@@ -63,6 +63,14 @@ struct Generate_Mipmaps : Compute_Pass<4> {
 	void generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys);
 };
 
+struct Forwar_Light_Pass : Render_Pass {
+	Gpu_Buffer shadow_atlas_info_cbuffer;
+
+	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
+	void setup_root_signature(Gpu_Device &device);
+	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
+};
 
 //struct Shader;
 //struct Gpu_Device;

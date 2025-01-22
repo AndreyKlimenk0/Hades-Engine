@@ -45,6 +45,7 @@ struct Command_List : D3D12_Object<ID3D12GraphicsCommandList> {
 	
 	virtual void create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type);
 	virtual ID3D12CommandList *get_d3d12_command_list() = 0;
+	virtual void set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor) {};
 };
 
 struct Graphics_Command_List : Command_List {
