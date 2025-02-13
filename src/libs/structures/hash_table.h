@@ -181,12 +181,12 @@ Hash_Node<_Key_, _Value_> *Hash_Table<_Key_, _Value_>::get_table_entry(const _Ke
 	return NULL;
 }
 
-
 template<typename _Key_, typename _Value_>
 inline void Hash_Table<_Key_, _Value_>::clear()
 {
 	Table_Entry *table_entry = NULL;
-	For(nodes, table_entry) {
+	For(nodes, table_entry)
+	{
 		if (table_entry) {
 			DELETE_PTR(table_entry);
 		}

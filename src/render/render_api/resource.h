@@ -7,6 +7,7 @@
 #include "base.h"
 #include "d3d12_object.h"
 #include "../../libs/number_types.h"
+#include "../../libs/structures/array.h"
 
 enum GPU_Heap_Type {
 	GPU_HEAP_TYPE_DEFAULT,
@@ -37,8 +38,13 @@ struct GPU_Resource : D3D12_Object<ID3D12Resource> {
 
 	void create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value);
 	void create(Gpu_Device &device, GPU_Heap heap, u64 offset, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value);
-	void set_size(u32 _count, u32 _stride);
-	u32 get_size();
+	void set_resource_parameters(u32 _count, u32 _stride);
+	void get_resource_footprint(Resource_Footprint &resource_footprint);
+	Subresource_Footprint get_subresource_footprint(u32 subresource_index);
+	
+	virtual u32 get_size();
+	virtual u32 get_subresource_count();
+
 	u64 get_gpu_address();
 	D3D12_RESOURCE_DESC d3d12_resource_desc();
 };

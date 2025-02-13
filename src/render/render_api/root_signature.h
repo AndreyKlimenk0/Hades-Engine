@@ -1,6 +1,7 @@
 #ifndef RENDER_API_ROOT_SIGNATURE_H
 #define RENDER_API_ROOT_SIGNATURE_H
 
+#include <limits.h>
 #include <d3d12.h>
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
@@ -39,14 +40,19 @@ enum Binding_Type {
 	BIND_UNORDERED_ACESS_RESOURCE,
 };
 
+// There is a string representation of the next enum in the .cpp file
+// Don't forget to update it.
 enum Root_Parameter_Type {
-	ROOT_PARAMETER_CONSTANT_BUFFER,
-	ROOT_PARAMETER_SHADER_RESOURCE,
-	ROOT_PARAMETER_UNORDERED_ACESS_RESOURCE,
-	ROOT_PARAMETER_SAMPLER
+	ROOT_PARAMETER_CONSTANT_BUFFER = 0,
+	ROOT_PARAMETER_SHADER_RESOURCE = 1,
+	ROOT_PARAMETER_UNORDERED_ACESS_RESOURCE = 2,
+	ROOT_PARAMETER_SAMPLER = 3
 };
 
 struct Root_Paramter_Index {
+	~Root_Paramter_Index();
+	Root_Paramter_Index();
+
 	u32 cb_parameter_index;
 	u32 sr_parameter_index;
 	u32 ua_parameter_index;
@@ -80,10 +86,13 @@ struct Root_Signature : D3D12_Object<ID3D12RootSignature> {
 	void store_parameter_index(u32 parameter_index, u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type);
 	u32 get_parameter_index(u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type);
 
-	u32 add_32bit_constants_parameter(u32 shader_register, u32 shader_space, u32 number_32bit_values, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	u32 add_32bit_constants_parameter(u32 shader_register, u32 shader_space, u32 struct_size, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 
 	u32 add_cb_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	
 	u32 add_sr_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	u32 add_sr_descriptor_table_parameter_xxx(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
+	
 	u32 add_ua_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 	u32 add_ua_descriptor_table_parameter(u32 shader_register, u32 shader_space, u32 number_descriptors, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);
 	u32 add_sampler_descriptor_table_parameter(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility = VISIBLE_TO_ALL);

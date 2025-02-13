@@ -104,15 +104,51 @@ void GPU_Resource::create(Gpu_Device &device, GPU_Heap heap, u64 offset, Resourc
     HR(device->CreatePlacedResource(heap.get(), offset, &resource_desc, to_d3d12_resource_state(resource_state), NULL, IID_PPV_ARGS(release_and_get_address())));
 }
 
-void GPU_Resource::set_size(u32 _count, u32 _stride)
+void GPU_Resource::set_resource_parameters(u32 _count, u32 _stride)
 {
     count = _count;
     stride = _stride;
 }
 
+void GPU_Resource::get_resource_footprint(Resource_Footprint &resource_footprint)
+{
+    u32 subresource_count = get_subresource_count();
+    D3D12_RESOURCE_DESC desc = d3d12_resource_desc();
+
+    u64 total_size = 0;
+    Array<u32> row_counts;
+    Array<u64> row_sizes;
+    Array<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> d3d12_footprints;
+
+    row_counts.resize(subresource_count);
+    row_sizes.resize(subresource_count);
+    d3d12_footprints.resize(subresource_count);
+
+    ComPtr<ID3D12Device> device;
+    get()->GetDevice(IID_PPV_ARGS(device.GetAddressOf()));
+    device->GetCopyableFootprints(&desc, 0, subresource_count, 0, d3d12_footprints.items, row_counts.items, row_sizes.items, &total_size);
+
+    resource_footprint.subresource_footprints.resize(subresource_count);
+    for (u32 i = 0; i < subresource_count; i++) {
+        resource_footprint.subresource_footprints.push(Subresource_Footprint(i, row_counts[i], row_sizes[i], d3d12_footprints[i]));
+    }
+}
+
+Subresource_Footprint GPU_Resource::get_subresource_footprint(u32 subresource_index)
+{
+    Resource_Footprint resource_footprint;
+    get_resource_footprint(resource_footprint);
+    return resource_footprint.get_subresource_footprint(subresource_index);
+}
+
 u32 GPU_Resource::get_size()
 {
     return stride * count;
+}
+
+u32 GPU_Resource::get_subresource_count()
+{
+    return 1;
 }
 
 GPU_Address GPU_Resource::get_gpu_address()

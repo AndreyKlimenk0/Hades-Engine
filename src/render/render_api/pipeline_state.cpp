@@ -293,15 +293,35 @@ D3D12_INPUT_LAYOUT_DESC Graphics_Pipeline_Desc::d3d12_input_layout()
     return { input_elements.items, input_elements.count };
 }
 
-Pipeline_State::Pipeline_State()
+Compute_Pipeline_State::Compute_Pipeline_State()
 {
 }
 
-Pipeline_State::~Pipeline_State()
+Compute_Pipeline_State::~Compute_Pipeline_State()
 {
 }
 
-void Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc)
+void Compute_Pipeline_State::create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc)
+{
+    root_signature = compute_pipeline_desc.root_signature;
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12_compute_pipeline_state;
+    ZeroMemory(&d3d12_compute_pipeline_state, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
+    d3d12_compute_pipeline_state.pRootSignature = compute_pipeline_desc.root_signature ? compute_pipeline_desc.root_signature->get() : NULL;
+    d3d12_compute_pipeline_state.CS = compute_pipeline_desc.compute_shader->cs_bytecode.d3d12_shader_bytecode();
+
+    HR(device->CreateComputePipelineState(&d3d12_compute_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
+}
+
+Graphics_Pipeline_State::Graphics_Pipeline_State()
+{
+}
+
+Graphics_Pipeline_State::~Graphics_Pipeline_State()
+{
+}
+
+void Graphics_Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc)
 {
     assert(graphics_pipeline_desc.render_targets_formats.count > 0);
 
@@ -319,7 +339,7 @@ void Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12_graphics_pipeline_state;
     ZeroMemory(&d3d12_graphics_pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-    d3d12_graphics_pipeline_state.pRootSignature= graphics_pipeline_desc.root_signature->get();
+    d3d12_graphics_pipeline_state.pRootSignature = graphics_pipeline_desc.root_signature->get();
     d3d12_graphics_pipeline_state.VS = graphics_pipeline_desc.vertex_shader->vs_bytecode.d3d12_shader_bytecode();
     d3d12_graphics_pipeline_state.PS = graphics_pipeline_desc.vertex_shader->ps_bytecode.d3d12_shader_bytecode();
     d3d12_graphics_pipeline_state.InputLayout = graphics_pipeline_desc.d3d12_input_layout();
@@ -337,14 +357,4 @@ void Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics
     d3d12_graphics_pipeline_state.SampleDesc.Count = 1;
 
     HR(device->CreateGraphicsPipelineState(&d3d12_graphics_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
-}
-
-void Pipeline_State::create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc)
-{
-    D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12_compute_pipeline_state;
-    ZeroMemory(&d3d12_compute_pipeline_state, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
-    d3d12_compute_pipeline_state.pRootSignature = compute_pipeline_desc.root_signature ? compute_pipeline_desc.root_signature->get() : NULL;
-    d3d12_compute_pipeline_state.CS = compute_pipeline_desc.compute_shader->cs_bytecode.d3d12_shader_bytecode();
-    
-    HR(device->CreateComputePipelineState(&d3d12_compute_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
 }

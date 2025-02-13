@@ -1,6 +1,7 @@
 #include "test.h"
 #include "../libs/str.h"
 #include "../sys/sys.h"
+#include "../sys/memory.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/tree.h"
 
@@ -31,8 +32,15 @@ inline u32 encode_color(const Vector3 &rgb_value)
 	return result;
 }
 
+
+struct alignas(256) World_Matrix {
+	Matrix4 world_matrix;
+};
+
 void test()
 {
+	World_Matrix temp;
+	u32 size = sizeof(World_Matrix);
 }
 
 void update_test()

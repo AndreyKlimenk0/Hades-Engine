@@ -105,12 +105,12 @@ def build_fxc_command_line_params(shader_name: str, profile : str, entry_point :
         enable_debugging_information = "/Zi"
         strip_reflection = "/Qstrip_reflect"
         shader_debug_file = f'/Fd "{path_to_shader_pdb_file}"'
-        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {skip_optimization} {row_major_oder_matrices} {enable_debugging_information} {strip_reflection} {shader_debug_file}'
+        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {skip_optimization} {row_major_oder_matrices} {enable_debugging_information} {strip_reflection} {shader_debug_file} /enable_unbounded_descriptor_tables'
         return (True, command_line_params)
     
     elif compilation_mode == Compilation_Mode.RELEASE:
         optimization = "/O0"
-        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {row_major_oder_matrices} {optimization}'
+        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {row_major_oder_matrices} {optimization} /enable_unbounded_descriptor_tables'
         return (True, command_line_params)
     else:
         return (False, "")

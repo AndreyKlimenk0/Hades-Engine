@@ -39,6 +39,8 @@ struct Array {
 
 	u32 push(const T &item);
 	u32 get_size();
+	u32 get_stride();
+
 	T &pop();
 	T &get(u32 index);
 	T &first();
@@ -217,6 +219,12 @@ inline u32 Array<T>::get_size()
 	return sizeof(T) * count;
 }
 
+template<typename T>
+inline u32 Array<T>::get_stride()
+{
+	return sizeof(T);
+}
+
 template <typename T>
 inline T &Array<T>::get(u32 index)
 {
@@ -302,5 +310,35 @@ inline void zero_memory(Array<T> *array)
 		memset((void *)array->items, 0, sizeof(T) * array->size);
 	}
 }
+
+template <typename T>
+struct Find_Result {
+	bool found;
+	u32 index;
+	T data;
+};
+
+template <typename T, typename U, typename F>
+Find_Result<T> find_in_array(Array<T> &dynamic_array, const U &value, const F &compare_func)
+{
+	for (u32 i = 0; i < dynamic_array.count; i++) {
+		if (compare_func(dynamic_array[i], value)) {
+			return Find_Result<T>(true, i, dynamic_array[i]);
+		}
+	}
+	return Find_Result<T>(false, UINT32_MAX, T());
+}
+
+template <typename T, typename F>
+Find_Result<T> find_in_array(Array<T> &dynamic_array, const T &value, const F &compare_func)
+{
+	for (u32 i = 0; i < dynamic_array.count; i++) {
+		if (compare_func(dynamic_array[i], value)) {
+			return Find_Result<T>(true, i, dynamic_array[i]);
+		}
+	}
+	return Find_Result<T>(false, UINT32_MAX, T());
+}
+
 
 #endif

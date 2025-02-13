@@ -566,8 +566,8 @@ void test_window()
 	static bool init_local = false;
 	if (!init_local) {
 		init_local = true;
-		dir_image.init_from_file("folder.png", "editor");
-		file_image.init_from_file("google-docs.png", "editor");
+		//dir_image.init_from_file("folder.png", "editor");
+		//file_image.init_from_file("google-docs.png", "editor");
 	}
 
 	Array<String> temp;
@@ -588,7 +588,7 @@ void test_window()
 		if (begin_tree("Layout  tree")) {
 			if (begin_tree_node("Node 1")) {
 				if (begin_tree_node("Node 11", GUI_TREE_NODE_NOT_DISPLAY_NAME)) {
-					image(&dir_image.texture, 16, 16);
+					//image(&dir_image.texture, 16, 16);
 					
 					text("Text 1");
 					text("Text 2");
@@ -607,12 +607,12 @@ void test_window()
 			}
 			if (begin_tree_node("Node 2")) {
 				if (begin_tree_node("Node 22", GUI_TREE_NODE_NOT_DISPLAY_NAME)) {
-					image(&file_image.texture, 18, 18);
+					//image(&file_image.texture, 18, 18);
 					text("Color.png");
 					end_tree_node();
 				}
 				if (begin_tree_node("Node 23", GUI_TREE_NODE_NOT_DISPLAY_NAME | GUI_TREE_NODE_FINAL)) {
-					image(&file_image.texture, 18, 18);
+					//image(&file_image.texture, 18, 18);
 					text("Code.png");
 					end_tree_node();
 				}
@@ -666,7 +666,7 @@ void test_window_auto_size()
 	static Image up;
 	if (!init) {
 		init = true;
-		up.init_from_file("icons8-sun-22.png", "editor");
+		//up.init_from_file("icons8-sun-22.png", "editor");
 	}
 	if (gui::begin_menu("Test menu")) {
 		gui::menu_item(&up, "Add entity");

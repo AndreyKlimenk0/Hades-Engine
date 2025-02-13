@@ -1,46 +1,52 @@
 #ifndef __DRAW_BOX__
 
-cbuffer World_Matrix : register(b1, space0) {
-    float4x4 world_matrix;
+#include "mesh.hlsl"
+#include "vertex.hlsl"
+#include "globals.hlsl"
+
+struct Pass_Data {
+    uint world_matrix_idx;
+    uint mesh_idx;
+    uint2 pad;
 };
 
-cbuffer View_Matrix : register(b2, space0) {
-    float4x4 view_matrix;
+ConstantBuffer<Pass_Data> pass_data : register(b0, space0);
+
+StructuredBuffer<float4x4> world_matrices : register(t0, space0);
+StructuredBuffer<Mesh_Instance> mesh_instances : register(t1, space0);
+StructuredBuffer<Vertex_P3NTUV> unified_vertex_buffer : register(t2, space0);
+StructuredBuffer<uint> unified_index_buffer : register(t3, space0);
+
+struct Vertex_Out {
+	float4 position : SV_POSITION;
+	float3 world_position : POSITION;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float2 uv : TEXCOORD;
 };
 
-cbuffer Perspective_Matrix : register(b3, space0) {
-    float4x4 perspective_matrix;
-};
-
-Texture2D<float4> texture_map : register(t0, space0);
-SamplerState linear_sampling : register(s0, space0);
-
-struct Vertex_Input
+Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 {
-    float3 position : POSITION;
-    float2 uv : TEXCOORD;
-};
-
-struct Vertex_Output
-{
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD;
-};
-
-Vertex_Output vs_main(Vertex_Input input)
-{
-    float4x4 wvp_matrix = mul(mul(world_matrix, view_matrix), perspective_matrix);
-
-    Vertex_Output output;
-    output.position = mul(float4(input.position, 1.0f), wvp_matrix);
-    output.uv = input.uv;
-    return output;
+	Mesh_Instance mesh_instance = mesh_instances[pass_data.mesh_idx];
+	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
+	Vertex_P3NTUV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
+	
+	float4x4 world_matrix = transpose(world_matrices[pass_data.world_matrix_idx]);
+	
+	Vertex_Out vertex_out;
+	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(frame_info.view_matrix, frame_info.perspective_matrix))); 
+	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix).xyz;
+	vertex_out.normal = mul(vertex.normal, (float3x3)world_matrix);
+	vertex_out.tangent = mul(vertex.tangent, (float3x3)world_matrix);
+	vertex_out.uv = vertex.uv;
+	return vertex_out;
 }
 
-float4 ps_main(Vertex_Output output) : SV_TARGET
+float4 ps_main(Vertex_Out output) : SV_TARGET
 {
-    float4 texel = texture_map.Sample(linear_sampling, output.uv);
-    return texel;
+    Mesh_Instance mesh_instance = mesh_instances[pass_data.mesh_idx];
+    Texture2D<float4> tex = textures[mesh_instance.material.diffuse_texture_index];
+    return tex.Sample(linear_sampling, output.uv);
 }
 
 #endif

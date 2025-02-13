@@ -692,7 +692,7 @@
     <ClInclude Include="src\render\font.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\hlsl.h">
+    <ClInclude Include="src\render\gpu_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\model.h">

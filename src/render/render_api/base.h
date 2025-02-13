@@ -5,9 +5,10 @@
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
 
-#include "../../libs/number_types.h"
 #include "../../libs/color.h"
+#include "../../libs/number_types.h"
 #include "../../libs/math/structures.h"
+#include "../../libs/structures/array.h"
 
 typedef u64 GPU_Address;
 typedef ComPtr<ID3D12Device> Gpu_Device;
@@ -59,7 +60,30 @@ enum Resource_State {
 	RESOURCE_STATE_COPY_SOURCE,
 	RESOURCE_STATE_PRESENT,
 	RESOURCE_STATE_RENDER_TARGET,
-	RESOURCE_STATE_DEPTH_WRITE
+	RESOURCE_STATE_DEPTH_WRITE,
+	RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+	RESOURCE_STATE_ALL_SHADER_RESOURCE,
+};
+
+struct Subresource_Footprint {
+	Subresource_Footprint();
+	Subresource_Footprint(u32 subresource_index, u32 row_count, u64 row_size, D3D12_PLACED_SUBRESOURCE_FOOTPRINT &places_subresource_footprint);
+	~Subresource_Footprint();
+	
+	u32 subresource_index = 0;
+	u32 row_count = 0;
+	u64 row_size = 0;
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT places_subresource_footprint;
+
+	D3D12_SUBRESOURCE_FOOTPRINT d3d12_subresource_footprint();
+};
+
+struct Resource_Footprint {
+	Resource_Footprint();
+	~Resource_Footprint();
+
+	Array<Subresource_Footprint> subresource_footprints;
+	Subresource_Footprint get_subresource_footprint(u32 index);
 };
 
 bool check_tearing_support();

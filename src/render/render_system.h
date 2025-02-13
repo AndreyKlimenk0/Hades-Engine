@@ -7,6 +7,7 @@
 #include "../libs/structures/array.h"
 #include "../libs/math/structures.h"
 
+#include "gpu_data.h"
 #include "render_passes.h"
 #include "render_api/base.h"
 #include "render_api/fence.h"
@@ -21,32 +22,18 @@
 struct Win32_Window;
 struct Variable_Service;
 
-struct View {
+struct View_Plane {
+	u32 width;
+	u32 height;
 	float ratio;
 	float fov;
 	float near_plane;
 	float far_plane;
 
 	Matrix4 perspective_matrix;
-	Matrix4 orthogonal_matrix;
+	Matrix4 orthographic_matrix;
 
-	void update_proje0ction_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane);
-};
-
-struct Projection_Plane {
-	u32 width;
-	u32 height;
-	float ratio;
-	float fov_y_ratio;
-	float near_plane;
-	float far_plane;
-};
-
-struct Projection_Matries {
-	Matrix4 perspective_matrix;
-	Matrix4 orthogonal_matrix;
-
-	void update();
+	void update(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane);
 };
 
 struct Box_Render_Pass {
@@ -109,11 +96,21 @@ struct CPU_Buffer {
 	u32 frame_index;
 	Array<Buffer *> buffers;
 
+	template <typename T>
+	void write(const T &data);
+
 	void begin_frame(u32 _frame_index);
-	void write(void *data, u32 data_size);
 	void create(Gpu_Device &device, GPU_Allocator *allocator, u32 frames_in_flight, const Buffer_Desc &buffers_desc);
 	Buffer *get_frame_resource();
+	CB_Descriptor get_cb_descriptor();
 };
+
+template<typename T>
+inline void CPU_Buffer::write(const T &data)
+{
+	Buffer *buffer = get_frame_resource();
+	buffer->write(data, 256);
+}
 
 struct Pipeline_Resource_Storage {
 	u32 back_buffer_count = 0;
@@ -125,6 +122,7 @@ struct Pipeline_Resource_Storage {
 
 	Descriptor_Heap_Pool *descriptor_heap_pool = NULL;
 
+	CPU_Buffer frame_info_buffer;
 	Array<u32> cpu_buffers_sizes;
 	Array<CPU_Buffer *> cpu_buffers;
 
@@ -134,6 +132,8 @@ struct Pipeline_Resource_Storage {
 	void begin_frame(u32 _back_buffer_index);
 
 	CPU_Buffer *request_constant_buffer(u32 buffer_size);
+	
+	void update_frame_info_constant_buffer(GPU_Frame_Info *frame_info);
 };
 
 const u32 RENDER_TARGET_BUFFER_BUFFER = 0x1;
@@ -146,9 +146,14 @@ struct Render_Command_Buffer {
 	Texture *back_buffer_texture = NULL;
 	Texture *back_buffer_depth_texture = NULL;
 	Descriptor_Heap_Pool *descriptors_pool = NULL;
+	Pipeline_Resource_Storage *pipeline_resource_storage = NULL;
 
 	void create(Gpu_Device &device, u32 frames_in_flight);
-	void apply(Pipeline_State &pipeline_state, u32 flags = 0);
+	void setup_common_compute_pipeline_resources(Root_Signature *root_signature);
+	void setup_common_graphics_pipeline_resources(Root_Signature *root_signature);
+
+	void apply(Compute_Pipeline_State *pipeline, u32 flags = 0);
+	void apply(Graphics_Pipeline_State *pipeline, u32 flags = 0);
 	void begin_frame(Texture *back_buffer);
 	void draw(u32 index_count);
 
@@ -169,6 +174,8 @@ struct Render_System {
 	u32 back_buffer_index = 0;
 	u64 frame_fence_value = 0;
 
+	View_Plane window_view_plane;
+
 	Fence frame_fence;
 	Array<u64> frame_fence_values;
 
@@ -179,9 +186,12 @@ struct Render_System {
 	Command_Queue compute_queue;
 	Command_Queue graphics_queue;
 	
-	Render_Command_Buffer command_buffer;
+	//bool execute_uploading = false;
+	//u64 upload_fence_value = 0;
+	//Fence upload_fence;
+	//Compute_Command_List upload_command_list;
 
-	Texture texture;
+	Render_Command_Buffer command_buffer;
 
 	Texture back_buffer_depth_texture;
 	Array<Texture> back_buffer_textures;
@@ -193,12 +203,8 @@ struct Render_System {
 		Box_Pass box;
 	} passes;
 
-	//Test data
-	Buffer vertex_buffer;
-	Buffer index_buffer;
-
 	Generate_Mipmaps generate_mipmaps;
-	Array<Render_Pass *> frame_passes;
+	Array<Graphics_Pass *> frame_graphics_passes;
 
 	void init(Win32_Window *win32_window, Variable_Service *variable_service);
 	void init_vars(Win32_Window *win32_window, Variable_Service *variable_service);
@@ -207,6 +213,7 @@ struct Render_System {
 	void init_texture();
 	void resize(u32 window_width, u32 window_height);
 
+	void flush();
 	void render();
 
 	Size_u32 get_window_size();
