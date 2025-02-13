@@ -5,6 +5,7 @@
 
 CPU_Descriptor::CPU_Descriptor()
 {
+    ZeroMemory(&cpu_handle, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE));
 }
 
 CPU_Descriptor::CPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle) : index(heap_index), cpu_handle(cpu_handle)
@@ -15,8 +16,14 @@ CPU_Descriptor::~CPU_Descriptor()
 {
 }
 
-GPU_Descriptor::GPU_Descriptor()
+bool CPU_Descriptor::valid()
 {
+    return (index != UINT_MAX) && (cpu_handle.ptr != 0);
+}
+
+GPU_Descriptor::GPU_Descriptor() : CPU_Descriptor()
+{
+    ZeroMemory(&gpu_handle, sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
 }
 
 GPU_Descriptor::GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) : CPU_Descriptor(heap_index, cpu_handle), gpu_handle(gpu_handle)
@@ -25,6 +32,11 @@ GPU_Descriptor::GPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_h
 
 GPU_Descriptor::~GPU_Descriptor()
 {
+}
+
+bool GPU_Descriptor::valid()
+{
+    return CPU_Descriptor::valid() && (gpu_handle.ptr != 0);
 }
 
 static D3D12_DESCRIPTOR_HEAP_TYPE descriptor_heap_type_to_d3d12(Descriptor_Heap_Type descriptor_heap_type)
@@ -94,6 +106,11 @@ D3D12_GPU_DESCRIPTOR_HANDLE Descriptor_Heap::get_gpu_handle(u32 descriptor_index
 D3D12_GPU_DESCRIPTOR_HANDLE Descriptor_Heap::get_base_gpu_handle()
 {
     return get_gpu_handle(0);
+}
+
+GPU_Descriptor Descriptor_Heap::get_base_gpu_descriptor()
+{
+    return GPU_Descriptor(0, cpu_handle, gpu_handle);
 }
 
 CBSRUA_Descriptor_Heap::CBSRUA_Descriptor_Heap() : Descriptor_Heap()

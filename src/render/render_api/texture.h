@@ -39,6 +39,8 @@ struct Texture : GPU_Resource {
 	RT_Descriptor rt_descriptor;
 
 	void create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, Texture2D_Desc &desc);
+	u32 get_size();
+	u32 get_subresource_count();
 	Texture2D_Desc get_texture2d_desc();
 };
 

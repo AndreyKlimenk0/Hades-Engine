@@ -22,7 +22,7 @@ typedef Enum_Helper<Geometry_Type> Geometry_Type_Helper;
 struct Editor_Window {
 	Editor_Window();
 	virtual ~Editor_Window();
-	
+
 	Editor *editor = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
@@ -60,7 +60,7 @@ struct Entity_Tree_Window : Top_Right_Window {
 
 	void init(Engine *engine);
 	void draw();
-	
+
 	template <typename T>
 	void draw_entity_list(Array<T> &entity_list, const char *name);
 };
@@ -161,7 +161,7 @@ struct Editor {
 	void handle_events();
 	void update();
 	void picking();
-	
+
 	void render();
 	void render_menus();
 	void render_left_bar();

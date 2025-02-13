@@ -78,7 +78,9 @@ bool create_d3d12_gpu_device(Gpu_Device &device)
         D3D12_MESSAGE_ID apathetic_messages[] = {
             D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
             D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE
+            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+            //D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_VERTEX_BUFFER_NOT_SET,
+            //D3D12_MESSAGE_ID_COMMAND_LIST_DRAW_INDEX_BUFFER_NOT_SET
         };
 
         D3D12_INFO_QUEUE_FILTER message_filter;
@@ -128,6 +130,10 @@ D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resource_sta
             return D3D12_RESOURCE_STATE_PRESENT;
         case RESOURCE_STATE_DEPTH_WRITE:
             return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        case RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE:
+            return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        case RESOURCE_STATE_ALL_SHADER_RESOURCE:
+            return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
     }
     assert(false);
     return (D3D12_RESOURCE_STATES)0;
@@ -153,4 +159,36 @@ Clear_Value::Clear_Value(float _depth, u8 _stencil)
 
 Clear_Value::~Clear_Value()
 {
+}
+
+Subresource_Footprint::Subresource_Footprint()
+{
+    ZeroMemory(&places_subresource_footprint, sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT));
+}
+
+Subresource_Footprint::Subresource_Footprint(u32 subresource_index, u32 row_count, u64 row_size, D3D12_PLACED_SUBRESOURCE_FOOTPRINT &places_subresource_footprint)
+    : subresource_index(subresource_index), row_count(row_count), row_size(row_size), places_subresource_footprint(places_subresource_footprint)
+{
+}
+
+Subresource_Footprint::~Subresource_Footprint()
+{
+}
+
+D3D12_SUBRESOURCE_FOOTPRINT Subresource_Footprint::d3d12_subresource_footprint()
+{
+    return places_subresource_footprint.Footprint;
+}
+
+Resource_Footprint::Resource_Footprint()
+{
+}
+
+Resource_Footprint::~Resource_Footprint()
+{
+}
+
+Subresource_Footprint Resource_Footprint::get_subresource_footprint(u32 index)
+{
+    return subresource_footprints[index];
 }

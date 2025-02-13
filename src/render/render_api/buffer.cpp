@@ -38,7 +38,7 @@ void Buffer::unmap()
 
 void Buffer::create(Gpu_Device &device, GPU_Heap &heap, u64 offset, Resource_State resource_state, const Buffer_Desc &buffer_desc)
 {
-    set_size(buffer_desc.count, buffer_desc.stride);
+    set_resource_parameters(buffer_desc.count, buffer_desc.stride);
 
     D3D12_RESOURCE_DESC resource_desc;
     ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
@@ -59,7 +59,7 @@ void Buffer::create(Gpu_Device &device, GPU_Heap &heap, u64 offset, Resource_Sta
 
 void Buffer::create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, const Buffer_Desc &buffer_desc)
 {
-    set_size(buffer_desc.count, buffer_desc.stride);
+    set_resource_parameters(buffer_desc.count, buffer_desc.stride);
 
     D3D12_RESOURCE_DESC resource_desc;
     ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));

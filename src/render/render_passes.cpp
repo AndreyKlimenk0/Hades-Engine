@@ -1,32 +1,67 @@
 #include <limits.h>
 
 #include "../sys/sys.h"
+#include "render_helpers.h"
 #include "render_world.h"
 #include "render_system.h"
 #include "render_passes.h"
 #include "shader_manager.h"
 
-
-struct alignas(256) World_Matrix {
-	Matrix4 world_matrix;
+struct Pass_Data {
+	u32 parameter0;
+	u32 parameter1;
+	u32 parameter2;
+	u32 parameter3;
 };
 
-struct alignas(256) View_Matrix {
-	Matrix4 view_matrix;
-};
+Render_Pass::Render_Pass()
+{
+	name = "Unnamed render pass";
+}
 
-struct alignas(256) Perspective_Matrix {
-	Matrix4 perspective_matrix;
-};
+Render_Pass::~Render_Pass()
+{
+}
+
+void Render_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+{
+	setup_root_signature(device);
+	setup_pipeline(device, shader_manager);
+}
+
+void Render_Pass::setup_root_signature(Gpu_Device &device)
+{
+	root_signature.add_cb_descriptor_table_parameter(0, 10);      //Frame_Info
+	root_signature.add_sr_descriptor_table_parameter_xxx(0, 10);  //Textures
+	root_signature.add_sampler_descriptor_table_parameter(0, 10); //Point sampling
+	root_signature.add_sampler_descriptor_table_parameter(1, 10); //Linear sampling
+	root_signature.create(device, ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS);
+}
+
+Box_Pass::Box_Pass()
+{
+	name = "Box pass";
+}
+
+Box_Pass::~Box_Pass()
+{
+}
+
+
+void Box_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+{
+	pipeline_resource_storage->request_constant_buffer(sizeof(Pass_Data));
+	Render_Pass::init(device, shader_manager, NULL);
+}
 
 void Box_Pass::setup_root_signature(Gpu_Device &device)
 {
-	root_signature.add_cb_descriptor_table_parameter(1, 0);
-	root_signature.add_cb_descriptor_table_parameter(2, 0);
-	root_signature.add_cb_descriptor_table_parameter(3, 0);
-	root_signature.add_sr_descriptor_table_parameter(0, 0);
-	root_signature.add_sampler_descriptor_table_parameter(0, 0);
-	root_signature.create(device, ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS);
+	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
+	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
+	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
+	root_signature.add_sr_descriptor_table_parameter(3, 0); //Unified index buffer
+	Render_Pass::setup_root_signature(device);
 }
 
 const u32 RENDER_TARGET_BACK_BUFFER = 0x1;
@@ -39,8 +74,6 @@ void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_man
 	graphics_pipeline_desc.root_signature = &root_signature;
 	graphics_pipeline_desc.vertex_shader = shader;
 	graphics_pipeline_desc.pixel_shader = shader;
-	graphics_pipeline_desc.add_layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
-	graphics_pipeline_desc.add_layout("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 	graphics_pipeline_desc.viewport.width = 1900;
@@ -49,76 +82,28 @@ void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_man
 	pipeline_state.create(gpu_device, graphics_pipeline_desc);
 }
 
-void Box_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
-{
-	world_matrix_buffer = pipeline_resource_storage->request_constant_buffer(sizeof(World_Matrix));
-	view_matrix_buffer = pipeline_resource_storage->request_constant_buffer(sizeof(World_Matrix));
-	pers_matrix_buffer = pipeline_resource_storage->request_constant_buffer(sizeof(World_Matrix));
-
-	setup_root_signature(device);
-	setup_pipeline(device, shader_manager);
-}
-
-struct Binding_Helper {
-	Binding_Helper(Command_List *command_list, Root_Signature *root_signature);
-	~Binding_Helper() {};
-
-	Command_List *command_list = NULL;
-	Root_Signature *root_signature = NULL;
-	void set_root_descriptor_table(u32 shader_register, u32 shader_space, CB_Descriptor *base_decriptor);
-	void set_root_descriptor_table(u32 shader_register, u32 shader_space, SR_Descriptor *base_decriptor);
-	void set_root_descriptor_table(u32 shader_register, u32 shader_space, Sampler_Descriptor *base_decriptor);
-};
-
-Binding_Helper::Binding_Helper(Command_List *command_list, Root_Signature *root_signature) : command_list(command_list), root_signature(root_signature) {}
-
-void Binding_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, CB_Descriptor *base_decriptor)
-{
-	command_list->set_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER), *base_decriptor);
-}
-
-void Binding_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, SR_Descriptor *base_decriptor)
-{
-	command_list->set_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), *base_decriptor);
-}
-
-void Binding_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, Sampler_Descriptor *base_decriptor)
-{
-	command_list->set_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SAMPLER), *base_decriptor);
-}
-
 void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args)
 {
 	Render_System *render_sys = (Render_System *)args;
 	Size_u32 window = render_sys->get_window_size();
 
-	render_command_buffer->apply(pipeline_state, RENDER_TARGET_BUFFER_BUFFER);
-	
-	auto world_matrix = make_scale_matrix(10.0f);
-	//auto world_matrix = make_identity_matrix();
-	auto position = Vector3(0.0f, 0.0f, -10.0f);
-	auto direction = Vector3::base_z;
-	auto view_matrix = make_look_at_matrix(position, position + direction, Vector3::base_y);
-	auto perspective_matrix = make_perspective_matrix(90, 16.0f / 9.0f, 1.0f, 1000.0f);
+	render_command_buffer->apply(&pipeline_state, RENDER_TARGET_BUFFER_BUFFER);
+	Graphics_Command_List *command_list = &render_command_buffer->graphics_command_list;
 
-	world_matrix_buffer->write((void *)&world_matrix, sizeof(Matrix4));
-	view_matrix_buffer->write((void *)&view_matrix, sizeof(Matrix4));
-	pers_matrix_buffer->write((void *)&perspective_matrix, sizeof(Matrix4));
+	auto helper = Graphics_Command_List_Helper(command_list, &root_signature);
+	helper.set_root_descriptor_table(0, 0, &render_world->world_matrices_buffer.sr_descriptor);
+	helper.set_root_descriptor_table(1, 0, &render_world->model_storage.mesh_instance_buffer.sr_descriptor);
+	helper.set_root_descriptor_table(2, 0, &render_world->model_storage.unified_vertex_buffer.sr_descriptor);
+	helper.set_root_descriptor_table(3, 0, &render_world->model_storage.unified_index_buffer.sr_descriptor);
 
-	auto &command_list = render_command_buffer->graphics_command_list;
-
-	auto helper = Binding_Helper(&command_list, &root_signature);
-
-	helper.set_root_descriptor_table(1, 0, &world_matrix_buffer->get_frame_resource()->cb_descriptor);
-	helper.set_root_descriptor_table(2, 0, &view_matrix_buffer->get_frame_resource()->cb_descriptor);
-	helper.set_root_descriptor_table(3, 0, &pers_matrix_buffer->get_frame_resource()->cb_descriptor);
-	helper.set_root_descriptor_table(0, 0, &render_sys->pipeline_resource_storage.linear_sampler_descriptor);
-	helper.set_root_descriptor_table(0, 0, &render_sys->texture.sr_descriptor);
-
-	command_list.set_vertex_buffer(render_sys->vertex_buffer);
-	command_list.set_index_buffer(render_sys->index_buffer);
-
-	render_command_buffer->draw(36);
+	Pass_Data pass_data;
+	Render_Entity *render_entity = NULL;
+	For(render_world->game_render_entities, render_entity) {
+		pass_data.parameter0 = render_entity->mesh_idx;
+		pass_data.parameter1 = render_entity->world_matrix_idx;
+		command_list->set_graphics_constants(0, pass_data);
+		command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+	}
 }
 
 struct Mipmaps_Info {
@@ -165,9 +150,9 @@ void Generate_Mipmaps::setup_root_signature(Gpu_Device &device)
 
 void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys)
 {
-	compute_command_list->set_root_signature(root_signature);
+	compute_command_list->set_compute_root_signature(root_signature);
 	compute_command_list->set_descriptor_heaps(render_sys->descriptors_pool.cbsrua_descriptor_heap, render_sys->descriptors_pool.sampler_descriptor_heap);
-	compute_command_list->set_root_descriptor_table(3, render_sys->pipeline_resource_storage.linear_sampler_descriptor);
+	compute_command_list->set_compute_root_descriptor_table(3, render_sys->pipeline_resource_storage.linear_sampler_descriptor);
 	
 	Array<UA_Descriptor> unordered_access_descriptors;
 	unordered_access_descriptors.resize(12);
@@ -213,9 +198,9 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 			if (dest_height == 0)
 				dest_height = 1;
 			
-			compute_command_list->set_constants(0, Mipmaps_Info(mip_level, number_mips, 1.0f / dest_width, 1.0f / dest_height));
-			compute_command_list->set_root_descriptor_table(1, texture->sr_descriptor);
-			compute_command_list->set_root_descriptor_table(2, unordered_access_descriptors[mip_level + 1]);
+			compute_command_list->set_compute_constants(0, Mipmaps_Info(mip_level, number_mips, 1.0f / dest_width, 1.0f / dest_height));
+			compute_command_list->set_compute_root_descriptor_table(1, texture->sr_descriptor);
+			compute_command_list->set_compute_root_descriptor_table(2, unordered_access_descriptors[mip_level + 1]);
 			compute_command_list->dispatch(dest_width, dest_height);
 
 			mip_level += number_mips;
@@ -227,24 +212,6 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 		unordered_access_descriptors.reset();
 	}
 }
-
-void Forwar_Light_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
-{
-
-}
-
-void Forwar_Light_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
-{
-}
-
-void Forwar_Light_Pass::setup_root_signature(Gpu_Device &device)
-{
-}
-
-void Forwar_Light_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args)
-{
-}
-
 
 //#include <assert.h>
 //

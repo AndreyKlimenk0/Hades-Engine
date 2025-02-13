@@ -9,6 +9,7 @@
 #include "../libs/os/input.h"
 
 struct Engine;
+struct Render_Primitive_List;
 
 typedef u32 Gui_ID;
 typedef u32 Window_Style;
@@ -212,8 +213,7 @@ struct Gui_Window_Theme {
 	const char *header_text = NULL;
 };
 
-namespace gui
-{
+namespace gui {
 	void init_gui(Engine *engine);
 	void handle_events();
 	void shutdown();
@@ -262,7 +262,7 @@ namespace gui
 
 	bool button(const char *text, bool *state = NULL);
 	bool radio_button(const char *name, bool *state);
-	//bool image_button(u32 width, u32 height, Texture2D *texture);
+	bool image_button(Image *image);
 
 	bool add_tab(const char *tab_name);
 
