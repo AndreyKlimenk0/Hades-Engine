@@ -1,5 +1,16 @@
+#include <string.h>
+
 #include "root_signature.h"
+#include "../../libs/str.h"
+#include "../../sys/sys.h"
 #include "../../sys/utils.h"
+
+static const char *str_shader_register_types[] = {
+	"Constant Buffer",
+	"Shader Resource",
+	"Unordered Access",
+	"Sampler"
+};
 
 static D3D12_SHADER_VISIBILITY shader_visibility_to_d3d12(Shader_Visibility shader_visibility)
 {
@@ -81,7 +92,12 @@ void Root_Signature::store_parameter_index(u32 parameter_index, u32 shader_regis
 	assert(shader_register <= HLSL_REGISTRE_COUNT);
 	assert(shader_space <= HLSL_SPACE_COUNT);
 
-	parameter_index_table[shader_register][shader_space].set_parameter_index(parameter_index, parameter_type);
+	u32 temp = parameter_index_table[shader_register][shader_space].get_parameter_index(parameter_type);
+	if (temp != UINT_MAX) {
+		error("A parameter index has already been set for the shader register(register = {}, space = {}, type = {}).", shader_register, shader_space, str_shader_register_types[static_cast<u32>(parameter_type)]);
+	} else {
+		parameter_index_table[shader_register][shader_space].set_parameter_index(parameter_index, parameter_type);
+	}
 }
 
 u32 Root_Signature::get_parameter_index(u32 shader_register, u32 shader_space, Root_Parameter_Type parameter_type)
@@ -89,19 +105,23 @@ u32 Root_Signature::get_parameter_index(u32 shader_register, u32 shader_space, R
 	assert(shader_register <= HLSL_REGISTRE_COUNT);
 	assert(shader_space <= HLSL_SPACE_COUNT);
 
-	return parameter_index_table[shader_register][shader_space].get_parameter_index(parameter_type);
+	u32 parameter_index = parameter_index_table[shader_register][shader_space].get_parameter_index(parameter_type);
+	if (parameter_index == UINT_MAX) {
+		error("A parameter index has not been set yet for the shader register(register = {}, space = {}, type = {}).", shader_register, shader_space, str_shader_register_types[static_cast<u32>(parameter_type)]);
+	}
+	return parameter_index;
 }
 
-u32 Root_Signature::add_32bit_constants_parameter(u32 shader_register, u32 shader_space, u32 number_32bit_values, Shader_Visibility shader_visibility)
+u32 Root_Signature::add_32bit_constants_parameter(u32 shader_register, u32 shader_space, u32 struct_size, Shader_Visibility shader_visibility)
 {
-	assert(number_32bit_values % 4 == 0);
+	assert(struct_size % 4 == 0);
 
 	D3D12_ROOT_PARAMETER1 parameter;
 	ZeroMemory(&parameter, sizeof(D3D12_ROOT_PARAMETER1));
 	parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 	parameter.Constants.ShaderRegister = shader_register;
 	parameter.Constants.RegisterSpace = shader_space;
-	parameter.Constants.Num32BitValues = number_32bit_values / 4;
+	parameter.Constants.Num32BitValues = struct_size / 4;
 	parameter.ShaderVisibility = shader_visibility_to_d3d12(shader_visibility);
 
 	u32 parameter_index = parameters.push(parameter);
@@ -142,6 +162,31 @@ u32 Root_Signature::add_sr_descriptor_table_parameter(u32 shader_register, u32 s
 	descriptor_range->BaseShaderRegister = shader_register;
 	descriptor_range->RegisterSpace = shader_space;
 	descriptor_range->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	ranges.push(descriptor_range);
+
+	D3D12_ROOT_PARAMETER1 parameter;
+	ZeroMemory(&parameter, sizeof(D3D12_ROOT_PARAMETER1));
+	parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	parameter.DescriptorTable.NumDescriptorRanges = 1;
+	parameter.DescriptorTable.pDescriptorRanges = ranges.last();
+	parameter.ShaderVisibility = shader_visibility_to_d3d12(shader_visibility);
+
+	u32 parameter_index = parameters.push(parameter);
+	store_parameter_index(parameter_index, shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE);
+	return parameter_index;
+}
+
+u32 Root_Signature::add_sr_descriptor_table_parameter_xxx(u32 shader_register, u32 shader_space, Shader_Visibility shader_visibility)
+{
+	D3D12_DESCRIPTOR_RANGE1 *descriptor_range = new D3D12_DESCRIPTOR_RANGE1();
+	ZeroMemory(descriptor_range, sizeof(D3D12_DESCRIPTOR_RANGE1));
+	descriptor_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptor_range->NumDescriptors = UINT_MAX;
+	descriptor_range->BaseShaderRegister = shader_register;
+	descriptor_range->RegisterSpace = shader_space;
+	descriptor_range->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+	descriptor_range->Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 
 	ranges.push(descriptor_range);
 
@@ -302,6 +347,15 @@ void Root_Signature::add_descriptor_range(u32 shader_register, Sampler_Descripto
 	descriptor_range.OffsetInDescriptorsFromTableStart = descriptor.index;
 
 	descriptor_ranges->push(descriptor_range);
+}
+
+Root_Paramter_Index::~Root_Paramter_Index()
+{
+}
+
+Root_Paramter_Index::Root_Paramter_Index()
+{
+	memset((void *)this, 0xff, sizeof(Root_Paramter_Index));
 }
 
 void Root_Paramter_Index::set_parameter_index(u32 parameter_index, Root_Parameter_Type parameter_type)

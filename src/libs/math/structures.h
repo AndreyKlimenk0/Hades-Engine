@@ -35,6 +35,9 @@ struct Size3D {
 	Size3D<T> &operator=(const Size3D<U> &other);
 
 	T &operator[](u32 index);
+	
+	template <typename U>
+	operator Size3D<U>();
 
 	Size3D<T> &operator+=(const T &value);
 	Size3D<T> &operator-=(const T &value);
@@ -257,6 +260,13 @@ T &Size3D<T>::operator[](u32 index)
 {
 	assert(index < 3);
 	return ((T *)this)[index];
+}
+
+template<typename T>
+template<typename U>
+inline Size3D<T>::operator Size3D<U>()
+{
+	return Size3D<U>(static_cast<U>(width), static_cast<U>(height), static_cast<U>(depth));
 }
 
 template<typename T>

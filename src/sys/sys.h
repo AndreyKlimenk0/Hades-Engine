@@ -7,6 +7,8 @@
 #include "../win32/win_console.h"
 #include "../libs/number_types.h"
 
+#define ASSERT_MSG(expr, str_msg) (assert((expr) && (str_msg)))
+
 void report_info(const char *info_message);
 void report_error(const char *error_message);
 char *get_error_message_from_error_code(DWORD hr);

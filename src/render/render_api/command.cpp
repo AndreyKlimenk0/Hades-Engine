@@ -77,17 +77,6 @@ void Command_List::reset(u32 command_allocator_index)
     HR(d3d12_object->Reset(command_allocator.get(), NULL));
 }
 
-void Command_List::set_pipeline_state(Pipeline_State &pipeline_state)
-{
-    d3d12_object->SetPipelineState(pipeline_state.get());
-}
-
-void Command_List::set_descriptor_heaps(CBSRUA_Descriptor_Heap &cbsrua_descriptor_heap, Sampler_Descriptor_Heap &sampler_descriptor_heap)
-{
-    ID3D12DescriptorHeap *descriptor_heaps[] = { cbsrua_descriptor_heap.get(), sampler_descriptor_heap.get() };
-    d3d12_object->SetDescriptorHeaps(2, descriptor_heaps);
-}
-
 void Command_List::create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type)
 {
     assert(number_command_allocators > 0);
@@ -97,6 +86,93 @@ void Command_List::create(Gpu_Device &device, u32 number_command_allocators, Com
         command_allocators[i].create(device, command_list_type);
     }
     device->CreateCommandList(0, command_list_type_to_d3d12(command_list_type), command_allocators.first().get(), NULL, IID_PPV_ARGS(release_and_get_address()));
+    close();
+}
+
+ID3D12CommandList *Command_List::get_d3d12_command_list()
+{
+    return get();
+}
+
+Copy_Command_List::Copy_Command_List()
+{
+}
+
+Copy_Command_List::~Copy_Command_List()
+{
+}
+
+void Copy_Command_List::resource_barrier(const Resource_Barrier &resource_barrier)
+{
+    D3D12_RESOURCE_BARRIER d3d12_resource_barrier = const_cast<Resource_Barrier &>(resource_barrier).d3d12_resource_barrier();
+    d3d12_object->ResourceBarrier(1, &d3d12_resource_barrier);
+}
+
+void Copy_Command_List::copy_resources(GPU_Resource &dest, GPU_Resource &source)
+{
+    d3d12_object->CopyResource(dest.get(), source.get());
+}
+
+void Copy_Command_List::copy_buffer_to_texture(Texture &dest, Buffer &source, Subresource_Footprint &subresource_footprint)
+{
+    D3D12_TEXTURE_COPY_LOCATION dest_texture_copy_location;
+    ZeroMemory(&dest_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+    dest_texture_copy_location.pResource = dest.get();
+    dest_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dest_texture_copy_location.SubresourceIndex = subresource_footprint.subresource_index;
+
+    D3D12_TEXTURE_COPY_LOCATION source_texture_copy_location;
+    ZeroMemory(&source_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+    source_texture_copy_location.pResource = source.get();
+    source_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    source_texture_copy_location.PlacedFootprint.Footprint = subresource_footprint.d3d12_subresource_footprint();
+
+    d3d12_object->CopyTextureRegion(&dest_texture_copy_location, 0, 0, 0, &source_texture_copy_location, NULL);
+}
+
+void Copy_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
+{
+    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_COPY);
+}
+
+Compute_Command_List::Compute_Command_List()
+{
+}
+
+Compute_Command_List::~Compute_Command_List()
+{
+}
+
+void Compute_Command_List::set_pipeline_state(Compute_Pipeline_State &pipeline_state)
+{
+    d3d12_object->SetPipelineState(pipeline_state.get());
+}
+
+void Compute_Command_List::set_compute_root_signature(Root_Signature &root_signature)
+{
+    d3d12_object->SetComputeRootSignature(root_signature.get());
+}
+
+void Compute_Command_List::set_descriptor_heaps(CBSRUA_Descriptor_Heap &cbsrua_descriptor_heap, Sampler_Descriptor_Heap &sampler_descriptor_heap)
+{
+    ID3D12DescriptorHeap *descriptor_heaps[] = { cbsrua_descriptor_heap.get(), sampler_descriptor_heap.get() };
+    d3d12_object->SetDescriptorHeaps(2, descriptor_heaps);
+}
+
+void Compute_Command_List::set_compute_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor)
+{
+    assert(const_cast<GPU_Descriptor &>(base_descriptor).valid());
+    d3d12_object->SetComputeRootDescriptorTable(parameter_index, base_descriptor.gpu_handle);
+}
+
+void Compute_Command_List::dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z)
+{
+    d3d12_object->Dispatch(group_count_x, group_count_y, group_count_z);
+}
+
+void Compute_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
+{
+    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_COMPUTE);
 }
 
 Graphics_Command_List::Graphics_Command_List()
@@ -105,11 +181,6 @@ Graphics_Command_List::Graphics_Command_List()
 
 Graphics_Command_List::~Graphics_Command_List()
 {
-}
-
-ID3D12CommandList *Graphics_Command_List::get_d3d12_command_list()
-{
-    return static_cast<ID3D12CommandList *>(get());
 }
 
 void Graphics_Command_List::set_primitive_type(Primitive_Type primitive_type)
@@ -154,12 +225,6 @@ void Graphics_Command_List::clear_depth_stencil_view(DS_Descriptor &descriptor, 
     d3d12_object->ClearDepthStencilView(descriptor.cpu_handle, D3D12_CLEAR_FLAG_DEPTH, depth, stencil, 0, NULL);
 }
 
-void Graphics_Command_List::resource_barrier(const Resource_Barrier &resource_barrier)
-{
-    D3D12_RESOURCE_BARRIER d3d12_resource_barrier = const_cast<Resource_Barrier &>(resource_barrier).d3d12_resource_barrier();
-    d3d12_object->ResourceBarrier(1, &d3d12_resource_barrier);
-}
-
 void Graphics_Command_List::set_vertex_buffer(GPU_Resource &resource)
 {
     D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
@@ -180,15 +245,35 @@ void Graphics_Command_List::set_index_buffer(GPU_Resource &resource)
     d3d12_object->IASetIndexBuffer(&index_buffer_view);
 }
 
-void Graphics_Command_List::set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor)
+void Graphics_Command_List::set_pipeline_state(Graphics_Pipeline_State &pipeline_state)
 {
-    d3d12_object->SetGraphicsRootDescriptorTable(parameter_index, descriptor.gpu_handle);
+    d3d12_object->SetPipelineState(pipeline_state.get());
+}
+
+void Graphics_Command_List::set_graphics_root_signature(Root_Signature &root_signature)
+{
+    d3d12_object->SetGraphicsRootSignature(root_signature.get());
+}
+
+void Graphics_Command_List::set_graphics_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor)
+{
+    assert(const_cast<GPU_Descriptor &>(base_descriptor).valid());
+    d3d12_object->SetGraphicsRootDescriptorTable(parameter_index, base_descriptor.gpu_handle);
+}
+
+void Graphics_Command_List::draw(u32 vertex_count)
+{
+    d3d12_object->DrawInstanced(vertex_count, 1, 0, 0);
+}
+
+void Graphics_Command_List::draw_indexed(u32 index_count)
+{
+    d3d12_object->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
 }
 
 void Graphics_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
 {
     Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_DIRECT);
-    close(); // Should Command_List::create call this function ?
 }
 
 Command_Queue::Command_Queue()
@@ -199,8 +284,17 @@ Command_Queue::~Command_Queue()
 {
 }
 
+void Command_Queue::flush_gpu()
+{
+    u64 fence_value = 0;
+    signal(fence_value, fence);
+    fence.wait_for_gpu(fence_value);
+}
+
 void Command_Queue::create(Gpu_Device &device, Command_List_Type command_list_type)
 {
+    fence.create(device);
+
     D3D12_COMMAND_QUEUE_DESC command_queue_desc;
     ZeroMemory(&command_queue_desc, sizeof(D3D12_COMMAND_QUEUE_DESC));
     command_queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -220,87 +314,4 @@ u64 Command_Queue::signal(u64 &fence_value, Fence &fence)
     u64 fence_value_for_signal = ++fence_value;
     d3d12_object->Signal(fence.get(), fence_value_for_signal);
     return fence_value_for_signal;
-}
-
-Copy_Command_List::Copy_Command_List()
-{
-}
-
-Copy_Command_List::~Copy_Command_List()
-{
-}
-
-void Copy_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
-{
-    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_COPY);
-    close(); // Should Command_List::create call this function ?
-}
-
-ID3D12CommandList *Copy_Command_List::get_d3d12_command_list()
-{
-    return static_cast<ID3D12CommandList *>(get());
-}
-
-void Copy_Command_List::copy_resources(GPU_Resource &dest, GPU_Resource &source)
-{
-    d3d12_object->CopyResource(dest.get(), source.get());
-}
-
-void Copy_Command_List::copy_texture(GPU_Resource &dest, GPU_Resource &source, Subresource_Info &subresource_info)
-{
-    D3D12_TEXTURE_COPY_LOCATION dest_texture_copy_location;
-    ZeroMemory(&dest_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
-    dest_texture_copy_location.pResource = dest.get();
-    dest_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    dest_texture_copy_location.SubresourceIndex = 0;
-
-    D3D12_SUBRESOURCE_FOOTPRINT source_texture_footprint;
-    ZeroMemory(&source_texture_footprint, sizeof(D3D12_SUBRESOURCE_FOOTPRINT));
-    source_texture_footprint.Width = subresource_info.width;
-    source_texture_footprint.Height = subresource_info.height;
-    source_texture_footprint.Depth = subresource_info.depth;
-    source_texture_footprint.Format = subresource_info.format;
-    source_texture_footprint.RowPitch = subresource_info.row_pitch;
-
-    D3D12_TEXTURE_COPY_LOCATION source_texture_copy_location;
-    ZeroMemory(&source_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
-    source_texture_copy_location.pResource = source.get();
-    source_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    source_texture_copy_location.PlacedFootprint.Footprint = source_texture_footprint;
-    
-    d3d12_object->CopyTextureRegion(&dest_texture_copy_location, 0, 0, 0, &source_texture_copy_location, NULL);
-}
-
-Compute_Command_List::Compute_Command_List()
-{
-}
-
-Compute_Command_List::~Compute_Command_List()
-{
-}
-
-void Compute_Command_List::set_root_descriptor_table(u32 parameter_index, GPU_Descriptor &descriptor)
-{
-    d3d12_object->SetComputeRootDescriptorTable(parameter_index, descriptor.gpu_handle);
-}
-
-void Compute_Command_List::set_root_signature(Root_Signature &root_signature)
-{
-    d3d12_object->SetComputeRootSignature(root_signature.get());
-}
-
-void Compute_Command_List::dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z)
-{
-    d3d12_object->Dispatch(group_count_x, group_count_y, group_count_z);
-}
-
-void Compute_Command_List::create(Gpu_Device &device, u32 number_command_allocators)
-{
-    Command_List::create(device, number_command_allocators, COMMAND_LIST_TYPE_COMPUTE);
-    close(); // Should Command_List::create call this function ?
-}
-
-ID3D12CommandList *Compute_Command_List::get_d3d12_command_list()
-{
-    return static_cast<ID3D12CommandList *>(get());
 }

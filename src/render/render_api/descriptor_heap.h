@@ -2,6 +2,7 @@
 #define RENDER_API_DESCRIPTOR_HEAP
 
 #include <d3d12.h>
+#include <limits.h>
 
 #include "base.h"
 #include "sampler.h"
@@ -14,8 +15,10 @@ struct CPU_Descriptor {
 	CPU_Descriptor(u32 heap_index, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle);
 	virtual ~CPU_Descriptor();
 
-	u32 index = 0;
+	u32 index = UINT_MAX;
 	D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
+	
+	virtual bool valid();
 };
 
 struct GPU_Descriptor : CPU_Descriptor {
@@ -24,6 +27,7 @@ struct GPU_Descriptor : CPU_Descriptor {
 	virtual ~GPU_Descriptor();
 	
 	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle;
+	bool valid();
 };
 
 struct CB_Descriptor : GPU_Descriptor {
@@ -73,6 +77,7 @@ struct Descriptor_Heap : D3D12_Object<ID3D12DescriptorHeap> {
 	D3D12_CPU_DESCRIPTOR_HANDLE get_cpu_handle(u32 descriptor_index);
 	D3D12_GPU_DESCRIPTOR_HANDLE get_gpu_handle(u32 descriptor_index);
 	D3D12_GPU_DESCRIPTOR_HANDLE get_base_gpu_handle();
+	GPU_Descriptor get_base_gpu_descriptor();
 };
 
 struct CBSRUA_Descriptor_Heap : Descriptor_Heap {

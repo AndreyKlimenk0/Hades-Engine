@@ -27,33 +27,53 @@ struct Compute_Command_List;
 #include "render_api/texture.h"
 #include "../libs/structures/array.h"
 
+//struct Render_Pass {
+//	Render_Pass() = default;
+//	virtual ~Render_Pass() = default;
+//
+//	String name;
+//	Root_Signature root_signature;
+//	Graphics_Pipeline_State pipeline_state;
+//	
+//	virtual void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage) = 0;
+//	virtual void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL) = 0;
+//};
+
 struct Render_Pass {
-	Render_Pass() = default;
-	virtual ~Render_Pass() = default;
+	Render_Pass();
+	virtual ~Render_Pass();
 
 	String name;
 	Root_Signature root_signature;
-	Pipeline_State pipeline_state;
+
+	virtual void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	virtual void setup_root_signature(Gpu_Device &device);
+	virtual void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager) = 0;
+};
+
+struct Graphics_Pass : Render_Pass {
+	using Render_Pass::Render_Pass;
+	Graphics_Pipeline_State pipeline_state;
 	
-	virtual void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage) = 0;
 	virtual void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL) = 0;
 };
 
-struct Box_Pass : Render_Pass {
-	CPU_Buffer *world_matrix_buffer;
-	CPU_Buffer *view_matrix_buffer;
-	CPU_Buffer *pers_matrix_buffer;
-
-	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
-	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
-	void setup_root_signature(Gpu_Device &device);
-	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
+template <u32 N = 1>
+struct Compute_Pass : Render_Pass {
+	using Render_Pass::Render_Pass;
+	Compute_Pipeline_State pipeline_states[N];
 };
 
-template <u32 N = 1>
-struct Compute_Pass {
-	Root_Signature root_signature;
-	Pipeline_State pipeline_states[N];
+struct Box_Pass : Graphics_Pass {
+	Box_Pass();
+	~Box_Pass();
+
+	CPU_Buffer *pass_data = NULL;
+
+	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	void setup_root_signature(Gpu_Device &device);
+	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
+	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
 };
 
 struct Generate_Mipmaps : Compute_Pass<4> {
@@ -61,15 +81,6 @@ struct Generate_Mipmaps : Compute_Pass<4> {
 	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
 	void setup_root_signature(Gpu_Device &device);
 	void generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys);
-};
-
-struct Forwar_Light_Pass : Render_Pass {
-	Gpu_Buffer shadow_atlas_info_cbuffer;
-
-	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
-	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
-	void setup_root_signature(Gpu_Device &device);
-	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
 };
 
 //struct Shader;

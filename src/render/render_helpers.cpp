@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <dxgi.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+//#define STB_IMAGE_IMPLEMENTATION
+//#include <stb_image.h>
 
 #include "render_helpers.h"
 #include "../sys/sys.h"
@@ -257,4 +257,50 @@ u32 dxgi_format_size(DXGI_FORMAT format)
 		default:
 			return 0;
 	}
+}
+
+Compute_Command_List_Helper::Compute_Command_List_Helper(Compute_Command_List *command_list, Root_Signature *root_signature) : command_list(command_list), root_signature(root_signature)
+{
+}
+
+Compute_Command_List_Helper::~Compute_Command_List_Helper()
+{
+}
+
+void Compute_Command_List_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, CB_Descriptor *base_decriptor)
+{
+	command_list->set_compute_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER), *base_decriptor);
+}
+
+void Compute_Command_List_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, SR_Descriptor *base_decriptor)
+{
+	command_list->set_compute_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), *base_decriptor);
+}
+
+void Compute_Command_List_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, Sampler_Descriptor *base_decriptor)
+{
+	command_list->set_compute_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SAMPLER), *base_decriptor);
+}
+
+Graphics_Command_List_Helper::Graphics_Command_List_Helper(Graphics_Command_List *command_list, Root_Signature *root_signature) : command_list(command_list), root_signature(root_signature) 
+{
+}
+
+Graphics_Command_List_Helper::~Graphics_Command_List_Helper()
+{
+}
+
+void Graphics_Command_List_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, CB_Descriptor *base_decriptor)
+{
+	command_list->set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER), *base_decriptor);
+}
+
+void Graphics_Command_List_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, SR_Descriptor *base_decriptor)
+{
+	command_list->set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), *base_decriptor);
+}
+
+void Graphics_Command_List_Helper::set_root_descriptor_table(u32 shader_register, u32 shader_space, Sampler_Descriptor *base_decriptor)
+{
+	command_list->set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SAMPLER), *base_decriptor);
 }
