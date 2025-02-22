@@ -91,7 +91,7 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World
 	Graphics_Command_List *command_list = &render_command_buffer->graphics_command_list;
 
 	auto helper = Graphics_Command_List_Helper(command_list, &root_signature);
-	helper.set_root_descriptor_table(0, 0, &render_world->world_matrices_buffer.sr_descriptor);
+	helper.set_root_descriptor_table(0, 0, &render_world->world_matrices_buffer[render_sys->back_buffer_index].sr_descriptor);
 	helper.set_root_descriptor_table(1, 0, &render_world->model_storage.mesh_instance_buffer.sr_descriptor);
 	helper.set_root_descriptor_table(2, 0, &render_world->model_storage.unified_vertex_buffer.sr_descriptor);
 	helper.set_root_descriptor_table(3, 0, &render_world->model_storage.unified_index_buffer.sr_descriptor);

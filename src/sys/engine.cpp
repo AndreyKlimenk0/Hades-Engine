@@ -190,6 +190,7 @@ void Engine::init(Win32_Window *window)
 	// The editor dependence on render system because it uses the window size for initializing gui.
 	editor.init(this);
 	
+	game_world.init();
 	render_world.init(this);
 
 	init_commands();
@@ -215,6 +216,9 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
+	editor.handle_events();
+
+	editor.update();
 	render_world.update();
 
 	render_sys.render();

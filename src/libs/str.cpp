@@ -276,14 +276,16 @@ char *to_string(double num)
 
 char *to_string(bool val)
 {
-	static char _true[] = "true";
-	static char _false[] = "false";
-	return val ? _true : _false;
+	u32 str_len = val ? 5 : 6;
+	char *str = new char [str_len];
+	memset((void *)str, 0, str_len);
+	strcpy(str, val ? "true" : "false");
+	return str;
 }
 
 char *to_string(const char *string)
 {
-	return const_cast<char *>(string);
+	return _strdup(string);
 }
 
 char *to_string(char c)

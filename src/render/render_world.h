@@ -219,7 +219,7 @@ struct Render_World {
 	//Gpu_RWStruct_Buffer voxels_sb;
 	//Gpu_Struct_Buffer lights_struct_buffer;
 	//Gpu_Struct_Buffer cascaded_shadows_info_sb;
-	Buffer world_matrices_buffer;
+	Buffer world_matrices_buffer[3];
 	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
 
