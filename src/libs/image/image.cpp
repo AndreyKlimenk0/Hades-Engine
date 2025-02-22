@@ -49,10 +49,11 @@ void Image::clear()
 	file_name.free();
 }
 
-void Image::create(u32 image_width, u32 image_height, DXGI_FORMAT image_format)
+void Image::allocate_memory(u32 image_width, u32 image_height, DXGI_FORMAT image_format)
 {
 	assert(image_width > 0);
 	assert(image_height > 0);
+	assert(image_format != DXGI_FORMAT_UNKNOWN);
 
 	clear();
 	width = image_width;
@@ -80,7 +81,7 @@ void Image::fill(const Color &color)
 
 bool Image::valid()
 {
-	return (width != 0) && (height != 0) && (format != DXGI_FORMAT_UNKNOWN && data);
+	return (width != 0) && (height != 0) && (format != DXGI_FORMAT_UNKNOWN) && data;
 }
 
 bool load_image_from_file(const char *full_path_to_file, DXGI_FORMAT format, Image *image)

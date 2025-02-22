@@ -130,7 +130,7 @@ void Model_Storage::init()
 	u32 height = 200;
 
 	Image color_buffer;
-	color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+	color_buffer.allocate_memory(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
 	default_textures.normal = create_texture_from_image(&color_buffer);
@@ -399,6 +399,7 @@ void upload_data_in_gpu_buffer(Array<T> &array, Buffer *buffer)
 
 	Copy_Command_List upload_command_list;
 	upload_command_list.create(gpu_device, 1);
+	upload_command_list.set_name(L"Copy buffer command list");
 	upload_command_list.reset(0);
 
 	upload_command_list.resource_barrier(Transition_Resource_Barrier(*buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST));
@@ -411,12 +412,19 @@ void upload_data_in_gpu_buffer(Array<T> &array, Buffer *buffer)
 
 	Graphics_Command_List graphics_command_list;
 	graphics_command_list.create(gpu_device, 1);
+	graphics_command_list.set_name(L"Graphics bufffer command list");
 	graphics_command_list.reset(0);
 	graphics_command_list.resource_barrier(Transition_Resource_Barrier(*buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_ALL_SHADER_RESOURCE));
 	graphics_command_list.close();
 
+	Fence fence2;
+	fence2.create(render_sys->gpu_device);
+	u64 fence_value2 = 0;
+
 	render_sys->graphics_queue.execute_command_list(graphics_command_list);
-	render_sys->graphics_queue.flush_gpu();
+	auto new_fence_value2 = render_sys->graphics_queue.signal(fence_value2, fence2);
+	fence2.wait_for_gpu(new_fence_value2);
+	//render_sys->graphics_queue.flush_gpu();
 }
 
 inline u32 find_max_mip_level(u32 width, u32 height)
@@ -710,7 +718,8 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
-	upload_data_in_gpu_buffer(render_entity_world_matrices, &world_matrices_buffer);
+	Buffer *buffer = &world_matrices_buffer[render_sys->back_buffer_index];
+	upload_data_in_gpu_buffer(render_entity_world_matrices, buffer);
 }
 
 void Render_World::update_global_illumination()
