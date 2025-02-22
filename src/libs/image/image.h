@@ -21,7 +21,7 @@ struct Image {
 	Image &operator=(const Image &other);
 
 	void clear();
-	void create(u32 image_width, u32 image_height, DXGI_FORMAT image_format);
+	void allocate_memory(u32 image_width, u32 image_height, DXGI_FORMAT image_format);
 	void fill(const Color &color);
 	bool valid();
 };
