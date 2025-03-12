@@ -10,6 +10,7 @@
 #include "../sys/engine.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "../libs/memory/base.h"
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 

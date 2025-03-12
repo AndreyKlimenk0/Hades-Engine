@@ -3,35 +3,50 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include "../memory/pool_allocator.h"
 
 template <typename T>
 struct Queue_Node {
+	Queue_Node() = default;
+	~Queue_Node() = default;
+
 	T item;
-	Queue_Node* next;
-	Queue_Node(const T& item, Queue_Node* next) : item(item), next(next) {}
+	Queue_Node *next = NULL;
+	Queue_Node(const T &item, Queue_Node *next) : item(item), next(next) {}
 };
 
 template <typename T>
 struct Queue {
-	Queue_Node<T>* first = NULL;
-	Queue_Node<T>* last = NULL;
-
-	Queue() {}
+	Queue();
 	~Queue();
+
+	Queue_Node<T> *first = NULL;
+	Queue_Node<T> *last = NULL;
+
+	Pool_Allocator<Queue_Node<T>> pool_allocator;
+
 	void push(const T& item);
 	void clear();
 	bool is_empty();
-	T pop();
+	void pop();
+	T &front();
 };
+
+template<typename T>
+Queue<T>::Queue()
+{
+	pool_allocator.init(16);
+}
 
 template<typename T>
 Queue<T>::~Queue()
 {
 	clear();
+	pool_allocator.free_memory();
 }
 
 template <typename T>
-inline bool Queue<T>::is_empty()
+bool Queue<T>::is_empty()
 {
 	return first == NULL;
 }
@@ -39,7 +54,8 @@ inline bool Queue<T>::is_empty()
 template <typename T>
 void Queue<T>::push(const T& item)
 {
-	Queue_Node<T>* node = new Queue_Node<T>(item, NULL);
+	Queue_Node<T> *node = pool_allocator.allocate();
+	node->item = item;
 	if (last) {
 		last->next = node;
 	}
@@ -50,35 +66,38 @@ void Queue<T>::push(const T& item)
 }
 
 template<typename T>
-inline void Queue<T>::clear()
+void Queue<T>::clear()
 {
 	Queue_Node<T>* node = NULL;
 	while (first) {
 		node = first;
 		first = first->next;
 		node->next = NULL;
-		delete node;
+		pool_allocator.free(node);
 	}
 	first = NULL;
 	last = NULL;
 }
 
 template <typename T>
-T Queue<T>::pop()
+void Queue<T>::pop()
 {
-	assert(first != NULL);
-	T item;
 	Queue_Node<T>* node = first;
 	if (node) {
 		first = node->next;
-		item = node->item;
 		if (node == last) {
 			last = NULL;
 		}
 		node->next = NULL;
-		delete node;
+		pool_allocator.free(node);
 	}
-	return item;
+}
+
+template<typename T>
+T &Queue<T>::front()
+{
+	assert(!is_empty());
+	return first->item;
 }
 
 #endif

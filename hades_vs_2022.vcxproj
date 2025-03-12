@@ -109,7 +109,7 @@
     <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\release</OutDir>
-    <IntDir>$(SolutionDir)build\relese</IntDir>
+    <IntDir>$(SolutionDir)build\release</IntDir>
     <TargetName>hades</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VTune profiling|x64'">
@@ -197,7 +197,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>assimp-vc143-mt.lib;d3d11.lib;d3dcompiler.lib;zlib.lib;freetype.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mt.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib;d3d12.lib;zlib.lib;freetype.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -423,6 +423,8 @@
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\structures.h" />
     <ClInclude Include="src\libs\math\vector.h" />
+    <ClInclude Include="src\libs\memory\base.h" />
+    <ClInclude Include="src\libs\memory\pool_allocator.h" />
     <ClInclude Include="src\libs\mesh_loader.h" />
     <ClInclude Include="src\libs\number_types.h" />
     <ClInclude Include="src\libs\os\event.h" />
@@ -470,7 +472,6 @@
     <ClInclude Include="src\sys\file_tracking.h" />
     <ClInclude Include="src\sys\level.h" />
     <ClInclude Include="src\sys\map.h" />
-    <ClInclude Include="src\sys\memory.h" />
     <ClInclude Include="src\sys\profiling.h" />
     <ClInclude Include="src\sys\sys.h" />
     <ClInclude Include="src\sys\sys_local.h" />

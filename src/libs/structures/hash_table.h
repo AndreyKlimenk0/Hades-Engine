@@ -22,7 +22,15 @@ inline u32 hash(const char *string, int factor, int table_count)
 	return (u32)(hash % table_count);
 }
 
-inline u32 hash(int number, int table_count, int attempt)
+//inline u32 hash(int number, int table_count, int attempt)
+//{
+//	char *str = to_string(number);
+//	u32 h = hash(str, table_count, attempt);
+//	free_string(str);
+//	return h;
+//}
+
+inline u32 hash(u64 number, int table_count, int attempt)
 {
 	char *str = to_string(number);
 	u32 h = hash(str, table_count, attempt);

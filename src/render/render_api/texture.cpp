@@ -3,7 +3,7 @@
 #include "texture.h"
 #include "../render_helpers.h"
 #include "../../sys/utils.h"
-#include "../../sys/memory.h"
+#include "../../libs/memory/base.h"
 
 Texture::Texture()
 {

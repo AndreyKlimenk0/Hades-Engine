@@ -852,10 +852,22 @@
     <ClInclude Include="src\render\render_api\buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\sys\memory.h">
+    <ClInclude Include="src\render\render_api\sampler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\render_api\sampler.h">
+    <ClInclude Include="src\libs\image\image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\structures\tree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sys\profiling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\memory\base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\memory\pool_allocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
