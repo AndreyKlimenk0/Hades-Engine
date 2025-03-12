@@ -1,7 +1,7 @@
 #include "test.h"
 #include "../libs/str.h"
 #include "../sys/sys.h"
-#include "../sys/memory.h"
+#include "../libs/memory/base.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/tree.h"
 
