@@ -6,10 +6,10 @@
 #include "base.h"
 #include "resource.h"
 #include "descriptor_heap.h"
-#include "../../sys/memory.h"
+#include "../../libs/memory/base.h"
 
 #include "../../libs/number_types.h"
-#include "../../sys/memory.h"
+
 
 struct Buffer_Desc {
 	Buffer_Desc();
