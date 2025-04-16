@@ -83,7 +83,8 @@ GPU_Resource::GPU_Resource()
 
 GPU_Resource::~GPU_Resource()
 {
-    free();
+    count = 0;
+    stride = 0;
 }
 
 void GPU_Resource::create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value)
@@ -116,7 +117,7 @@ void GPU_Resource::free()
 {
     count = 0;
     stride = 0;
-    release();
+    D3D12_Object<ID3D12Resource>::release();
 }
 
 void GPU_Resource::set_resource_parameters(u32 _count, u32 _stride)

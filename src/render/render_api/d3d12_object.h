@@ -29,7 +29,6 @@ inline D3D12_Object<T>::D3D12_Object()
 template<typename T>
 inline D3D12_Object<T>::~D3D12_Object()
 {
-	release();
 }
 
 template<typename T>
