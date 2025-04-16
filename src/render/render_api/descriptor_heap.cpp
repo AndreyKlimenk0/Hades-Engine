@@ -135,7 +135,7 @@ CB_Descriptor CBSRUA_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, 
     return CB_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource)
+SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource, u32 mipmap_level)
 {
     assert(0 < resource.count);
     assert(0 < resource.stride);
@@ -159,7 +159,7 @@ SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, 
         case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
             assert(resource_desc.DepthOrArraySize == 1);
             shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            shader_resource_view_desc.Texture2D.MostDetailedMip = 0;
+            shader_resource_view_desc.Texture2D.MostDetailedMip = mipmap_level;
             shader_resource_view_desc.Texture2D.MipLevels = resource_desc.MipLevels;
             shader_resource_view_desc.Texture2D.PlaneSlice = 0;
             shader_resource_view_desc.Texture2D.ResourceMinLODClamp = 0.0f;
@@ -174,7 +174,7 @@ SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, 
     return SR_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-UA_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource, u32 mip_level)
+UA_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, GPU_Resource &resource, u32 mipmap_level)
 {
     D3D12_RESOURCE_DESC resource_desc = resource.d3d12_resource_desc();
 
@@ -186,7 +186,7 @@ UA_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, 
         case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
             assert(resource_desc.DepthOrArraySize == 1);
             unordered_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-            unordered_access_view_desc.Texture2D.MipSlice = mip_level;
+            unordered_access_view_desc.Texture2D.MipSlice = mipmap_level;
             break;
         }
         default: {

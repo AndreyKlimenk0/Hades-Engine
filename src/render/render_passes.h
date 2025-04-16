@@ -9,7 +9,7 @@
 //#include "../libs/math/matrix.h"
 //#include "../libs/math/structures.h"
 
-struct CPU_Buffer;
+struct Buffer;
 struct Shader_Manager;
 struct Pipeline_Resource_Storage;
 struct Render_World;
@@ -24,20 +24,8 @@ struct Compute_Command_List;
 #include "render_api/pipeline_state.h"
 
 //For generating mipmaps
-#include "render_api/texture.h"
+#include "render_resources.h"
 #include "../libs/structures/array.h"
-
-//struct Render_Pass {
-//	Render_Pass() = default;
-//	virtual ~Render_Pass() = default;
-//
-//	String name;
-//	Root_Signature root_signature;
-//	Graphics_Pipeline_State pipeline_state;
-//	
-//	virtual void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage) = 0;
-//	virtual void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL) = 0;
-//};
 
 struct Render_Pass {
 	Render_Pass();
@@ -45,41 +33,32 @@ struct Render_Pass {
 
 	String name;
 	Root_Signature root_signature;
+	Pipeline_State pipeline_states[4];
 
-	virtual void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	Buffer *pass_data_constant_buffer = NULL;
+
+	virtual void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
 	virtual void setup_root_signature(Gpu_Device &device);
 	virtual void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager) = 0;
+	virtual void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL) = 0;
 };
 
-struct Graphics_Pass : Render_Pass {
-	using Render_Pass::Render_Pass;
-	Graphics_Pipeline_State pipeline_state;
-	
-	virtual void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL) = 0;
-};
-
-template <u32 N = 1>
-struct Compute_Pass : Render_Pass {
-	using Render_Pass::Render_Pass;
-	Compute_Pipeline_State pipeline_states[N];
-};
-
-struct Box_Pass : Graphics_Pass {
+struct Box_Pass : Render_Pass {
 	Box_Pass();
 	~Box_Pass();
 
-	CPU_Buffer *pass_data = NULL;
-
-	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
 	void setup_root_signature(Gpu_Device &device);
 	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
-	void render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args = NULL);
+	void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL);
 };
 
-struct Generate_Mipmaps : Compute_Pass<4> {
+struct Generate_Mipmaps : Render_Pass {
+
 	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
 	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
 	void setup_root_signature(Gpu_Device &device);
+	void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL) {}
 	void generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys);
 };
 

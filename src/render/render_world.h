@@ -16,8 +16,7 @@
 #include "../libs/structures/array.h"
 #include "../libs/structures/hash_table.h"
 
-#include "render_api\buffer.h"
-#include "render_api\texture.h"
+#include "render_resources.h"
 
 struct Engine;
 struct Render_Pass;
@@ -80,9 +79,9 @@ struct Model_Storage {
 	Hash_Table<String_Id, Texture *> textures_table;
 	Hash_Table<String_Id, Pair<Render_Model *, u32>> render_models_table;
 
-	Buffer unified_vertex_buffer;
-	Buffer unified_index_buffer;
-	Buffer mesh_instance_buffer;
+	Buffer *unified_vertex_buffer = NULL;
+	Buffer *unified_index_buffer = NULL;
+	Buffer *mesh_instance_buffer = NULL;
 
 	void init();
 	void release_all_resources();
@@ -219,7 +218,7 @@ struct Render_World {
 	//Gpu_RWStruct_Buffer voxels_sb;
 	//Gpu_Struct_Buffer lights_struct_buffer;
 	//Gpu_Struct_Buffer cascaded_shadows_info_sb;
-	Buffer world_matrices_buffer[3];
+	Buffer *world_matrices_buffer = NULL;
 	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
 

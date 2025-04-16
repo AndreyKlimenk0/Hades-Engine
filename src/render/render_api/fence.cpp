@@ -4,23 +4,32 @@
 
 Fence::Fence()
 {
-	fence_handle = create_event_handle();
+	handle = create_event_handle();
 }
 
 Fence::~Fence()
 {
-	close_event_handle(fence_handle);
+	close_event_handle(handle);
 }
 
-void Fence::create(Gpu_Device &device, u64 initial_value)
+void Fence::create(Gpu_Device &device, u64 initial_expected_value)
 {
-	HR(device->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(release_and_get_address())));
+	expected_value = initial_expected_value;
+	HR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(release_and_get_address())));
 }
 
-void Fence::wait_for_gpu(u64 fence_value)
+bool Fence::wait_for_gpu()
 {
-	if (d3d12_object->GetCompletedValue() < fence_value) {
-		d3d12_object->SetEventOnCompletion(fence_value, fence_handle);
-		WaitForSingleObject(fence_handle, INFINITE);
+	u64 completed_value = d3d12_object->GetCompletedValue();
+	if (completed_value < expected_value) {
+		d3d12_object->SetEventOnCompletion(expected_value, handle);
+		WaitForSingleObject(handle, INFINITE);
+		return true;
 	}
+	return false;
+}
+
+u64 Fence::increment_expected_value()
+{
+	return ++expected_value;
 }

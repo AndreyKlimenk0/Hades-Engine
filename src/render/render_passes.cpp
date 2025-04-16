@@ -23,8 +23,9 @@ Render_Pass::~Render_Pass()
 {
 }
 
-void Render_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+void Render_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
 {
+	name = pass_name;
 	setup_root_signature(device);
 	setup_pipeline(device, shader_manager);
 }
@@ -40,23 +41,27 @@ void Render_Pass::setup_root_signature(Gpu_Device &device)
 
 Box_Pass::Box_Pass()
 {
-	name = "Box pass";
 }
 
 Box_Pass::~Box_Pass()
 {
 }
 
+struct Box_Pass_Data {
 
-void Box_Pass::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+};
+
+void Box_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
 {
-	pipeline_resource_storage->request_constant_buffer(sizeof(Pass_Data));
-	Render_Pass::init(device, shader_manager, NULL);
+	Buffer_Desc buffer_desc = Buffer_Desc(sizeof(Pass_Data), CONSTANT_BUFFER_ALIGNMENT);
+	pass_data_constant_buffer = pipeline_resource_storage->create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
+	Render_Pass::init(pass_name, device, shader_manager, pipeline_resource_storage);
 }
 
 void Box_Pass::setup_root_signature(Gpu_Device &device)
 {
 	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	//root_signature.add_cb_descriptor_table_parameter(0, 0); //Pass data
 	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
 	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
 	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
@@ -79,30 +84,32 @@ void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_man
 	graphics_pipeline_desc.viewport.width = 1900;
 	graphics_pipeline_desc.viewport.height = 980;
 
-	pipeline_state.create(gpu_device, graphics_pipeline_desc);
+	pipeline_states[0].create(gpu_device, graphics_pipeline_desc);
 }
 
-void Box_Pass::render(Render_Command_Buffer *render_command_buffer, Render_World *render_world, void *args)
+void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *context, void *args)
 {
-	Render_System *render_sys = (Render_System *)args;
-	Size_u32 window = render_sys->get_window_size();
-
-	render_command_buffer->apply(&pipeline_state, RENDER_TARGET_BUFFER_BUFFER);
-	Graphics_Command_List *command_list = &render_command_buffer->graphics_command_list;
-
-	auto helper = Graphics_Command_List_Helper(command_list, &root_signature);
-	helper.set_root_descriptor_table(0, 0, &render_world->world_matrices_buffer[render_sys->back_buffer_index].sr_descriptor);
-	helper.set_root_descriptor_table(1, 0, &render_world->model_storage.mesh_instance_buffer.sr_descriptor);
-	helper.set_root_descriptor_table(2, 0, &render_world->model_storage.unified_vertex_buffer.sr_descriptor);
-	helper.set_root_descriptor_table(3, 0, &render_world->model_storage.unified_index_buffer.sr_descriptor);
+	Render_World *render_world = (Render_World *)context;
+	
+	render_command_buffer->apply(&pipeline_states[0], RENDER_TARGET_BACK_BUFFER);
+	
+	//render_command_buffer->bind_buffer(0, 0, CONSTANT_BUFFER_REGISTER, pass_data_constant_buffer);
+	render_command_buffer->bind_buffer(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer);
+	render_command_buffer->bind_buffer(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer);
+	render_command_buffer->bind_buffer(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer);
+	render_command_buffer->bind_buffer(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer);
 
 	Pass_Data pass_data;
 	Render_Entity *render_entity = NULL;
 	For(render_world->game_render_entities, render_entity) {
 		pass_data.parameter0 = render_entity->mesh_idx;
 		pass_data.parameter1 = render_entity->world_matrix_idx;
-		command_list->set_graphics_constants(0, pass_data);
-		command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		render_command_buffer->graphics_command_list.set_graphics_constants(0, pass_data);
+		//pass_data_constant_buffer->write(&pass_data, sizeof(Pass_Data), 256);
+		
+		//render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		//render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		render_command_buffer->graphics_command_list.get()->DrawInstanced(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count(), 1, 0, 0);
 	}
 }
 
@@ -153,24 +160,18 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 	compute_command_list->set_compute_root_signature(root_signature);
 	compute_command_list->set_descriptor_heaps(render_sys->descriptors_pool.cbsrua_descriptor_heap, render_sys->descriptors_pool.sampler_descriptor_heap);
 	compute_command_list->set_compute_root_descriptor_table(3, render_sys->pipeline_resource_storage.linear_sampler_descriptor);
-	
-	Array<UA_Descriptor> unordered_access_descriptors;
-	unordered_access_descriptors.resize(12);
 
 	for (u32 i = 0; i < textures.count; i++) {
 		Texture *texture = textures[i];
 
-		Texture2D_Desc texture_desc = texture->get_texture2d_desc();
+		Texture_Desc texture_desc = texture->get_texture2d_desc();
+		texture_desc.dimension = TEXTURE_DIMENSION_2D;
 		if ((texture_desc.width == 0) || (texture_desc.height == 0)) {
 			continue;
 		}
 
 		if (texture_desc.miplevels <= 1) {
 			continue;
-		}
-
-		for (u32 mip_level = 0; mip_level < texture_desc.miplevels; mip_level++) {
-			unordered_access_descriptors.push(render_sys->descriptors_pool.allocate_ua_descriptor(texture, mip_level));
 		}
 
 		u32 prev_pipeline_index = UINT_MAX;
@@ -199,17 +200,12 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 				dest_height = 1;
 			
 			compute_command_list->set_compute_constants(0, Mipmaps_Info(mip_level, number_mips, 1.0f / dest_width, 1.0f / dest_height));
-			compute_command_list->set_compute_root_descriptor_table(1, texture->sr_descriptor);
-			compute_command_list->set_compute_root_descriptor_table(2, unordered_access_descriptors[mip_level + 1]);
+			compute_command_list->set_compute_root_descriptor_table(1, texture->get_shader_resource_descriptor());
+			compute_command_list->set_compute_root_descriptor_table(2, texture->get_unordered_access_descriptor(mip_level + 1));
 			compute_command_list->dispatch(dest_width, dest_height);
 
 			mip_level += number_mips;
 		}
-
-		for (u32 i = 0; i < unordered_access_descriptors.count; i++) {
-			render_sys->descriptors_pool.free(&unordered_access_descriptors[i]);
-		}
-		unordered_access_descriptors.reset();
 	}
 }
 

@@ -29,26 +29,6 @@ static const String HLSL_FILE_EXTENSION = "cso";
 static const u32 SHADERS_COUNT = sizeof(Shader_Manager::Shader_List) / sizeof(Shader);
 static Shader_Table_Entiry shader_table[SHADERS_COUNT];
 
-inline wchar_t *to_wstring(const char *string)
-{
-	assert(string);
-
-	size_t converted_characters = 0;
-	size_t str_len = strlen(string);
-	wchar_t *wstr_buffer = new wchar_t[str_len + 1];
-
-	errno_t result = mbstowcs_s(&converted_characters, wstr_buffer, str_len + 1, string, str_len);
-	assert(result == 0);
-	assert(converted_characters == (str_len + 1));
-
-	return wstr_buffer;
-}
-
-void free_string(const wchar_t *string)
-{
-	delete[] string;
-}
-
 inline Shader *find_shader_in_shader_table(const char *shader_name)
 {
 	for (u32 i = 0; i < SHADERS_COUNT; i++) {

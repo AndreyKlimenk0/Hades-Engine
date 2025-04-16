@@ -20,6 +20,7 @@
 
 static void load_meshes(Array<String> &mesh_names)
 {
+	BEGIN_TASK("Load meshes");
 	Game_World *game_world = Engine::get_game_world();
 	Render_World *render_world = Engine::get_render_world();
 	Variable_Service *variable_service = Engine::get_variable_service();
@@ -65,6 +66,7 @@ static void load_meshes(Array<String> &mesh_names)
 			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), delta_time_in_milliseconds());
 		}
 	}
+	END_TASK();
 }
 
 static void load_level(Array<String> &command_args)

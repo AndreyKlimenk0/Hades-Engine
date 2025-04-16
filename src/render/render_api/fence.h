@@ -12,10 +12,12 @@ struct Fence : D3D12_Object<ID3D12Fence> {
 	Fence();
 	~Fence();
 
-	HANDLE fence_handle;
+	u64 expected_value;
+	HANDLE handle;
 	
-	void create(Gpu_Device &device, u64 initial_value = 0);
-	void wait_for_gpu(u64 fence_value);
+	void create(Gpu_Device &device, u64 initial_expected_value = 0);
+	bool wait_for_gpu();
+	u64 increment_expected_value();
 };
 
 #endif

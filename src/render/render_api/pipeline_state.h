@@ -141,24 +141,24 @@ struct Compute_Pipeline_Desc {
 	Shader *compute_shader = NULL;
 };
 
-struct Compute_Pipeline_State : D3D12_Object<ID3D12PipelineState> {
-	Compute_Pipeline_State();
-	~Compute_Pipeline_State();
-	
-	Root_Signature *root_signature = NULL;
-
-	void create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc);
+enum Pipeline_Type {
+	PIPELINE_TYPE_UNKNOWN,
+	PIPELINE_TYPE_GRAPHICS,
+	PIPELINE_TYPE_COMPUTE
 };
 
-struct Graphics_Pipeline_State : D3D12_Object<ID3D12PipelineState> {
-	Graphics_Pipeline_State();
-	~Graphics_Pipeline_State();
+struct Pipeline_State : D3D12_Object<ID3D12PipelineState> {
+	Pipeline_State();
+	~Pipeline_State();
 
-	Primitive_Type primitive_type;
+	Pipeline_Type type = PIPELINE_TYPE_UNKNOWN;
+	Primitive_Type primitive_type = PRIMITIVE_TYPE_UNKNOWN;
 	Root_Signature *root_signature = NULL;
 	Viewport viewport;
 	Rect_u32 clip_rect;
 
+	void create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc);
 	void create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc);
 };
+
 #endif

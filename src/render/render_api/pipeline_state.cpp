@@ -293,16 +293,19 @@ D3D12_INPUT_LAYOUT_DESC Graphics_Pipeline_Desc::d3d12_input_layout()
     return { input_elements.items, input_elements.count };
 }
 
-Compute_Pipeline_State::Compute_Pipeline_State()
+Pipeline_State::Pipeline_State()
 {
 }
 
-Compute_Pipeline_State::~Compute_Pipeline_State()
+Pipeline_State::~Pipeline_State()
 {
 }
 
-void Compute_Pipeline_State::create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc)
+void Pipeline_State::create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc)
 {
+    assert(type == PIPELINE_TYPE_UNKNOWN);
+
+    type = PIPELINE_TYPE_COMPUTE;
     root_signature = compute_pipeline_desc.root_signature;
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12_compute_pipeline_state;
@@ -313,18 +316,11 @@ void Compute_Pipeline_State::create(Gpu_Device &device, Compute_Pipeline_Desc &c
     HR(device->CreateComputePipelineState(&d3d12_compute_pipeline_state, IID_PPV_ARGS(release_and_get_address())));
 }
 
-Graphics_Pipeline_State::Graphics_Pipeline_State()
+void Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc)
 {
-}
+    assert(type == PIPELINE_TYPE_UNKNOWN);
 
-Graphics_Pipeline_State::~Graphics_Pipeline_State()
-{
-}
-
-void Graphics_Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc)
-{
-    assert(graphics_pipeline_desc.render_targets_formats.count > 0);
-
+    type = PIPELINE_TYPE_GRAPHICS;
     primitive_type = graphics_pipeline_desc.primitive_type;
     root_signature = graphics_pipeline_desc.root_signature;
     viewport = graphics_pipeline_desc.viewport;
