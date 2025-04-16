@@ -38,6 +38,7 @@ struct GPU_Resource : D3D12_Object<ID3D12Resource> {
 
 	void create(Gpu_Device &device, GPU_Heap_Type heap_type, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value);
 	void create(Gpu_Device &device, GPU_Heap heap, u64 offset, Resource_State resource_state, D3D12_RESOURCE_DESC &resource_desc, Clear_Value &clear_value);
+	void free();
 	void set_resource_parameters(u32 _count, u32 _stride);
 	void get_resource_footprint(Resource_Footprint &resource_footprint);
 	Subresource_Footprint get_subresource_footprint(u32 subresource_index);

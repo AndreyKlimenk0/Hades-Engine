@@ -7,14 +7,17 @@
 #include "resource.h"
 #include "descriptor_heap.h"
 #include "../../libs/memory/base.h"
-
 #include "../../libs/number_types.h"
 
+enum Resource_Alignment : u32 {
+	NO_RESOURCE_ALIGNMENT = 0,
+	CONSTANT_BUFFER_ALIGNMENT = 256,
+};
 
 struct Buffer_Desc {
 	Buffer_Desc();
-	Buffer_Desc(u32 size);
-	Buffer_Desc(u32 count, u32 stride);
+	Buffer_Desc(u32 stride, Resource_Alignment alignment = NO_RESOURCE_ALIGNMENT);
+	Buffer_Desc(u32 count, u32 stride, Resource_Alignment alignment = NO_RESOURCE_ALIGNMENT);
 	~Buffer_Desc();
 
 	u32 count = 0;
@@ -24,9 +27,9 @@ struct Buffer_Desc {
 	u32 get_size();
 };
 
-struct Buffer : GPU_Resource {
-	Buffer();
-	~Buffer();
+struct GPU_Buffer : GPU_Resource {
+	GPU_Buffer();
+	~GPU_Buffer();
 
 	CB_Descriptor cb_descriptor;
 	SR_Descriptor sr_descriptor;
@@ -43,7 +46,7 @@ struct Buffer : GPU_Resource {
 };
 
 template<typename T>
-inline void Buffer::write(const T &data, u32 alignment)
+inline void GPU_Buffer::write(const T &data, u32 alignment)
 {
 	u32 aligned_size = align_address<u32>(sizeof(T), alignment);
 	assert(aligned_size <= GPU_Resource::get_size());

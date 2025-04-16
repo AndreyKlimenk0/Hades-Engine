@@ -216,6 +216,8 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
+	render_sys.begin_frame();
+
 	editor.handle_events();
 
 	editor.update();
@@ -229,6 +231,7 @@ void Engine::frame()
 	frame_time = milliseconds_counter() - start_time;
 
 	//print("Fps", fps);
+	END_FRAME();
 }
 
 void Engine::shutdown()

@@ -113,7 +113,7 @@ void Copy_Command_List::copy_resources(GPU_Resource &dest, GPU_Resource &source)
     d3d12_object->CopyResource(dest.get(), source.get());
 }
 
-void Copy_Command_List::copy_buffer_to_texture(Texture &dest, Buffer &source, Subresource_Footprint &subresource_footprint)
+void Copy_Command_List::copy_buffer_to_texture(GPU_Resource &dest, GPU_Buffer &source, Subresource_Footprint &subresource_footprint)
 {
     D3D12_TEXTURE_COPY_LOCATION dest_texture_copy_location;
     ZeroMemory(&dest_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
@@ -143,7 +143,7 @@ Compute_Command_List::~Compute_Command_List()
 {
 }
 
-void Compute_Command_List::set_pipeline_state(Compute_Pipeline_State &pipeline_state)
+void Compute_Command_List::set_pipeline_state(Pipeline_State &pipeline_state)
 {
     d3d12_object->SetPipelineState(pipeline_state.get());
 }
@@ -214,15 +214,15 @@ void Graphics_Command_List::set_clip_rect(const Rect_u32 &clip_rect)
     d3d12_object->RSSetScissorRects(1, &d3d12_clip_rect);
 }
 
-void Graphics_Command_List::clear_render_target_view(RT_Descriptor &descriptor, const Color &color)
+void Graphics_Command_List::clear_render_target_view(const RT_Descriptor &descriptor, const Color &color)
 {
     float temp[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
     d3d12_object->ClearRenderTargetView(descriptor.cpu_handle, temp, 0, NULL);
 }
 
-void Graphics_Command_List::clear_depth_stencil_view(DS_Descriptor &descriptor, float depth, u8 stencil)
+void Graphics_Command_List::clear_depth_stencil_view(const DS_Descriptor &descriptor, float depth, u8 stencil)
 {
-    d3d12_object->ClearDepthStencilView(descriptor.cpu_handle, D3D12_CLEAR_FLAG_DEPTH, depth, stencil, 0, NULL);
+    d3d12_object->ClearDepthStencilView(descriptor.cpu_handle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, depth, stencil, 0, NULL);
 }
 
 void Graphics_Command_List::set_vertex_buffer(GPU_Resource &resource)
@@ -243,11 +243,6 @@ void Graphics_Command_List::set_index_buffer(GPU_Resource &resource)
     index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
     
     d3d12_object->IASetIndexBuffer(&index_buffer_view);
-}
-
-void Graphics_Command_List::set_pipeline_state(Graphics_Pipeline_State &pipeline_state)
-{
-    d3d12_object->SetPipelineState(pipeline_state.get());
 }
 
 void Graphics_Command_List::set_graphics_root_signature(Root_Signature &root_signature)
@@ -284,11 +279,16 @@ Command_Queue::~Command_Queue()
 {
 }
 
+void Command_Queue::wait(Fence &fence)
+{
+    d3d12_object->Wait(fence.get(), fence.expected_value);
+}
+
 void Command_Queue::flush_gpu()
 {
-    u64 fence_value = 0;
-    signal(fence_value, fence);
-    fence.wait_for_gpu(fence_value);
+    fence.increment_expected_value();
+    signal(fence);
+    fence.wait_for_gpu();
 }
 
 void Command_Queue::create(Gpu_Device &device, Command_List_Type command_list_type)
@@ -309,9 +309,7 @@ void Command_Queue::execute_command_list(Command_List &command_list)
     d3d12_object->ExecuteCommandLists(1, command_lists);
 }
 
-u64 Command_Queue::signal(u64 &fence_value, Fence &fence)
+void Command_Queue::signal(Fence &fence)
 {
-    u64 fence_value_for_signal = ++fence_value;
-    d3d12_object->Signal(fence.get(), fence_value_for_signal);
-    return fence_value_for_signal;
+    d3d12_object->Signal(fence.get(), fence.expected_value);
 }

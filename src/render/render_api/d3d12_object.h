@@ -1,6 +1,8 @@
 #ifndef RENDER_API_D3D12_OBJECT_H
 #define RENDER_API_D3D12_OBJECT_H
 
+#include "../../libs/str.h"
+
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
 
@@ -11,7 +13,7 @@ struct D3D12_Object {
 
 	ComPtr<T> d3d12_object;
 
-	void set_name(const wchar_t *name);
+	void set_debug_name(const char *name);
 
 	u32 release();
 	T *get();
@@ -27,12 +29,15 @@ inline D3D12_Object<T>::D3D12_Object()
 template<typename T>
 inline D3D12_Object<T>::~D3D12_Object()
 {
+	release();
 }
 
 template<typename T>
-inline void D3D12_Object<T>::set_name(const wchar_t *name)
+inline void D3D12_Object<T>::set_debug_name(const char *name)
 {
-	d3d12_object->SetName(name);
+	wchar_t *temp = to_wstring(name);
+	d3d12_object->SetName(temp);
+	free_string(temp);
 }
 
 template<typename T>

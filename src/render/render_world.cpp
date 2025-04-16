@@ -6,7 +6,6 @@
 
 #include "../sys/sys.h"
 #include "../sys/engine.h"
-#include "../sys/memory.h"
 
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -279,10 +278,10 @@ void Model_Storage::upload_models_in_gpu()
 		merge(&unified_index_list, &render_models[i]->mesh.indices);
 
 		GPU_Material material;
-		material.normal_idx = render_models[i]->normal_texture->sr_descriptor.index;
-		material.diffuse_idx = render_models[i]->diffuse_texture->sr_descriptor.index;
-		material.specular_idx = render_models[i]->specular_texture->sr_descriptor.index;
-		material.displacement_idx = render_models[i]->displacement_texture->sr_descriptor.index;
+		material.normal_idx = render_models[i]->normal_texture->get_shader_resource_descriptor().index;
+		material.diffuse_idx = render_models[i]->diffuse_texture->get_shader_resource_descriptor().index;
+		material.specular_idx = render_models[i]->specular_texture->get_shader_resource_descriptor().index;
+		material.displacement_idx = render_models[i]->displacement_texture->get_shader_resource_descriptor().index;
 
 		Mesh_Instance mesh_instance;
 		mesh_instance.vertex_count = render_models[i]->mesh.vertex_count();
@@ -297,86 +296,44 @@ void Model_Storage::upload_models_in_gpu()
 		index_offset += render_models[i]->mesh.index_count();
 	}
 
-	Buffer unified_vertex_upload_buffer;
-	Buffer unified_index_upload_buffer;
-	Buffer unified_mesh_instance_upload_buffer;
+	if (!unified_vertex_buffer || (unified_vertex_buffer->get_size() < unified_vertex_list.get_size())) {
+		DELETE_PTR(unified_vertex_buffer);
+		auto temp = align_address<u32>(unified_vertex_list.get_size(), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+		
+		//Buffer_Desc buffer_desc = Buffer_Desc(unified_vertex_list.get_size());
+		Buffer_Desc buffer_desc = Buffer_Desc(unified_vertex_list.count, unified_vertex_list.get_stride());
+		
+		//Buffer_Desc buffer_desc = Buffer_Desc(unified_vertex_list.get_size());
+		unified_vertex_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
+		unified_vertex_buffer->set_debug_name("Unified vertex buffer");
+		unified_vertex_buffer->write((void *)unified_vertex_list.items, unified_vertex_list.get_size());
+	}
 
-	unified_vertex_upload_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(unified_vertex_list.count, unified_vertex_list.get_stride()));
-	unified_index_upload_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(unified_index_list.count, unified_index_list.get_stride()));
-	unified_mesh_instance_upload_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(unified_mesh_instances_list.count, unified_mesh_instances_list.get_stride()));
+	if (!unified_index_buffer || (unified_index_buffer->get_size() < unified_index_buffer->get_size())) {
+		DELETE_PTR(unified_index_buffer);
+		//u32 x1 = align_address<u32>(unified_index_list.get_size(), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+		//u32 x2 = unified_index_list.get_size();
+		
+		Buffer_Desc buffer_desc = Buffer_Desc(unified_index_list.count, unified_index_list.get_stride());
+		
+		unified_index_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
+		unified_index_buffer->set_debug_name("Unified index buffer");
+		unified_index_buffer->write((void *)unified_index_list.items, unified_index_list.get_size());
+	}
 
-	u8 *ptr = unified_vertex_upload_buffer.map();
-	memcpy((void *)ptr, (void *)unified_vertex_list.items, unified_vertex_list.get_size());
-	unified_vertex_upload_buffer.unmap();
-
-	ptr = unified_index_upload_buffer.map();
-	memcpy((void *)ptr, (void *)unified_index_list.items, unified_index_list.get_size());
-	unified_index_upload_buffer.unmap();
-
-	ptr = unified_mesh_instance_upload_buffer.map();
-	memcpy((void *)ptr, (void *)unified_mesh_instances_list.items, unified_mesh_instances_list.get_size());
-	unified_mesh_instance_upload_buffer.unmap();
-
-	unified_vertex_buffer.release();
-	unified_index_buffer.release();
-	mesh_instance_buffer.release();
-
-	render_sys->descriptors_pool.free(&unified_vertex_buffer.sr_descriptor);
-	render_sys->descriptors_pool.free(&unified_index_buffer.sr_descriptor);
-	render_sys->descriptors_pool.free(&mesh_instance_buffer.sr_descriptor);
-
-	unified_vertex_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COMMON, Buffer_Desc(unified_vertex_list.count, unified_vertex_list.get_stride()));
-	unified_index_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COMMON, Buffer_Desc(unified_index_list.count, unified_index_list.get_stride()));
-	mesh_instance_buffer.create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COMMON, Buffer_Desc(unified_mesh_instances_list.count, unified_mesh_instances_list.get_stride()));
-
-	unified_vertex_buffer.sr_descriptor = render_sys->descriptors_pool.allocate_sr_descriptor(&unified_vertex_buffer);
-	unified_index_buffer.sr_descriptor = render_sys->descriptors_pool.allocate_sr_descriptor(&unified_index_buffer);
-	mesh_instance_buffer.sr_descriptor = render_sys->descriptors_pool.allocate_sr_descriptor(&mesh_instance_buffer);
-
-	Copy_Command_List upload_command_list;
-	upload_command_list.create(gpu_device, 1);
-	upload_command_list.reset(0);
-
-	upload_command_list.resource_barrier(Transition_Resource_Barrier(unified_vertex_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST));
-	upload_command_list.resource_barrier(Transition_Resource_Barrier(unified_index_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST));
-	upload_command_list.resource_barrier(Transition_Resource_Barrier(mesh_instance_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST));
-
-	upload_command_list.copy_resources(unified_vertex_buffer, unified_vertex_upload_buffer);
-	upload_command_list.copy_resources(unified_index_buffer, unified_index_upload_buffer);
-	upload_command_list.copy_resources(mesh_instance_buffer, unified_mesh_instance_upload_buffer);
-
-	upload_command_list.resource_barrier(Transition_Resource_Barrier(unified_vertex_buffer, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON));
-	upload_command_list.resource_barrier(Transition_Resource_Barrier(unified_index_buffer, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON));
-	upload_command_list.resource_barrier(Transition_Resource_Barrier(mesh_instance_buffer, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON));
-	upload_command_list.close();
-
-	Fence fence;
-	fence.create(render_sys->gpu_device);
-	u64 fence_value = 0;
-
-	render_sys->copy_queue.execute_command_list(upload_command_list);
-	auto new_fence_value = render_sys->copy_queue.signal(fence_value, fence);
-	fence.wait_for_gpu(new_fence_value);
-
-	Graphics_Command_List graphics_command_list;
-	graphics_command_list.create(gpu_device, 1);
-	graphics_command_list.reset(0);
-	graphics_command_list.resource_barrier(Transition_Resource_Barrier(unified_vertex_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_ALL_SHADER_RESOURCE));
-	graphics_command_list.resource_barrier(Transition_Resource_Barrier(unified_index_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_ALL_SHADER_RESOURCE));
-	graphics_command_list.resource_barrier(Transition_Resource_Barrier(mesh_instance_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_ALL_SHADER_RESOURCE));
-	graphics_command_list.close();
-
-	Fence fence2;
-	fence2.create(render_sys->gpu_device);
-	u64 fence_value2 = 0;
-
-	render_sys->graphics_queue.execute_command_list(graphics_command_list);
-	auto new_fence_value2 = render_sys->graphics_queue.signal(fence_value2, fence2);
-	fence2.wait_for_gpu(new_fence_value2);
+	if (!mesh_instance_buffer || (mesh_instance_buffer->get_size() < mesh_instance_buffer->get_size())) {
+		DELETE_PTR(mesh_instance_buffer);
+		
+		Buffer_Desc buffer_desc = Buffer_Desc(unified_mesh_instances_list.count, unified_mesh_instances_list.get_stride());
+		
+		mesh_instance_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
+		mesh_instance_buffer->set_debug_name("Mesh instance buffer");
+		mesh_instance_buffer->write((void *)unified_mesh_instances_list.items, unified_mesh_instances_list.get_size());
+	}
 }
 
 template <typename T>
-void upload_data_in_gpu_buffer(Array<T> &array, Buffer *buffer)
+void upload_data_in_gpu_buffer(Array<T> &array, GPU_Buffer *buffer)
 {
 	if (array.is_empty()) {
 		return;
@@ -384,7 +341,7 @@ void upload_data_in_gpu_buffer(Array<T> &array, Buffer *buffer)
 	Gpu_Device &gpu_device = Engine::get_render_system()->gpu_device;
 	Render_System *render_sys = Engine::get_render_system();
 
-	Buffer temp_buffer;
+	GPU_Buffer temp_buffer;
 	temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(array.count, array.get_stride()));
 
 	u8 *ptr = temp_buffer.map();
@@ -400,7 +357,7 @@ void upload_data_in_gpu_buffer(Array<T> &array, Buffer *buffer)
 
 	Copy_Command_List upload_command_list;
 	upload_command_list.create(gpu_device, 1);
-	upload_command_list.set_name(L"Copy buffer command list");
+	upload_command_list.set_debug_name("Copy buffer command list");
 	upload_command_list.reset(0);
 
 	upload_command_list.resource_barrier(Transition_Resource_Barrier(*buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST));
@@ -413,7 +370,7 @@ void upload_data_in_gpu_buffer(Array<T> &array, Buffer *buffer)
 
 	Graphics_Command_List graphics_command_list;
 	graphics_command_list.create(gpu_device, 1);
-	graphics_command_list.set_name(L"Graphics bufffer command list");
+	graphics_command_list.set_debug_name("Graphics bufffer command list");
 	graphics_command_list.reset(0);
 	graphics_command_list.resource_barrier(Transition_Resource_Barrier(*buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_ALL_SHADER_RESOURCE));
 	graphics_command_list.close();
@@ -433,7 +390,7 @@ inline u32 find_max_mip_level(u32 width, u32 height)
 	return math::log2(math::max(width, height));
 }
 
-void upload_bitmap_in_buffer(u32 width, u32 height, u8 *data, DXGI_FORMAT format, Buffer &buffer)
+void upload_bitmap_in_buffer(u32 width, u32 height, u8 *data, DXGI_FORMAT format, GPU_Buffer &buffer)
 {
 	assert(data);
 	assert((width > 0) && (height > 0));
@@ -458,19 +415,20 @@ Texture *create_texture_from_image(Image *image)
 	
 	Gpu_Device &gpu_device = Engine::get_render_system()->gpu_device;
 	Render_System *render_sys = Engine::get_render_system();
+	Pipeline_Resource_Storage *pipeline_resource_storage = &render_sys->pipeline_resource_storage;
 
-	Texture2D_Desc texture_desc;
+	Texture_Desc texture_desc;
+	texture_desc.dimension = TEXTURE_DIMENSION_2D;
 	texture_desc.width = image->width;
 	texture_desc.height = image->height;
 	texture_desc.format = image->format;
 	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
 	texture_desc.miplevels = find_max_mip_level(image->width, image->height);
+	texture_desc.resource_state = RESOURCE_STATE_COPY_DEST;
 
-	Texture *texture = new Texture();
-	texture->create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST, texture_desc);
-	texture->sr_descriptor = render_sys->descriptors_pool.allocate_sr_descriptor(texture);
+	Texture *texture = pipeline_resource_storage->create_texture(&texture_desc);
 
-	Buffer temp_buffer;
+	GPU_Buffer temp_buffer;
 	temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(texture->get_size()));
 	upload_bitmap_in_buffer(image->width, image->height, image->data, image->format, temp_buffer);
 
@@ -483,13 +441,12 @@ Texture *create_texture_from_image(Image *image)
 	upload_command_list.resource_barrier(Transition_Resource_Barrier(*texture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON));
 
 	Fence fence;
-	fence.create(render_sys->gpu_device);
-	u64 fence_value = 0;
+	fence.create(render_sys->gpu_device, 1);
 
 	upload_command_list.close();
 	render_sys->copy_queue.execute_command_list(upload_command_list);
-	auto new_fence_value = render_sys->copy_queue.signal(fence_value, fence);
-	fence.wait_for_gpu(new_fence_value);
+	render_sys->copy_queue.signal(fence);
+	fence.wait_for_gpu();
 
 	return texture;
 }
@@ -498,25 +455,22 @@ Texture *Model_Storage::create_texture_from_file(const char *full_path_to_textur
 {
 	Gpu_Device &gpu_device = Engine::get_render_system()->gpu_device;
 	Render_System *render_sys = Engine::get_render_system();
-	//auto upload_command_list = &render_sys->upload_command_list;
-
-	//render_sys->execute_uploading = true;
-	//upload_command_list->reset(0);
+	Pipeline_Resource_Storage *pipeline_resource_storage = &render_sys->pipeline_resource_storage;
 
 	Image image;
 	if (load_image_from_file(full_path_to_texture, DXGI_FORMAT_R8G8B8A8_UNORM, &image)) {
-		Texture2D_Desc texture_desc;
+		Texture_Desc texture_desc;
+		texture_desc.dimension = TEXTURE_DIMENSION_2D;
 		texture_desc.width = image.width;
 		texture_desc.height = image.height;
 		texture_desc.format = image.format;
 		texture_desc.flags = ALLOW_UNORDERED_ACCESS;
 		texture_desc.miplevels = find_max_mip_level(image.width, image.height);
+		texture_desc.resource_state = RESOURCE_STATE_COPY_DEST;
 		
-		Texture *texture = new Texture();
-		texture->create(gpu_device, GPU_HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST, texture_desc);
-		texture->sr_descriptor = render_sys->descriptors_pool.allocate_sr_descriptor(texture);
+		Texture *texture = pipeline_resource_storage->create_texture(&texture_desc);
 
-		Buffer temp_buffer;
+		GPU_Buffer temp_buffer;
 		temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(texture->get_size()));
 		upload_bitmap_in_buffer(image.width, image.height, image.data, image.format, temp_buffer);
 
@@ -529,13 +483,12 @@ Texture *Model_Storage::create_texture_from_file(const char *full_path_to_textur
 		upload_command_list.resource_barrier(Transition_Resource_Barrier(*texture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON));
 
 		Fence fence;
-		fence.create(render_sys->gpu_device);
-		u64 fence_value = 0;
+		fence.create(render_sys->gpu_device, 1);
 
 		upload_command_list.close();
 		render_sys->copy_queue.execute_command_list(upload_command_list);
-		auto new_fence_value = render_sys->copy_queue.signal(fence_value, fence);
-		fence.wait_for_gpu(new_fence_value);
+		render_sys->copy_queue.signal(fence);
+		fence.wait_for_gpu();
 
 		Compute_Command_List compute_command_list;
 		compute_command_list.create(render_sys->gpu_device, 1);
@@ -545,10 +498,12 @@ Texture *Model_Storage::create_texture_from_file(const char *full_path_to_textur
 		textures.push(texture);
 		render_sys->generate_mipmaps.generate(&compute_command_list, textures, render_sys);
 
+		fence.increment_expected_value();
+
 		compute_command_list.close();
 		render_sys->compute_queue.execute_command_list(compute_command_list);
-		new_fence_value = render_sys->compute_queue.signal(fence_value, fence);
-		fence.wait_for_gpu(new_fence_value);
+		render_sys->compute_queue.signal(fence);
+		fence.wait_for_gpu();
 		
 		return texture;
 	}
@@ -719,8 +674,6 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
-	Buffer *buffer = &world_matrices_buffer[render_sys->back_buffer_index];
-	upload_data_in_gpu_buffer(render_entity_world_matrices, buffer);
 }
 
 void Render_World::update_global_illumination()
@@ -983,14 +936,11 @@ Model_Storage *Render_World::get_model_storage()
 
 void Render_World::render()
 {
-	//render_sys->render_pipeline.update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
-
-	//render_sys->render_pipeline.set_vertex_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
-	//render_sys->render_pipeline.set_pixel_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
-
-	//Render_Pass *render_pass = NULL;
-	//For(frame_render_passes, render_pass)
-	//{
-	//	render_pass->render(this, &render_sys->render_pipeline);
-	//}
+	if (!world_matrices_buffer || (world_matrices_buffer->get_size() < render_entity_world_matrices.get_size())) {
+		DELETE_PTR(world_matrices_buffer);
+		Buffer_Desc buffer_desc = Buffer_Desc(render_entity_world_matrices.count, render_entity_world_matrices.get_stride());
+		world_matrices_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
+		world_matrices_buffer->set_debug_name("World matrices");
+	}
+	world_matrices_buffer->write((void *)render_entity_world_matrices.items, render_entity_world_matrices.get_size());
 }

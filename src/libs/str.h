@@ -70,6 +70,8 @@ inline bool operator>=(const String &first, const String &second);
 inline bool operator<=(const String &first, const String &second);
 
 void free_string(const char *string);
+void free_string(const wchar_t *string);
+
 void format_(Array<char *> *array);
 void split(const char *string, const char *characters, Array<char *> *array);
 void to_upper_first_letter(String *string);
@@ -90,20 +92,25 @@ char *to_string(u64 number, int base = 10);
 char *to_string(float number);
 char *to_string(float number, u32 precision);
 char *to_string(double num);
+
 char *to_string(bool val);
-char *to_string(const char *string);
+
 char *to_string(char c);
 char *to_string(String &string);
 char *to_string(String *string);
+char *to_string(const char *string);
+wchar_t *to_wstring(const char *string);
+
 char *to_string(Vector2 *vector);
 char *to_string(Vector3 *vector);
 char *to_string(Vector4 *vector);
 char *to_string(Matrix4 *matrix);
+
 char *to_string(Rect_u32 *rect);
 char *to_string(Rect_s32 *rect);
 char *to_string(Rect_f32 *rect);
+
 char *to_string(Point_s32 *point);
-char *to_string(Matrix4 *matrix);
 
 int is_format_string(const char *string);
 
@@ -123,6 +130,16 @@ char *format(Args... args)
 	Array<char *> strings;
 	format_(&strings, args...);
 	return __do_formatting(&strings);
+}
+
+template <typename... Args>
+String format_string(Args... args)
+{
+	Array<char *> strings;
+	format_(&strings, args...);
+	String string;
+	string.move(__do_formatting(&strings));
+	return string;
 }
 
 inline String::operator const char *()

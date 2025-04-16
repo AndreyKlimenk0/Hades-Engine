@@ -27,9 +27,10 @@ struct Queue {
 
 	void push(const T& item);
 	void clear();
-	bool is_empty();
+	bool empty();
 	void pop();
 	T &front();
+	T &back();
 };
 
 template<typename T>
@@ -46,7 +47,7 @@ Queue<T>::~Queue()
 }
 
 template <typename T>
-bool Queue<T>::is_empty()
+bool Queue<T>::empty()
 {
 	return first == NULL;
 }
@@ -96,8 +97,15 @@ void Queue<T>::pop()
 template<typename T>
 T &Queue<T>::front()
 {
-	assert(!is_empty());
+	assert(!empty());
 	return first->item;
+}
+
+template<typename T>
+T &Queue<T>::back()
+{
+	assert(!empty());
+	return last->item;
 }
 
 #endif
