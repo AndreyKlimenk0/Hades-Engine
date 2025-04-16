@@ -115,7 +115,8 @@ void Pool_Allocator<T>::free(T *data)
 		ASSERT_MSG(false, "Pool_Allocator::free: Can't free memory. The allocator doesn't own this chunk of memory.");
 	}
 #endif
-	memset((void *)&memory_chunk->data, 0, sizeof(T));
+	//memset((void *)&memory_chunk->data, 0, sizeof(T));
+	memory_chunk->data.~T();
 	memory_chunk->next = head;
 	head = memory_chunk;
 }

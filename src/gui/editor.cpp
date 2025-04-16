@@ -286,7 +286,7 @@ void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbi
 	//render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
 	//render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
 
-	Vector2 sun_position = normalize(&Vector2(light->direction.x, light->direction.z));
+	Vector2 sun_position = normalize(Vector2(light->direction.x, light->direction.z));
 	sun_position *= (float)orbit_radius;
 	sun_position.y *= -1.0f;
 	sun_position += position.to_vector2();

@@ -152,6 +152,7 @@ void display_directory(Directory_Entry *directory, u32 *selected_node_counter, A
 		selected.push(temp);
 	}
 }
+
 void display_directory_tree(Directory_Entry *directory)
 {
 	u32 selected_node_counter = 0;

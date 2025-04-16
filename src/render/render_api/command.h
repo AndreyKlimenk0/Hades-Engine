@@ -6,7 +6,6 @@
 #include "base.h"
 #include "fence.h"
 #include "buffer.h"
-#include "texture.h"
 #include "resource.h"
 #include "d3d12_object.h"
 #include "pipeline_state.h"
@@ -42,7 +41,7 @@ struct Command_List : D3D12_Object<ID3D12GraphicsCommandList> {
 	void close();
 	void reset(u32 command_allocator_index);
 	
-	void create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type);
+	virtual void create(Gpu_Device &device, u32 number_command_allocators, Command_List_Type command_list_type);
 	ID3D12CommandList *get_d3d12_command_list();
 };
 
@@ -53,16 +52,17 @@ struct Copy_Command_List : Command_List {
 	void resource_barrier(const Resource_Barrier &resource_barrier);
 
 	void copy_resources(GPU_Resource &dest, GPU_Resource &source);
-	void copy_buffer_to_texture(Texture &dest, Buffer &source, Subresource_Footprint &subresource_footprint);
+	void copy_buffer_to_texture(GPU_Resource &dest, GPU_Buffer &source, Subresource_Footprint &subresource_footprint);
 
-	virtual void create(Gpu_Device &device, u32 number_command_allocators);
+	void create(Gpu_Device &device, u32 number_command_allocators);
 };
 
 struct Compute_Command_List : Copy_Command_List {
 	Compute_Command_List();
 	virtual ~Compute_Command_List();
 
-	void set_pipeline_state(Compute_Pipeline_State &pipeline_state);
+	void set_pipeline_state(Pipeline_State &pipeline_state);
+	
 	void set_compute_root_signature(Root_Signature &root_signature);
 	void set_descriptor_heaps(CBSRUA_Descriptor_Heap &cbsrua_descriptor_heap, Sampler_Descriptor_Heap &sampler_descriptor_heap);
 
@@ -72,7 +72,7 @@ struct Compute_Command_List : Copy_Command_List {
 
 	void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z = 1);
 
-	virtual void create(Gpu_Device &device, u32 number_command_allocators);
+	void create(Gpu_Device &device, u32 number_command_allocators);
 };
 
 struct Graphics_Command_List : Compute_Command_List {
@@ -83,8 +83,8 @@ struct Graphics_Command_List : Compute_Command_List {
 	void set_viewport(const Viewport &viewport);
 	void set_clip_rect(const Rect_u32 &clip_rect);
 
-	void clear_render_target_view(RT_Descriptor &descriptor, const Color &color);
-	void clear_depth_stencil_view(DS_Descriptor &descriptor, float depth = 1.0f, u8 stencil = 0);
+	void clear_render_target_view(const RT_Descriptor &descriptor, const Color &color);
+	void clear_depth_stencil_view(const DS_Descriptor &descriptor, float depth = 1.0f, u8 stencil = 0);
 
 	void set_vertex_buffer(GPU_Resource &resource);
 	void set_index_buffer(GPU_Resource &resource);
@@ -93,7 +93,6 @@ struct Graphics_Command_List : Compute_Command_List {
 	void set_graphics_constants(u32 parameter_index, const T &data);
 	void set_graphics_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor);
 	
-	void set_pipeline_state(Graphics_Pipeline_State &pipeline_state);
 	void set_graphics_root_signature(Root_Signature &root_signature);
 
 	void draw(u32 vertex_count);
@@ -108,11 +107,12 @@ struct Command_Queue : D3D12_Object<ID3D12CommandQueue> {
 
 	Fence fence;
 
+	void wait(Fence &wait_fence);
 	void flush_gpu();
 	void create(Gpu_Device &device, Command_List_Type command_list_type);
 	void execute_command_list(Command_List &command_list);
 
-	u64 signal(u64 &fence_value, Fence &fence);
+	void signal(Fence &fence);
 };
 
 template<typename T>
