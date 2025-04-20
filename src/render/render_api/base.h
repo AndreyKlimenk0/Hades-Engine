@@ -29,6 +29,8 @@ struct Clear_Value {
 	float depth;
 	u8 stencil;
 	Color color;
+
+	bool depth_stencil_set();
 };
 
 struct Viewport {

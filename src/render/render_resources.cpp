@@ -218,7 +218,7 @@ inline D3D12_RESOURCE_DIMENSION to_d3d12_resource_dimension(Texture_Dimension te
 	 return align_address<u32>(d3d12_texture_desc.Width * dxgi_format_size(d3d12_texture_desc.Format), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) * d3d12_texture_desc.Height;
  }
 
- Texture_Desc Texture::get_texture2d_desc()
+ Texture_Desc Texture::get_texture_desc()
  {
 	 D3D12_RESOURCE_DESC d3d12_texture_desc = d3d12_resource_desc();
 	 assert(d3d12_texture_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D);

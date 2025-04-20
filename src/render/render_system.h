@@ -152,15 +152,36 @@ struct Copy_Manager {
 	void execute_copying();
 };
 
-struct Pipeline_Resource_Storage {
+struct Depth_Stencil_Texture_Desc {
+	Depth_Stencil_Texture_Desc() {};
+	Depth_Stencil_Texture_Desc(u32 width, u32 height) {};
+	~Depth_Stencil_Texture_Desc() {};
+
+	u32 width = 0;
+	u32 height = 0;
+	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+	Clear_Value clear_value;
+};
+
+struct Render_Target_Texture_Desc {
+	u32 width = 0;
+	u32 height = 0;
+	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+	Clear_Value clear_value;
+};
+
+struct Resource_Manager {
 	Sampler_Descriptor point_sampler_descriptor;
 	Sampler_Descriptor linear_sampler_descriptor;
 	Sampler_Descriptor anisotropic_sampler_descriptor;
 
+	Copy_Manager *copy_manager = NULL;
+	Descriptor_Heap_Pool *descriptors_pool = NULL;
+
 	u64 frame_count = 0;
 	Buffer *frame_info_buffer = NULL;
 
-	void init(Gpu_Device &device, u32 _back_buffer_count, Descriptor_Heap_Pool *descriptor_heap_pool);
+	void init(Gpu_Device &device, Descriptor_Heap_Pool *_descriptors_pool, Copy_Manager *_copy_manager, Texture_Desc *back_buffer_texture_desc);
 	void update_frame_info_constant_buffer(GPU_Frame_Info *frame_info);
 	void begin_frame(u64 frame_number);
 	void end_frame(u64 frame_number);
@@ -168,9 +189,16 @@ struct Pipeline_Resource_Storage {
 	Array<Buffer *> buffers;
 	Array<Texture *> textures;
 	
+	Hash_Table<String, Texture *> texture_table;
+	Depth_Stencil_Texture_Desc default_depth_stencil_desc;
+	Render_Target_Texture_Desc default_render_target_desc;
+	
 	Resource_Allocator resource_allocator;
 	Buffer *create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc);
 	Texture *create_texture(Texture_Desc *texture_desc);
+	
+	Texture *find_depth_stencil_texture(const char *texture_name);
+	Texture *create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc = NULL);
 };
 
 const u32 RENDER_TARGET_BUFFER_BUFFER = 0x1;
@@ -188,9 +216,8 @@ struct Render_Command_Buffer {
 	Graphics_Command_List graphics_command_list;
 	
 	Texture *back_buffer_texture = NULL;
-	Texture *back_buffer_depth_texture = NULL;
 	Descriptor_Heap_Pool *descriptors_pool = NULL;
-	Pipeline_Resource_Storage *pipeline_resource_storage = NULL;
+	Resource_Manager *resource_manager = NULL;
 
 	void create(Gpu_Device &device, u32 frames_in_flight);
 	void setup_common_compute_pipeline_resources(Root_Signature *root_signature);
@@ -201,8 +228,13 @@ struct Render_Command_Buffer {
 	void apply_graphics_pipeline(Pipeline_State *pipeline_state, u32 flags = 0);
 
 	void bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer);
+
+	void clear_depth_stencil_view(const DS_Descriptor &descriptor, float depth = 1.0f, u8 stencil = 0);
+	void clear_render_target_view(const RT_Descriptor &descriptor, const Color &color);
 	
-	void draw(u32 index_count);
+	void set_back_buffer_as_render_target(Texture *depth_stencil_texture);
+	
+	void draw(u32 vertex_count);
 
 	void begin_frame(Texture *back_buffer)
 	{
@@ -239,12 +271,11 @@ struct Render_System {
 
 	Resource_Allocator resource_allocator;
 	Descriptor_Heap_Pool descriptors_pool;
-	Pipeline_Resource_Storage pipeline_resource_storage;
+	Resource_Manager resource_manager;
 	Copy_Manager copy_manager;
 
 	Render_Command_Buffer command_buffer;
 
-	Texture *back_buffer_depth_texture;
 	Array<Texture> back_buffer_textures;
 
 	Generate_Mipmaps generate_mipmaps;

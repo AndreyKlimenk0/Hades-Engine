@@ -11,7 +11,7 @@
 
 struct Buffer;
 struct Shader_Manager;
-struct Pipeline_Resource_Storage;
+struct Resource_Manager;
 struct Render_World;
 struct Render_Command_Buffer;
 struct Render_System;
@@ -35,10 +35,9 @@ struct Render_Pass {
 	Root_Signature root_signature;
 	Pipeline_State pipeline_states[4];
 
-	Buffer *pass_data_constant_buffer = NULL;
-
-	virtual void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	virtual void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
 	virtual void setup_root_signature(Gpu_Device &device);
+	virtual void schedule_resources(Resource_Manager *resource_manager);
 	virtual void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager) = 0;
 	virtual void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL) = 0;
 };
@@ -47,7 +46,10 @@ struct Box_Pass : Render_Pass {
 	Box_Pass();
 	~Box_Pass();
 
-	void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	Texture *depth_stencil_texture = NULL;
+
+	void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
+	void schedule_resources(Resource_Manager *resource_manager);
 	void setup_root_signature(Gpu_Device &device);
 	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
 	void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL);
@@ -55,7 +57,7 @@ struct Box_Pass : Render_Pass {
 
 struct Generate_Mipmaps : Render_Pass {
 
-	void init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage);
+	void init(Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
 	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
 	void setup_root_signature(Gpu_Device &device);
 	void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL) {}

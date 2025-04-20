@@ -95,6 +95,8 @@ struct Graphics_Command_List : Compute_Command_List {
 	
 	void set_graphics_root_signature(Root_Signature &root_signature);
 
+	void set_render_target(const RT_Descriptor &render_target_descriptor, const DS_Descriptor &depth_stencil_descriptor);
+
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count);
 

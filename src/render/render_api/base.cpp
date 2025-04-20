@@ -159,6 +159,11 @@ Clear_Value::~Clear_Value()
 {
 }
 
+bool Clear_Value::depth_stencil_set()
+{
+    return type == CLEAR_VALUE_DEPTH_STENCIL;
+}
+
 Subresource_Footprint::Subresource_Footprint()
 {
     ZeroMemory(&places_subresource_footprint, sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT));
