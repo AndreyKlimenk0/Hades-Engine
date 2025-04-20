@@ -16,6 +16,7 @@ struct Swap_Chain {
 	void resize(u32 width, u32 height);
 	void present(u32 sync_interval, u32 flags);
 	void get_buffer(u32 buffer_index, GPU_Resource &resource);
+	void get_current_buffer(GPU_Resource &resource);
 	void release();
 
 	u32 get_current_back_buffer_index();

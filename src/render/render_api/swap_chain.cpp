@@ -57,3 +57,8 @@ void Swap_Chain::get_buffer(u32 buffer_index, GPU_Resource &resource)
 {
     HR(dxgi_swap_chain->GetBuffer(buffer_index, IID_PPV_ARGS(resource.release_and_get_address())));
 }
+
+void Swap_Chain::get_current_buffer(GPU_Resource &resource)
+{
+    get_buffer(get_current_back_buffer_index(), resource);
+}
