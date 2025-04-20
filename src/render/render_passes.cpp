@@ -23,11 +23,12 @@ Render_Pass::~Render_Pass()
 {
 }
 
-void Render_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+void Render_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	name = pass_name;
 	setup_root_signature(device);
 	setup_pipeline(device, shader_manager);
+	schedule_resources(resource_manager);
 }
 
 void Render_Pass::setup_root_signature(Gpu_Device &device)
@@ -37,6 +38,10 @@ void Render_Pass::setup_root_signature(Gpu_Device &device)
 	root_signature.add_sampler_descriptor_table_parameter(0, 10); //Point sampling
 	root_signature.add_sampler_descriptor_table_parameter(1, 10); //Linear sampling
 	root_signature.create(device, ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS);
+}
+
+void Render_Pass::schedule_resources(Resource_Manager *resource_manager)
+{
 }
 
 Box_Pass::Box_Pass()
@@ -51,21 +56,25 @@ struct Box_Pass_Data {
 
 };
 
-void Box_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+void Box_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	Buffer_Desc buffer_desc = Buffer_Desc(sizeof(Pass_Data), CONSTANT_BUFFER_ALIGNMENT);
-	pass_data_constant_buffer = pipeline_resource_storage->create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
-	Render_Pass::init(pass_name, device, shader_manager, pipeline_resource_storage);
+	Render_Pass::init(pass_name, device, shader_manager, resource_manager);
+}
+
+void Box_Pass::schedule_resources(Resource_Manager *resource_manager)
+{
+	depth_stencil_texture = resource_manager->create_depth_stencil_texture("Main_Depth_Texture");
 }
 
 void Box_Pass::setup_root_signature(Gpu_Device &device)
 {
 	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
-	//root_signature.add_cb_descriptor_table_parameter(0, 0); //Pass data
 	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
 	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
 	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
 	root_signature.add_sr_descriptor_table_parameter(3, 0); //Unified index buffer
+	
 	Render_Pass::setup_root_signature(device);
 }
 
@@ -90,10 +99,13 @@ void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_man
 void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *context, void *args)
 {
 	Render_World *render_world = (Render_World *)context;
+
+	render_command_buffer->clear_depth_stencil_view(depth_stencil_texture->get_depth_stencil_descriptor());
+	render_command_buffer->clear_render_target_view(render_command_buffer->back_buffer_texture->get_render_target_descriptor(), Color::LightSteelBlue);
+	render_command_buffer->set_back_buffer_as_render_target(depth_stencil_texture);
 	
 	render_command_buffer->apply(&pipeline_states[0], RENDER_TARGET_BACK_BUFFER);
 	
-	//render_command_buffer->bind_buffer(0, 0, CONSTANT_BUFFER_REGISTER, pass_data_constant_buffer);
 	render_command_buffer->bind_buffer(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer);
 	render_command_buffer->bind_buffer(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer);
 	render_command_buffer->bind_buffer(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer);
@@ -105,11 +117,8 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *contex
 		pass_data.parameter0 = render_entity->mesh_idx;
 		pass_data.parameter1 = render_entity->world_matrix_idx;
 		render_command_buffer->graphics_command_list.set_graphics_constants(0, pass_data);
-		//pass_data_constant_buffer->write(&pass_data, sizeof(Pass_Data), 256);
 		
-		//render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
-		//render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
-		render_command_buffer->graphics_command_list.get()->DrawInstanced(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count(), 1, 0, 0);
+		render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
 	}
 }
 
@@ -123,7 +132,7 @@ struct Mipmaps_Info {
 	Vector2 texel_size;
 };
 
-void Generate_Mipmaps::init(Gpu_Device &device, Shader_Manager *shader_manager, Pipeline_Resource_Storage *pipeline_resource_storage)
+void Generate_Mipmaps::init(Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	setup_root_signature(device);
 	setup_pipeline(device, shader_manager);
@@ -159,12 +168,12 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 {
 	compute_command_list->set_compute_root_signature(root_signature);
 	compute_command_list->set_descriptor_heaps(render_sys->descriptors_pool.cbsrua_descriptor_heap, render_sys->descriptors_pool.sampler_descriptor_heap);
-	compute_command_list->set_compute_root_descriptor_table(3, render_sys->pipeline_resource_storage.linear_sampler_descriptor);
+	compute_command_list->set_compute_root_descriptor_table(3, render_sys->resource_manager.linear_sampler_descriptor);
 
 	for (u32 i = 0; i < textures.count; i++) {
 		Texture *texture = textures[i];
 
-		Texture_Desc texture_desc = texture->get_texture2d_desc();
+		Texture_Desc texture_desc = texture->get_texture_desc();
 		texture_desc.dimension = TEXTURE_DIMENSION_2D;
 		if ((texture_desc.width == 0) || (texture_desc.height == 0)) {
 			continue;

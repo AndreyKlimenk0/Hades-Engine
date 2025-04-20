@@ -250,6 +250,11 @@ void Graphics_Command_List::set_graphics_root_signature(Root_Signature &root_sig
     d3d12_object->SetGraphicsRootSignature(root_signature.get());
 }
 
+void Graphics_Command_List::set_render_target(const RT_Descriptor &render_target_descriptor, const DS_Descriptor &depth_stencil_descriptor)
+{
+    d3d12_object->OMSetRenderTargets(1, &render_target_descriptor.cpu_handle, FALSE, &depth_stencil_descriptor.cpu_handle);
+}
+
 void Graphics_Command_List::set_graphics_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor)
 {
     assert(const_cast<GPU_Descriptor &>(base_descriptor).valid());

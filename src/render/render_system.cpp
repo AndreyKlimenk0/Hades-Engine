@@ -211,22 +211,13 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 		swap_chain.get_buffer(i, back_buffer_textures[i]);
 	}
 	
-	pipeline_resource_storage.init(gpu_device, back_buffer_count, &descriptors_pool);
-
-	Texture_Desc depth_texture_desc;
-	depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
-	depth_texture_desc.width = window.width;
-	depth_texture_desc.height = window.height;
-	depth_texture_desc.format = DXGI_FORMAT_D32_FLOAT;
-	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
-	depth_texture_desc.clear_value = Clear_Value(1.0f, 0);
-	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
-
-	back_buffer_depth_texture = pipeline_resource_storage.create_texture(&depth_texture_desc);
+	Texture temp;
+	swap_chain.get_current_buffer(temp);
+	Texture_Desc back_buffer_texture_desc = temp.get_texture_desc();
+	resource_manager.init(gpu_device, &descriptors_pool, &copy_manager, &back_buffer_texture_desc);
 
 	init_passes();
 
-	command_buffer.back_buffer_depth_texture = back_buffer_depth_texture;
 	command_buffer.descriptors_pool = &descriptors_pool;
 
 	copy_manager.init(this);
@@ -245,17 +236,11 @@ void Render_System::init_vars(Win32_Window *win32_window, Variable_Service *vari
 
 void Render_System::init_passes()
 {
-	//frame_graphics_passes.push(&passes.box);
-	//Shader_Manager *shader_manager = &Engine::get_instance()->shader_manager;
-	//for (u32 i = 0; i < frame_graphics_passes.count; i++) {
-	//	frame_graphics_passes[i]->init(gpu_device, shader_manager, &pipeline_resource_storage);
-	//}
-
 	Shader_Manager *sm = &Engine::get_instance()->shader_manager;
-	generate_mipmaps.init(gpu_device, sm, &pipeline_resource_storage);
+	generate_mipmaps.init(gpu_device, sm, &resource_manager);
 
 	auto pass = new Box_Pass();
-	pass->init("Box_Pass", gpu_device, sm, &pipeline_resource_storage);
+	pass->init("Box_Pass", gpu_device, sm, &resource_manager);
 	
 	passes.push(pass);
 }
@@ -283,12 +268,12 @@ void Render_System::flush()
 void Render_System::begin_frame()
 {
 	frame_fence.increment_expected_value();
-	pipeline_resource_storage.begin_frame(frame_fence.expected_value);
+	resource_manager.begin_frame(frame_fence.expected_value);
 }
 
 void Render_System::end_frame(u64 frame_number)
 {
-	pipeline_resource_storage.end_frame(frame_number);
+	resource_manager.end_frame(frame_number);
 }
 
 void wait_for_gpu(Fence *fence, u64 expected_value)
@@ -319,19 +304,15 @@ void Render_System::render()
 
 	copy_manager.execute_copying();
 
-	pipeline_resource_storage.update_frame_info_constant_buffer(&frame_info);
+	resource_manager.update_frame_info_constant_buffer(&frame_info);
 
 	auto *command_list = command_buffer.get_graphics_command_list();
 
-	//print("Begin render Frame", frame_fence.expected_value);
-	//print("Reset command allocator", back_buffer_index);
 	command_list->reset(back_buffer_index);
 
 	Texture &back_buffer = back_buffer_textures[back_buffer_index];
 
 	command_list->resource_barrier(Transition_Resource_Barrier(back_buffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
-	command_list->clear_render_target_view(back_buffer.get_render_target_descriptor(), Color::LightSteelBlue);
-	command_list->clear_depth_stencil_view(back_buffer_depth_texture->get_depth_stencil_descriptor());
 
 	command_buffer.begin_frame(&back_buffer);
 	
@@ -349,30 +330,9 @@ void Render_System::render()
 
 	back_buffer_index = swap_chain.get_current_back_buffer_index();
 
-	//frame_fence.expected_value = frame_fence_values[back_buffer_index];
-	//print("Get new expected value", frame_fence.expected_value);
-	//frame_fence.wait_for_gpu();
 	wait_for_gpu(&frame_fence, frame_fence.expected_value - 1);
 	
 	end_frame(frame_fence.expected_value - 1);
-
-	//print("End render Frame", frame_fence_values[back_buffer_index]);
-	//end_frame(frame_fence_values[back_buffer_index]);
-	//print("----------------------------------------------------------");
-	
-	//graphics_queue.signal(frame_fence);
-	//print("Save expected value", frame_fence.expected_value);
-	//frame_fence_values[back_buffer_index] = frame_fence.expected_value;
-
-	//back_buffer_index = swap_chain.get_current_back_buffer_index();
-
-	//frame_fence.expected_value = frame_fence_values[back_buffer_index];
-	//print("Get new expected value", frame_fence.expected_value);
-	//frame_fence.wait_for_gpu();
-
-	//print("End render Frame", frame_fence_values[back_buffer_index]);
-	//end_frame(frame_fence_values[back_buffer_index]);
-	//print("----------------------------------------------------------");
 }
 
 Size_u32 Render_System::get_window_size()
@@ -380,9 +340,22 @@ Size_u32 Render_System::get_window_size()
 	return { window.width, window.height };
 }
 
-void Pipeline_Resource_Storage::init(Gpu_Device &device, u32 _back_buffer_count, Descriptor_Heap_Pool *descriptor_heap_pool)
+void Resource_Manager::init(Gpu_Device &device, Descriptor_Heap_Pool *_descriptors_pool, Copy_Manager *_copy_manager, Texture_Desc *back_buffer_texture_desc)
 {
-	assert(_back_buffer_count > 0);
+	assert(back_buffer_texture_desc->valid());
+
+	descriptors_pool = _descriptors_pool;
+	copy_manager = _copy_manager;
+
+	default_render_target_desc.width = back_buffer_texture_desc->width;
+	default_render_target_desc.height = back_buffer_texture_desc->height;
+	default_render_target_desc.format = back_buffer_texture_desc->format;
+	default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
+
+	default_depth_stencil_desc.width = back_buffer_texture_desc->width;
+	default_depth_stencil_desc.height = back_buffer_texture_desc->height;
+	default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
+	default_depth_stencil_desc.clear_value = Clear_Value(1.0f, 0);
 
 	Sampler point_sampler = Sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
 	Sampler linear_sampler = Sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
@@ -390,21 +363,20 @@ void Pipeline_Resource_Storage::init(Gpu_Device &device, u32 _back_buffer_count,
 
 	resource_allocator.init(Engine::get_render_system());
 
-	point_sampler_descriptor = descriptor_heap_pool->allocate_sampler_descriptor(point_sampler);
-	linear_sampler_descriptor = descriptor_heap_pool->allocate_sampler_descriptor(linear_sampler);
-	anisotropic_sampler_descriptor = descriptor_heap_pool->allocate_sampler_descriptor(anisotropic_sampler);
+	point_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(point_sampler);
+	linear_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(linear_sampler);
+	anisotropic_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(anisotropic_sampler);
 
 	Buffer_Desc buffer_desc = Buffer_Desc(sizeof(GPU_Frame_Info), CONSTANT_BUFFER_ALIGNMENT);
-	//Buffer_Desc buffer_desc = Buffer_Desc(2560);
 	frame_info_buffer = create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
 }
 
-void Pipeline_Resource_Storage::update_frame_info_constant_buffer(GPU_Frame_Info *frame_info)
+void Resource_Manager::update_frame_info_constant_buffer(GPU_Frame_Info *frame_info)
 {
 	frame_info_buffer->write(frame_info, sizeof(GPU_Frame_Info), 256);
 }
 
-void Pipeline_Resource_Storage::begin_frame(u64 frame_number)
+void Resource_Manager::begin_frame(u64 frame_number)
 {
 	frame_count = frame_number;
 	for (u32 i = 0; i < buffers.count; i++) {
@@ -412,28 +384,68 @@ void Pipeline_Resource_Storage::begin_frame(u64 frame_number)
 	}
 }
 
-void Pipeline_Resource_Storage::end_frame(u64 frame_number)
+void Resource_Manager::end_frame(u64 frame_number)
 {
 	for (u32 i = 0; i < buffers.count; i++) {
 		buffers[i]->end_frame(frame_number);
 	}
 }
 
-Buffer *Pipeline_Resource_Storage::create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc)
+Buffer *Resource_Manager::create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc)
 {
-	Render_System *render_sys = Engine::get_render_system();
 	auto buffer = new Buffer();
-	buffer->create(buffer_type, buffer_desc, &resource_allocator, &render_sys->descriptors_pool, &render_sys->copy_manager);
+	buffer->create(buffer_type, buffer_desc, &resource_allocator, descriptors_pool, copy_manager);
 	buffer->begin_frame(frame_count);
 	buffers.push(buffer);
 	return buffer;
 }
 
-Texture *Pipeline_Resource_Storage::create_texture(Texture_Desc *texture_desc)
+Texture *Resource_Manager::create_texture(Texture_Desc *texture_desc)
 {
-	Render_System *render_sys = Engine::get_render_system();
 	auto texture = new Texture();
-	texture->create(texture_desc, &resource_allocator, &render_sys->descriptors_pool);
+	texture->create(texture_desc, &resource_allocator, descriptors_pool);
+	textures.push(texture);
+	return texture;
+}
+
+Texture *Resource_Manager::find_depth_stencil_texture(const char *texture_name)
+{
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = new Texture();
+		texture_table.set(texture_name, texture);
+	}
+	return texture;
+}
+
+Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
+{
+	Depth_Stencil_Texture_Desc filled_depth_stencil_desc;
+	if (depth_stencil_desc) {
+		filled_depth_stencil_desc.width = depth_stencil_desc->width > 0 ? depth_stencil_desc->width : default_depth_stencil_desc.width;
+		filled_depth_stencil_desc.height = depth_stencil_desc->height > 0 ? depth_stencil_desc->height : default_depth_stencil_desc.height;
+		filled_depth_stencil_desc.format = depth_stencil_desc->format != DXGI_FORMAT_UNKNOWN ? depth_stencil_desc->format : default_depth_stencil_desc.format;
+		filled_depth_stencil_desc.clear_value = depth_stencil_desc->clear_value.depth_stencil_set() ? depth_stencil_desc->clear_value : default_depth_stencil_desc.clear_value;
+	} else {
+		filled_depth_stencil_desc = default_depth_stencil_desc;
+	}
+
+	Texture_Desc depth_texture_desc;
+	depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	depth_texture_desc.width = filled_depth_stencil_desc.width;
+	depth_texture_desc.height = filled_depth_stencil_desc.height;
+	depth_texture_desc.format = filled_depth_stencil_desc.format;
+	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
+	depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
+	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
+
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = new Texture();
+		texture_table.set(texture_name, texture);
+	}
+	texture->create(&depth_texture_desc, &resource_allocator, descriptors_pool);
+	
 	return texture;
 }
 
@@ -443,31 +455,31 @@ void Render_Command_Buffer::create(Gpu_Device &device, u32 frames_in_flight)
 	compute_command_list.create(device, frames_in_flight);
 
 	descriptors_pool = &Engine::get_render_system()->descriptors_pool;
-	pipeline_resource_storage = &Engine::get_render_system()->pipeline_resource_storage;
+	resource_manager = &Engine::get_render_system()->resource_manager;
 }
 
 void Render_Command_Buffer::setup_common_compute_pipeline_resources(Root_Signature *root_signature)
 {
 	GPU_Descriptor base_cbsrua_descriptor = descriptors_pool->cbsrua_descriptor_heap.get_base_gpu_descriptor();
-	CB_Descriptor frame_info_buffer_descriptor = pipeline_resource_storage->frame_info_buffer->get_constant_buffer_descriptor();
+	CB_Descriptor frame_info_buffer_descriptor = resource_manager->frame_info_buffer->get_constant_buffer_descriptor();
 
 	Compute_Command_List_Helper binding_helper = Compute_Command_List_Helper(&graphics_command_list, root_signature);
 	binding_helper.set_root_descriptor_table(0, 10, &frame_info_buffer_descriptor);                         // Per frame info buffer
 	binding_helper.set_root_descriptor_table(0, 10, static_cast<SR_Descriptor *>(&base_cbsrua_descriptor)); // Textures
-	binding_helper.set_root_descriptor_table(0, 10, &pipeline_resource_storage->point_sampler_descriptor);  // Point sampler
-	binding_helper.set_root_descriptor_table(1, 10, &pipeline_resource_storage->linear_sampler_descriptor); // Linear sampler
+	binding_helper.set_root_descriptor_table(0, 10, &resource_manager->point_sampler_descriptor);  // Point sampler
+	binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
 }
 
 void Render_Command_Buffer::setup_common_graphics_pipeline_resources(Root_Signature *root_signature)
 {
 	GPU_Descriptor base_cbsrua_descriptor = descriptors_pool->cbsrua_descriptor_heap.get_base_gpu_descriptor();
-	CB_Descriptor frame_info_buffer_descriptor = pipeline_resource_storage->frame_info_buffer->get_constant_buffer_descriptor();
+	CB_Descriptor frame_info_buffer_descriptor = resource_manager->frame_info_buffer->get_constant_buffer_descriptor();
 
 	Graphics_Command_List_Helper binding_helper = Graphics_Command_List_Helper(&graphics_command_list, root_signature);
 	binding_helper.set_root_descriptor_table(0, 10, &frame_info_buffer_descriptor);                         // Per frame info buffer
 	binding_helper.set_root_descriptor_table(0, 10, static_cast<SR_Descriptor *>(&base_cbsrua_descriptor)); // Textures
-	binding_helper.set_root_descriptor_table(0, 10, &pipeline_resource_storage->point_sampler_descriptor);  // Point sampler
-	binding_helper.set_root_descriptor_table(1, 10, &pipeline_resource_storage->linear_sampler_descriptor); // Linear sampler
+	binding_helper.set_root_descriptor_table(0, 10, &resource_manager->point_sampler_descriptor);  // Point sampler
+	binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
 }
 
 void Render_Command_Buffer::apply(Pipeline_State *pipeline_state, u32 flags)
@@ -502,13 +514,6 @@ void Render_Command_Buffer::apply_graphics_pipeline(Pipeline_State *pipeline_sta
 	graphics_command_list.set_primitive_type(pipeline_state->primitive_type);
 	graphics_command_list.set_viewport(pipeline_state->viewport);
 	graphics_command_list.set_clip_rect(pipeline_state->clip_rect);
-
-	if (flags & RENDER_TARGET_BUFFER_BUFFER) {
-		RT_Descriptor render_target_descriptor = back_buffer_texture->get_render_target_descriptor();
-		DS_Descriptor ds_descriptor = back_buffer_depth_texture->get_depth_stencil_descriptor();
-		graphics_command_list.get()->OMSetRenderTargets(1, &render_target_descriptor.cpu_handle, FALSE, &ds_descriptor.cpu_handle);
-	} else {
-	}
 }
 
 void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer)
@@ -534,9 +539,24 @@ void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, S
 	}
 }
 
-void Render_Command_Buffer::draw(u32 index_count)
+void Render_Command_Buffer::clear_depth_stencil_view(const DS_Descriptor &descriptor, float depth, u8 stencil)
 {
-	graphics_command_list.get()->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
+	graphics_command_list.clear_depth_stencil_view(descriptor, depth, stencil);
+}
+
+void Render_Command_Buffer::clear_render_target_view(const RT_Descriptor &descriptor, const Color &color)
+{
+	graphics_command_list.clear_render_target_view(descriptor, color);
+}
+
+void Render_Command_Buffer::set_back_buffer_as_render_target(Texture *depth_stencil_texture)
+{
+	graphics_command_list.set_render_target(back_buffer_texture->get_render_target_descriptor(), depth_stencil_texture->get_depth_stencil_descriptor());
+}
+
+void Render_Command_Buffer::draw(u32 vertex_count)
+{
+	graphics_command_list.get()->DrawInstanced(vertex_count, 1, 0, 0);
 }
 
 Graphics_Command_List *Render_Command_Buffer::get_graphics_command_list()

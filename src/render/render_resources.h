@@ -126,7 +126,7 @@ struct Texture : GPU_Resource {
 
 	u32 get_size();
 	u32 get_subresource_count();
-	Texture_Desc get_texture2d_desc();
+	Texture_Desc get_texture_desc();
 	
 	SR_Descriptor get_shader_resource_descriptor(u32 mipmap_level = 0);
 	UA_Descriptor get_unordered_access_descriptor(u32 mipmap_level = 0);

@@ -298,35 +298,24 @@ void Model_Storage::upload_models_in_gpu()
 
 	if (!unified_vertex_buffer || (unified_vertex_buffer->get_size() < unified_vertex_list.get_size())) {
 		DELETE_PTR(unified_vertex_buffer);
-		auto temp = align_address<u32>(unified_vertex_list.get_size(), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-		
-		//Buffer_Desc buffer_desc = Buffer_Desc(unified_vertex_list.get_size());
 		Buffer_Desc buffer_desc = Buffer_Desc(unified_vertex_list.count, unified_vertex_list.get_stride());
-		
-		//Buffer_Desc buffer_desc = Buffer_Desc(unified_vertex_list.get_size());
-		unified_vertex_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
+		unified_vertex_buffer = render_sys->resource_manager.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
 		unified_vertex_buffer->set_debug_name("Unified vertex buffer");
 		unified_vertex_buffer->write((void *)unified_vertex_list.items, unified_vertex_list.get_size());
 	}
 
 	if (!unified_index_buffer || (unified_index_buffer->get_size() < unified_index_buffer->get_size())) {
 		DELETE_PTR(unified_index_buffer);
-		//u32 x1 = align_address<u32>(unified_index_list.get_size(), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-		//u32 x2 = unified_index_list.get_size();
-		
 		Buffer_Desc buffer_desc = Buffer_Desc(unified_index_list.count, unified_index_list.get_stride());
-		
-		unified_index_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
+		unified_index_buffer = render_sys->resource_manager.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
 		unified_index_buffer->set_debug_name("Unified index buffer");
 		unified_index_buffer->write((void *)unified_index_list.items, unified_index_list.get_size());
 	}
 
 	if (!mesh_instance_buffer || (mesh_instance_buffer->get_size() < mesh_instance_buffer->get_size())) {
 		DELETE_PTR(mesh_instance_buffer);
-		
 		Buffer_Desc buffer_desc = Buffer_Desc(unified_mesh_instances_list.count, unified_mesh_instances_list.get_stride());
-		
-		mesh_instance_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
+		mesh_instance_buffer = render_sys->resource_manager.create_buffer(BUFFER_TYPE_DEFAULT, &buffer_desc);
 		mesh_instance_buffer->set_debug_name("Mesh instance buffer");
 		mesh_instance_buffer->write((void *)unified_mesh_instances_list.items, unified_mesh_instances_list.get_size());
 	}
@@ -415,7 +404,7 @@ Texture *create_texture_from_image(Image *image)
 	
 	Gpu_Device &gpu_device = Engine::get_render_system()->gpu_device;
 	Render_System *render_sys = Engine::get_render_system();
-	Pipeline_Resource_Storage *pipeline_resource_storage = &render_sys->pipeline_resource_storage;
+	Resource_Manager *resource_manager = &render_sys->resource_manager;
 
 	Texture_Desc texture_desc;
 	texture_desc.dimension = TEXTURE_DIMENSION_2D;
@@ -426,7 +415,7 @@ Texture *create_texture_from_image(Image *image)
 	texture_desc.miplevels = find_max_mip_level(image->width, image->height);
 	texture_desc.resource_state = RESOURCE_STATE_COPY_DEST;
 
-	Texture *texture = pipeline_resource_storage->create_texture(&texture_desc);
+	Texture *texture = resource_manager->create_texture(&texture_desc);
 
 	GPU_Buffer temp_buffer;
 	temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(texture->get_size()));
@@ -455,7 +444,7 @@ Texture *Model_Storage::create_texture_from_file(const char *full_path_to_textur
 {
 	Gpu_Device &gpu_device = Engine::get_render_system()->gpu_device;
 	Render_System *render_sys = Engine::get_render_system();
-	Pipeline_Resource_Storage *pipeline_resource_storage = &render_sys->pipeline_resource_storage;
+	Resource_Manager *resource_manager = &render_sys->resource_manager;
 
 	Image image;
 	if (load_image_from_file(full_path_to_texture, DXGI_FORMAT_R8G8B8A8_UNORM, &image)) {
@@ -468,7 +457,7 @@ Texture *Model_Storage::create_texture_from_file(const char *full_path_to_textur
 		texture_desc.miplevels = find_max_mip_level(image.width, image.height);
 		texture_desc.resource_state = RESOURCE_STATE_COPY_DEST;
 		
-		Texture *texture = pipeline_resource_storage->create_texture(&texture_desc);
+		Texture *texture = resource_manager->create_texture(&texture_desc);
 
 		GPU_Buffer temp_buffer;
 		temp_buffer.create(gpu_device, GPU_HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ, Buffer_Desc(texture->get_size()));
@@ -939,7 +928,7 @@ void Render_World::render()
 	if (!world_matrices_buffer || (world_matrices_buffer->get_size() < render_entity_world_matrices.get_size())) {
 		DELETE_PTR(world_matrices_buffer);
 		Buffer_Desc buffer_desc = Buffer_Desc(render_entity_world_matrices.count, render_entity_world_matrices.get_stride());
-		world_matrices_buffer = render_sys->pipeline_resource_storage.create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
+		world_matrices_buffer = render_sys->resource_manager.create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
 		world_matrices_buffer->set_debug_name("World matrices");
 	}
 	world_matrices_buffer->write((void *)render_entity_world_matrices.items, render_entity_world_matrices.get_size());
