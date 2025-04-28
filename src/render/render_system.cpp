@@ -181,9 +181,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	}
 
 	frame_fence.create(gpu_device);
-	frame_fence_values.reserve(back_buffer_count);
 	back_buffer_textures.reserve(back_buffer_count);
-	zero_memory(&frame_fence_values);
 
 	copy_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
 	copy_queue.set_debug_name("Copy Queue");
@@ -221,6 +219,8 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	command_buffer.descriptors_pool = &descriptors_pool;
 
 	copy_manager.init(this);
+
+	begin_frame();
 }
 
 void Render_System::init_vars(Win32_Window *win32_window, Variable_Service *variable_service)
@@ -240,9 +240,13 @@ void Render_System::init_passes()
 	generate_mipmaps.init(gpu_device, sm, &resource_manager);
 
 	auto pass = new Box_Pass();
-	pass->init("Box_Pass", gpu_device, sm, &resource_manager);
+	pass->init("Box pass", gpu_device, sm, &resource_manager);
+
+	auto shadows_pass = new Shadows_Pass();
+	shadows_pass->init("Shadows pass", gpu_device, sm, &resource_manager);
 	
 	passes.push(pass);
+	passes.push(shadows_pass);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -333,6 +337,8 @@ void Render_System::render()
 	wait_for_gpu(&frame_fence, frame_fence.expected_value - 1);
 	
 	end_frame(frame_fence.expected_value - 1);
+
+	begin_frame();
 }
 
 Size_u32 Render_System::get_window_size()
@@ -451,6 +457,8 @@ Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name
 
 void Render_Command_Buffer::create(Gpu_Device &device, u32 frames_in_flight)
 {
+	render_sys = Engine::get_render_system();
+
 	graphics_command_list.create(device, frames_in_flight);
 	compute_command_list.create(device, frames_in_flight);
 
@@ -482,20 +490,23 @@ void Render_Command_Buffer::setup_common_graphics_pipeline_resources(Root_Signat
 	binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
 }
 
-void Render_Command_Buffer::apply(Pipeline_State *pipeline_state, u32 flags)
+void Render_Command_Buffer::apply(Pipeline_State *pipeline_state)
 {
 	assert(pipeline_state->type != PIPELINE_TYPE_UNKNOWN);
 
 	current_pipeline = pipeline_state;
 	if (pipeline_state->type == PIPELINE_TYPE_COMPUTE) {
-		apply_compute_pipeline(pipeline_state, flags);
+		apply_compute_pipeline(pipeline_state);
 	} else if (pipeline_state->type == PIPELINE_TYPE_GRAPHICS) {
-		apply_graphics_pipeline(pipeline_state, flags);
+		apply_graphics_pipeline(pipeline_state);
 	}
 }
 
-void Render_Command_Buffer::apply_compute_pipeline(Pipeline_State *pipeline_state, u32 flags)
+void Render_Command_Buffer::apply_compute_pipeline(Pipeline_State *pipeline_state)
 {
+	last_applied_viewport.reset();
+	last_applied_clip_rect.reset();
+
 	compute_command_list.set_compute_root_signature(*pipeline_state->root_signature);
 	compute_command_list.set_pipeline_state(*pipeline_state);
 	compute_command_list.set_descriptor_heaps(descriptors_pool->cbsrua_descriptor_heap, descriptors_pool->sampler_descriptor_heap);
@@ -503,8 +514,11 @@ void Render_Command_Buffer::apply_compute_pipeline(Pipeline_State *pipeline_stat
 	setup_common_compute_pipeline_resources(pipeline_state->root_signature);
 }
 
-void Render_Command_Buffer::apply_graphics_pipeline(Pipeline_State *pipeline_state, u32 flags)
+void Render_Command_Buffer::apply_graphics_pipeline(Pipeline_State *pipeline_state)
 {
+	last_applied_viewport.reset();
+	last_applied_clip_rect.reset();
+
 	graphics_command_list.set_graphics_root_signature(*pipeline_state->root_signature);
 	graphics_command_list.set_pipeline_state(*pipeline_state);
 	graphics_command_list.set_descriptor_heaps(descriptors_pool->cbsrua_descriptor_heap, descriptors_pool->sampler_descriptor_heap);
@@ -512,8 +526,6 @@ void Render_Command_Buffer::apply_graphics_pipeline(Pipeline_State *pipeline_sta
 	setup_common_graphics_pipeline_resources(pipeline_state->root_signature);
 
 	graphics_command_list.set_primitive_type(pipeline_state->primitive_type);
-	graphics_command_list.set_viewport(pipeline_state->viewport);
-	graphics_command_list.set_clip_rect(pipeline_state->clip_rect);
 }
 
 void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer)
@@ -554,8 +566,27 @@ void Render_Command_Buffer::set_back_buffer_as_render_target(Texture *depth_sten
 	graphics_command_list.set_render_target(back_buffer_texture->get_render_target_descriptor(), depth_stencil_texture->get_depth_stencil_descriptor());
 }
 
+void Render_Command_Buffer::set_clip_rect(Rect_u32 *clip_rect)
+{
+	last_applied_clip_rect = *clip_rect;
+	graphics_command_list.set_clip_rect(last_applied_clip_rect);
+}
+
+void Render_Command_Buffer::set_viewport(Viewport *viewport)
+{
+	last_applied_viewport = *viewport;
+	graphics_command_list.set_viewport(last_applied_viewport);
+	
+	last_applied_clip_rect = static_cast<Rect_u32>(Rect_f32(viewport->x, viewport->y, viewport->width, viewport->height));
+	graphics_command_list.set_clip_rect(last_applied_clip_rect);
+}
+
 void Render_Command_Buffer::draw(u32 vertex_count)
 {
+	if ((last_applied_viewport.width == 0) || (last_applied_viewport.height == 0)) {
+		Viewport viewport = Viewport(Size_u32(render_sys->window_view_plane.width, render_sys->window_view_plane.height));
+		Render_Command_Buffer::set_viewport(&viewport);
+	}
 	graphics_command_list.get()->DrawInstanced(vertex_count, 1, 0, 0);
 }
 
@@ -578,10 +609,12 @@ u64 GPU_Linear_Allocator::allocate(u64 size, u64 alignment)
 	return offset;
 }
 
-void View_Plane::update(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
+void View_Plane::update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane)
 {
+	width = _width;
+	height = _height;
 	ratio = (float)width / (float)height;
-	fov = degrees_to_radians((float)fov_in_degrees);
+	fov = degrees_to_radians((float)_fov);
 	near_plane = _near_plane;
 	far_plane = _far_plane;
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);

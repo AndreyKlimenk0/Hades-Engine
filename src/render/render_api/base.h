@@ -44,6 +44,8 @@ struct Viewport {
 	float height = 0.0f;
 	float min_depth = 0.0f;
 	float max_depth = 1.0f;
+
+	void reset();
 };
 
 enum Primitive_Type {

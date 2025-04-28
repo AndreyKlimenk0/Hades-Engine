@@ -78,8 +78,6 @@ void Box_Pass::setup_root_signature(Gpu_Device &device)
 	Render_Pass::setup_root_signature(device);
 }
 
-const u32 RENDER_TARGET_BACK_BUFFER = 0x1;
-
 void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_manager)
 {
 	Shader *shader = GET_SHADER(shader_manager, draw_box);
@@ -90,8 +88,6 @@ void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_man
 	graphics_pipeline_desc.pixel_shader = shader;
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
-	graphics_pipeline_desc.viewport.width = 1900;
-	graphics_pipeline_desc.viewport.height = 980;
 
 	pipeline_states[0].create(gpu_device, graphics_pipeline_desc);
 }
@@ -104,7 +100,7 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *contex
 	render_command_buffer->clear_render_target_view(render_command_buffer->back_buffer_texture->get_render_target_descriptor(), Color::LightSteelBlue);
 	render_command_buffer->set_back_buffer_as_render_target(depth_stencil_texture);
 	
-	render_command_buffer->apply(&pipeline_states[0], RENDER_TARGET_BACK_BUFFER);
+	render_command_buffer->apply(&pipeline_states[0]);
 	
 	render_command_buffer->bind_buffer(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer);
 	render_command_buffer->bind_buffer(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer);
@@ -214,6 +210,92 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 			compute_command_list->dispatch(dest_width, dest_height);
 
 			mip_level += number_mips;
+		}
+	}
+}
+
+void Shadows_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+{
+	Render_Pass::init(pass_name, device, shader_manager, resource_manager);
+}
+
+void Shadows_Pass::schedule_resources(Resource_Manager *resource_manager)
+{
+	Depth_Stencil_Texture_Desc depth_stencil_desc;
+	depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
+	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
+	
+	shadow_atlas = resource_manager->create_depth_stencil_texture("Shadow_Atlas", &depth_stencil_desc);
+}
+
+struct Depth_Map_Pass_Data {
+	u32 mesh_idx;
+	u32 world_matrix_idx;
+	Pad2 pad;
+	Matrix4 view_projection_matrix;
+};
+
+void Shadows_Pass::setup_root_signature(Gpu_Device &device)
+{
+	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
+	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
+	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
+	root_signature.add_sr_descriptor_table_parameter(3, 0); //Unified index buffer
+
+	Render_Pass::setup_root_signature(device);
+}
+
+void Shadows_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+{
+	Shader *shader = GET_SHADER(shader_manager, depth_map);
+
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = &root_signature;
+	graphics_pipeline_desc.vertex_shader = shader;
+	//graphics_pipeline_desc.pixel_shader = shader;
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+
+	pipeline_states[0].create(device, graphics_pipeline_desc);
+}
+
+void Shadows_Pass::render(Render_Command_Buffer *render_command_buffer, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+
+	render_command_buffer->clear_depth_stencil_view(shadow_atlas->get_depth_stencil_descriptor());
+	auto temp = shadow_atlas->get_depth_stencil_descriptor().cpu_handle;
+	render_command_buffer->graphics_command_list.get()->OMSetRenderTargets(0, NULL, FALSE, &temp);
+	//render_command_buffer->set_back_buffer_as_render_target(depth_stencil_texture);
+
+	render_command_buffer->apply(&pipeline_states[0]);
+
+	render_command_buffer->bind_buffer(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer);
+	render_command_buffer->bind_buffer(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer);
+	render_command_buffer->bind_buffer(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer);
+	render_command_buffer->bind_buffer(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer);
+	
+	Depth_Map_Pass_Data pass_data;
+
+	Cascaded_Shadows *cascaded_shadows = NULL;
+	For(render_world->cascaded_shadows_list, cascaded_shadows) {
+		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
+		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map) {
+			if (cascaded_shadow_map->viewport.x == 1024) {
+				int x = 0;
+			}
+			render_command_buffer->set_viewport(&cascaded_shadow_map->viewport);
+			//render_command_buffer->set_viewport(&viewport);
+
+			Render_Entity *render_entity = NULL;
+			For(render_world->game_render_entities, render_entity) {
+				pass_data.mesh_idx = render_entity->mesh_idx;
+				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
+
+				render_command_buffer->graphics_command_list.set_graphics_constants(0, pass_data);
+				render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+			}
 		}
 	}
 }

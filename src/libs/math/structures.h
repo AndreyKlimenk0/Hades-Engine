@@ -168,7 +168,7 @@ template <typename T>
 struct Rect {
 	Rect();
 	Rect(T x, T y, T width, T height);
-	Rect(Size3D<T> &size);
+	Rect(const Size3D<T> &size);
 
 	T x;
 	T y;
@@ -177,6 +177,10 @@ struct Rect {
 
 	T &operator[](u32 index);
 
+	template <typename U>
+	operator Rect<U>();
+
+	void reset();
 	void set(Size3D<T> &size);
 	void set(T _x, T _y);
 	void move(T x_delta, T y_delta);
@@ -719,7 +723,7 @@ inline Rect<T>::Rect(T _x, T _y, T _width, T _height)
 }
 
 template<typename T>
-inline Rect<T>::Rect(Size3D<T> &size)
+inline Rect<T>::Rect(const Size3D<T> &size)
 {
 	memset((void *)this, 0, sizeof(Rect<T>));
 
@@ -732,6 +736,19 @@ inline T &Rect<T>::operator[](u32 index)
 {
 	assert(index < 4);
 	return (&x)[index];
+}
+
+template<typename T>
+template<typename U>
+inline Rect<T>::operator Rect<U>()
+{
+	return Rect<U>(static_cast<U>(x), static_cast<U>(y), static_cast<U>(width), static_cast<U>(height));
+}
+
+template<typename T>
+inline void Rect<T>::reset()
+{
+	memset((void *)this, 0, sizeof(Rect<T>));
 }
 
 template <typename T>
