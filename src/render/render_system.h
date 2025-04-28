@@ -34,7 +34,7 @@ struct View_Plane {
 	Matrix4 perspective_matrix;
 	Matrix4 orthographic_matrix;
 
-	void update(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane);
+	void update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane);
 };
 
 struct Box_Render_Pass {
@@ -218,14 +218,18 @@ struct Render_Command_Buffer {
 	Texture *back_buffer_texture = NULL;
 	Descriptor_Heap_Pool *descriptors_pool = NULL;
 	Resource_Manager *resource_manager = NULL;
+	Render_System *render_sys = NULL;
+
+	Rect_u32 last_applied_clip_rect;
+	Viewport last_applied_viewport;
 
 	void create(Gpu_Device &device, u32 frames_in_flight);
 	void setup_common_compute_pipeline_resources(Root_Signature *root_signature);
 	void setup_common_graphics_pipeline_resources(Root_Signature *root_signature);
 
-	void apply(Pipeline_State *pipeline_state, u32 flags = 0);
-	void apply_compute_pipeline(Pipeline_State *pipeline_state, u32 flags = 0);
-	void apply_graphics_pipeline(Pipeline_State *pipeline_state, u32 flags = 0);
+	void apply(Pipeline_State *pipeline_state);
+	void apply_compute_pipeline(Pipeline_State *pipeline_state);
+	void apply_graphics_pipeline(Pipeline_State *pipeline_state);
 
 	void bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer);
 
@@ -233,6 +237,9 @@ struct Render_Command_Buffer {
 	void clear_render_target_view(const RT_Descriptor &descriptor, const Color &color);
 	
 	void set_back_buffer_as_render_target(Texture *depth_stencil_texture);
+
+	void set_clip_rect(Rect_u32 *clip_rect);
+	void set_viewport(Viewport *viewport);
 	
 	void draw(u32 vertex_count);
 
@@ -260,7 +267,6 @@ struct Render_System {
 	View_Plane window_view_plane;
 
 	Fence frame_fence;
-	Array<u64> frame_fence_values;
 
 	Gpu_Device gpu_device;
 	Swap_Chain swap_chain;

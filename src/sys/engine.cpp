@@ -198,6 +198,9 @@ void Engine::init(Win32_Window *window)
 	temp.push("Sponza.gltf");
 	//temp.push("Mutant.fbx");
 	run_command("load mesh", temp);
+
+	Entity_Id entity_id = game_world.make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+	render_world.add_light(entity_id);
 }
 
 #include "sys.h"
@@ -216,8 +219,6 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
-	render_sys.begin_frame();
-
 	editor.handle_events();
 
 	editor.update();
@@ -230,7 +231,6 @@ void Engine::frame()
 	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
 	frame_time = milliseconds_counter() - start_time;
 
-	//print("Fps", fps);
 	END_FRAME();
 }
 

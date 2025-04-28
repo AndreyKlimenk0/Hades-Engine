@@ -111,6 +111,11 @@ Viewport::~Viewport()
 {
 }
 
+void Viewport::reset()
+{
+    memset((void *)this, 0, sizeof(Viewport));
+}
+
 D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resource_state)
 {
     switch (resource_state) {

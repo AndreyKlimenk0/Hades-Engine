@@ -204,12 +204,15 @@ void Graphics_Command_List::set_viewport(const Viewport &viewport)
 
 void Graphics_Command_List::set_clip_rect(const Rect_u32 &clip_rect)
 {
+    assert(clip_rect.width > 0);
+    assert(clip_rect.height > 0);
+
     D3D12_RECT d3d12_clip_rect;
     ZeroMemory(&d3d12_clip_rect, sizeof(D3D12_RECT));
     d3d12_clip_rect.left = clip_rect.x;
     d3d12_clip_rect.top = clip_rect.y;
-    d3d12_clip_rect.right = clip_rect.width;
-    d3d12_clip_rect.bottom = clip_rect.height;
+    d3d12_clip_rect.right = clip_rect.x + clip_rect.width;
+    d3d12_clip_rect.bottom = clip_rect.y + clip_rect.height;
 
     d3d12_object->RSSetScissorRects(1, &d3d12_clip_rect);
 }
