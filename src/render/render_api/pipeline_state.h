@@ -128,8 +128,6 @@ struct Graphics_Pipeline_Desc {
 	DXGI_FORMAT depth_stencil_format;
 	Array<DXGI_FORMAT> render_targets_formats;
 	Array<D3D12_INPUT_ELEMENT_DESC> input_elements;
-	Viewport viewport;
-	Rect_u32 clip_rect;
 
 	void add_render_target(DXGI_FORMAT format);
 	void add_layout(const char *semantic_name, DXGI_FORMAT format);
@@ -154,8 +152,6 @@ struct Pipeline_State : D3D12_Object<ID3D12PipelineState> {
 	Pipeline_Type type = PIPELINE_TYPE_UNKNOWN;
 	Primitive_Type primitive_type = PRIMITIVE_TYPE_UNKNOWN;
 	Root_Signature *root_signature = NULL;
-	Viewport viewport;
-	Rect_u32 clip_rect;
 
 	void create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc);
 	void create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc);

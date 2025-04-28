@@ -546,8 +546,6 @@ void Render_World::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
 
-	ZeroMemory(&frame_info, sizeof(GPU_Frame_Info));
-
 	model_storage.init();
 
 	init_shadow_rendering();
@@ -577,43 +575,11 @@ void Render_World::init(Engine *engine)
 
 void Render_World::init_shadow_rendering()
 {
-	//Texture2D_Desc depth_stencil_desc;
-	//depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
-	//depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
-	//depth_stencil_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
-	//depth_stencil_desc.mip_levels = 1;
-	//depth_stencil_desc.bind |= BIND_DEPTH_STENCIL;
-
-	//render_sys->gpu_device.create_texture_2d(&depth_stencil_desc, &shadow_atlas);
-	//render_sys->gpu_device.create_depth_stencil_view(&depth_stencil_desc, &shadow_atlas);
-	//render_sys->gpu_device.create_shader_resource_view(&depth_stencil_desc, &shadow_atlas);
-
-	//fill_texture((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
-
-	//shadow_cascade_ranges.push({ 1, 15 });
-	//shadow_cascade_ranges.push({ 15, 150 });
-	//shadow_cascade_ranges.push({ 150, 500 });
-	//shadow_cascade_ranges.push({ 500, 1000 });
-	//shadow_cascade_ranges.push({ 1000, 5000 });
-
-	//jittering_tile_size = 16;
-	//jittering_filter_size = 8;
-	//jittering_scaling = jittering_filter_size / 2;
-
-	//Array<Vector2> jittered_samples;
-	//make_jittering_sampling_filters(jittering_tile_size, jittering_filter_size, jittered_samples);
-
-	//Texture3D_Desc jittering_samples_texture_desc;
-	//jittering_samples_texture_desc.width = math::pow2(jittering_filter_size);
-	//jittering_samples_texture_desc.height = jittering_tile_size;
-	//jittering_samples_texture_desc.depth = jittering_tile_size;
-	//jittering_samples_texture_desc.format = DXGI_FORMAT_R32G32_FLOAT;
-	//jittering_samples_texture_desc.bind = BIND_SHADER_RESOURCE;
-	//jittering_samples_texture_desc.data = (void *)jittered_samples.items;
-	//jittering_samples_texture_desc.mip_levels = 1;
-
-	//render_sys->gpu_device.create_texture_3d(&jittering_samples_texture_desc, &jittering_samples);
-	//render_sys->gpu_device.create_shader_resource_view(&jittering_samples_texture_desc, &jittering_samples);
+	shadow_cascade_ranges.push({ 1, 15 });
+	shadow_cascade_ranges.push({ 15, 150 });
+	shadow_cascade_ranges.push({ 150, 500 });
+	shadow_cascade_ranges.push({ 500, 1000 });
+	shadow_cascade_ranges.push({ 1000, 5000 });
 }
 
 void Render_World::release_all_resources()
@@ -652,7 +618,7 @@ void Render_World::update()
 {
 	rendering_view.update(game_world);
 	update_render_entities();
-	//update_shadows();
+	update_shadows();
 	//update_global_illumination();
 }
 
@@ -692,7 +658,6 @@ void Render_World::add_light(Entity_Id light_id)
 	if (!light) {
 		return;
 	}
-	frame_info.light_count++;
 
 	Light_Info light_info;
 	light_info.light_id = get_entity_id(light);
@@ -711,6 +676,8 @@ void Render_World::add_light(Entity_Id light_id)
 
 		shader_lights.push(hlsl_light);
 		//lights_struct_buffer.update(&shader_lights);
+
+		//gpu_upload_data_list.push(GPU_Upload_Data(gpu_lights_buffer, (void *)shader_lights.items, shader_lights.get_size()));
 
 		light_info_list.push(light_info);
 	}
@@ -741,33 +708,45 @@ u32 Render_World::delete_render_entity(Entity_Id entity_id)
 	return render_entity_index;
 }
 
+template <typename T>
+void write_to_upload_buffer(const char *buffer_name, Buffer **buffer, Array<T> &array)
+{
+	Render_System *render_sys = Engine::get_render_system();
+
+	if (!*buffer || ((*buffer)->get_size() < array.get_size())) {
+		DELETE_PTR(*buffer);
+		Buffer_Desc buffer_desc = Buffer_Desc(array.count, array.get_stride());
+		(*buffer) = render_sys->resource_manager.create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
+		(*buffer)->set_debug_name(buffer_name);
+	}
+	(*buffer)->write((void *)array.items, array.get_size());
+}
+
 bool Render_World::add_shadow(Light *light)
 {
-	u32 cascaded_shadows_info_index = cascaded_shadows_info_list.count;
-
-	GPU_Cascaded_Shadows_Info cascaded_shadows_info;
-	cascaded_shadows_info.light_direction = light->direction;
-	cascaded_shadows_info.shadow_map_start_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count;
-	cascaded_shadows_info.shadow_map_end_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count + (shadow_cascade_ranges.count - 1);
-	cascaded_shadows_info_list.push(cascaded_shadows_info);
-	//cascaded_shadows_info_sb.update(&cascaded_shadows_info_list);
-
 	Cascaded_Shadows cascaded_shadows;
 	cascaded_shadows.light_direction = light->direction;
 
 	for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
 		Cascaded_Shadow_Map cascaded_shadow_map;
 		cascaded_shadow_map.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
-		//cascaded_shadow_map.init(render_sys->view.fov, render_sys->view.ratio, &shadow_cascade_ranges[i]);
+		cascaded_shadow_map.init(render_sys->window_view_plane.fov, render_sys->window_view_plane.ratio, &shadow_cascade_ranges[i]);
 
 		if (!get_shadow_atls_viewport(&cascaded_shadow_map.viewport)) {
-			assert(false);
 			return false;
 		}
 		cascaded_shadows.cascaded_shadow_maps.push(cascaded_shadow_map);
 		cascaded_shadow_map_count++;
 	}
 	cascaded_shadows_list.push(cascaded_shadows);
+	
+	GPU_Cascaded_Shadows_Info cascaded_shadows_info;
+	cascaded_shadows_info.light_direction = light->direction;
+	cascaded_shadows_info.shadow_map_start_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count;
+	cascaded_shadows_info.shadow_map_end_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count + (shadow_cascade_ranges.count - 1);
+	cascaded_shadows_info_list.push(cascaded_shadows_info);
+
+	write_to_upload_buffer("Cascaded shadows", &cascaded_shadows_buffer, cascaded_shadows_info_list);
 	return true;
 }
 
@@ -793,7 +772,6 @@ void Render_World::update_light(Light *light)
 		hlsl_light->radius = light->radius;
 		hlsl_light->range = light->range;
 		hlsl_light->light_type = light->light_type;
-		//lights_struct_buffer.update(&shader_lights);
 	} else {
 		print("Render_World::update_cascade_shadows: A cascade shadows was not found. Can not update The cascade shadows");
 	}
@@ -932,4 +910,10 @@ void Render_World::render()
 		world_matrices_buffer->set_debug_name("World matrices");
 	}
 	world_matrices_buffer->write((void *)render_entity_world_matrices.items, render_entity_world_matrices.get_size());
+
+	//for (u32 i = 0; i < gpu_upload_data_list.count; i++) {
+	//	GPU_Upload_Data *gpu_upload_data = &gpu_upload_data_list[i];
+	//	gpu_upload_data->buffer->write(gpu_upload_data->data, gpu_upload_data->data_size);
+	//}
+	//gpu_upload_data_list.reset();
 }

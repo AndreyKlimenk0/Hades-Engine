@@ -189,7 +189,7 @@ struct Render_World {
 	Matrix4 top_to_down_voxel_view_matrix;
 	Matrix4 back_to_front_voxel_view_matrix;
 
-	GPU_Frame_Info frame_info;
+
 	Rendering_View rendering_view;
 
 	Bounding_Sphere world_bounding_sphere;
@@ -219,6 +219,15 @@ struct Render_World {
 	//Gpu_Struct_Buffer lights_struct_buffer;
 	//Gpu_Struct_Buffer cascaded_shadows_info_sb;
 	Buffer *world_matrices_buffer = NULL;
+	Buffer *cascaded_shadows_buffer = NULL;
+
+	struct GPU_Upload_Data {
+		Buffer *buffer = NULL;
+		void *data = NULL;
+		u32 data_size = 0;
+	};
+	Array<GPU_Upload_Data> gpu_upload_data_list;
+	Buffer *gpu_lights_buffer = NULL;
 	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
 

@@ -171,7 +171,6 @@ static D3D12_DEPTH_WRITE_MASK to_d3d12_depth_write_mask(Depth_Write depth_write)
 
 static D3D12_BLEND_DESC to_d3d12_blend_desc(u32 render_target_count, Blending_Desc blending_desc)
 {
-    assert(render_target_count > 0);
     assert(render_target_count <= 8);
 
     D3D12_BLEND_DESC d3d12_blend_desc;
@@ -217,6 +216,7 @@ static D3D12_DEPTH_STENCIL_DESC to_d3d12_depth_stencil_desc(Depth_Stencil_Desc d
     d3d12_depth_stencil_desc.DepthEnable = depth_stencil_desc.enable_depth_test;
     d3d12_depth_stencil_desc.DepthWriteMask = to_d3d12_depth_write_mask(depth_stencil_desc.depth_write);
     d3d12_depth_stencil_desc.DepthFunc = to_d3d12_comparison_func(depth_stencil_desc.depth_compare_func);
+    
     d3d12_depth_stencil_desc.StencilEnable = depth_stencil_desc.enable_stencil_test;
     d3d12_depth_stencil_desc.StencilReadMask = depth_stencil_desc.stencil_read_mask;
     d3d12_depth_stencil_desc.StencilWriteMask = depth_stencil_desc.stencil_write_mask;
@@ -323,15 +323,6 @@ void Pipeline_State::create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics
     type = PIPELINE_TYPE_GRAPHICS;
     primitive_type = graphics_pipeline_desc.primitive_type;
     root_signature = graphics_pipeline_desc.root_signature;
-    viewport = graphics_pipeline_desc.viewport;
-    if ((graphics_pipeline_desc.clip_rect.width == 0) && (graphics_pipeline_desc.clip_rect.height == 0)) {
-        clip_rect.x = static_cast<u32>(graphics_pipeline_desc.viewport.x);
-        clip_rect.y = static_cast<u32>(graphics_pipeline_desc.viewport.y);
-        clip_rect.width = static_cast<u32>(graphics_pipeline_desc.viewport.width);
-        clip_rect.height = static_cast<u32>(graphics_pipeline_desc.viewport.height);
-    } else {
-        clip_rect = graphics_pipeline_desc.clip_rect;
-    }
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12_graphics_pipeline_state;
     ZeroMemory(&d3d12_graphics_pipeline_state, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
