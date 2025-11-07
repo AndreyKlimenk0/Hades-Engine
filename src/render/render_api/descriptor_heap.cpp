@@ -135,6 +135,29 @@ CB_Descriptor CBSRUA_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, 
     return CB_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
+inline DXGI_FORMAT to_shader_resource_view_format(DXGI_FORMAT format)
+{
+    switch (format) {
+        case DXGI_FORMAT_R24G8_TYPELESS:
+        case DXGI_FORMAT_D24_UNORM_S8_UINT:
+            return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+        case DXGI_FORMAT_D32_FLOAT:
+        case DXGI_FORMAT_R32_TYPELESS:
+            return DXGI_FORMAT_R32_FLOAT;
+    }
+    return format;
+}
+
+inline DXGI_FORMAT to_depth_stencil_view_format(DXGI_FORMAT format)
+{
+    switch (format) {
+        case DXGI_FORMAT_R32_FLOAT:
+        case DXGI_FORMAT_R32_TYPELESS:
+            return DXGI_FORMAT_D32_FLOAT;
+    }
+    return format;
+}
+
 SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, GPU_Resource &resource, u32 mipmap_level)
 {
     assert(0 < resource.count);
@@ -144,7 +167,7 @@ SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, 
 
     D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
     ZeroMemory(&shader_resource_view_desc, sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC));
-    shader_resource_view_desc.Format = resource_desc.Format;
+    shader_resource_view_desc.Format = to_shader_resource_view_format(resource_desc.Format);
     shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
     switch (resource_desc.Dimension) {
@@ -165,12 +188,18 @@ SR_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, 
             shader_resource_view_desc.Texture2D.ResourceMinLODClamp = 0.0f;
             break;
         }
+        case D3D12_RESOURCE_DIMENSION_TEXTURE3D: {
+            shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+            shader_resource_view_desc.Texture3D.MostDetailedMip = mipmap_level;
+            shader_resource_view_desc.Texture3D.MipLevels = resource_desc.MipLevels;
+            shader_resource_view_desc.Texture3D.ResourceMinLODClamp = 0.0f;
+            break;
+        }
         default: {
             assert(false);
         }
     }
     gpu_device->CreateShaderResourceView(resource.get(), &shader_resource_view_desc, get_cpu_handle(descriptor_index));
-
     return SR_Descriptor(descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
@@ -280,7 +309,7 @@ DS_Descriptor DS_Descriptor_Heap::place_descriptor(u32 descriptor_index, GPU_Res
 
     D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
     ZeroMemory(&depth_stencil_view_desc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
-    depth_stencil_view_desc.Format = resource_desc.Format;
+    depth_stencil_view_desc.Format = to_depth_stencil_view_format(resource_desc.Format);
 
     switch (resource_desc.Dimension) {
         case D3D12_RESOURCE_DIMENSION_TEXTURE2D:{
