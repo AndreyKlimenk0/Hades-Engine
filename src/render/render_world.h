@@ -165,18 +165,10 @@ inline Size_u32 Voxel_Grid::total_size()
 	return grid_size * ceil_size;
 }
 
-struct Light_Info {
-	Entity_Id light_id;
-	u32 cascade_shadows_index;
-	u32 cascaded_shadows_info_index;
-	u32 hlsl_light_index;
-};
-
 struct Render_World {
 	Game_World *game_world = NULL;
 	Render_System *render_sys = NULL;
 
-	u32 cascaded_shadow_map_count = 0;
 	u32 jittering_tile_size = 0;
 	u32 jittering_filter_size = 0;
 	u32 jittering_scaling = 0;
@@ -184,18 +176,17 @@ struct Render_World {
 	Matrix4 voxel_matrix;
 	Voxel_Grid voxel_grid;
 	Vector3 voxel_grid_center;
+	Texture jittering_samples;
 
 	Matrix4 left_to_right_voxel_view_matrix;
 	Matrix4 top_to_down_voxel_view_matrix;
 	Matrix4 back_to_front_voxel_view_matrix;
-
 
 	Rendering_View rendering_view;
 
 	Bounding_Sphere world_bounding_sphere;
 
 	Array<Matrix4> render_entity_world_matrices;
-	Array<Matrix4> light_view_matrices; // is the code necessary ? 
 	Array<Matrix4> cascaded_view_projection_matrices;
 
 	Array<Render_Entity> game_render_entities;
@@ -203,8 +194,7 @@ struct Render_World {
 	Array<Cascaded_Shadows> cascaded_shadows_list;
 	Array<GPU_Cascaded_Shadows_Info> cascaded_shadows_info_list;
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
-	Array<Light_Info> light_info_list;
-	Array<GPU_Light> shader_lights;
+	Array<GPU_Light> lights;
 
 	Array<Render_Pass *> frame_render_passes;
 
@@ -219,7 +209,9 @@ struct Render_World {
 	//Gpu_Struct_Buffer lights_struct_buffer;
 	//Gpu_Struct_Buffer cascaded_shadows_info_sb;
 	Buffer *world_matrices_buffer = NULL;
-	Buffer *cascaded_shadows_buffer = NULL;
+	Buffer *casded_view_projection_matrices_buffer = NULL;
+	Buffer *cascaded_shadows_info_buffer = NULL;
+	Buffer *lights_buffer = NULL;
 
 	struct GPU_Upload_Data {
 		Buffer *buffer = NULL;
@@ -227,12 +219,9 @@ struct Render_World {
 		u32 data_size = 0;
 	};
 	Array<GPU_Upload_Data> gpu_upload_data_list;
-	Buffer *gpu_lights_buffer = NULL;
 	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
-
 	void init(Engine *engine);
-	void init_shadow_rendering();
 	void release_all_resources();
 	void release_render_entities_resources();
 
@@ -241,14 +230,10 @@ struct Render_World {
 	void update_render_entities();
 	void update_global_illumination();
 
+	void upload_lights();
+
 	void add_render_entity(Entity_Id entity_id, u32 mesh_idx, void *args = NULL);
-	bool add_shadow(Light *light);
-	void add_light(Entity_Id light_id);
-	void update_light(Light *light);
-
 	u32 delete_render_entity(Entity_Id entity_id);
-
-	void render();
 
 	void set_rendering_view(Entity_Id camera_id);
 

@@ -107,10 +107,7 @@ inline void init_render_world(File *level_file, Game_World *game_world, Render_W
 			//}
 		}
 	}
-
-	for (u32 i = 0; i < game_world->lights.count; i++) {
-		render_world->add_light(get_entity_id(&game_world->lights[i]));
-	}
+	render_world->upload_lights();
 }
 
 inline void save_game_entities(File *level_file, Game_World *game_world)

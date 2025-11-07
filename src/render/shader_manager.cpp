@@ -155,36 +155,36 @@ inline bool compile_shader(const char *path_to_shader, Shader_Type shader_type, 
 {
 	String profile;
 	String entry_point;
-	u32 complation_flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
+	u32 complation_flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR | D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
 	switch (shader_type) {
 		case VERTEX_SHADER: {
 			entry_point = "vs_main";
-			profile = "vs_5_0";
+			profile = "vs_5_1";
 			break;
 		}
 		case GEOMETRY_SHADER: {
 			entry_point = "gs_main";
-			profile = "gs_5_0";
+			profile = "gs_5_1";
 			break;
 		}
 		case COMPUTE_SHADER: {
 			entry_point = "cs_main";
-			profile = "cs_5_0";
+			profile = "cs_5_1";
 			break;
 		}
 		case HULL_SHADER: {
 			entry_point = "hs_main";
-			profile = "hs_5_0";
+			profile = "hs_5_1";
 			break;
 		}
 		case DOMAIN_SHADER: {
 			entry_point = "ds_main";
-			profile = "ds_5_0";
+			profile = "ds_5_1";
 			break;
 		}
 		case PIXEL_SHADER: {
 			entry_point = "ps_main";
-			profile = "ps_5_0";
+			profile = "ps_5_1";
 			break;
 		}
 		default: {

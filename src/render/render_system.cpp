@@ -202,7 +202,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	}
 	swap_chain.create(allow_tearing, back_buffer_count, window.width, window.height, win32_window->handle, graphics_queue);
 
-	descriptors_pool.allocate_pool(gpu_device, 1000);
+	descriptors_pool.allocate_pool(gpu_device, 4000);
 
 	for (u32 i = 0; i < back_buffer_count; i++) {
 		back_buffer_textures[i].descriptor_pool = &descriptors_pool;
@@ -244,9 +244,13 @@ void Render_System::init_passes()
 
 	auto shadows_pass = new Shadows_Pass();
 	shadows_pass->init("Shadows pass", gpu_device, sm, &resource_manager);
+
+	auto forward_pass = new Forward_Pass();
+	forward_pass->init("Forward rendering pass", gpu_device, sm, &resource_manager);
 	
-	passes.push(pass);
 	passes.push(shadows_pass);
+	//passes.push(pass);
+	passes.push(forward_pass);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -302,9 +306,7 @@ void Render_System::render()
 
 	frame_info.view_position = render_world->rendering_view.position;
 	frame_info.view_direction = render_world->rendering_view.direction;
-	frame_info.light_count = render_world->shader_lights.count;
-
-	render_world->render();
+	frame_info.light_count = render_world->lights.count;
 
 	copy_manager.execute_copying();
 
@@ -449,8 +451,8 @@ Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name
 	if (!texture_table.get(texture_name, &texture)) {
 		texture = new Texture();
 		texture_table.set(texture_name, texture);
+		texture->create(&depth_texture_desc, &resource_allocator, descriptors_pool);
 	}
-	texture->create(&depth_texture_desc, &resource_allocator, descriptors_pool);
 	
 	return texture;
 }
@@ -547,18 +549,51 @@ void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, S
 				graphics_command_list.set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER), descriptor);
 				break;
 			}
+			default: {
+				assert(false);
+			}
 		}
 	}
 }
 
-void Render_Command_Buffer::clear_depth_stencil_view(const DS_Descriptor &descriptor, float depth, u8 stencil)
+void Render_Command_Buffer::bind_texture(u32 shader_register, u32 shader_space, Shader_Register type, Texture *texture)
 {
-	graphics_command_list.clear_depth_stencil_view(descriptor, depth, stencil);
+	Root_Signature *root_signature = current_pipeline->root_signature;
+
+	if (current_pipeline->type == PIPELINE_TYPE_COMPUTE) {
+
+
+	} else if (current_pipeline->type == PIPELINE_TYPE_GRAPHICS) {
+		switch (type) {
+			case SHADER_RESOURCE_REGISTER: {
+				SR_Descriptor descriptor = texture->get_shader_resource_descriptor();
+				graphics_command_list.set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), descriptor);
+				break;
+			}
+			case CONSTANT_BUFFER_REGISTER: {
+				assert(false);
+			}
+			default: {
+				assert(false);
+			}
+		}
+	}
 }
 
-void Render_Command_Buffer::clear_render_target_view(const RT_Descriptor &descriptor, const Color &color)
+void Render_Command_Buffer::clear_depth_stencil(Texture *depth_stencil_texture, float depth, u8 stencil)
 {
-	graphics_command_list.clear_render_target_view(descriptor, color);
+	graphics_command_list.clear_depth_stencil_view(depth_stencil_texture->get_depth_stencil_descriptor(), depth, stencil);
+}
+
+void Render_Command_Buffer::clear_render_target(Texture *render_target_texture, const Color &color)
+{
+	graphics_command_list.clear_render_target_view(render_target_texture->get_render_target_descriptor(), color);
+}
+
+void Render_Command_Buffer::set_depth_stencil(Texture *depth_stencil_texture)
+{
+	DS_Descriptor depth_stencil_descriptor = depth_stencil_texture->get_depth_stencil_descriptor();
+	graphics_command_list.get()->OMSetRenderTargets(0, NULL, FALSE, &depth_stencil_descriptor.cpu_handle);
 }
 
 void Render_Command_Buffer::set_back_buffer_as_render_target(Texture *depth_stencil_texture)

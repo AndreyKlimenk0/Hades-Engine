@@ -66,6 +66,17 @@ struct Shadows_Pass : Render_Pass {
 	void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL);
 };
 
+struct Forward_Pass : Render_Pass {
+	Texture *back_buffer_depth_texture = NULL;
+	Texture *shadow_atlas = NULL;
+
+	void init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
+	void schedule_resources(Resource_Manager *resource_manager);
+	void setup_root_signature(Gpu_Device &device);
+	void setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager);
+	void render(Render_Command_Buffer *render_command_buffer, void *context, void *args = NULL);
+};
+
 struct Generate_Mipmaps : Render_Pass {
 
 	void init(Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);

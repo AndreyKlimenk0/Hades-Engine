@@ -6,6 +6,7 @@
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
 #include "../libs/structures/queue.h"
+#include "../libs/structures/hash_table.h"
 #include "../libs/math/structures.h"
 
 #include "gpu_data.h"
@@ -232,10 +233,12 @@ struct Render_Command_Buffer {
 	void apply_graphics_pipeline(Pipeline_State *pipeline_state);
 
 	void bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer);
+	void bind_texture(u32 shader_register, u32 shader_space, Shader_Register type, Texture *texture);
 
-	void clear_depth_stencil_view(const DS_Descriptor &descriptor, float depth = 1.0f, u8 stencil = 0);
-	void clear_render_target_view(const RT_Descriptor &descriptor, const Color &color);
+	void clear_depth_stencil(Texture *depth_stencil_texture, float depth = 1.0f, u8 stencil = 0);
+	void clear_render_target(Texture *render_target_texture, const Color &color);
 	
+	void set_depth_stencil(Texture *depth_stencil_texture);
 	void set_back_buffer_as_render_target(Texture *depth_stencil_texture);
 
 	void set_clip_rect(Rect_u32 *clip_rect);

@@ -8,12 +8,6 @@
 #define POINT_LIGHT_TYPE 1
 #define DIRECTIONAL_LIGHT_TYPE 2
 
-struct Material {
-    float3 normal;
-    float3 diffuse;
-    float3 specular;
-};
-
 struct Light {
 	float3 position;
 	float radius;
@@ -102,23 +96,36 @@ struct Light {
 //	return specular + diffuse + ambient;
 //}
 
-float3 calculate_directional_light(float3 position, Material material, Light light)
-{
-	float3 diffuse = { 0.0f, 0.0f, 0.0f };
-	float3 specular = { 0.0f, 0.0f, 0.0f };
+// float3 calculate_directional_light(float3 world_position, float3 camera_position, float3 normal, float3 diffuse, float3 specular, Light light)
+// {
+// 	float diffuse_factor = max(dot(-light.direction, normal), 0.0f);
+// 	if (diffuse_factor > 0.0f) {
+// 		diffuse *= diffuse_factor;
+// 		float3 reflect_dir = normalize(reflect(-light.direction, normal));
+// 		float3 dir_to_camera = normalize(camera_position - world_position);
+// 		float specular_factor = max(dot(reflect_dir, dir_to_camera), 0.0f);
+// 		specular *= specular_factor;
+// 	}
+// 	return diffuse + specular;
+// }
 
-	float diffuse_factor = max(dot(-light.direction, material.normal), 0.0f);
+float3 calculate_directional_light(float3 position, float3 camera_position, float3 normal, float3 diffuse, float3 specular, Light light)
+{
+	float3 temp_diffuse = { 0.0f, 0.0f, 0.0f };
+	float3 temp_specular = { 0.0f, 0.0f, 0.0f };
+
+	float diffuse_factor = max(dot(-light.direction, normal), 0.0f);
 	if (diffuse_factor > 0.0f) {
-		diffuse = diffuse_factor * material.diffuse;
-		float3 reflect_dir = normalize(reflect(-light.direction, material.normal));
+		temp_diffuse = diffuse_factor * diffuse;
+		float3 reflect_dir = normalize(reflect(-light.direction, normal));
 		float3 dir_to_camera = normalize(camera_position - position);
 		float specular_factor = max(dot(reflect_dir, dir_to_camera), 0.0f);
-		specular = specular_factor * material.specular;
+		temp_specular = specular_factor * specular;
 	}
-	return diffuse + specular;
+	return temp_diffuse + temp_specular;
 }
 
-float3 calculate_light(float3 world_position, Material material, uint light_count, StructuredBuffer<Light> lights)
+float3 calculate_light(float3 world_position, float3 camera_position, float3 normal, float3 diffuse, float3 specular, uint light_count, StructuredBuffer<Light> lights)
 {
     float3 light_factor = { 0.0f, 0.0f, 0.0f};
     for (uint i = 0; i < light_count; i++) {
@@ -131,7 +138,7 @@ float3 calculate_light(float3 world_position, Material material, uint light_coun
 				//light_factor += calculate_point_light(light, material, world_position);
 				break;
 			case DIRECTIONAL_LIGHT_TYPE:
-				light_factor += calculate_directional_light(world_position, material, light);
+				light_factor += calculate_directional_light(world_position, camera_position, normal, diffuse, specular, light);
 				break;
 		}
 	}

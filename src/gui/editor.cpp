@@ -307,7 +307,7 @@ void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbi
 		//game_world->update_light_direction(light, Vector3(vec2.x, light->direction.y, vec2.y));
 		light->direction.x = new_light_direction.x;
 		light->direction.z = new_light_direction.y;
-		render_world->update_light(light);
+		render_world->upload_lights();
 	}
 }
 
@@ -316,7 +316,7 @@ void Entity_Window::display_light(Light *light)
 	if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
 		if (gui::edit_field("Direction", &light->direction)) {
 			game_world->update_light_direction(light, light->direction);
-			render_world->update_light(light);
+			render_world->upload_lights();
 		}
 		gui::edit_field("Color", &light->color);
 
@@ -1191,7 +1191,7 @@ void Editor::render_menus()
 		if (gui::menu_item("Direction light")) {
 			//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
 			Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-			render_world->add_light(entity_id);
+			render_world->upload_lights();
 		}
 		if (gui::menu_item("Point light")) {
 		}
