@@ -14,7 +14,7 @@ ConstantBuffer<Pass_Data> pass_data : register(b0, space0);
 
 StructuredBuffer<float4x4> world_matrices : register(t0, space0);
 StructuredBuffer<Mesh_Instance> mesh_instances : register(t1, space0);
-StructuredBuffer<Vertex_P3NTUV> unified_vertex_buffer : register(t2, space0);
+StructuredBuffer<Vertex_P3N3T3UV> unified_vertex_buffer : register(t2, space0);
 StructuredBuffer<uint> unified_index_buffer : register(t3, space0);
 
 struct Vertex_Out {
@@ -29,7 +29,7 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 {
 	Mesh_Instance mesh_instance = mesh_instances[pass_data.mesh_idx];
 	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
-	Vertex_P3NTUV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
+	Vertex_P3N3T3UV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
 	
 	float4x4 world_matrix = transpose(world_matrices[pass_data.world_matrix_idx]);
 	
@@ -46,7 +46,8 @@ float4 ps_main(Vertex_Out output) : SV_TARGET
 {
     Mesh_Instance mesh_instance = mesh_instances[pass_data.mesh_idx];
     Texture2D<float4> tex = textures[mesh_instance.material.diffuse_texture_index];
-    return tex.Sample(linear_sampling, output.uv);
+    float3 result = tex.Sample(linear_sampling, output.uv).rgb;
+    return float4(result, 1.0f);
 }
 
 #endif

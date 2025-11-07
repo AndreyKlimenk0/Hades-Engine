@@ -105,6 +105,7 @@ struct Texture_Desc {
 	DXGI_FORMAT format;
 	Clear_Value clear_value;
 	Resource_State resource_state = RESOURCE_STATE_COMMON;
+	String name;
 
 	bool valid();
 };

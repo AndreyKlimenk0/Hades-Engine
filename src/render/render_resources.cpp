@@ -187,6 +187,10 @@ inline D3D12_RESOURCE_DIMENSION to_d3d12_resource_dimension(Texture_Dimension te
 	 D3D12_RESOURCE_ALLOCATION_INFO allocation_info = gpu_device.Get()->GetResourceAllocationInfo(0, 1, &resource_desc);
 	 Resource_Allocation allocation = allocator->allocate_texture(allocation_info.SizeInBytes);
 	 GPU_Resource::create(gpu_device, *allocation.heap, allocation.heap_offset, texture_desc->resource_state, resource_desc, texture_desc->clear_value);
+
+	 if (!texture_desc->name.is_empty()) {
+		 set_debug_name(texture_desc->name);
+	 }
 	 //GPU_Resource::create(*resource_allocator->gpu_device, GPU_HEAP_TYPE_DEFAULT, texture_desc->resource_state, resource_desc, texture_desc->clear_value);
  }
 
@@ -207,15 +211,15 @@ inline D3D12_RESOURCE_DIMENSION to_d3d12_resource_dimension(Texture_Dimension te
  u32 Texture::get_subresource_count()
  {
 	 D3D12_RESOURCE_DESC d3d12_texture_desc = d3d12_resource_desc();
-	 assert(d3d12_texture_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D);
 	 return static_cast<u32>(d3d12_texture_desc.MipLevels);
  }
 
  u32 Texture::get_size()
  {
 	 D3D12_RESOURCE_DESC d3d12_texture_desc = d3d12_resource_desc();
-	 assert(d3d12_texture_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D);
-	 return align_address<u32>(d3d12_texture_desc.Width * dxgi_format_size(d3d12_texture_desc.Format), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) * d3d12_texture_desc.Height;
+	 auto &gpu_device = Engine::get_render_system()->gpu_device;
+	 D3D12_RESOURCE_ALLOCATION_INFO allocation_info = gpu_device.Get()->GetResourceAllocationInfo(0, 1, &d3d12_texture_desc);
+	 return static_cast<u32>(allocation_info.SizeInBytes);
  }
 
  Texture_Desc Texture::get_texture_desc()

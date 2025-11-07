@@ -96,8 +96,8 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *contex
 {
 	Render_World *render_world = (Render_World *)context;
 
-	render_command_buffer->clear_depth_stencil_view(depth_stencil_texture->get_depth_stencil_descriptor());
-	render_command_buffer->clear_render_target_view(render_command_buffer->back_buffer_texture->get_render_target_descriptor(), Color::LightSteelBlue);
+	render_command_buffer->clear_depth_stencil(depth_stencil_texture);
+	render_command_buffer->clear_render_target(render_command_buffer->back_buffer_texture, Color::LightSteelBlue);
 	render_command_buffer->set_back_buffer_as_render_target(depth_stencil_texture);
 	
 	render_command_buffer->apply(&pipeline_states[0]);
@@ -179,6 +179,11 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 			continue;
 		}
 
+		u32 x = 0;
+		for (u32 mip_level = 0; mip_level < texture_desc.miplevels; mip_level++) {
+			texture->get_unordered_access_descriptor(mip_level);
+		}
+
 		u32 prev_pipeline_index = UINT_MAX;
 		for (u32 mip_level = 0; mip_level < texture_desc.miplevels - 1;) {
 			u32 source_width = texture_desc.width >> mip_level;
@@ -224,6 +229,7 @@ void Shadows_Pass::schedule_resources(Resource_Manager *resource_manager)
 	Depth_Stencil_Texture_Desc depth_stencil_desc;
 	depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
+	depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
 	
 	shadow_atlas = resource_manager->create_depth_stencil_texture("Shadow_Atlas", &depth_stencil_desc);
 }
@@ -253,7 +259,6 @@ void Shadows_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_man
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = &root_signature;
 	graphics_pipeline_desc.vertex_shader = shader;
-	//graphics_pipeline_desc.pixel_shader = shader;
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 
 	pipeline_states[0].create(device, graphics_pipeline_desc);
@@ -263,10 +268,8 @@ void Shadows_Pass::render(Render_Command_Buffer *render_command_buffer, void *co
 {
 	Render_World *render_world = (Render_World *)context;
 
-	render_command_buffer->clear_depth_stencil_view(shadow_atlas->get_depth_stencil_descriptor());
-	auto temp = shadow_atlas->get_depth_stencil_descriptor().cpu_handle;
-	render_command_buffer->graphics_command_list.get()->OMSetRenderTargets(0, NULL, FALSE, &temp);
-	//render_command_buffer->set_back_buffer_as_render_target(depth_stencil_texture);
+	render_command_buffer->clear_depth_stencil(shadow_atlas);
+	render_command_buffer->set_depth_stencil(shadow_atlas);
 
 	render_command_buffer->apply(&pipeline_states[0]);
 
@@ -281,11 +284,7 @@ void Shadows_Pass::render(Render_Command_Buffer *render_command_buffer, void *co
 	For(render_world->cascaded_shadows_list, cascaded_shadows) {
 		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
 		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map) {
-			if (cascaded_shadow_map->viewport.x == 1024) {
-				int x = 0;
-			}
 			render_command_buffer->set_viewport(&cascaded_shadow_map->viewport);
-			//render_command_buffer->set_viewport(&viewport);
 
 			Render_Entity *render_entity = NULL;
 			For(render_world->game_render_entities, render_entity) {
@@ -299,6 +298,117 @@ void Shadows_Pass::render(Render_Command_Buffer *render_command_buffer, void *co
 		}
 	}
 }
+
+void Forward_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+{
+	Render_Pass::init(pass_name, device, shader_manager, resource_manager);
+}
+
+void Forward_Pass::schedule_resources(Resource_Manager *resource_manager)
+{
+	back_buffer_depth_texture = resource_manager->create_depth_stencil_texture("Back_Buffer_Depth_Texture");
+	shadow_atlas = resource_manager->create_depth_stencil_texture("Shadow_Atlas");
+}
+
+struct Shadow_Atlas {
+	u32 atlas_size;
+	u32 cascade_size;
+	Pad2 pad;
+};
+
+struct Jittering_Filter {
+	u32 tile_size;
+	u32 filter_size;
+	u32 scaling;
+	Pad1 pad;
+};
+
+void Forward_Pass::setup_root_signature(Gpu_Device &device)
+{
+	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
+	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
+	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
+	root_signature.add_sr_descriptor_table_parameter(3, 0); //Unified index buffer
+	root_signature.add_sr_descriptor_table_parameter(4, 0); //Lights buffer
+
+	root_signature.add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
+	root_signature.add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
+	
+	root_signature.add_sr_descriptor_table_parameter(0, 2); //shadow atlas texture
+	root_signature.add_sr_descriptor_table_parameter(1, 2); //jittering_samples
+	root_signature.add_sr_descriptor_table_parameter(2, 2); //cascaded_shadows_list
+	root_signature.add_sr_descriptor_table_parameter(3, 2); //shadow_cascade_view_projection_matrices
+
+	Render_Pass::setup_root_signature(device);
+}
+
+void Forward_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+{
+	Shader *shader = GET_SHADER(shader_manager, forward_light);
+
+	Depth_Stencil_Desc depth_desc;
+	depth_desc.enable_depth_test = false;
+
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = &root_signature;
+	graphics_pipeline_desc.vertex_shader = shader;
+	graphics_pipeline_desc.pixel_shader = shader;
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	pipeline_states[0].create(device, graphics_pipeline_desc);
+}
+
+void Forward_Pass::render(Render_Command_Buffer *render_command_buffer, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+
+	render_command_buffer->clear_depth_stencil(back_buffer_depth_texture);
+	render_command_buffer->clear_render_target(render_command_buffer->back_buffer_texture, Color::LightSteelBlue);
+	render_command_buffer->set_back_buffer_as_render_target(back_buffer_depth_texture);
+
+	render_command_buffer->apply(&pipeline_states[0]);
+	
+	render_command_buffer->graphics_command_list.resource_barrier(Transition_Resource_Barrier(*shadow_atlas, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_ALL_SHADER_RESOURCE));
+
+	render_command_buffer->bind_buffer(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer);
+	render_command_buffer->bind_buffer(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer);
+	render_command_buffer->bind_buffer(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer);
+	render_command_buffer->bind_buffer(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer);
+	render_command_buffer->bind_buffer(4, 0, SHADER_RESOURCE_REGISTER, render_world->lights_buffer);
+
+	render_command_buffer->bind_texture(0, 2, SHADER_RESOURCE_REGISTER, shadow_atlas);
+	render_command_buffer->bind_texture(1, 2, SHADER_RESOURCE_REGISTER, &render_world->jittering_samples);
+	render_command_buffer->bind_buffer(2, 2, SHADER_RESOURCE_REGISTER, render_world->cascaded_shadows_info_buffer);
+	render_command_buffer->bind_buffer(3, 2, SHADER_RESOURCE_REGISTER, render_world->casded_view_projection_matrices_buffer);
+
+
+	Shadow_Atlas shadow_atlas_info;
+	shadow_atlas_info.atlas_size = SHADOW_ATLAS_SIZE;
+	shadow_atlas_info.cascade_size = CASCADE_SIZE;
+
+	Jittering_Filter filter;
+	filter.tile_size = render_world->jittering_tile_size;
+	filter.filter_size = render_world->jittering_filter_size;
+	filter.scaling = render_world->jittering_scaling;
+
+	render_command_buffer->graphics_command_list.set_graphics_constants(root_signature.get_parameter_index(0, 2, ROOT_PARAMETER_CONSTANT_BUFFER), shadow_atlas_info);
+	render_command_buffer->graphics_command_list.set_graphics_constants(root_signature.get_parameter_index(1, 2, ROOT_PARAMETER_CONSTANT_BUFFER), filter);
+
+	Pass_Data pass_data;
+	Render_Entity *render_entity = NULL;
+	For(render_world->game_render_entities, render_entity) {
+		pass_data.parameter0 = render_entity->mesh_idx;
+		pass_data.parameter1 = render_entity->world_matrix_idx;
+		render_command_buffer->graphics_command_list.set_graphics_constants(0, pass_data);
+
+		render_command_buffer->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+	}
+
+	render_command_buffer->graphics_command_list.resource_barrier(Transition_Resource_Barrier(*shadow_atlas, RESOURCE_STATE_ALL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE));
+}
+
 
 //#include <assert.h>
 //

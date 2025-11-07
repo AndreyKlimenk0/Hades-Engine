@@ -195,12 +195,15 @@ void Engine::init(Win32_Window *window)
 
 	init_commands();
 	Array<String> temp;
+//	temp.push("vampire.fbx");
 	temp.push("Sponza.gltf");
 	//temp.push("Mutant.fbx");
 	run_command("load mesh", temp);
 
 	Entity_Id entity_id = game_world.make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-	render_world.add_light(entity_id);
+	render_world.upload_lights();
+
+	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 }
 
 #include "sys.h"
@@ -220,6 +223,7 @@ void Engine::frame()
 	run_event_loop();
 
 	editor.handle_events();
+	file_tracking_sys.update();
 
 	editor.update();
 	render_world.update();
