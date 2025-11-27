@@ -595,6 +595,14 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 	view_projection_matrix = make_identity_matrix();
 }
 
+Render_World::Render_World()
+{
+}
+
+Render_World::~Render_World()
+{
+}
+
 void Render_World::init(Engine *engine)
 {
 	//@Note: Why don't pass just the engine pointer ?

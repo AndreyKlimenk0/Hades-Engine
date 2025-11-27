@@ -166,6 +166,9 @@ inline Size_u32 Voxel_Grid::total_size()
 }
 
 struct Render_World {
+	Render_World();
+	~Render_World();
+
 	Game_World *game_world = NULL;
 	Render_System *render_sys = NULL;
 
