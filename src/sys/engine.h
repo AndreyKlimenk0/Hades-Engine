@@ -27,8 +27,8 @@ struct Engine {
 	Variable_Service var_service;
 	File_Tracking_System file_tracking_sys;
 	Game_World game_world;
-	Render_World render_world;
 	Render_System render_sys;
+	Render_World render_world;
 	Font_Manager font_manager;
 	Shader_Manager shader_manager;
 

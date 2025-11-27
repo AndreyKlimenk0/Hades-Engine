@@ -72,6 +72,7 @@ Descriptor_Heap_Pool::Descriptor_Heap_Pool()
 
 Descriptor_Heap_Pool::~Descriptor_Heap_Pool()
 {
+	print("~Descriptor_Heap_Pool");
 }
 
 CB_Descriptor Descriptor_Heap_Pool::allocate_cb_descriptor(GPU_Resource *resource)

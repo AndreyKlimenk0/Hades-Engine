@@ -240,6 +240,8 @@ void Engine::frame()
 
 void Engine::shutdown()
 {
+	render_sys.flush();
+
 	if (current_level_name.is_empty()) {
 		int counter = 0;
 		String index = "";

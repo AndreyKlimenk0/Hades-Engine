@@ -13,6 +13,13 @@ using Microsoft::WRL::ComPtr;
 typedef u64 GPU_Address;
 typedef ComPtr<ID3D12Device> Gpu_Device;
 
+struct Buffer {
+};
+
+struct Render_Device {
+	void create_buffer();
+};
+
 enum Clear_Value_Type {
 	CLEAR_VALUE_UNKNOWN,
 	CLEAR_VALUE_COLOR,
