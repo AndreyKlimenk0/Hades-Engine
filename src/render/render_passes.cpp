@@ -1,7 +1,6 @@
 #include <limits.h>
 
 #include "../sys/sys.h"
-#include "render_helpers.h"
 #include "render_world.h"
 #include "render_system.h"
 #include "render_passes.h"
@@ -23,7 +22,7 @@ Render_Pass::~Render_Pass()
 {
 }
 
-void Render_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+void Render_Pass::init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	name = pass_name;
 	setup_root_signature(device);
@@ -31,13 +30,16 @@ void Render_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager
 	schedule_resources(resource_manager);
 }
 
-void Render_Pass::setup_root_signature(Gpu_Device &device)
+void Render_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature.add_cb_descriptor_table_parameter(0, 10);      //Frame_Info
-	root_signature.add_sr_descriptor_table_parameter_xxx(0, 10);  //Textures
-	root_signature.add_sampler_descriptor_table_parameter(0, 10); //Point sampling
-	root_signature.add_sampler_descriptor_table_parameter(1, 10); //Linear sampling
-	root_signature.create(device, ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS);
+	root_signature = device->create_root_signature();
+
+	root_signature->add_constant_buffer_parameter(0, 10);      //Frame_Info
+	root_signature->add_shader_resource_parameter(0, 10, UNBOUNDED_DESCRIPTORS_NUMBER);  //Textures
+	root_signature->add_sampler_parameter(0, 10); //Point sampling
+	root_signature->add_sampler_parameter(1, 10); //Linear sampling
+
+	root_signature->compile();
 }
 
 void Render_Pass::schedule_resources(Resource_Manager *resource_manager)
@@ -56,9 +58,8 @@ struct Box_Pass_Data {
 
 };
 
-void Box_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+void Box_Pass::init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
-	Buffer_Desc buffer_desc = Buffer_Desc(sizeof(Pass_Data), CONSTANT_BUFFER_ALIGNMENT);
 	Render_Pass::init(pass_name, device, shader_manager, resource_manager);
 }
 
@@ -67,32 +68,32 @@ void Box_Pass::schedule_resources(Resource_Manager *resource_manager)
 	depth_stencil_texture = resource_manager->create_depth_stencil_texture("Main_Depth_Texture");
 }
 
-void Box_Pass::setup_root_signature(Gpu_Device &device)
+void Box_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
-	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
-	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
-	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
-	root_signature.add_sr_descriptor_table_parameter(3, 0); //Unified index buffer
-	
 	Render_Pass::setup_root_signature(device);
+
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature->add_shader_resource_parameter(0, 0); //World matrices
+	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
+	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
 }
 
-void Box_Pass::setup_pipeline(Gpu_Device &gpu_device, Shader_Manager *shader_manager)
+void Box_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
 {
 	Shader *shader = GET_SHADER(shader_manager, draw_box);
 
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
-	graphics_pipeline_desc.root_signature = &root_signature;
+	graphics_pipeline_desc.root_signature = root_signature;
 	graphics_pipeline_desc.vertex_shader = shader;
 	graphics_pipeline_desc.pixel_shader = shader;
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	pipeline_states[0].create(gpu_device, graphics_pipeline_desc);
+	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
 }
 
-void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *context, void *args)
+void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *context, void *args
 {
 	Render_World *render_world = (Render_World *)context;
 
@@ -100,7 +101,7 @@ void Box_Pass::render(Render_Command_Buffer *render_command_buffer, void *contex
 	render_command_buffer->clear_render_target(render_command_buffer->back_buffer_texture, Color::LightSteelBlue);
 	render_command_buffer->set_back_buffer_as_render_target(depth_stencil_texture);
 	
-	render_command_buffer->apply(&pipeline_states[0]);
+	render_command_buffer->apply(pipeline_state);
 	
 	render_command_buffer->bind_buffer(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer);
 	render_command_buffer->bind_buffer(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer);
@@ -128,13 +129,13 @@ struct Mipmaps_Info {
 	Vector2 texel_size;
 };
 
-void Generate_Mipmaps::init(Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+void Generate_Mipmaps::init(Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	setup_root_signature(device);
 	setup_pipeline(device, shader_manager);
 }
 
-void Generate_Mipmaps::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+void Generate_Mipmaps::setup_pipeline(Render_Device *device, Shader_Manager *shader_manager)
 {
 	Shader *shaders[4];
 	shaders[0] = GET_SHADER(shader_manager, generate_mips_linear);
@@ -150,7 +151,7 @@ void Generate_Mipmaps::setup_pipeline(Gpu_Device &device, Shader_Manager *shader
 	}
 }
 
-void Generate_Mipmaps::setup_root_signature(Gpu_Device &device)
+void Generate_Mipmaps::setup_root_signature(Render_Device *device)
 {
 	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Mipmaps_Info));
 	root_signature.add_sr_descriptor_table_parameter(0, 0);
@@ -219,7 +220,7 @@ void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Arra
 	}
 }
 
-void Shadows_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+void Shadows_Pass::init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	Render_Pass::init(pass_name, device, shader_manager, resource_manager);
 }
@@ -241,7 +242,7 @@ struct Depth_Map_Pass_Data {
 	Matrix4 view_projection_matrix;
 };
 
-void Shadows_Pass::setup_root_signature(Gpu_Device &device)
+void Shadows_Pass::setup_root_signature(Render_Device *device)
 {
 	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
 	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
@@ -252,7 +253,7 @@ void Shadows_Pass::setup_root_signature(Gpu_Device &device)
 	Render_Pass::setup_root_signature(device);
 }
 
-void Shadows_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+void Shadows_Pass::setup_pipeline(Render_Device *device, Shader_Manager *shader_manager)
 {
 	Shader *shader = GET_SHADER(shader_manager, depth_map);
 
@@ -299,7 +300,7 @@ void Shadows_Pass::render(Render_Command_Buffer *render_command_buffer, void *co
 	}
 }
 
-void Forward_Pass::init(const char *pass_name, Gpu_Device &device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
+void Forward_Pass::init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
 {
 	Render_Pass::init(pass_name, device, shader_manager, resource_manager);
 }
@@ -323,27 +324,27 @@ struct Jittering_Filter {
 	Pad1 pad;
 };
 
-void Forward_Pass::setup_root_signature(Gpu_Device &device)
+void Forward_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
-	root_signature.add_sr_descriptor_table_parameter(0, 0); //World matrices
-	root_signature.add_sr_descriptor_table_parameter(1, 0); //Mesh instances
-	root_signature.add_sr_descriptor_table_parameter(2, 0); //unified vertex buffer
-	root_signature.add_sr_descriptor_table_parameter(3, 0); //Unified index buffer
-	root_signature.add_sr_descriptor_table_parameter(4, 0); //Lights buffer
-
-	root_signature.add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
-	root_signature.add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature->add_shader_resource_parameter(0, 0); //World matrices
+	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
+	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
+	root_signature->add_shader_resource_parameter(4, 0); //Lights buffer
 	
-	root_signature.add_sr_descriptor_table_parameter(0, 2); //shadow atlas texture
-	root_signature.add_sr_descriptor_table_parameter(1, 2); //jittering_samples
-	root_signature.add_sr_descriptor_table_parameter(2, 2); //cascaded_shadows_list
-	root_signature.add_sr_descriptor_table_parameter(3, 2); //shadow_cascade_view_projection_matrices
+	root_signature->add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
+	root_signature->add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
+	
+	root_signature->add_shader_resource_parameter(0, 2); //shadow atlas texture
+	root_signature->add_shader_resource_parameter(1, 2); //jittering_samples
+	root_signature->add_shader_resource_parameter(2, 2); //cascaded_shadows_list
+	root_signature->add_shader_resource_parameter(3, 2); //shadow_cascade_view_projection_matrices
 
 	Render_Pass::setup_root_signature(device);
 }
 
-void Forward_Pass::setup_pipeline(Gpu_Device &device, Shader_Manager *shader_manager)
+void Forward_Pass::setup_pipeline(Render_Device *device, Shader_Manager *shader_manager)
 {
 	Shader *shader = GET_SHADER(shader_manager, forward_light);
 

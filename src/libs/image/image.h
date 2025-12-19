@@ -28,4 +28,8 @@ struct Image {
 
 bool load_image_from_file(const char *full_path_to_file, DXGI_FORMAT format, Image *image);
 
+inline u32 find_max_mip_level(u32 width, u32 height)
+{
+	return math::log2(math::max(width, height));
+}
 #endif

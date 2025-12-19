@@ -19,6 +19,7 @@ struct Array {
 	T *items = NULL;
 	u32 count;
 	u32 size;
+	u32 stride = sizeof(T);
 
 	Array(const Array<T> &other);
 	Array<T> &operator=(const Array<T> &other);
@@ -33,13 +34,14 @@ struct Array {
 	void reserve(u32 _count, bool clear_array = false);
 	void set_pointer_to_item(T* ptr, u32 index);
 	void set_pointer_to_item(T** ptr, u32 index);
+
+	void *to_void_ptr();
 	
 	bool is_empty();
 	bool find(const T &item);
 
 	u32 push(const T &item);
 	u32 get_size();
-	u32 get_stride();
 
 	T &pop();
 	T &get(u32 index);
@@ -182,6 +184,12 @@ inline void Array<T>::set_pointer_to_item(T **ptr, u32 index)
 {
 	assert(count > index);
 	*ptr = &items[index];
+}
+
+template<typename T>
+inline void *Array<T>::to_void_ptr()
+{
+	return (void *)items;
 }
 
 template <typename T>

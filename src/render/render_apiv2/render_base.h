@@ -1,17 +1,73 @@
-#ifndef RENDER_API_PIPELINE_STATE
-#define RENDER_API_PIPELINE_STATE
+#ifndef RENDER_BASE_H
+#define RENDER_BASE_H
 
-#include <d3d12.h>
-#include <dxgiformat.h>
+#include "render_types.h"
 
-#include "base.h"
-#include "d3d12_object.h"
-#include "root_signature.h"
+#include "../../libs/str.h"
+#include "../../libs/color.h"
 #include "../../libs/number_types.h"
-#include "../../libs/structures/array.h"
 #include "../../libs/math/structures.h"
 
-struct Shader;
+struct Buffer_Desc {
+	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
+	u32 stride = 0;
+	u32 count = 0;
+	void *data = NULL;
+	String name = "Unknown";
+
+	u64 size();
+};
+
+struct Texture_Desc {
+	Texture_Dimension dimension = TEXTURE_DIMENSION_UNKNOWN;
+	Resource_State resource_state = RESOURCE_STATE_COMMON;
+	u32 width = 0;
+	u32 height = 1;
+	u32 depth = 1;
+	u32 miplevels = 1;
+	u32 flags = 0;
+	void *data = NULL;
+	DXGI_FORMAT format;
+	Clear_Value clear_value;
+	String name = "Unknown";
+
+	u64 size();
+};
+
+enum Clear_Value_Type {
+	CLEAR_VALUE_UNKNOWN,
+	CLEAR_VALUE_COLOR,
+	CLEAR_VALUE_DEPTH_STENCIL
+};
+
+struct Clear_Value {
+	Clear_Value();
+	Clear_Value(Color &_color);
+	Clear_Value(float _depht, u8 _stencil);
+	~Clear_Value();
+
+	Clear_Value_Type type;
+	float depth;
+	u8 stencil;
+	Color color;
+
+	bool depth_stencil_set();
+};
+
+struct Viewport {
+	Viewport();
+	Viewport(const Size_f32 &size);
+	~Viewport();
+
+	float x = 0.0f;
+	float y = 0.0f;
+	float width = 0.0f;
+	float height = 0.0f;
+	float min_depth = 0.0f;
+	float max_depth = 1.0f;
+
+	void reset();
+};
 
 enum Fill_Type {
 	FILL_TYPE_WIREFRAME,
@@ -63,7 +119,7 @@ enum Blend_Operation {
 struct Blending_Desc {
 	Blending_Desc();
 	~Blending_Desc();
-	
+
 	bool enable;
 	Blend_Option src;
 	Blend_Option dest;
@@ -116,8 +172,10 @@ struct Depth_Stencil_Desc {
 	Stencil_Operation stencil_and_depth_passed;
 };
 
+struct Shader;
+struct Root_Signature;
+
 struct Graphics_Pipeline_Desc {
-	u32 layout_offset = 0;
 	Root_Signature *root_signature = NULL;
 	Shader *vertex_shader = NULL;
 	Shader *pixel_shader = NULL;
@@ -127,34 +185,12 @@ struct Graphics_Pipeline_Desc {
 	Depth_Stencil_Desc depth_stencil_desc;
 	DXGI_FORMAT depth_stencil_format;
 	Array<DXGI_FORMAT> render_targets_formats;
-	Array<D3D12_INPUT_ELEMENT_DESC> input_elements;
 
 	void add_render_target(DXGI_FORMAT format);
-	void add_layout(const char *semantic_name, DXGI_FORMAT format);
-	D3D12_INPUT_LAYOUT_DESC d3d12_input_layout();
 };
 
 struct Compute_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
 	Shader *compute_shader = NULL;
 };
-
-enum Pipeline_Type {
-	PIPELINE_TYPE_UNKNOWN,
-	PIPELINE_TYPE_GRAPHICS,
-	PIPELINE_TYPE_COMPUTE
-};
-
-struct Pipeline_State : D3D12_Object<ID3D12PipelineState> {
-	Pipeline_State();
-	~Pipeline_State();
-
-	Pipeline_Type type = PIPELINE_TYPE_UNKNOWN;
-	Primitive_Type primitive_type = PRIMITIVE_TYPE_UNKNOWN;
-	Root_Signature *root_signature = NULL;
-
-	void create(Gpu_Device &device, Compute_Pipeline_Desc &compute_pipeline_desc);
-	void create(Gpu_Device &device, Graphics_Pipeline_Desc &graphics_pipeline_desc);
-};
-
 #endif
