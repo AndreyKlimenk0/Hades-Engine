@@ -1,12 +1,16 @@
 #ifndef RENDER_WORLD_H
 #define RENDER_WORLD_H
 
-#include "gpu_data.h"
 #include "mesh.h"
+#include "gpu_data.h"
 #include "render_passes.h"
 #include "render_system.h"
-#include "render_helpers.h"
+
+#include "render_apiv2/render_types.h"
+#include "render_apiv2/render_device.h"
+
 #include "../game/world.h"
+
 #include "../libs/str.h"
 #include "../libs/color.h"
 #include "../libs/number_types.h"
@@ -16,16 +20,12 @@
 #include "../libs/structures/array.h"
 #include "../libs/structures/hash_table.h"
 
-#include "render_resources.h"
-
 struct Engine;
 struct Render_Pass;
 
 const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_SIZE = 8192;
 const u32 CASCADE_SIZE = 1024;
-
-const R24U8 DEFAULT_DEPTH_VALUE = R24U8(0xffffff, 0);
 
 struct Render_Entity {
 	u32 world_matrix_idx;
@@ -171,6 +171,7 @@ struct Render_World {
 
 	Game_World *game_world = NULL;
 	Render_System *render_sys = NULL;
+	Render_Device *render_device = NULL;
 
 	u32 jittering_tile_size = 0;
 	u32 jittering_filter_size = 0;
@@ -179,7 +180,7 @@ struct Render_World {
 	Matrix4 voxel_matrix;
 	Voxel_Grid voxel_grid;
 	Vector3 voxel_grid_center;
-	Texture jittering_samples;
+	Texture *jittering_samples = NULL;
 
 	Matrix4 left_to_right_voxel_view_matrix;
 	Matrix4 top_to_down_voxel_view_matrix;
