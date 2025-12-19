@@ -2,7 +2,6 @@
 
 #include "font.h"
 #include "render_system.h"
-#include "render_helpers.h"
 
 #include "../sys/sys.h"
 #include "../sys/vars.h"
@@ -23,152 +22,6 @@
 //	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 //}
 
-struct VertexP3C3 {
-	VertexP3C3() = default;
-	VertexP3C3(float x, float y, float z, float uvx, float uvy) : vertex(x, y, z), uv(uvx, uvy) {}
-	~VertexP3C3() = default;
-	Vector3 vertex;
-	Vector2 uv;
-};
-
-static VertexP3C3 vertices[8] = {
-	// Front face
-	{-0.5f, -0.5f,  0.5f, 0.0f, 0.0f}, // 0 - Bottom-left
-	{ 0.5f, -0.5f,  0.5f, 1.0f, 0.0f}, // 1 - Bottom-right
-	{ 0.5f,  0.5f,  0.5f, 1.0f, 1.0f}, // 2 - Top-right
-	{-0.5f,  0.5f,  0.5f, 0.0f, 1.0f}, // 3 - Top-left
-
-	// Back face
-	{-0.5f, -0.5f, -0.5f, 1.0f, 0.0f}, // 4 - Bottom-left
-	{ 0.5f, -0.5f, -0.5f, 0.0f, 0.0f}, // 5 - Bottom-right
-	{ 0.5f,  0.5f, -0.5f, 0.0f, 1.0f}, // 6 - Top-right
-	{-0.5f,  0.5f, -0.5f, 1.0f, 1.0f}  // 7 - Top-left
-};
-
-//static VertexP3C3 vertices[8] = {
-//	{ Vector3(-1.0f, -1.0f, -1.0f), Vector3(0.0f, 0.0f, 0.0f) }, // 0
-//	{ Vector3(-1.0f,  1.0f, -1.0f), Vector3(0.0f, 1.0f, 0.0f) }, // 1
-//	{ Vector3(1.0f,  1.0f, -1.0f), Vector3(1.0f, 1.0f, 0.0f) }, // 2
-//	{ Vector3(1.0f, -1.0f, -1.0f), Vector3(1.0f, 0.0f, 0.0f) }, // 3
-//	{ Vector3(-1.0f, -1.0f,  1.0f), Vector3(0.0f, 0.0f, 1.0f) }, // 4
-//	{ Vector3(-1.0f,  1.0f,  1.0f), Vector3(0.0f, 1.0f, 1.0f) }, // 5
-//	{ Vector3(1.0f,  1.0f,  1.0f), Vector3(1.0f, 1.0f, 1.0f) }, // 6
-//	{ Vector3(1.0f, -1.0f,  1.0f), Vector3(1.0f, 0.0f, 1.0f) }  // 7
-//};
-//
-static u32 indices[36] =
-{
-	0, 1, 2, 0, 2, 3,
-	4, 6, 5, 4, 7, 6,
-	4, 5, 1, 4, 1, 0,
-	3, 2, 6, 3, 6, 7,
-	1, 5, 6, 1, 6, 2,
-	4, 0, 3, 4, 3, 7
-};
-
-Descriptor_Heap_Pool::Descriptor_Heap_Pool()
-{
-}
-
-Descriptor_Heap_Pool::~Descriptor_Heap_Pool()
-{
-	print("~Descriptor_Heap_Pool");
-}
-
-CB_Descriptor Descriptor_Heap_Pool::allocate_cb_descriptor(GPU_Resource *resource)
-{
-	return cbsrua_descriptor_heap.place_cb_descriptor(cbsrua_descriptor_indices.pop(), *resource);
-}
-
-SR_Descriptor Descriptor_Heap_Pool::allocate_sr_descriptor(GPU_Resource *resource, u32 mipmap_level)
-{
-	return cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_indices.pop(), *resource, mipmap_level);
-}
-
-UA_Descriptor Descriptor_Heap_Pool::allocate_ua_descriptor(GPU_Resource *resource, u32 mipmap_level)
-{
-	return cbsrua_descriptor_heap.place_ua_descriptor(cbsrua_descriptor_indices.pop(), *resource, mipmap_level);
-}
-
-RT_Descriptor Descriptor_Heap_Pool::allocate_rt_descriptor(GPU_Resource *resource)
-{
-	return rt_descriptor_heap.place_descriptor(rt_descriptor_indices.pop(), *resource);
-}
-
-DS_Descriptor Descriptor_Heap_Pool::allocate_ds_descriptor(GPU_Resource *resource)
-{
-	return ds_descriptor_heap.place_descriptor(rt_descriptor_indices.pop(), *resource);
-}
-
-Sampler_Descriptor Descriptor_Heap_Pool::allocate_sampler_descriptor(Sampler &sampler)
-{
-	return sampler_descriptor_heap.place_descriptor(sampler_descriptor_indices.pop(), sampler);
-}
-
-void Descriptor_Heap_Pool::allocate_pool(Gpu_Device &device, u32 descriptors_count)
-{
-	cbsrua_descriptor_heap.create(device, descriptors_count);
-	rt_descriptor_heap.create(device, descriptors_count);
-	ds_descriptor_heap.create(device, descriptors_count);
-	sampler_descriptor_heap.create(device, descriptors_count);
-
-	rt_descriptor_indices.resize(descriptors_count);
-	ds_descriptor_indices.resize(descriptors_count);
-	cbsrua_descriptor_indices.resize(descriptors_count);
-	sampler_descriptor_indices.resize(descriptors_count);
-
-	u32 index = descriptors_count;
-	for (u32 i = 0; i < descriptors_count; i++) {
-		index -= 1;
-		rt_descriptor_indices.push(index);
-		ds_descriptor_indices.push(index);
-		cbsrua_descriptor_indices.push(index);
-		sampler_descriptor_indices.push(index);
-	}
-}
-
-void Descriptor_Heap_Pool::free(CB_Descriptor *descriptor)
-{
-	if (descriptor->valid()) {
-		cbsrua_descriptor_indices.push(descriptor->index);
-	}
-}
-
-void Descriptor_Heap_Pool::free(SR_Descriptor *descriptor)
-{
-	if (descriptor->valid()) {
-		cbsrua_descriptor_indices.push(descriptor->index);
-	}
-}
-
-void Descriptor_Heap_Pool::free(UA_Descriptor *descriptor)
-{
-	if (descriptor->valid()) {
-		cbsrua_descriptor_indices.push(descriptor->index);
-	}
-}
-
-void Descriptor_Heap_Pool::free(Sampler_Descriptor *descriptor)
-{
-	if (descriptor->valid()) {
-		sampler_descriptor_indices.push(descriptor->index);
-	}
-}
-
-void Descriptor_Heap_Pool::free(RT_Descriptor *descriptor)
-{
-	if (descriptor->valid()) {
-		rt_descriptor_indices.push(descriptor->index);
-	}
-}
-
-void Descriptor_Heap_Pool::free(DS_Descriptor *descriptor)
-{
-	if (descriptor->valid()) {
-		ds_descriptor_indices.push(descriptor->index);
-	}
-}
-
 void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_service)
 {
 	assert(win32_window->width > 0);
@@ -178,42 +31,42 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 	window_view_plane.update(60, window.width, window.height, 1.0f, 10000.0f);
 
-	if (!create_d3d12_gpu_device(gpu_device)) {
-	}
+	//if (!create_d3d12_gpu_device(gpu_device)) {
+	//}
 
-	frame_fence.create(gpu_device);
-	back_buffer_textures.reserve(back_buffer_count);
+	//frame_fence.create(gpu_device);
+	//back_buffer_textures.reserve(back_buffer_count);
 
-	copy_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
-	copy_queue.set_debug_name("Copy Queue");
+	//copy_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
+	//copy_queue.set_debug_name("Copy Queue");
 
-	compute_queue.create(gpu_device, COMMAND_LIST_TYPE_COMPUTE);
-	compute_queue.set_debug_name("Compute Queue");
+	//compute_queue.create(gpu_device, COMMAND_LIST_TYPE_COMPUTE);
+	//compute_queue.set_debug_name("Compute Queue");
 
-	graphics_queue.create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
-	graphics_queue.set_debug_name("Graphics Queue");
+	//graphics_queue.create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
+	//graphics_queue.set_debug_name("Graphics Queue");
 
-	command_buffer.create(gpu_device, back_buffer_count);
+	//command_buffer.create(gpu_device, back_buffer_count);
 
-	bool allow_tearing = false;
-	if (!window.vsync && window.windowed && check_tearing_support()) {
-		sync_interval = 0;
-		present_flags = DXGI_PRESENT_ALLOW_TEARING;
-		allow_tearing = true;
-	}
-	swap_chain.create(allow_tearing, back_buffer_count, window.width, window.height, win32_window->handle, graphics_queue);
+	//bool allow_tearing = false;
+	//if (!window.vsync && window.windowed && check_tearing_support()) {
+	//	sync_interval = 0;
+	//	present_flags = DXGI_PRESENT_ALLOW_TEARING;
+	//	allow_tearing = true;
+	//}
+	//swap_chain.create(allow_tearing, back_buffer_count, window.width, window.height, win32_window->handle, graphics_queue);
 
-	descriptors_pool.allocate_pool(gpu_device, 4000);
+	//descriptors_pool.allocate_pool(gpu_device, 4000);
 
-	for (u32 i = 0; i < back_buffer_count; i++) {
-		back_buffer_textures[i].descriptor_pool = &descriptors_pool;
-		swap_chain.get_buffer(i, back_buffer_textures[i]);
-	}
-	
-	Texture temp;
-	swap_chain.get_current_buffer(temp);
-	Texture_Desc back_buffer_texture_desc = temp.get_texture_desc();
-	resource_manager.init(gpu_device, &descriptors_pool, &copy_manager, &back_buffer_texture_desc);
+	//for (u32 i = 0; i < back_buffer_count; i++) {
+	//	back_buffer_textures[i].descriptor_pool = &descriptors_pool;
+	//	swap_chain.get_buffer(i, back_buffer_textures[i]);
+	//}
+	//
+	//Texture temp;
+	//swap_chain.get_current_buffer(temp);
+	//Texture_Desc back_buffer_texture_desc = temp.get_texture_desc();
+	//resource_manager.init(gpu_device, &descriptors_pool, &copy_manager, &back_buffer_texture_desc);
 
 	init_passes();
 
@@ -260,39 +113,22 @@ void Render_System::resize(u32 window_width, u32 window_height)
 	}
 }
 
-void flush(Fence *fence, Command_Queue *command_queue)
-{
-	command_queue->signal(*fence);
-	fence->wait_for_gpu();
-}
-
 void Render_System::flush()
 {
-	Fence fence;
+	/*Fence fence;
 	fence.create(gpu_device, 1);
 	graphics_queue.signal(fence);
-	fence.wait_for_gpu();
+	fence.wait_for_gpu();*/
 }
 
-void Render_System::begin_frame()
-{
-	frame_fence.increment_expected_value();
-	resource_manager.begin_frame(frame_fence.expected_value);
-}
-
-void Render_System::end_frame(u64 frame_number)
-{
-	resource_manager.end_frame(frame_number);
-}
-
-void wait_for_gpu(Fence *fence, u64 expected_value)
+/*void wait_for_gpu(Fence *fence, u64 expected_value)
 {
 	u64 completed_value = fence->get()->GetCompletedValue();
 	if (completed_value < expected_value) {
 		fence->get()->SetEventOnCompletion(expected_value, fence->handle);
 		WaitForSingleObject(fence->handle, INFINITE);
 	}
-}
+}*/
 
 void Render_System::render()
 {
@@ -349,35 +185,30 @@ Size_u32 Render_System::get_window_size()
 	return { window.width, window.height };
 }
 
-void Resource_Manager::init(Gpu_Device &device, Descriptor_Heap_Pool *_descriptors_pool, Copy_Manager *_copy_manager, Texture_Desc *back_buffer_texture_desc)
+void Resource_Manager::init()
 {
-	assert(back_buffer_texture_desc->valid());
+	//default_render_target_desc.width = back_buffer_texture_desc->width;
+	//default_render_target_desc.height = back_buffer_texture_desc->height;
+	//default_render_target_desc.format = back_buffer_texture_desc->format;
+	//default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
 
-	descriptors_pool = _descriptors_pool;
-	copy_manager = _copy_manager;
+	//default_depth_stencil_desc.width = back_buffer_texture_desc->width;
+	//default_depth_stencil_desc.height = back_buffer_texture_desc->height;
+	//default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
+	//default_depth_stencil_desc.clear_value = Clear_Value(1.0f, 0);
 
-	default_render_target_desc.width = back_buffer_texture_desc->width;
-	default_render_target_desc.height = back_buffer_texture_desc->height;
-	default_render_target_desc.format = back_buffer_texture_desc->format;
-	default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
+	//Sampler point_sampler = Sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
+	//Sampler linear_sampler = Sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
+	//Sampler anisotropic_sampler = Sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
 
-	default_depth_stencil_desc.width = back_buffer_texture_desc->width;
-	default_depth_stencil_desc.height = back_buffer_texture_desc->height;
-	default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
-	default_depth_stencil_desc.clear_value = Clear_Value(1.0f, 0);
+	//resource_allocator.init(Engine::get_render_system());
 
-	Sampler point_sampler = Sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
-	Sampler linear_sampler = Sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
-	Sampler anisotropic_sampler = Sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
+	//point_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(point_sampler);
+	//linear_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(linear_sampler);
+	//anisotropic_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(anisotropic_sampler);
 
-	resource_allocator.init(Engine::get_render_system());
-
-	point_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(point_sampler);
-	linear_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(linear_sampler);
-	anisotropic_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(anisotropic_sampler);
-
-	Buffer_Desc buffer_desc = Buffer_Desc(sizeof(GPU_Frame_Info), CONSTANT_BUFFER_ALIGNMENT);
-	frame_info_buffer = create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
+	//Buffer_Desc buffer_desc = Buffer_Desc(sizeof(GPU_Frame_Info), CONSTANT_BUFFER_ALIGNMENT);
+	//frame_info_buffer = create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
 }
 
 void Resource_Manager::update_frame_info_constant_buffer(GPU_Frame_Info *frame_info)
@@ -385,46 +216,31 @@ void Resource_Manager::update_frame_info_constant_buffer(GPU_Frame_Info *frame_i
 	frame_info_buffer->write(frame_info, sizeof(GPU_Frame_Info), 256);
 }
 
-void Resource_Manager::begin_frame(u64 frame_number)
-{
-	frame_count = frame_number;
-	for (u32 i = 0; i < buffers.count; i++) {
-		buffers[i]->begin_frame(frame_number);
-	}
-}
-
-void Resource_Manager::end_frame(u64 frame_number)
-{
-	for (u32 i = 0; i < buffers.count; i++) {
-		buffers[i]->end_frame(frame_number);
-	}
-}
-
-Buffer *Resource_Manager::create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc)
-{
-	auto buffer = new Buffer();
-	buffer->create(buffer_type, buffer_desc, &resource_allocator, descriptors_pool, copy_manager);
-	buffer->begin_frame(frame_count);
-	buffers.push(buffer);
-	return buffer;
-}
+//Buffer *Resource_Manager::create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc)
+//{
+//	auto buffer = new Buffer();
+//	buffer->create(buffer_type, buffer_desc, &resource_allocator, descriptors_pool, copy_manager);
+//	buffer->begin_frame(frame_count);
+//	buffers.push(buffer);
+//	return buffer;
+//}
 
 Texture *Resource_Manager::create_texture(Texture_Desc *texture_desc)
 {
-	auto texture = new Texture();
-	texture->create(texture_desc, &resource_allocator, descriptors_pool);
-	textures.push(texture);
-	return texture;
+	//auto texture = new Texture();
+	//texture->create(texture_desc, &resource_allocator, descriptors_pool);
+	//textures.push(texture);
+	//return texture;
 }
 
 Texture *Resource_Manager::find_depth_stencil_texture(const char *texture_name)
 {
-	Texture *texture = NULL;
-	if (!texture_table.get(texture_name, &texture)) {
-		texture = new Texture();
-		texture_table.set(texture_name, texture);
-	}
-	return texture;
+	//Texture *texture = NULL;
+	//if (!texture_table.get(texture_name, &texture)) {
+	//	texture = new Texture();
+	//	texture_table.set(texture_name, texture);
+	//}
+	//return texture;
 }
 
 Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
@@ -439,58 +255,57 @@ Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name
 		filled_depth_stencil_desc = default_depth_stencil_desc;
 	}
 
-	Texture_Desc depth_texture_desc;
-	depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
-	depth_texture_desc.width = filled_depth_stencil_desc.width;
-	depth_texture_desc.height = filled_depth_stencil_desc.height;
-	depth_texture_desc.format = filled_depth_stencil_desc.format;
-	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
-	depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
-	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
+	//Texture_Desc depth_texture_desc;
+	//depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	//depth_texture_desc.width = filled_depth_stencil_desc.width;
+	//depth_texture_desc.height = filled_depth_stencil_desc.height;
+	//depth_texture_desc.format = filled_depth_stencil_desc.format;
+	//depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
+	//depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
+	//depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
 
-	Texture *texture = NULL;
-	if (!texture_table.get(texture_name, &texture)) {
-		texture = new Texture();
-		texture_table.set(texture_name, texture);
-		texture->create(&depth_texture_desc, &resource_allocator, descriptors_pool);
-	}
-	
-	return texture;
+	//Texture *texture = NULL;
+	//if (!texture_table.get(texture_name, &texture)) {
+	//	texture = new Texture();
+	//	texture_table.set(texture_name, texture);
+	//	texture->create(&depth_texture_desc, &resource_allocator, descriptors_pool);
+	//}
+	//
+	//return texture;
 }
 
-void Render_Command_Buffer::create(Gpu_Device &device, u32 frames_in_flight)
+void Render_Command_Buffer::create(Render_Device *render_device)
 {
 	render_sys = Engine::get_render_system();
 
-	graphics_command_list.create(device, frames_in_flight);
-	compute_command_list.create(device, frames_in_flight);
+	//graphics_command_list.create(device, frames_in_flight);
+	//compute_command_list.create(device, frames_in_flight);
 
-	descriptors_pool = &Engine::get_render_system()->descriptors_pool;
 	resource_manager = &Engine::get_render_system()->resource_manager;
 }
 
 void Render_Command_Buffer::setup_common_compute_pipeline_resources(Root_Signature *root_signature)
 {
-	GPU_Descriptor base_cbsrua_descriptor = descriptors_pool->cbsrua_descriptor_heap.get_base_gpu_descriptor();
-	CB_Descriptor frame_info_buffer_descriptor = resource_manager->frame_info_buffer->get_constant_buffer_descriptor();
+	//GPU_Descriptor base_cbsrua_descriptor = descriptors_pool->cbsrua_descriptor_heap.get_base_gpu_descriptor();
+	//CB_Descriptor frame_info_buffer_descriptor = resource_manager->frame_info_buffer->get_constant_buffer_descriptor();
 
-	Compute_Command_List_Helper binding_helper = Compute_Command_List_Helper(&graphics_command_list, root_signature);
-	binding_helper.set_root_descriptor_table(0, 10, &frame_info_buffer_descriptor);                         // Per frame info buffer
-	binding_helper.set_root_descriptor_table(0, 10, static_cast<SR_Descriptor *>(&base_cbsrua_descriptor)); // Textures
-	binding_helper.set_root_descriptor_table(0, 10, &resource_manager->point_sampler_descriptor);  // Point sampler
-	binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
+	//Compute_Command_List_Helper binding_helper = Compute_Command_List_Helper(&graphics_command_list, root_signature);
+	//binding_helper.set_root_descriptor_table(0, 10, &frame_info_buffer_descriptor);                         // Per frame info buffer
+	//binding_helper.set_root_descriptor_table(0, 10, static_cast<SR_Descriptor *>(&base_cbsrua_descriptor)); // Textures
+	//binding_helper.set_root_descriptor_table(0, 10, &resource_manager->point_sampler_descriptor);  // Point sampler
+	//binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
 }
 
 void Render_Command_Buffer::setup_common_graphics_pipeline_resources(Root_Signature *root_signature)
 {
-	GPU_Descriptor base_cbsrua_descriptor = descriptors_pool->cbsrua_descriptor_heap.get_base_gpu_descriptor();
-	CB_Descriptor frame_info_buffer_descriptor = resource_manager->frame_info_buffer->get_constant_buffer_descriptor();
+	//GPU_Descriptor base_cbsrua_descriptor = descriptors_pool->cbsrua_descriptor_heap.get_base_gpu_descriptor();
+	//CB_Descriptor frame_info_buffer_descriptor = resource_manager->frame_info_buffer->get_constant_buffer_descriptor();
 
-	Graphics_Command_List_Helper binding_helper = Graphics_Command_List_Helper(&graphics_command_list, root_signature);
-	binding_helper.set_root_descriptor_table(0, 10, &frame_info_buffer_descriptor);                         // Per frame info buffer
-	binding_helper.set_root_descriptor_table(0, 10, static_cast<SR_Descriptor *>(&base_cbsrua_descriptor)); // Textures
-	binding_helper.set_root_descriptor_table(0, 10, &resource_manager->point_sampler_descriptor);  // Point sampler
-	binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
+	//Graphics_Command_List_Helper binding_helper = Graphics_Command_List_Helper(&graphics_command_list, root_signature);
+	//binding_helper.set_root_descriptor_table(0, 10, &frame_info_buffer_descriptor);                         // Per frame info buffer
+	//binding_helper.set_root_descriptor_table(0, 10, static_cast<SR_Descriptor *>(&base_cbsrua_descriptor)); // Textures
+	//binding_helper.set_root_descriptor_table(0, 10, &resource_manager->point_sampler_descriptor);  // Point sampler
+	//binding_helper.set_root_descriptor_table(1, 10, &resource_manager->linear_sampler_descriptor); // Linear sampler
 }
 
 void Render_Command_Buffer::apply(Pipeline_State *pipeline_state)
@@ -510,9 +325,9 @@ void Render_Command_Buffer::apply_compute_pipeline(Pipeline_State *pipeline_stat
 	last_applied_viewport.reset();
 	last_applied_clip_rect.reset();
 
-	compute_command_list.set_compute_root_signature(*pipeline_state->root_signature);
-	compute_command_list.set_pipeline_state(*pipeline_state);
-	compute_command_list.set_descriptor_heaps(descriptors_pool->cbsrua_descriptor_heap, descriptors_pool->sampler_descriptor_heap);
+	compute_command_list->set_compute_root_signature(pipeline_state->root_signature);
+	compute_command_list->set_pipeline_state(pipeline_state);
+	//compute_command_list->set_descriptor_heaps(descriptors_pool->cbsrua_descriptor_heap, descriptors_pool->sampler_descriptor_heap);
 
 	setup_common_compute_pipeline_resources(pipeline_state->root_signature);
 }
@@ -522,18 +337,19 @@ void Render_Command_Buffer::apply_graphics_pipeline(Pipeline_State *pipeline_sta
 	last_applied_viewport.reset();
 	last_applied_clip_rect.reset();
 
-	graphics_command_list.set_graphics_root_signature(*pipeline_state->root_signature);
-	graphics_command_list.set_pipeline_state(*pipeline_state);
-	graphics_command_list.set_descriptor_heaps(descriptors_pool->cbsrua_descriptor_heap, descriptors_pool->sampler_descriptor_heap);
+	graphics_command_list->set_graphics_root_signature(pipeline_state->root_signature);
+	graphics_command_list->set_pipeline_state(pipeline_state);
+	//graphics_command_list.set_descriptor_heaps(descriptors_pool->cbsrua_descriptor_heap, descriptors_pool->sampler_descriptor_heap);
 
 	setup_common_graphics_pipeline_resources(pipeline_state->root_signature);
 
-	graphics_command_list.set_primitive_type(pipeline_state->primitive_type);
+	graphics_command_list->set_primitive_type(pipeline_state->primitive_type);
 }
 
 void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer)
 {
 	Root_Signature *root_signature = current_pipeline->root_signature;
+	u32 parameter_index = root_signature->get_parameter_index(shader_register, shader_space, type);
 
 	if (current_pipeline->type == PIPELINE_TYPE_COMPUTE) {
 
@@ -541,13 +357,13 @@ void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, S
 	} else if (current_pipeline->type == PIPELINE_TYPE_GRAPHICS) {
 		switch (type) {
 			case SHADER_RESOURCE_REGISTER: {
-				SR_Descriptor descriptor = buffer->get_shader_resource_descriptor();
-				graphics_command_list.set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), descriptor);
+				SR_Descriptor *descriptor = buffer->shader_resource_descriptor();
+				graphics_command_list->set_graphics_root_descriptor_table(parameter_index, descriptor);
 				break;
 			}
 			case CONSTANT_BUFFER_REGISTER: {
-				CB_Descriptor descriptor = buffer->get_constant_buffer_descriptor();
-				graphics_command_list.set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_CONSTANT_BUFFER), descriptor);
+				CB_Descriptor *descriptor = buffer->constant_buffer_descriptor();
+				graphics_command_list->set_graphics_root_descriptor_table(parameter_index, descriptor);
 				break;
 			}
 			default: {
@@ -560,6 +376,7 @@ void Render_Command_Buffer::bind_buffer(u32 shader_register, u32 shader_space, S
 void Render_Command_Buffer::bind_texture(u32 shader_register, u32 shader_space, Shader_Register type, Texture *texture)
 {
 	Root_Signature *root_signature = current_pipeline->root_signature;
+	u32 parameter_index = root_signature->get_parameter_index(shader_register, shader_space, type);
 
 	if (current_pipeline->type == PIPELINE_TYPE_COMPUTE) {
 
@@ -567,8 +384,8 @@ void Render_Command_Buffer::bind_texture(u32 shader_register, u32 shader_space, 
 	} else if (current_pipeline->type == PIPELINE_TYPE_GRAPHICS) {
 		switch (type) {
 			case SHADER_RESOURCE_REGISTER: {
-				SR_Descriptor descriptor = texture->get_shader_resource_descriptor();
-				graphics_command_list.set_graphics_root_descriptor_table(root_signature->get_parameter_index(shader_register, shader_space, ROOT_PARAMETER_SHADER_RESOURCE), descriptor);
+				SR_Descriptor *descriptor = texture->shader_resource_descriptor();
+				graphics_command_list->set_graphics_root_descriptor_table(parameter_index, descriptor);
 				break;
 			}
 			case CONSTANT_BUFFER_REGISTER: {
