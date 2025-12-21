@@ -75,42 +75,6 @@ struct Resource_Manager {
 
 const u32 RENDER_TARGET_BUFFER_BUFFER = 0x1;
 
-struct Render_Command_Buffer {
-	Pipeline_State *current_pipeline = NULL;
-
-	Copy_Command_List *copy_command_list = NULL;
-	Compute_Command_List *compute_command_list = NULL;
-	Graphics_Command_List *graphics_command_list = NULL;
-
-	Resource_Manager *resource_manager = NULL;
-	Render_System *render_sys = NULL;
-
-	Rect_u32 last_applied_clip_rect;
-	Viewport last_applied_viewport;
-
-	void create(Render_Device *render_device);
-	void setup_common_compute_pipeline_resources(Root_Signature *root_signature);
-	void setup_common_graphics_pipeline_resources(Root_Signature *root_signature);
-
-	void apply(Pipeline_State *pipeline_state);
-	void apply_compute_pipeline(Pipeline_State *pipeline_state);
-	void apply_graphics_pipeline(Pipeline_State *pipeline_state);
-
-	void bind_buffer(u32 shader_register, u32 shader_space, Shader_Register type, Buffer *buffer);
-	void bind_texture(u32 shader_register, u32 shader_space, Shader_Register type, Texture *texture);
-
-	void clear_depth_stencil(Texture *depth_stencil_texture, float depth = 1.0f, u8 stencil = 0);
-	void clear_render_target(Texture *render_target_texture, const Color &color);
-	
-	void set_depth_stencil(Texture *depth_stencil_texture);
-	void set_back_buffer_as_render_target(Texture *depth_stencil_texture);
-
-	void set_clip_rect(Rect_u32 *clip_rect);
-	void set_viewport(Viewport *viewport);
-	
-	void draw(u32 vertex_count);
-};
-
 struct Render_System {
 	struct Window {
 		bool vsync = false;

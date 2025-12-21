@@ -62,15 +62,35 @@ struct Buffer {
 	virtual UA_Descriptor *unordered_access_descriptor(u32 mipmap_level = 0) = 0;
 };
 
+struct Subresource_Footprint {
+	Subresource_Footprint();
+	Subresource_Footprint(u32 subresource_index, u32 row_count, u64 row_size);
+	~Subresource_Footprint();
+
+	u32 subresource_index = 0;
+	u32 row_count = 0;
+	u64 row_size = 0;
+};
+
 struct Texture {
 	Texture();
 	virtual ~Texture();
 
 	virtual Texture_Desc texture_desc() = 0;
+	
 	virtual SR_Descriptor *shader_resource_descriptor(u32 mipmap_level = 0) = 0;
 	virtual UA_Descriptor *unordered_access_descriptor(u32 mipmap_level = 0) = 0;
 	virtual DS_Descriptor *depth_stencil_descriptor() = 0;
 	virtual RT_Descriptor *render_target_descriptor() = 0;
+
+	virtual Subresource_Footprint subresource_footprint() = 0;
+};
+
+struct Sampler {
+	Sampler();
+	virtual ~Sampler();
+
+	virtual Sampler_Descriptor sampler_descriptor() = 0;
 };
 
 const u32 UNBOUNDED_DESCRIPTORS_NUMBER = UINT_MAX;
@@ -100,25 +120,13 @@ struct Pipeline_State {
 	Root_Signature *root_signature = NULL;
 };
 
-struct Subresource_Footprint {
-	Subresource_Footprint();
-	Subresource_Footprint(u32 subresource_index, u32 row_count, u64 row_size);
-	~Subresource_Footprint();
-
-	u32 subresource_index = 0;
-	u32 row_count = 0;
-	u64 row_size = 0;
-	D3D12_PLACED_SUBRESOURCE_FOOTPRINT places_subresource_footprint;
-
-	D3D12_SUBRESOURCE_FOOTPRINT d3d12_subresource_footprint();
-};
-
 struct Command_List {
 	Command_List();
 	virtual ~Command_List();
 
 	virtual void close() = 0;
 	virtual void reset() = 0;
+	virtual Command_List_Type command_list_type() = 0;
 };
 
 struct Copy_Command_List : Command_List {
@@ -126,7 +134,7 @@ struct Copy_Command_List : Command_List {
 	virtual ~Copy_Command_List();
 
 	virtual void copy(Buffer *dest, Buffer *source) = 0;
-	virtual void copy_buffer_to_texture(Texture *texture, Buffer *buffer, Subresource_Footprint &subresource_footprint) = 0;
+	virtual void copy_buffer_to_texture(Texture *texture, Buffer *buffer, Subresource_Footprint *subresource_footprint = NULL) = 0;
 };
 
 struct Compute_Command_List : Copy_Command_List {
@@ -136,8 +144,11 @@ struct Compute_Command_List : Copy_Command_List {
 	virtual void set_pipeline_state(Pipeline_State *pipeline_state) = 0;
 	virtual void set_compute_root_signature(Root_Signature *root_signature) = 0;
 	
-	virtual void set_compute_constants(u32 parameter_index, void *data) = 0;
-	virtual void set_compute_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor) = 0;
+	//virtual void set_compute_constants(u32 parameter_index, void *data) = 0;
+	//virtual void set_compute_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor) = 0;
+
+	virtual void set_compute_constatns(u32 shader_register, u32 shader_space, Shader_Register register_type) = 0;
+	virtual void set_compute_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor) = 0;
 
 	virtual void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z = 1) = 0;
 };
@@ -158,8 +169,11 @@ struct Graphics_Command_List : Compute_Command_List {
 	virtual void set_vertex_buffer(Buffer *buffer) = 0;
 	virtual void set_index_buffer(Buffer *buffer) = 0;
 	
-	virtual void set_graphics_constants(u32 parameter_index, void *data) = 0;
-	virtual void set_graphics_root_descriptor_table(u32 parameter_index, GPU_Descriptor *base_descriptor) = 0;
+	//virtual void set_graphics_constants(u32 parameter_index, void *data) = 0;
+	//virtual void set_graphics_root_descriptor_table(u32 parameter_index, GPU_Descriptor *base_descriptor) = 0;
+	virtual void set_graphics_constatns(u32 shader_register, u32 shader_space, Shader_Register register_type) = 0;
+	virtual void set_graphics_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor) = 0;
+	
 	virtual void set_render_target(RT_Descriptor *render_target_descriptor, DS_Descriptor *depth_stencil_descriptor) = 0;
 	
 	virtual void draw(u32 vertex_count) = 0;
@@ -205,12 +219,13 @@ struct Render_Device {
 	Render_Device();
 	virtual ~Render_Device();
 
-	static bool create();
-
-	void set_context();
+	virtual void wait_for_uploading() = 0;
+	virtual void finish_frame(u64 completed_frame) = 0;
 
 	virtual Buffer *create_buffer(Buffer_Desc *buffer_desc) = 0;
 	virtual Texture *create_texture(Texture_Desc *texture_desc) = 0;
+	virtual Sampler *create_sampler(Sampler_Filter filter, Address_Mode uvw);
+	
 	virtual GPU_Heap *create_gpu_heap(u64 size, GPU_Heap_Type heap_type, GPU_Heap_Content conten) = 0;
 
 	virtual Copy_Command_List *create_copy_command_list() = 0;
@@ -221,9 +236,8 @@ struct Render_Device {
 
 	virtual Pipeline_State *create_pipeline_state(Compute_Pipeline_Desc *pipeline_desc) = 0;
 	virtual Pipeline_State *create_pipeline_state(Graphics_Pipeline_Desc *pipeline_desc) = 0;
-
-	virtual void finish_frame() = 0;
-
-	virtual void wait_for_uploading() = 0;
 };
+
+Render_Device *create_render_device();
+
 #endif
