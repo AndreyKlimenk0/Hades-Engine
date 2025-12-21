@@ -333,6 +333,11 @@ CBSRUA_Descriptor_Heap::~CBSRUA_Descriptor_Heap()
 {
 }
 
+void CBSRUA_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
+{
+	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+}
+
 D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_cb_descriptor(u32 descriptor_index, D3D12_Resource *resource)
 {
 	assert(resource->size() <= UINT_MAX);
@@ -438,7 +443,7 @@ struct Sampler_Descriptor_Heap : Descriptor_Heap {
 
 void Sampler_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
 {
-
+	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
 
 D3D12_GPU_Descriptor Sampler_Descriptor_Heap::place_descriptor(u32 descriptor_index, D3D12_Sampler *sampler)
@@ -453,22 +458,83 @@ struct RT_Descriptor_Heap : Descriptor_Heap {
 	~RT_Descriptor_Heap();
 
 	void create(ComPtr<ID3D12Device> &device, u32 descriptors_number);
-	RT_Descriptor place_descriptor(u32 descriptor_index, D3D12_Resource *resource);
+	D3D12_CPU_Descriptor place_descriptor(u32 descriptor_index, D3D12_Resource *resource);
 };
 
-RT_Descriptor RT_Descriptor_Heap::place_descriptor(u32 descriptor_index, D3D12_Resource *resource)
+void RT_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
 {
-	return RT_Descriptor();
+	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
+D3D12_CPU_Descriptor RT_Descriptor_Heap::place_descriptor(u32 descriptor_index, D3D12_Resource *resource)
+{
+	D3D12_RESOURCE_DESC resource_desc = resource->d3d12_resource_desc();
+
+	D3D12_RENDER_TARGET_VIEW_DESC render_target_view_desc;
+	ZeroMemory(&render_target_view_desc, sizeof(D3D12_RENDER_TARGET_VIEW_DESC));
+	render_target_view_desc.Format = resource_desc.Format;
+
+	switch (resource_desc.Dimension) {
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
+			assert(resource_desc.DepthOrArraySize == 1);
+			render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+			render_target_view_desc.Texture2D.MipSlice = 0;
+			render_target_view_desc.Texture2D.PlaneSlice = 0;
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+	d3d12_device->CreateRenderTargetView(resource->get(), &render_target_view_desc, get_cpu_handle(descriptor_index));
+	return D3D12_CPU_Descriptor(descriptor_index, get_cpu_handle(descriptor_index));
+}
 
 struct DS_Descriptor_Heap : Descriptor_Heap {
 	DS_Descriptor_Heap();
 	~DS_Descriptor_Heap();
 
 	void create(ComPtr<ID3D12Device> &device, u32 descriptors_number);
-	DS_Descriptor place_descriptor(u32 descriptor_index, D3D12_Resource *resource);
+	D3D12_CPU_Descriptor place_descriptor(u32 descriptor_index, D3D12_Resource *resource);
 };
+
+void RT_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
+{
+	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+}
+
+inline DXGI_FORMAT to_depth_stencil_view_format(DXGI_FORMAT format)
+{
+	switch (format) {
+		case DXGI_FORMAT_R32_FLOAT:
+		case DXGI_FORMAT_R32_TYPELESS:
+			return DXGI_FORMAT_D32_FLOAT;
+	}
+	return format;
+}
+
+D3D12_CPU_Descriptor DS_Descriptor_Heap::place_descriptor(u32 descriptor_index, D3D12_Resource *resource)
+{
+	D3D12_RESOURCE_DESC resource_desc = resource->d3d12_resource_desc();
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
+	ZeroMemory(&depth_stencil_view_desc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
+	depth_stencil_view_desc.Format = to_depth_stencil_view_format(resource_desc.Format);
+
+	switch (resource_desc.Dimension) {
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
+			assert(resource_desc.DepthOrArraySize == 1);
+			depth_stencil_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			depth_stencil_view_desc.Texture2D.MipSlice = 0;
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+	d3d12_device->CreateDepthStencilView(resource->get(), &depth_stencil_view_desc, get_cpu_handle(descriptor_index));
+	return D3D12_CPU_Descriptor(descriptor_index, get_cpu_handle(descriptor_index));
+}
 
 struct Descriptor_Heap_Pool {
 	Descriptor_Heap_Pool();
@@ -484,14 +550,14 @@ struct Descriptor_Heap_Pool {
 	CBSRUA_Descriptor_Heap cbsrua_descriptor_heap;
 	Sampler_Descriptor_Heap sampler_descriptor_heap;
 
-	CB_Descriptor allocate_cb_descriptor(GPU_Resource *resource);
-	SR_Descriptor allocate_sr_descriptor(GPU_Resource *resource, u32 mipmap_level = 0);
-	UA_Descriptor allocate_ua_descriptor(GPU_Resource *resource, u32 mipmap_level = 0);
-	RT_Descriptor allocate_rt_descriptor(GPU_Resource *resource);
-	DS_Descriptor allocate_ds_descriptor(GPU_Resource *resource);
-	Sampler_Descriptor allocate_sampler_descriptor(Sampler &sampler);
+	D3D12_GPU_Descriptor allocate_cb_descriptor(D3D12_Resource *resource);
+	D3D12_GPU_Descriptor allocate_sr_descriptor(D3D12_Resource *resource, u32 mipmap_level = 0);
+	D3D12_GPU_Descriptor allocate_ua_descriptor(D3D12_Resource *resource, u32 mipmap_level = 0);
+	D3D12_CPU_Descriptor allocate_rt_descriptor(D3D12_Resource *resource);
+	D3D12_CPU_Descriptor allocate_ds_descriptor(D3D12_Resource *resource);
+	D3D12_GPU_Descriptor allocate_sampler_descriptor(D3D12_Sampler *sampler);
 
-	void allocate_pool(Gpu_Device &device, u32 descriptors_count);
+	void allocate_pool(ComPtr<ID3D12Device> &device, u32 descriptors_count);
 
 	void free(CB_Descriptor *descriptor);
 	void free(SR_Descriptor *descriptor);
@@ -500,6 +566,101 @@ struct Descriptor_Heap_Pool {
 	void free(DS_Descriptor *descriptor);
 	void free(Sampler_Descriptor *descriptor);
 };
+
+D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_cb_descriptor(D3D12_Resource *resource)
+{
+	return cbsrua_descriptor_heap.place_cb_descriptor(cbsrua_descriptor_indices.pop(), resource);
+}
+
+D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_sr_descriptor(D3D12_Resource *resource, u32 mipmap_level)
+{
+	return cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_indices.pop(), resource, mipmap_level);
+}
+
+D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_ua_descriptor(D3D12_Resource *resource, u32 mipmap_level)
+{
+	return cbsrua_descriptor_heap.place_ua_descriptor(cbsrua_descriptor_indices.pop(), resource, mipmap_level);
+}
+
+D3D12_CPU_Descriptor Descriptor_Heap_Pool::allocate_rt_descriptor(D3D12_Resource *resource)
+{
+	return rt_descriptor_heap.place_descriptor(rt_descriptor_indices.pop(), resource);
+}
+
+D3D12_CPU_Descriptor Descriptor_Heap_Pool::allocate_ds_descriptor(D3D12_Resource *resource)
+{
+	return ds_descriptor_heap.place_descriptor(rt_descriptor_indices.pop(), resource);
+}
+
+D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_sampler_descriptor(D3D12_Sampler *sampler)
+{
+	return sampler_descriptor_heap.place_descriptor(sampler_descriptor_indices.pop(), sampler);
+}
+
+void Descriptor_Heap_Pool::allocate_pool(ComPtr<ID3D12Device> &device, u32 descriptors_count)
+{
+	cbsrua_descriptor_heap.create(device, descriptors_count);
+	rt_descriptor_heap.create(device, descriptors_count);
+	ds_descriptor_heap.create(device, descriptors_count);
+	sampler_descriptor_heap.create(device, descriptors_count);
+
+	rt_descriptor_indices.resize(descriptors_count);
+	ds_descriptor_indices.resize(descriptors_count);
+	cbsrua_descriptor_indices.resize(descriptors_count);
+	sampler_descriptor_indices.resize(descriptors_count);
+
+	u32 index = descriptors_count;
+	for (u32 i = 0; i < descriptors_count; i++) {
+		index -= 1;
+		rt_descriptor_indices.push(index);
+		ds_descriptor_indices.push(index);
+		cbsrua_descriptor_indices.push(index);
+		sampler_descriptor_indices.push(index);
+	}
+}
+
+void Descriptor_Heap_Pool::free(CB_Descriptor *descriptor)
+{
+	if (descriptor->valid()) {
+		cbsrua_descriptor_indices.push(descriptor->index());
+	}
+}
+
+void Descriptor_Heap_Pool::free(SR_Descriptor *descriptor)
+{
+	if (descriptor->valid()) {
+		cbsrua_descriptor_indices.push(descriptor->index());
+	}
+}
+
+void Descriptor_Heap_Pool::free(UA_Descriptor *descriptor)
+{
+	if (descriptor->valid()) {
+		cbsrua_descriptor_indices.push(descriptor->index());
+	}
+}
+
+void Descriptor_Heap_Pool::free(Sampler_Descriptor *descriptor)
+{
+	if (descriptor->valid()) {
+		sampler_descriptor_indices.push(descriptor->index());
+	}
+}
+
+void Descriptor_Heap_Pool::free(RT_Descriptor *descriptor)
+{
+	if (descriptor->valid()) {
+		rt_descriptor_indices.push(descriptor->index());
+	}
+}
+
+void Descriptor_Heap_Pool::free(DS_Descriptor *descriptor)
+{
+	if (descriptor->valid()) {
+		ds_descriptor_indices.push(descriptor->index());
+	}
+}
+
 
 template <typename... Args>
 void set_name(ID3D12Object *objec, Args... args)
@@ -1283,8 +1444,4 @@ Graphics_Command_List *D3D12_Render_Device::create_graphics_command_list()
 void D3D12_Render_Device::safe_release(ComPtr<ID3D12Resource> &resource)
 {
 	resource_release_queue.push({ frame_number, resource });
-}
-
-void Descriptor_Heap_Pool::allocate_pool(Gpu_Device &device, u32 descriptors_count)
-{
 }
