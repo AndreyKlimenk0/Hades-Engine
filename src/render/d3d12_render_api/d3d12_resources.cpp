@@ -6,8 +6,8 @@
 #include "d3d12_descriptor_heap.h"
 #include "d3d12_functions.h"
 
-#include "../../../sys/utils.h"
-#include "../../../libs/memory/base.h"
+#include "../../sys/utils.h"
+#include "../../libs/memory/base.h"
 
 inline Texture_Dimension to_texture_dimension(D3D12_RESOURCE_DIMENSION d3d12_resource_dimension)
 {
