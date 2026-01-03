@@ -4,9 +4,9 @@
 #include <d3d12.h>
 #include <stdint.h>
 
-#include "../render.h"
-#include "../base_types.h"
-#include "../../../libs/number_types.h"
+#include "../render_api/render.h"
+#include "../render_api/base_types.h"
+#include "../../libs/number_types.h"
 
 enum Descriptor_Type {
 	DESCRIPTOR_TYPE_CBV_SRV_UAV = 0,

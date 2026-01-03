@@ -4,8 +4,8 @@
 #include <assert.h>
 #include <d3d12.h>
 
-#include "../base_types.h"
-#include "../base_structs.h"
+#include "../render_api/base_types.h"
+#include "../render_api/base_structs.h"
 
 inline D3D12_HEAP_TYPE to_d3d12_heap_type(Resource_Usage type)
 {
