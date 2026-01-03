@@ -124,8 +124,8 @@ Texture *create_texture_from_image(Image *image);
 
 void Model_Storage::init()
 {
-	u32 width = 200;
-	u32 height = 200;
+	u32 width = 256;
+	u32 height = 256;
 
 	Image color_buffer;
 	color_buffer.allocate_memory(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -137,7 +137,6 @@ void Model_Storage::init()
 	default_textures.diffuse = create_texture_from_image(&color_buffer);
 	
 	color_buffer.fill(Color(0.01f, 0.01f, 0.01f));
-	//color_buffer.fill(Color(0.2f, 0.2f, 0.2f));
 	default_textures.specular = create_texture_from_image(&color_buffer);
 	
 	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
@@ -426,6 +425,7 @@ void Render_World::init(Engine *engine)
 	//@Note: Why don't pass just the engine pointer ?
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
+	render_device = engine->render_sys.render_device;
 
 	model_storage.init();
 
@@ -717,16 +717,17 @@ void Render_World::update_shadows()
 		}
 	}
 
-	if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->size() < (u64)cascaded_view_projection_matrices.get_size())) {
+	//if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->size() < (u64)cascaded_view_projection_matrices.get_size())) {
 		DELETE_PTR(casded_view_projection_matrices_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = lights.count;
-		buffer_desc.stride = lights.stride;
-		buffer_desc.data = lights.to_void_ptr();
+		//buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.count = cascaded_view_projection_matrices.count;
+		buffer_desc.stride = cascaded_view_projection_matrices.stride;
+		buffer_desc.data = cascaded_view_projection_matrices.to_void_ptr();
 		buffer_desc.name = "View projection shadow matrices";
 
 		casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
-	}
+	//}
 }
 
 void Render_World::set_rendering_view(Entity_Id camera_id)

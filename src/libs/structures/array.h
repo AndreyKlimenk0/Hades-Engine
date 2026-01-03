@@ -227,12 +227,6 @@ inline u32 Array<T>::get_size()
 	return sizeof(T) * count;
 }
 
-template<typename T>
-inline u32 Array<T>::get_stride()
-{
-	return sizeof(T);
-}
-
 template <typename T>
 inline T &Array<T>::get(u32 index)
 {

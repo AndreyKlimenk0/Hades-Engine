@@ -1,4 +1,9 @@
-#include "render_types.h"
+#include "d3d12_functions.h"
+#include <dxgi1_5.h>
+
+#include <wrl/client.h>
+
+using Microsoft::WRL::ComPtr;
 
 u32 dxgi_format_size(DXGI_FORMAT format)
 {
@@ -116,4 +121,19 @@ u32 dxgi_format_size(DXGI_FORMAT format)
 		default:
 			return 0;
 	}
+}
+
+bool check_tearing_support()
+{
+	BOOL allow_tearing = FALSE;
+	ComPtr<IDXGIFactory4> factory4;
+	HRESULT result = CreateDXGIFactory1(IID_PPV_ARGS(&factory4));
+	if (SUCCEEDED(result)) {
+		ComPtr<IDXGIFactory5> factory5;
+		result = factory4.As(&factory5);
+		if (SUCCEEDED(result)) {
+			result = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+		}
+	}
+	return SUCCEEDED(result) && allow_tearing;
 }

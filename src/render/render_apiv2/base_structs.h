@@ -1,38 +1,13 @@
 #ifndef RENDER_BASE_H
 #define RENDER_BASE_H
 
-#include "render_types.h"
+#include "base_types.h"
 
 #include "../../libs/str.h"
 #include "../../libs/color.h"
 #include "../../libs/number_types.h"
 #include "../../libs/math/structures.h"
-
-struct Buffer_Desc {
-	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
-	u32 stride = 0;
-	u32 count = 0;
-	void *data = NULL;
-	String name = "Unknown";
-
-	u64 size();
-};
-
-struct Texture_Desc {
-	Texture_Dimension dimension = TEXTURE_DIMENSION_UNKNOWN;
-	Resource_State resource_state = RESOURCE_STATE_COMMON;
-	u32 width = 0;
-	u32 height = 1;
-	u32 depth = 1;
-	u32 miplevels = 1;
-	u32 flags = 0;
-	void *data = NULL;
-	DXGI_FORMAT format;
-	Clear_Value clear_value;
-	String name = "Unknown";
-
-	u64 size();
-};
+#include "../../libs/structures/array.h"
 
 enum Clear_Value_Type {
 	CLEAR_VALUE_UNKNOWN,
@@ -54,6 +29,69 @@ struct Clear_Value {
 	bool depth_stencil_set();
 };
 
+struct Buffer_Desc {
+	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
+	u32 stride = 0;
+	u32 count = 1;
+	void *data = NULL;
+	String name = "Unknown";
+
+	u64 size();
+};
+
+//const u32 ALLOW_RENDER_TARGET = 0x1,
+const u32 DEPTH_STENCIL_RESOURCE = 0x2;
+const u32 ALLOW_UNORDERED_ACCESS = 0x4;
+//const u32 DENY_SHADER_RESOURCE = 0x8,
+//const u32 ALLOW_CROSS_ADAPTER = 0x10,
+//const u32 ALLOW_SIMULTANEOUS_ACCESS = 0x20,
+//const u32 VIDEO_DECODE_REFERENCE_ONLY = 0x40,
+//const u32 VIDEO_ENCODE_REFERENCE_ONLY = 0x80,
+//const u32 RAYTRACING_ACCELERATION_STRUCTURE = 0x100;
+
+struct Texture_Desc {
+	Texture_Dimension dimension = TEXTURE_DIMENSION_UNKNOWN;
+	Resource_State resource_state = RESOURCE_STATE_COMMON;
+	u32 width = 0;
+	u32 height = 1;
+	u32 depth = 1;
+	u32 miplevels = 1;
+	u32 flags = 0;
+	void *data = NULL;
+	DXGI_FORMAT format;
+	Clear_Value clear_value;
+	String name = "Unknown";
+
+	u64 size();
+};
+
+struct Subresource_Footprint {
+	Subresource_Footprint();
+	~Subresource_Footprint();
+
+	u32 subresource_index = 0;
+	u32 row_count = 0;
+	u64 row_size = 0;
+
+	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+	u32 width = 0;
+	u32 height = 0;
+	u32 depth = 0;
+	u32 row_pitch = 0;
+};
+
+struct Resource_Footprint {
+	Resource_Footprint();
+	~Resource_Footprint();
+
+	u64 total_size = 0;
+	Array<Subresource_Footprint> subresource_footprints;
+	Subresource_Footprint subresource_footprint(u32 index)
+	{
+		return subresource_footprints[index];
+	}
+};
+
 struct Viewport {
 	Viewport();
 	Viewport(const Size_f32 &size);
@@ -69,51 +107,12 @@ struct Viewport {
 	void reset();
 };
 
-enum Fill_Type {
-	FILL_TYPE_WIREFRAME,
-	FILL_TYPE_SOLID
-};
-
-enum Cull_Type {
-	CULL_TYPE_UNKNOWN,
-	CULL_TYPE_FRONT,
-	CULL_TYPE_BACK
-};
-
 struct Rasterization_Desc {
 	Rasterization_Desc();
 	~Rasterization_Desc();
 
 	Fill_Type fill_type;
 	Cull_Type cull_type;
-};
-
-enum Blend_Option {
-	BLEND_ZERO,
-	BLEND_ONE,
-	BLEND_SRC_COLOR,
-	BLEND_INV_SRC_COLOR,
-	BLEND_SRC_ALPHA,
-	BLEND_INV_SRC_ALPHA,
-	BLEND_DEST_ALPHA,
-	BLEND_INV_DEST_ALPHA,
-	BLEND_DEST_COLOR,
-	BLEND_INV_DEST_COLOR,
-	BLEND_SRC_ALPHA_SAT,
-	BLEND_BLEND_FACTOR,
-	BLEND_INV_BLEND_FACTOR,
-	BLEND_SRC1_COLOR,
-	BLEND_INV_SRC1_COLOR,
-	BLEND_SRC1_ALPHA,
-	BLEND_INV_SRC1_ALPHA
-};
-
-enum Blend_Operation {
-	BLEND_OP_ADD,
-	BLEND_OP_SUBTRACT,
-	BLEND_OP_REV_SUBTRACT,
-	BLEND_OP_MIN,
-	BLEND_OP_MAX
 };
 
 struct Blending_Desc {
@@ -127,33 +126,6 @@ struct Blending_Desc {
 	Blend_Option src_alpha;
 	Blend_Option dest_alpha;
 	Blend_Operation blend_op_alpha;
-};
-
-enum Stencil_Operation {
-	STENCIL_OP_KEEP,
-	STENCIL_OP_ZERO,
-	STENCIL_OP_REPLACE,
-	STENCIL_OP_INCR_SAT,
-	STENCIL_OP_DECR_SAT,
-	STENCIL_OP_INVERT,
-	STENCIL_OP_INCR,
-	STENCIL_OP_DECR
-};
-
-enum Comparison_Func {
-	COMPARISON_NEVER,
-	COMPARISON_LESS,
-	COMPARISON_EQUAL,
-	COMPARISON_LESS_EQUAL,
-	COMPARISON_GREATER,
-	COMPARISON_NOT_EQUAL,
-	COMPARISON_GREATER_EQUAL,
-	COMPARISON_ALWAYS
-};
-
-enum Depth_Write {
-	DEPTH_WRITE_ZERO,
-	DEPTH_WRITE_ALL
 };
 
 struct Depth_Stencil_Desc {
@@ -172,13 +144,17 @@ struct Depth_Stencil_Desc {
 	Stencil_Operation stencil_and_depth_passed;
 };
 
-struct Shader;
 struct Root_Signature;
+
+struct Bytecode_Ref {
+	void *data = NULL;
+	u32 size = 0;
+};
 
 struct Graphics_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
-	Shader *vertex_shader = NULL;
-	Shader *pixel_shader = NULL;
+	Bytecode_Ref vs_bytecode;
+	Bytecode_Ref ps_bytecode;
 	Primitive_Type primitive_type = PRIMITIVE_TYPE_TRIANGLE;
 	Blending_Desc blending_desc;
 	Rasterization_Desc rasterization_desc;
@@ -191,6 +167,6 @@ struct Graphics_Pipeline_Desc {
 
 struct Compute_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
-	Shader *compute_shader = NULL;
+	Bytecode_Ref cs_bytecode;
 };
 #endif

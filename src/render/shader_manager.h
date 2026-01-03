@@ -7,6 +7,7 @@
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
+#include "render_apiv2/base_structs.h"
 
 #define GET_SHADER(shader_manager, shader_name) ((Shader *)&shader_manager->shaders.shader_name)
 
@@ -19,28 +20,32 @@ enum Shader_Type {
 	PIXEL_SHADER,
 };
 
-struct Bytecode {
-	Bytecode();
-	~Bytecode();
+struct Shader_Bytecode {
+	Shader_Bytecode();
+	~Shader_Bytecode();
 
 	u8 *data = NULL;
 	u32 size = 0; // Should it be s64 ?
 
+	Shader_Bytecode(const Shader_Bytecode &other) = delete;
+	Shader_Bytecode &operator=(const Shader_Bytecode &other) = delete;
+
 	void free();
 	void move(u8 *bytecode, u32 bytecode_size);
-	D3D12_SHADER_BYTECODE d3d12_shader_bytecode();
+
+	Bytecode_Ref bytecode_ref();
 };
 
 struct Shader {
 	Shader();
 	~Shader();
 
-	Bytecode vs_bytecode;
-	Bytecode gs_bytecode;
-	Bytecode cs_bytecode;
-	Bytecode hs_bytecode;
-	Bytecode ds_bytecode;
-	Bytecode ps_bytecode;
+	Shader_Bytecode vs_bytecode;
+	Shader_Bytecode gs_bytecode;
+	Shader_Bytecode cs_bytecode;
+	Shader_Bytecode hs_bytecode;
+	Shader_Bytecode ds_bytecode;
+	Shader_Bytecode ps_bytecode;
 
 	String file_name;
 	Array<Shader_Type> types;
