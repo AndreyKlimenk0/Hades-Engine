@@ -6,8 +6,7 @@
 #include "render_passes.h"
 #include "render_system.h"
 
-#include "render_apiv2/render_types.h"
-#include "render_apiv2/render_device.h"
+#include "render_apiv2/render.h"
 
 #include "../game/world.h"
 
@@ -200,8 +199,6 @@ struct Render_World {
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
 	Array<GPU_Light> lights;
 
-	Array<Render_Pass *> frame_render_passes;
-
 	Model_Storage model_storage;
 
 	//Texture2D shadow_atlas;
@@ -217,12 +214,6 @@ struct Render_World {
 	Buffer *cascaded_shadows_info_buffer = NULL;
 	Buffer *lights_buffer = NULL;
 
-	struct GPU_Upload_Data {
-		Buffer *buffer = NULL;
-		void *data = NULL;
-		u32 data_size = 0;
-	};
-	Array<GPU_Upload_Data> gpu_upload_data_list;
 	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
 	void init(Engine *engine);

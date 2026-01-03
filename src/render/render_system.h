@@ -10,7 +10,8 @@
 #include "../libs/math/structures.h"
 
 #include "gpu_data.h"
-#include "render_apiv2/render_device.h"
+#include "render_apiv2/render.h"
+#include "render_passes.h"
 
 struct Win32_Window;
 struct Variable_Service;
@@ -47,16 +48,15 @@ struct Render_Target_Texture_Desc {
 	Clear_Value clear_value;
 };
 
-struct Resource_Manager {
-	//Sampler_Descriptor point_sampler_descriptor;
-	//Sampler_Descriptor linear_sampler_descriptor;
-	//Sampler_Descriptor anisotropic_sampler_descriptor;
+struct Pipeline_Resource_Manager {
+	Render_Device *render_device = NULL;
 
-	u64 frame_count = 0;
+	Buffer *global_buffer = NULL;
 	Buffer *frame_info_buffer = NULL;
 
-	void init();
-	void update_frame_info_constant_buffer(GPU_Frame_Info *frame_info);
+	Sampler *anisotropic_sampler = NULL;
+	Sampler *linear_sampler = NULL;
+	Sampler *point_sampler = NULL;
 
 	Array<Buffer *> buffers;
 	Array<Texture *> textures;
@@ -64,16 +64,36 @@ struct Resource_Manager {
 	Hash_Table<String, Texture *> texture_table;
 	Depth_Stencil_Texture_Desc default_depth_stencil_desc;
 	Render_Target_Texture_Desc default_render_target_desc;
+
+	void init(Render_Device *_render_device, Texture_Desc *back_buffer_texture_desc);
+	void update_common_constant_buffers();
 	
-	//Resource_Allocator resource_allocator;
-	//Buffer *create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc);
-	Texture *create_texture(Texture_Desc *texture_desc);
+	//Texture *create_texture(Texture_Desc *texture_desc);
 	
-	Texture *find_depth_stencil_texture(const char *texture_name);
+	//Texture *find_depth_stencil_texture(const char *texture_name);
 	Texture *create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc = NULL);
 };
 
-const u32 RENDER_TARGET_BUFFER_BUFFER = 0x1;
+struct Command_List_Allocator {
+	Command_List_Allocator();
+	~Command_List_Allocator();
+	
+	u64 frame_number = 0;
+
+	Array<Command_List *> *command_list_table[4];
+
+	Queue<Pair<u64, Command_List *>> flight_command_lists;
+	Array<Command_List* > copy_command_lists;
+	Array<Command_List* > compute_command_lists;
+	Array<Command_List* > graphics_command_lists;
+
+	Render_Device *render_device = NULL;
+
+	void init(Render_Device *_render_device, u64 frame_start);
+	void finish_frame(u64 completed_frame);
+
+	Command_List *allocate_command_list(Command_List_Type command_list_type);
+};
 
 struct Render_System {
 	struct Window {
@@ -85,40 +105,34 @@ struct Render_System {
 
 	u32 sync_interval = 0;
 	u32 present_flags = 0;
-	u32 back_buffer_count = 0;
-	u32 back_buffer_index = 0;
 
 	View_Plane window_view_plane;
 
-	Fence frame_fence;
-
 	Render_Device *render_device = NULL;
-	Swap_Chain swap_chain;
+	Swap_Chain *swap_chain = NULL;
 
-	Command_Queue copy_queue;
-	Command_Queue compute_queue;
-	Command_Queue graphics_queue;
+	Fence *frame_fence = NULL;
+	Command_Queue *compute_queue = NULL;
+	Command_Queue *graphics_queue = NULL;
 
-	Resource_Allocator resource_allocator;
-	Descriptor_Heap_Pool descriptors_pool;
-	Resource_Manager resource_manager;
-	Copy_Manager copy_manager;
+	struct Render_Passes {
+		Shadows_Pass shadows_pass;
+		Forward_Pass forward_pass;
+	} passes;
+	
+	Array<Render_Pass *> render_passes_list;
 
-	Render_Command_Buffer command_buffer;
-
-	Array<Texture> back_buffer_textures;
-
-	Generate_Mipmaps generate_mipmaps;
-
-	Array<Render_Pass *> passes;
+	Command_List_Allocator command_list_allocator;
+	Pipeline_Resource_Manager pipeline_resource_manager;
 
 	void init(Win32_Window *win32_window, Variable_Service *variable_service);
-	void init_vars(Win32_Window *win32_window, Variable_Service *variable_service);
 	void init_passes();
 
 	void resize(u32 window_width, u32 window_height);
-
 	void flush();
+
+	void notify_start_frame();
+	void notify_end_frame();
 	void render();
 
 	Size_u32 get_window_size();

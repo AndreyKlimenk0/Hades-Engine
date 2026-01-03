@@ -10,9 +10,9 @@
 //#include "../libs/math/structures.h"
 
 struct Shader_Manager;
-struct Resource_Manager;
+struct Pipeline_Resource_Manager;
 
-#include "render_apiv2/render_device.h"
+#include "render_apiv2/render.h"
 
 //For generating mipmaps
 #include "../libs/structures/array.h"
@@ -21,60 +21,46 @@ struct Render_Pass {
 	Render_Pass();
 	virtual ~Render_Pass();
 
+	u32 access = 0;
 	String name;
 	Root_Signature *root_signature = NULL;
 	Pipeline_State *pipeline_state = NULL;
 
-	virtual void init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
+	virtual void init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
 	virtual void setup_root_signature(Render_Device *device);
-	virtual void schedule_resources(Resource_Manager *resource_manager);
+	virtual void schedule_resources(Pipeline_Resource_Manager *resource_manager);
 	virtual void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager) = 0;
 	virtual void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL) = 0;
 };
 
-struct Box_Pass : Render_Pass {
-	Box_Pass();
-	~Box_Pass();
-
-	Texture *depth_stencil_texture = NULL;
-
-	void init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
-	void schedule_resources(Resource_Manager *resource_manager);
-	void setup_root_signature(Render_Device *device);
-	void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager);
-	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
-};
-
 struct Shadows_Pass : Render_Pass {
-
 	Texture *shadow_atlas = NULL;
 
-	void init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
-	void schedule_resources(Resource_Manager *resource_manager);
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
 	void setup_root_signature(Render_Device *device);
 	void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager);
 	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
 };
 
 struct Forward_Pass : Render_Pass {
-	Texture *back_buffer_depth_texture = NULL;
 	Texture *shadow_atlas = NULL;
 
-	void init(const char *pass_name, Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
-	void schedule_resources(Resource_Manager *resource_manager);
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
 	void setup_root_signature(Render_Device *device);
 	void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager);
 	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
 };
 
-struct Generate_Mipmaps : Render_Pass {
-
-	void init(Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
-	void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager);
-	void setup_root_signature(Render_Device *device);
-	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL) {}
-	void generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys);
-};
+//struct Generate_Mipmaps : Render_Pass {
+//
+//	void init(Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager);
+//	void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager);
+//	void setup_root_signature(Render_Device *device);
+//	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL) {}
+//	void generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys);
+//};
 
 //struct Shader;
 //struct Gpu_Device;
