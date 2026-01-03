@@ -55,17 +55,11 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
     Texture2D<float4> normal_texture = textures[material.normal_texture_index];
     Texture2D<float4> diffuse_texture = textures[material.diffuse_texture_index];
     Texture2D<float4> specular_texture = textures[material.specular_texture_index];
-
-    float3 local_normal = normal_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    float3 normal = normal_mapping(local_normal, vertex_out.normal, vertex_out.tangent);
-    float3 diffuse = diffuse_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    float3 specular = specular_texture.Sample(linear_sampling, vertex_out.uv).rgb;
-    //float3 specular = 0.0f;
     
-    // float3 local_normal = normal_texture.SampleLevel(linear_sampling, vertex_out.uv, 0).rgb;
-    // float3 normal = normal_mapping(local_normal, vertex_out.normal, vertex_out.tangent);
-    // float3 diffuse = diffuse_texture.SampleLevel(linear_sampling, vertex_out.uv, 0).rgb;
-    // float3 specular = specular_texture.SampleLevel(linear_sampling, vertex_out.uv, 0).rgb;
+    float3 local_normal = normal_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
+    float3 normal = normal_mapping(local_normal, vertex_out.normal, vertex_out.tangent);
+    float3 diffuse = diffuse_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
+    float3 specular = specular_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
 
     
     //@Note: hard code
@@ -73,7 +67,7 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
 		return float4(diffuse, 1.0f);
 	}
     uint shadow_cascade_index;
-    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);    
+    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);       
     float3 light_factor = calculate_light(vertex_out.world_position, frame_info.view_position, normal, diffuse, specular, frame_info.light_count, lights);
     return float4(light_factor, 1.0f) * shadow_factor;
 }

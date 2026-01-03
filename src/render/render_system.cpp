@@ -12,99 +12,118 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
-//void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
-//{
-//	ratio = (float)width / (float)height;
-//	fov = degrees_to_radians(60.0f);
-//	near_plane = _near_plane;
-//	far_plane = _far_plane;
-//	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
-//	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
-//}
+#include "render_apiv2/d3d12_render_api/d3d12_functions.h"
+
+
+void View_Plane::update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane)
+{
+	width = _width;
+	height = _height;
+	ratio = (float)width / (float)height;
+	fov = degrees_to_radians((float)_fov);
+	near_plane = _near_plane;
+	far_plane = _far_plane;
+	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
+	orthographic_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
+}
+
+Command_List_Allocator::Command_List_Allocator()
+{
+}
+
+Command_List_Allocator::~Command_List_Allocator()
+{
+	
+}
+
+void Command_List_Allocator::init(Render_Device *_render_device, u64 frame_start)
+{
+	frame_number = frame_start;
+	render_device = _render_device;
+	
+	command_list_table[COMMAND_LIST_TYPE_COPY] = &copy_command_lists;
+	command_list_table[COMMAND_LIST_TYPE_COMPUTE] = &compute_command_lists;
+	command_list_table[COMMAND_LIST_TYPE_DIRECT] = &graphics_command_lists;
+}
+
+void Command_List_Allocator::finish_frame(u64 completed_frame)
+{
+	while (!flight_command_lists.empty() && (flight_command_lists.front().first <= completed_frame)) {
+		Command_List *command_list = flight_command_lists.front().second;
+		flight_command_lists.pop();
+		command_list_table[command_list->type]->push(command_list);
+	}
+	frame_number++;
+}
+
+Command_List *Command_List_Allocator::allocate_command_list(Command_List_Type command_list_type)
+{
+	Command_List *command_list = NULL;
+	if (command_list_table[command_list_type]->is_empty()) {
+		command_list = render_device->create_command_list(command_list_type);
+	} else {
+		command_list = command_list_table[command_list_type]->last();
+		command_list_table[command_list_type]->pop();
+	}
+	flight_command_lists.push({ frame_number, command_list });
+	return command_list;
+}
 
 void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_service)
 {
 	assert(win32_window->width > 0);
 	assert(win32_window->height > 0);
 
-	init_vars(win32_window, variable_service);
-
-	window_view_plane.update(60, window.width, window.height, 1.0f, 10000.0f);
-
-	//if (!create_d3d12_gpu_device(gpu_device)) {
-	//}
-
-	//frame_fence.create(gpu_device);
-	//back_buffer_textures.reserve(back_buffer_count);
-
-	//copy_queue.create(gpu_device, COMMAND_LIST_TYPE_COPY);
-	//copy_queue.set_debug_name("Copy Queue");
-
-	//compute_queue.create(gpu_device, COMMAND_LIST_TYPE_COMPUTE);
-	//compute_queue.set_debug_name("Compute Queue");
-
-	//graphics_queue.create(gpu_device, COMMAND_LIST_TYPE_DIRECT);
-	//graphics_queue.set_debug_name("Graphics Queue");
-
-	//command_buffer.create(gpu_device, back_buffer_count);
-
-	//bool allow_tearing = false;
-	//if (!window.vsync && window.windowed && check_tearing_support()) {
-	//	sync_interval = 0;
-	//	present_flags = DXGI_PRESENT_ALLOW_TEARING;
-	//	allow_tearing = true;
-	//}
-	//swap_chain.create(allow_tearing, back_buffer_count, window.width, window.height, win32_window->handle, graphics_queue);
-
-	//descriptors_pool.allocate_pool(gpu_device, 4000);
-
-	//for (u32 i = 0; i < back_buffer_count; i++) {
-	//	back_buffer_textures[i].descriptor_pool = &descriptors_pool;
-	//	swap_chain.get_buffer(i, back_buffer_textures[i]);
-	//}
-	//
-	//Texture temp;
-	//swap_chain.get_current_buffer(temp);
-	//Texture_Desc back_buffer_texture_desc = temp.get_texture_desc();
-	//resource_manager.init(gpu_device, &descriptors_pool, &copy_manager, &back_buffer_texture_desc);
-
-	init_passes();
-
-	command_buffer.descriptors_pool = &descriptors_pool;
-
-	copy_manager.init(this);
-
-	begin_frame();
-}
-
-void Render_System::init_vars(Win32_Window *win32_window, Variable_Service *variable_service)
-{
 	window.width = win32_window->width;
 	window.height = win32_window->height;
+
+	u32 back_buffer_count = 2;
 
 	Variable_Service *rendering = variable_service->find_namespace("rendering");
 	rendering->attach("vsync", &window.vsync);
 	rendering->attach("windowed", &window.windowed);
 	rendering->attach("back_buffer_count", (s32 *)&back_buffer_count);
+
+	window_view_plane.update(60, window.width, window.height, 1.0f, 10000.0f);
+
+	render_device = create_render_device(back_buffer_count);
+	if (!render_device) {
+		error("Failed to create render device.");
+	}
+
+	frame_fence = render_device->create_fence(back_buffer_count);
+
+	compute_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_COMPUTE, "Compute Queue");
+	graphics_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_DIRECT, "Graphics Queue");
+
+	bool allow_tearing = false;
+	if (!window.vsync && window.windowed && check_tearing_support()) {
+		sync_interval = 0;
+		present_flags = DXGI_PRESENT_ALLOW_TEARING;
+		allow_tearing = true;
+	}
+	swap_chain = create_swap_chain(allow_tearing, back_buffer_count, window.width, window.height, win32_window->handle, graphics_queue);
+
+	Texture_Desc back_buffer_texture_desc;
+	back_buffer_texture_desc.width = window.width;
+	back_buffer_texture_desc.height = window.height;
+	back_buffer_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	pipeline_resource_manager.init(render_device, &back_buffer_texture_desc);
+	command_list_allocator.init(render_device, back_buffer_count);
+
+	init_passes();
 }
 
 void Render_System::init_passes()
 {
-	Shader_Manager *sm = &Engine::get_instance()->shader_manager;
-	generate_mipmaps.init(gpu_device, sm, &resource_manager);
+	Shader_Manager *shader_manager = &Engine::get_instance()->shader_manager;
 
-	auto pass = new Box_Pass();
-	pass->init("Box pass", gpu_device, sm, &resource_manager);
+	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
-	auto shadows_pass = new Shadows_Pass();
-	shadows_pass->init("Shadows pass", gpu_device, sm, &resource_manager);
-
-	auto forward_pass = new Forward_Pass();
-	forward_pass->init("Forward rendering pass", gpu_device, sm, &resource_manager);
-	
-	passes.push(shadows_pass);
-	//passes.push(pass);
-	passes.push(forward_pass);
+	render_passes_list.push(&passes.shadows_pass);
+	render_passes_list.push(&passes.forward_pass);
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -121,63 +140,59 @@ void Render_System::flush()
 	fence.wait_for_gpu();*/
 }
 
-/*void wait_for_gpu(Fence *fence, u64 expected_value)
+void Render_System::notify_start_frame()
 {
-	u64 completed_value = fence->get()->GetCompletedValue();
-	if (completed_value < expected_value) {
-		fence->get()->SetEventOnCompletion(expected_value, fence->handle);
-		WaitForSingleObject(fence->handle, INFINITE);
-	}
-}*/
+}
+
+void Render_System::notify_end_frame()
+{
+	command_list_allocator.finish_frame(frame_fence->expected_value - 1);
+
+	render_device->finish_frame(frame_fence->expected_value - 1);
+}
+
+//void wait_for_gpu(Fence *fence, u64 expected_value)
+//{
+//	u64 completed_value = fence->get()->GetCompletedValue();
+//	if (completed_value < expected_value) {
+//		fence->get()->SetEventOnCompletion(expected_value, fence->handle);
+//		WaitForSingleObject(fence->handle, INFINITE);
+//	}
+//}
 
 void Render_System::render()
 {
+	notify_start_frame();
+
+	pipeline_resource_manager.update_common_constant_buffers();
+
+	Fence *uploading_fence = render_device->execute_uploading();
+
+	Graphics_Command_List *graphics_command_list = static_cast<Graphics_Command_List *>(command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_DIRECT));
+	graphics_command_list->reset();
+
+	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET);
+	
 	Render_World *render_world = Engine::get_render_world();
-
-	GPU_Frame_Info frame_info;
-	frame_info.view_matrix = render_world->rendering_view.view_matrix;
-	frame_info.perspective_matrix = window_view_plane.perspective_matrix;
-	frame_info.orthographic_matrix = window_view_plane.orthographic_matrix;
-	frame_info.near_plane = window_view_plane.near_plane;
-	frame_info.far_plane = window_view_plane.far_plane;
-
-	frame_info.view_position = render_world->rendering_view.position;
-	frame_info.view_direction = render_world->rendering_view.direction;
-	frame_info.light_count = render_world->lights.count;
-
-	copy_manager.execute_copying();
-
-	resource_manager.update_frame_info_constant_buffer(&frame_info);
-
-	auto *command_list = command_buffer.get_graphics_command_list();
-
-	command_list->reset(back_buffer_index);
-
-	Texture &back_buffer = back_buffer_textures[back_buffer_index];
-
-	command_list->resource_barrier(Transition_Resource_Barrier(back_buffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET));
-
-	command_buffer.begin_frame(&back_buffer);
-	
-	for (u32 i = 0; i < passes.count; i++) {
-		passes[i]->render(&command_buffer, render_world, (void *)this);
+	for (u32 i = 0; i < render_passes_list.count; i++) {
+		render_passes_list[i]->render(graphics_command_list, (void *)render_world, (void *)this);
 	}
+
+	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT);
+	graphics_command_list->close();
+
+	graphics_queue->wait(uploading_fence);
+	graphics_queue->execute_command_list(graphics_command_list);
 	
-	command_list->resource_barrier(Transition_Resource_Barrier(back_buffer, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT));
-	command_list->close();
-	graphics_queue.execute_command_list(*command_list);
+	swap_chain->present(sync_interval, present_flags);
 
-	swap_chain.present(sync_interval, present_flags);
+	graphics_queue->signal(frame_fence);
 
-	graphics_queue.signal(frame_fence);
+	frame_fence->wait_for_gpu(frame_fence->expected_value - 1);
 
-	back_buffer_index = swap_chain.get_current_back_buffer_index();
+	notify_end_frame();
 
-	wait_for_gpu(&frame_fence, frame_fence.expected_value - 1);
-	
-	end_frame(frame_fence.expected_value - 1);
-
-	begin_frame();
+	frame_fence->increment_expected_value();
 }
 
 Size_u32 Render_System::get_window_size()
@@ -185,35 +200,63 @@ Size_u32 Render_System::get_window_size()
 	return { window.width, window.height };
 }
 
-void Resource_Manager::init()
+void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc *back_buffer_texture_desc)
 {
-	//default_render_target_desc.width = back_buffer_texture_desc->width;
-	//default_render_target_desc.height = back_buffer_texture_desc->height;
-	//default_render_target_desc.format = back_buffer_texture_desc->format;
-	//default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
+	render_device = _render_device;
 
-	//default_depth_stencil_desc.width = back_buffer_texture_desc->width;
-	//default_depth_stencil_desc.height = back_buffer_texture_desc->height;
-	//default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
-	//default_depth_stencil_desc.clear_value = Clear_Value(1.0f, 0);
+	default_render_target_desc.width = back_buffer_texture_desc->width;
+	default_render_target_desc.height = back_buffer_texture_desc->height;
+	default_render_target_desc.format = back_buffer_texture_desc->format;
+	default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
 
-	//Sampler point_sampler = Sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
-	//Sampler linear_sampler = Sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
-	//Sampler anisotropic_sampler = Sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
+	default_depth_stencil_desc.width = back_buffer_texture_desc->width;
+	default_depth_stencil_desc.height = back_buffer_texture_desc->height;
+	default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
+	default_depth_stencil_desc.clear_value = Clear_Value(1.0f, 0);
 
-	//resource_allocator.init(Engine::get_render_system());
+	anisotropic_sampler = render_device->create_sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
+	linear_sampler = render_device->create_sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
+	point_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
 
-	//point_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(point_sampler);
-	//linear_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(linear_sampler);
-	//anisotropic_sampler_descriptor = descriptors_pool->allocate_sampler_descriptor(anisotropic_sampler);
+	GPU_Global_Info global_info;
+	global_info.anisotropic_sampler_idx = anisotropic_sampler->sampler_descriptor()->index();
+	global_info.linear_sampler_idx = linear_sampler->sampler_descriptor()->index();
+	global_info.point_sampler_idx = point_sampler->sampler_descriptor()->index();
 
-	//Buffer_Desc buffer_desc = Buffer_Desc(sizeof(GPU_Frame_Info), CONSTANT_BUFFER_ALIGNMENT);
-	//frame_info_buffer = create_buffer(BUFFER_TYPE_UPLOAD, &buffer_desc);
+	Buffer_Desc global_buffer_desc;
+	global_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
+	global_buffer_desc.stride = sizeof(GPU_Global_Info) + 256;
+	global_buffer_desc.name = "Global Info";
+
+	global_buffer = render_device->create_buffer(&global_buffer_desc);
+	global_buffer->request_write();
+	global_buffer->write(&global_info, sizeof(GPU_Global_Info), 256);
+
+	Buffer_Desc frame_info_buffer_desc;
+	frame_info_buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+	frame_info_buffer_desc.stride = sizeof(GPU_Frame_Info) + 256;
+	frame_info_buffer_desc.name = "Frame Info";
+
+	frame_info_buffer = render_device->create_buffer(&frame_info_buffer_desc);
 }
 
-void Resource_Manager::update_frame_info_constant_buffer(GPU_Frame_Info *frame_info)
+void Pipeline_Resource_Manager::update_common_constant_buffers()
 {
-	frame_info_buffer->write(frame_info, sizeof(GPU_Frame_Info), 256);
+	Render_System *render_sys = Engine::get_render_system();
+	Render_World *render_world = Engine::get_render_world();
+
+	GPU_Frame_Info frame_info;
+	frame_info.view_matrix = render_world->rendering_view.view_matrix;
+	frame_info.perspective_matrix = render_sys->window_view_plane.perspective_matrix;
+	frame_info.orthographic_matrix = render_sys->window_view_plane.orthographic_matrix;
+	frame_info.near_plane = render_sys->window_view_plane.near_plane;
+	frame_info.far_plane = render_sys->window_view_plane.far_plane;
+
+	frame_info.view_position = render_world->rendering_view.position;
+	frame_info.view_direction = render_world->rendering_view.direction;
+	frame_info.light_count = render_world->lights.count;
+
+	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 256);
 }
 
 //Buffer *Resource_Manager::create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc)
@@ -225,25 +268,25 @@ void Resource_Manager::update_frame_info_constant_buffer(GPU_Frame_Info *frame_i
 //	return buffer;
 //}
 
-Texture *Resource_Manager::create_texture(Texture_Desc *texture_desc)
-{
-	//auto texture = new Texture();
-	//texture->create(texture_desc, &resource_allocator, descriptors_pool);
-	//textures.push(texture);
-	//return texture;
-}
+//Texture *Pipeline_Resource_Manager::create_texture(Texture_Desc *texture_desc)
+//{
+//	auto texture = new Texture();
+//	texture->create(texture_desc, &resource_allocator, descriptors_pool);
+//	textures.push(texture);
+//	return texture;
+//}
 
-Texture *Resource_Manager::find_depth_stencil_texture(const char *texture_name)
-{
+//Texture *Pipeline_Resource_Manager::find_depth_stencil_texture(const char *texture_name)
+//{
 	//Texture *texture = NULL;
 	//if (!texture_table.get(texture_name, &texture)) {
 	//	texture = new Texture();
 	//	texture_table.set(texture_name, texture);
 	//}
 	//return texture;
-}
+//}
 
-Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
+Texture *Pipeline_Resource_Manager::create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
 {
 	Depth_Stencil_Texture_Desc filled_depth_stencil_desc;
 	if (depth_stencil_desc) {
@@ -254,136 +297,20 @@ Texture *Resource_Manager::create_depth_stencil_texture(const char *texture_name
 	} else {
 		filled_depth_stencil_desc = default_depth_stencil_desc;
 	}
+	Texture_Desc depth_texture_desc;
+	depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	depth_texture_desc.width = filled_depth_stencil_desc.width;
+	depth_texture_desc.height = filled_depth_stencil_desc.height;
+	depth_texture_desc.format = filled_depth_stencil_desc.format;
+	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
+	depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
+	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
 
-	//Texture_Desc depth_texture_desc;
-	//depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
-	//depth_texture_desc.width = filled_depth_stencil_desc.width;
-	//depth_texture_desc.height = filled_depth_stencil_desc.height;
-	//depth_texture_desc.format = filled_depth_stencil_desc.format;
-	//depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
-	//depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
-	//depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
-
-	//Texture *texture = NULL;
-	//if (!texture_table.get(texture_name, &texture)) {
-	//	texture = new Texture();
-	//	texture_table.set(texture_name, texture);
-	//	texture->create(&depth_texture_desc, &resource_allocator, descriptors_pool);
-	//}
-	//
-	//return texture;
-}
-
-void GPU_Linear_Allocator::create(Gpu_Device &device, u64 heap_size_in_bytes, GPU_Heap_Type heap_type, GPU_Heap_Content content)
-{
-	heap_size = heap_size_in_bytes;
-	heap.create(device, heap_size, heap_type, content);
-}
-
-u64 GPU_Linear_Allocator::allocate(u64 size, u64 alignment)
-{
-	assert((heap_offset + size + alignment) <= heap_size);
-	u64 offset = align_address(heap_offset, alignment);
-	heap_offset += size + alignment;
-	return offset;
-}
-
-void View_Plane::update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane)
-{
-	width = _width;
-	height = _height;
-	ratio = (float)width / (float)height;
-	fov = degrees_to_radians((float)_fov);
-	near_plane = _near_plane;
-	far_plane = _far_plane;
-	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
-	orthographic_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
-}
-
-Copy_Manager::Copy_Manager()
-{
-}
-
-Copy_Manager::~Copy_Manager()
-{
-}
-
-void Copy_Manager::init(Render_System *render_system)
-{
-	render_sys = render_system;
-	copy_fence.create(render_system->gpu_device, 1);
-	copy_command_list.create(render_sys->gpu_device, render_sys->back_buffer_count);
-}
-
-void Copy_Manager::add_copy_command(Copy_Command *copy_command)
-{
-	copy_commands.push(*copy_command);
-}
-
-void Copy_Manager::execute_copying()
-{
-	if (!copy_commands.is_empty()) {
-		copy_command_list.reset(render_sys->back_buffer_index);
-
-		for (u32 i = 0; i < copy_commands.count; i++) {
-			Copy_Command *copy_command = &copy_commands[i];
-			if (copy_command->resource_type == BUFFER_RESOURCE) {
-				copy_command_list.copy_resources(*copy_command->dest_resource, *copy_command->source_resource);
-			}
-		}
-		copy_commands.reset();
-
-		copy_command_list.close();
-		render_sys->copy_queue.execute_command_list(copy_command_list);
-		copy_fence.increment_expected_value();
-		render_sys->copy_queue.signal(copy_fence);
-		render_sys->graphics_queue.wait(copy_fence);
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = render_device->create_texture(&depth_texture_desc);
+		texture_table.set(texture_name, texture);
 	}
+	return texture;
 }
 
-void Resource_Allocator::init(Render_System *render_sys)
-{
-	Gpu_Device &gpu_device = render_sys->gpu_device;
-
-	default_heap_size = megabytes_to_bytes(500);
-	upload_heap_size = megabytes_to_bytes(500);
-	texture_heap_size = megabytes_to_bytes(1500);
-
-
-	default_buffer_heap.create(gpu_device, default_heap_size, GPU_HEAP_TYPE_DEFAULT, GPU_HEAP_CONTAIN_BUFFERS);
-	upload_buffer_heap.create(gpu_device, upload_heap_size, GPU_HEAP_TYPE_UPLOAD, GPU_HEAP_CONTAIN_BUFFERS);
-	texture_heap.create(gpu_device, texture_heap_size, GPU_HEAP_TYPE_DEFAULT, GPU_HEAP_CONTAIN_BUFFERS_AND_TEXTURES);
-}
-
-Resource_Allocation Resource_Allocator::allocate_buffer(Buffer_Type buffer_type, u64 allocation_size)
-{
-	Resource_Allocation resource_allocation;
-	u64 aligned_allozation_size = align_address<u64>(allocation_size, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-	if (buffer_type == BUFFER_TYPE_DEFAULT) {
-		assert((default_buffer_offset + aligned_allozation_size) <= default_heap_size);
-
-		resource_allocation.heap = &default_buffer_heap;
-		resource_allocation.heap_offset = default_buffer_offset;
-		default_buffer_offset += aligned_allozation_size;
-	} else if (buffer_type == BUFFER_TYPE_UPLOAD) {
-		assert((upload_buffer_offset + aligned_allozation_size) <= upload_heap_size);
-
-		resource_allocation.heap = &upload_buffer_heap;
-		resource_allocation.heap_offset = upload_buffer_offset;
-		upload_buffer_offset += aligned_allozation_size;
-	} else {
-		assert(false);
-	}
-	return resource_allocation;
-}
-
-Resource_Allocation Resource_Allocator::allocate_texture(u64 texture_size)
-{
-	assert((texture_offset + texture_size) <= texture_heap_size);
-
-	Resource_Allocation resource_allocation;
-	resource_allocation.heap = &texture_heap;
-	resource_allocation.heap_offset = texture_offset;
-	texture_offset += texture_size;
-	return resource_allocation;
-}

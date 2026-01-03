@@ -22,7 +22,6 @@
 #include "../render/render_world.h"
 #include "../render/render_passes.h"
 #include "../render/render_system.h"
-#include "../render/render_helpers.h"
 
 #include "../collision/collision.h"
 

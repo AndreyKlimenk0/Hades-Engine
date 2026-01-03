@@ -659,7 +659,7 @@ struct Gui_Manager {
 
 	void init(Engine *engine);
 	void init_from_save_file();
-	void load_and_init_textures(Gpu_Device *gpu_device);
+	//void load_and_init_textures(Gpu_Device *gpu_device);
 	void handle_events();
 	void handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
 	void set_font(const char *font_name, u32 font_size);
@@ -2784,7 +2784,7 @@ void Gui_Manager::init(Engine *engine)
 
 	set_font(font_name, (u32)font_size);
 	init_from_save_file();
-	load_and_init_textures(&engine->render_sys.gpu_device);
+	//load_and_init_textures(&engine->render_sys.gpu_device);
 }
 
 void Gui_Manager::init_from_save_file()
@@ -2826,9 +2826,9 @@ struct Name_Texture {
 	//Texture2D *texture = NULL;
 };
 
-void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
-{
-	assert(gpu_device);
+//void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
+//{
+//	assert(gpu_device);
 
 	//cross_icon_image.init_from_file("cross-small.png", "editor");
 
@@ -2856,7 +2856,7 @@ void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
 	//		*pairs[i].texture = default_texture;
 	//	}
 	//}
-}
+//}
 
 void Gui_Manager::handle_events()
 {

@@ -59,16 +59,6 @@ void Engine::init_base()
 	var_service.load("all.variables");
 }
 
-#include "../render/render_api/base.h"
-#include "../render/render_api/swap_chain.h"
-#include "../render/render_api/command.h"
-#include "../render/render_api/fence.h"
-#include "../render/render_api/resource.h"
-#include "../render/render_api/descriptor_heap.h"
-#include "../render/render_api/root_signature.h"
-#include "../render/render_api/pipeline_state.h"
-
-
 #include <windows.h>
 #include "../win32/win_helpers.h"
 
@@ -195,7 +185,7 @@ void Engine::init(Win32_Window *window)
 
 	init_commands();
 	Array<String> temp;
-//	temp.push("vampire.fbx");
+	//temp.push("vampire.fbx");
 	temp.push("Sponza.gltf");
 	//temp.push("Mutant.fbx");
 	run_command("load mesh", temp);

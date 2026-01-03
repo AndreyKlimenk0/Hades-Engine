@@ -11,6 +11,13 @@ typedef Vector2 Pad2;
 typedef Vector3 Pad3;
 typedef Vector4 Pad4;
 
+struct GPU_Global_Info {
+	u32 anisotropic_sampler_idx;
+	u32 linear_sampler_idx;
+	u32 point_sampler_idx;
+	u32 pad;
+};
+
 struct GPU_Frame_Info {
 	Matrix4 view_matrix;
 	Matrix4 perspective_matrix;

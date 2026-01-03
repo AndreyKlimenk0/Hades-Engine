@@ -207,6 +207,32 @@ inline bool compile_shader(const char *path_to_shader, Shader_Type shader_type, 
 	return result;
 }
 
+Shader_Bytecode::Shader_Bytecode()
+{
+}
+
+Shader_Bytecode::~Shader_Bytecode()
+{
+	free();
+}
+
+void Shader_Bytecode::free()
+{
+	DELETE_PTR(data);
+	size = 0;
+}
+
+void Shader_Bytecode::move(u8 *bytecode, u32 bytecode_size)
+{
+	data = bytecode;
+	size = bytecode_size;
+}
+
+Bytecode_Ref Shader_Bytecode::bytecode_ref()
+{
+	return { data, size };
+}
+
 Shader_Manager::Shader_Manager()
 {
 }
@@ -405,30 +431,4 @@ void Shader::free()
 	hs_bytecode.free();
 	ds_bytecode.free();
 	ps_bytecode.free();
-}
-
-Bytecode::Bytecode()
-{
-}
-
-Bytecode::~Bytecode()
-{
-	free();
-}
-
-void Bytecode::free()
-{
-	DELETE_PTR(data);
-	size = 0;
-}
-
-void Bytecode::move(u8 *bytecode, u32 bytecode_size)
-{
-	data = bytecode;
-	size = bytecode_size;
-}
-
-D3D12_SHADER_BYTECODE Bytecode::d3d12_shader_bytecode()
-{
-	return { (void *)data, (SIZE_T)size };
 }

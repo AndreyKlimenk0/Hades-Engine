@@ -79,7 +79,7 @@ float4 calculate_shadow_factor(float3 world_position, float2 screen_position, fl
                     float2 sampling_offset = jittering_samples.Load(uint4(index, row_index, depth_index, 0));
                     sampling_offset *= jittering_filter.scaling;
                     sampling_offset *= shadow_atlas_texel_size;
-                    float shadow_map_depth = shadow_atlas_texture.SampleLevel(point_sampling, shadow_atlas_ndc_coordinates.xy + sampling_offset, 0);
+                    float shadow_map_depth = shadow_atlas_texture.SampleLevel(point_sampler(), shadow_atlas_ndc_coordinates.xy + sampling_offset, 0);
                     
                     if ((current_depth - BIAS) > shadow_map_depth) {
                         light_illumination -= 1.0f;
@@ -95,7 +95,7 @@ float4 calculate_shadow_factor(float3 world_position, float2 screen_position, fl
                         float2 sampling_offset = jittering_samples.Load(uint4(index, row_index, depth_index, 0));
                         sampling_offset *= jittering_filter.scaling;
                         sampling_offset *= shadow_atlas_texel_size;
-                        float shadow_map_depth = shadow_atlas_texture.SampleLevel(point_sampling, shadow_atlas_ndc_coordinates.xy + sampling_offset, 0);
+                        float shadow_map_depth = shadow_atlas_texture.SampleLevel(point_sampler(), shadow_atlas_ndc_coordinates.xy + sampling_offset, 0);
                         
                         if ((current_depth - BIAS) > shadow_map_depth) {
                             light_illumination -= 1.0f;

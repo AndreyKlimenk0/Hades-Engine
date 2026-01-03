@@ -7,7 +7,7 @@
 #include "../os/file.h"
 #include "../../sys/sys.h"
 #include "../../sys/utils.h"
-#include "../../render/render_helpers.h"
+#include "../../render/render_apiv2/d3d12_render_api/d3d12_functions.h"
 
 
 Image::Image()
