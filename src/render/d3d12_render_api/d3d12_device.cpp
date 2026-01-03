@@ -4,7 +4,7 @@
 #include "d3d12_functions.h"
 #include "to_d3d12_types.h"
 
-#include "../../../win32/win_helpers.h"
+#include "../../win32/win_helpers.h"
 
 static D3D12_Render_Device *internal_render_device_reference = NULL;
 

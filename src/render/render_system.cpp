@@ -12,7 +12,7 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
-#include "render_apiv2/d3d12_render_api/d3d12_functions.h"
+#include "d3d12_render_api/d3d12_functions.h"
 
 
 void View_Plane::update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane)

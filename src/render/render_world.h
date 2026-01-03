@@ -6,7 +6,7 @@
 #include "render_passes.h"
 #include "render_system.h"
 
-#include "render_apiv2/render.h"
+#include "render_api/render.h"
 
 #include "../game/world.h"
 

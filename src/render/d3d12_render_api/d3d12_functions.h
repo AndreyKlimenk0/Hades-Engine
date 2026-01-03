@@ -3,8 +3,8 @@
 
 #include <d3d12.h>
 #include <dxgiformat.h>
-#include "../../../libs/str.h"
-#include "../../../libs/number_types.h"
+#include "../../libs/str.h"
+#include "../../libs/number_types.h"
 
 u32 dxgi_format_size(DXGI_FORMAT format);
 bool check_tearing_support();

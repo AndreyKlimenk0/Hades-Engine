@@ -7,7 +7,7 @@
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
-#include "render_apiv2/base_structs.h"
+#include "render_api/base_structs.h"
 
 #define GET_SHADER(shader_manager, shader_name) ((Shader *)&shader_manager->shaders.shader_name)
 

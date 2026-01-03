@@ -7,7 +7,8 @@
 #include "d3d12_descriptors.h"
 #include "d3d12_resources.h"
 
-#include "../../../libs/number_types.h"
+#include "../../libs/number_types.h"
+#include "../../libs/structures/array.h"
 
 using Microsoft::WRL::ComPtr;
 

@@ -6,11 +6,12 @@
 
 #include "d3d12_descriptors.h"
 
-#include "../base_structs.h"
-#include "../../../libs/str.h"
-#include "../../../libs/math/structures.h"
-#include "../../../libs/number_types.h"
-#include "../../../libs/structures/queue.h"
+#include "../render_api/render.h"
+#include "../render_api/base_structs.h"
+#include "../../libs/str.h"
+#include "../../libs/math/structures.h"
+#include "../../libs/number_types.h"
+#include "../../libs/structures/queue.h"
 
 using Microsoft::WRL::ComPtr;
 
