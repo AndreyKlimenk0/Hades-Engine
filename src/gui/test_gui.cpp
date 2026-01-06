@@ -2,13 +2,16 @@
 
 #include "gui.h"
 #include "test_gui.h"
+
+#include "../render/render_api/render.h"
+#include "../render/helpers.h"
+
 #include "../libs/os/event.h"
 #include "../libs/os/input.h"
+#include "../libs/os/path.h"
 #include "../sys/sys.h"
 #include "../libs/str.h"
 #include "../libs/image/image.h"
-#include "../libs/os/event.h"
-#include "../libs/os/input.h"
 #include "../libs/math/vector.h"
 #include "../libs/structures/array.h"
 
@@ -664,13 +667,16 @@ void test_window_auto_size()
 		end_window();
 	}
 	static bool init = false;
-	static Image up;
+	static Texture *up = NULL;
 	if (!init) {
 		init = true;
-		//up.init_from_file("icons8-sun-22.png", "editor");
+		String path;
+		build_full_path_to_editor_file("icons8-sun-22.png", path);
+		up = create_texture_from_file(path);
+		assert(up);
 	}
 	if (gui::begin_menu("Test menu")) {
-		gui::menu_item(&up, "Add entity");
+		gui::menu_item(up, "Add entity");
 		gui::menu_item("Delete entity");
 		gui::menu_item("Copy entity");
 		gui::segment();
@@ -686,7 +692,7 @@ void test_window_auto_size()
 
 	set_next_window_pos(500, 100);
 	if (gui::begin_menu("Test menu2")) {
-		gui::menu_item(&up, "Light");
+		gui::menu_item(up, "Light");
 		gui::menu_item("Shape");
 		gui::menu_item("Box");
 		gui::segment();

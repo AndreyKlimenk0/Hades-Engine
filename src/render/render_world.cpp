@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "helpers.h"
 #include "render_world.h"
 
 #include "../sys/sys.h"
@@ -120,15 +121,13 @@ void Shadow_Cascade_Ranges::add_range(u32 start, u32 end)
 	ranges.push({ start, end });
 }
 
-Texture *create_texture_from_image(Image *image);
-
 void Model_Storage::init()
 {
 	u32 width = 256;
 	u32 height = 256;
 
 	Image color_buffer;
-	color_buffer.allocate_memory(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+	color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
 	default_textures.normal = create_texture_from_image(&color_buffer);
@@ -326,49 +325,6 @@ void Model_Storage::upload_models_in_gpu()
 
 		mesh_instance_buffer = render_device->create_buffer(&buffer_desc);
 	}
-}
-
-Texture *create_texture_from_image(Image *image)
-{
-	Render_Device *render_device = Engine::get_render_system()->render_device;
-	if (!image->valid()) {
-		return NULL;
-	}
-
-	Texture_Desc texture_desc;
-	texture_desc.name = "Temp texture";
-	texture_desc.dimension = TEXTURE_DIMENSION_2D;
-	texture_desc.width = image->width;
-	texture_desc.height = image->height;
-	texture_desc.format = image->format;
-	//texture_desc.flags = ALLOW_UNORDERED_ACCESS;
-	texture_desc.miplevels = find_max_mip_level(image->width, image->height);
-	texture_desc.data = (void *)image->data;
-
-	return render_device->create_texture(&texture_desc);
-}
-
-Texture *Model_Storage::create_texture_from_file(const char *full_path_to_texture)
-{
-	Render_Device *render_device = Engine::get_render_system()->render_device;
-
-	Image image;
-	if (load_image_from_file(full_path_to_texture, DXGI_FORMAT_R8G8B8A8_UNORM, &image)) {
-		Texture_Desc texture_desc;
-		extract_file_name(full_path_to_texture, texture_desc.name);
-		texture_desc.dimension = TEXTURE_DIMENSION_2D;
-		texture_desc.width = image.width;
-		texture_desc.height = image.height;
-		texture_desc.format = image.format;
-		//texture_desc.flags = ALLOW_UNORDERED_ACCESS;
-		texture_desc.miplevels = find_max_mip_level(image.width, image.height);
-		//texture_desc.resource_state = RESOURCE_STATE_COPY_DEST;
-		texture_desc.resource_state = RESOURCE_STATE_COMMON;
-		texture_desc.data = (void *)image.data;
-
-		return render_device->create_texture(&texture_desc);
-	}
-	return NULL;
 }
 
 Texture *Model_Storage::find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture *default_texture)

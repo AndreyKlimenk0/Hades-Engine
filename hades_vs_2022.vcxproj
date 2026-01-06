@@ -141,7 +141,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>assimp-vc143-mtd.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib;d3d12.lib;zlib.lib;freetype.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mtd.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib;d3d12.lib;zlib.lib;freetype.lib;Dbghelp.lib;WinPixEventRuntime.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateMapFile>true</GenerateMapFile>
       <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
       <MapExports>true</MapExports>
@@ -224,6 +224,7 @@
     <ClCompile Include="src\libs\structures\dict.cpp" />
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\font.cpp" />
+    <ClCompile Include="src\render\helpers.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\renderer.cpp" />
     <ClCompile Include="src\render\render_api\base_structs.cpp" />
@@ -441,6 +442,7 @@
     <ClInclude Include="src\libs\utils.h" />
     <ClInclude Include="src\render\font.h" />
     <ClInclude Include="src\render\gpu_data.h" />
+    <ClInclude Include="src\render\helpers.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
     <ClInclude Include="src\render\renderer.h" />
