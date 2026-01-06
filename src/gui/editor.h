@@ -13,6 +13,7 @@
 #include "../render/render_world.h"
 
 struct Editor;
+struct Texture;
 struct Engine;
 
 typedef Enum_Helper<Entity_Type> Entity_Type_Helper;
@@ -135,11 +136,11 @@ struct Editor {
 
 	struct Left_Bar {
 		struct Images {
-			Image adding;
-			Image entity;
-			Image entities;
-			Image rendering;
-		} images;
+			Texture *adding = NULL;
+			Texture *entity = NULL;
+			Texture *entities = NULL;
+			Texture *rendering = NULL;
+		} textures;
 		Gui_Window_Theme window_theme;
 		Gui_Image_Button_Theme button_theme;
 	} left_bar;

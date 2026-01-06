@@ -3,6 +3,7 @@
 #include "../libs/image/image.h"
 #include "../sys/engine.h"
 #include "../libs/os/file.h"
+#include "../libs/os/path.h"
 
 Texture *create_texture_from_image(Image *image)
 {
@@ -45,4 +46,12 @@ Texture *create_texture_from_file(const char *full_path_to_texture)
 		return render_device->create_texture(&texture_desc);
 	}
 	return NULL;
+}
+
+Texture *create_texture_from_file(const char *file_name, const char *directory)
+{
+	String path_to_data_directory;
+	build_full_path_to_data_directory(directory, path_to_data_directory);
+	String full_path_to_file = join_paths(path_to_data_directory, file_name);
+	return create_texture_from_file(full_path_to_file);
 }

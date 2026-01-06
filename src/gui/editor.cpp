@@ -19,9 +19,11 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
+#include "../render/helpers.h"
 #include "../render/render_world.h"
 #include "../render/render_passes.h"
 #include "../render/render_system.h"
+#include "../render/render_api/render.h"
 
 #include "../collision/collision.h"
 
@@ -1082,10 +1084,10 @@ void Editor::init_left_bar()
 	left_bar.button_theme.button_size = { 42, 42 };
 	left_bar.button_theme.rect_rounding = 0;
 
-	//left_bar.images.adding.init_from_file("icons8-add-30.png", "editor");
-	//left_bar.images.entity.init_from_file("entity2.png", "editor");
-	//left_bar.images.entities.init_from_file("entities.png", "editor");
-	//left_bar.images.rendering.init_from_file("rendering.png", "editor");
+	left_bar.textures.adding = create_texture_from_file("icons8-add-30.png", "editor");
+	left_bar.textures.entity = create_texture_from_file("entity2.png", "editor");
+	left_bar.textures.entities = create_texture_from_file("entities.png", "editor");
+	left_bar.textures.rendering = create_texture_from_file("rendering.png", "editor");
 }
 
 void Editor::handle_events()
@@ -1235,17 +1237,17 @@ void Editor::render_left_bar()
 	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
 		gui::set_theme(&left_bar.button_theme);
 
-		//if (gui::image_button(&left_bar.images.adding)) {
-		//	gui::open_menu("Adding entity");
-		//}
-		//if (gui::image_button(&left_bar.images.entity)) {
-		//	open_or_close_right_window(&entity_window);
-		//}
-		//if (gui::image_button(&left_bar.images.entities)) {
-		//	open_or_close_right_window(&entities_window);
-		//}
-		//if (gui::image_button(&left_bar.images.rendering)) {
-		//}
+		if (gui::image_button(left_bar.textures.adding)) {
+			gui::open_menu("Adding entity");
+		}
+		if (gui::image_button(left_bar.textures.entity)) {
+			open_or_close_right_window(&entity_window);
+		}
+		if (gui::image_button(left_bar.textures.entities)) {
+			open_or_close_right_window(&entities_window);
+		}
+		if (gui::image_button(left_bar.textures.rendering)) {
+		}
 
 		gui::reset_image_button_theme();
 	}
