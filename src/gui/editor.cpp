@@ -1235,17 +1235,17 @@ void Editor::render_left_bar()
 	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
 		gui::set_theme(&left_bar.button_theme);
 
-		if (gui::image_button(&left_bar.images.adding)) {
-			gui::open_menu("Adding entity");
-		}
-		if (gui::image_button(&left_bar.images.entity)) {
-			open_or_close_right_window(&entity_window);
-		}
-		if (gui::image_button(&left_bar.images.entities)) {
-			open_or_close_right_window(&entities_window);
-		}
-		if (gui::image_button(&left_bar.images.rendering)) {
-		}
+		//if (gui::image_button(&left_bar.images.adding)) {
+		//	gui::open_menu("Adding entity");
+		//}
+		//if (gui::image_button(&left_bar.images.entity)) {
+		//	open_or_close_right_window(&entity_window);
+		//}
+		//if (gui::image_button(&left_bar.images.entities)) {
+		//	open_or_close_right_window(&entities_window);
+		//}
+		//if (gui::image_button(&left_bar.images.rendering)) {
+		//}
 
 		gui::reset_image_button_theme();
 	}

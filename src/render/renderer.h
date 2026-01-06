@@ -4,6 +4,7 @@
 #include "font.h"
 #include "vertices.h"
 #include "shader_manager.h"
+#include "render_api/render.h"
 
 #include "../libs/color.h"
 #include "../libs/number_types.h"
@@ -18,10 +19,10 @@ struct Primitive_2D {
 	u32 vertex_offset = 0;
 	u32 index_offset = 0;
 
-	Array<Vertex_X2UV> vertices;
+	Array<Vertex_P2UV> vertices;
 	Array<u32> indices;
 
-	void add_point(const Vector2 &point, const Vector2 &uv = Vector2(0.0f, 0.0f)) { vertices.push(Vertex_X2UV(point, uv)); }
+	void add_point(const Vector2 &point, const Vector2 &uv = Vector2(0.0f, 0.0f)) { vertices.push(Vertex_P2UV(point, uv)); }
 	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding);
 	void add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float x_rounding, float y_rounding);
 
@@ -30,17 +31,17 @@ struct Primitive_2D {
 };
 
 struct Render_Primitive_2D {
+	Texture *texture = NULL;
 	Primitive_2D *primitive = NULL;
 	Color color;
 	Rect_s32 clip_rect;
-	//Texture2D texture;
 	Matrix4 transform_matrix;
 };
 
 struct Render_2D;
 
 struct Render_Font {
-	//Texture2D font_atlas;
+	Texture* font_atlas = NULL;
 	Hash_Table<u8, Primitive_2D *> lookup_table;
 
 	void init(Render_2D *render_2d, Font *font);
@@ -84,12 +85,12 @@ struct Render_Primitive_List {
 	void add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 	void add_rect(float x, float y, float width, float height, const Color &color, u32 rounding = 0, u32 flags = ROUND_RECT);
 
-	//void add_texture(Rect_s32 *rect, Texture2D *resource);
-	//void add_texture(int x, int y, int width, int height, Texture2D *resource);
+	void add_texture(Rect_s32 *rect, Texture *resource);
+	void add_texture(int x, int y, int width, int height, Texture *resource);
 
 	void add_line(const Point_s32 &first_point, const Point_s32 &second_point, const Color &color, float thicknesss = 0.5f);
 
-	//Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture2D *texture, const Color &color, String &primitve_hash);
+	Primitive_2D *make_or_find_primitive(Matrix4 &transform_matx, Texture *texture, const Color &color, String &primitve_hash);
 };
 
 struct Render_System;
@@ -97,23 +98,12 @@ struct Render_System;
 struct Render_2D {
 	~Render_2D();
 
-	//bool initialized = false;
+	bool initialized = false;
 
-	//Texture2D default_texture;
+	Texture *default_texture = NULL;
 
-	//Gpu_Buffer constant_buffer;
-	//Gpu_Buffer vertex_buffer;
-	//Gpu_Buffer index_buffer;
-
-	//Rasterizer_State rasterizer_state;
-	//Blend_State blend_state;
-	//Depth_Stencil_State depth_stencil_state;
-
-	//Extend_Shader *render_2d = NULL;
-
-	//Gpu_Device *gpu_device = NULL;
-	//Render_Pipeline *render_pipeline = NULL;
-	//Render_System *render_system = NULL;
+	Buffer *vertex_buffer = NULL;
+	Buffer *index_buffer = NULL;
 
 	u32 total_vertex_count = 0;
 	u32 total_index_count = 0;
@@ -123,13 +113,12 @@ struct Render_2D {
 	Hash_Table<String, Primitive_2D *> lookup_table;
 	Hash_Table<String, Render_Font *> render_fonts;
 
-	void init(Render_System *render_sys, Shader_Manager *shader_manager);
+	void init(Render_System *render_sys);
 	void add_primitive(Primitive_2D *primitive);
 	void add_render_primitive_list(Render_Primitive_List *render_primitive_list);
 	Render_Font *get_render_font(Font *font);
 
-	void new_frame();
-	void render_frame(); // @Clean up change name 
+	void prepare_for_rendering(Render_Device *render_device);
 };
 
 struct Render_3D {

@@ -16,14 +16,16 @@ struct Image {
 	u32 height = 0;
 	u8 *data = NULL;
 	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
-	String file_name;
+	String name = "Unknown";
 
 	Image &operator=(const Image &other);
 
 	void clear();
-	void allocate_memory(u32 image_width, u32 image_height, DXGI_FORMAT image_format);
+	void create(u32 image_width, u32 image_height, DXGI_FORMAT image_format, const char *image_name = NULL);
 	void fill(const Color &color);
+	void update_region(u8 *source_data, Rect_u32 source_rect);
 	bool valid();
+	u32 pitch();
 };
 
 bool load_image_from_file(const char *full_path_to_file, DXGI_FORMAT format, Image *image);

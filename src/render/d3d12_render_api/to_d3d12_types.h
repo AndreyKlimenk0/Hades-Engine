@@ -293,7 +293,7 @@ inline D3D12_BLEND_DESC to_d3d12_blend_desc(u32 render_target_count, Blending_De
     ZeroMemory(&d3d12_blend_desc, sizeof(D3D12_BLEND_DESC));
     for (u32 i = 0; i < render_target_count; i++) {
         d3d12_blend_desc.RenderTarget[i].BlendEnable = blending_desc.enable;
-        d3d12_blend_desc.RenderTarget[i].LogicOpEnable = blending_desc.enable;
+        d3d12_blend_desc.RenderTarget[i].LogicOpEnable = false;
         d3d12_blend_desc.RenderTarget[i].SrcBlend = to_d3d12_blend_option(blending_desc.src);
         d3d12_blend_desc.RenderTarget[i].DestBlend = to_d3d12_blend_option(blending_desc.dest);
         d3d12_blend_desc.RenderTarget[i].BlendOp = to_d3d12_blend_operator(blending_desc.blend_op);

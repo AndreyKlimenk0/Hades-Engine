@@ -112,18 +112,23 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	pipeline_resource_manager.init(render_device, &back_buffer_texture_desc);
 	command_list_allocator.init(render_device, back_buffer_count);
 
+	render_2d.init(this);
+
 	init_passes();
 }
 
 void Render_System::init_passes()
 {
 	Shader_Manager *shader_manager = &Engine::get_instance()->shader_manager;
+	Render_World *render_world = Engine::get_render_world();
 
 	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.render2d_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
-	render_passes_list.push(&passes.shadows_pass);
-	render_passes_list.push(&passes.forward_pass);
+	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.render2d_pass, (void *)&render_2d,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -163,6 +168,8 @@ void Render_System::notify_end_frame()
 void Render_System::render()
 {
 	notify_start_frame();
+	
+	render_2d.prepare_for_rendering(render_device);
 
 	pipeline_resource_manager.update_common_constant_buffers();
 
@@ -173,9 +180,9 @@ void Render_System::render()
 
 	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET);
 	
-	Render_World *render_world = Engine::get_render_world();
-	for (u32 i = 0; i < render_passes_list.count; i++) {
-		render_passes_list[i]->render(graphics_command_list, (void *)render_world, (void *)this);
+	for (u32 i = 0; i < render_pass_submissions.count; i++) {
+		Render_Pass_Submission render_pass_submission = render_pass_submissions[i];
+		render_pass_submission.render_pass->render(graphics_command_list, render_pass_submission.context, render_pass_submission.args);
 	}
 
 	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT);

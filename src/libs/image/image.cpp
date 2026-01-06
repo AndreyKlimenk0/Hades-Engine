@@ -29,7 +29,7 @@ Image &Image::operator=(const Image &other)
 		width = other.width;
 		height = other.height;
 		format = other.format;
-		file_name = other.file_name;
+		name = other.name;
 
 		if (data) { DELETE_PTR(data); }
 		u32 image_size = width * height * dxgi_format_size(format);
@@ -45,19 +45,24 @@ void Image::clear()
 	height = 0;
 	DELETE_PTR(data);
 	format = DXGI_FORMAT_UNKNOWN;
-	file_name.free();
+	name.free();
 }
 
-void Image::allocate_memory(u32 image_width, u32 image_height, DXGI_FORMAT image_format)
+void Image::create(u32 image_width, u32 image_height, DXGI_FORMAT image_format, const char *image_name)
 {
 	assert(image_width > 0);
 	assert(image_height > 0);
 	assert(image_format != DXGI_FORMAT_UNKNOWN);
-
-	clear();
+	
+	if (valid()) {
+		clear();
+	}
 	width = image_width;
 	height = image_height;
 	format = image_format;
+	if (image_name) { 
+		name = image_name; 
+	}
 
 	data = new u8[width * height * dxgi_format_size(image_format)];
 }
@@ -78,9 +83,40 @@ void Image::fill(const Color &color)
 	}
 }
 
+void Image::update_region(u8 *source_data, Rect_u32 source_rect)
+{
+	if (source_rect.x >= width) {
+		print("Image::update_region: Failed to update '{}' image region. Source rect X is out of bounds (x={}, valid range: [0, {})).", name, source_rect.x, width);
+	}
+	if (source_rect.y >= height) {
+		print("Image::update_region: Failed to update '{}' image region. Source rect Y is out of bounds (y={}, valid range: [0, {})).", name, source_rect.y, height);
+	}
+	if (source_rect.right() > width) {
+		print("Image::update_region: Failed to update '{}' image region. Source rect right is out of bounds (right={}, valid range: [0, {}))", name, source_rect.right(), width);
+	}
+	if (source_rect.bottom() > height) {
+		print("Image::update_region: Failed to update '{}' image region. Source rect bottom is out of bounds (bottom={}, valid range: [0, {}))", name, source_rect.bottom(), height);
+	}
+	u32 image_pitch = pitch();
+	u32 format_size = dxgi_format_size(format);
+	if ((source_rect.x < width) && (source_rect.y < height) && (source_rect.right() <= width) && (source_rect.bottom() <= height)) {
+		for (u32 src_row = 0; src_row < source_rect.height; src_row++) {
+			u32 dst_row = src_row + source_rect.y;
+			u8 *dst = data + dst_row * image_pitch + (source_rect.x * format_size);
+			u8 *src = source_data + src_row * source_rect.width * format_size;
+			memcpy((void *)dst, (void *)src, source_rect.width * format_size);
+		}
+	}
+}
+
 bool Image::valid()
 {
 	return (width != 0) && (height != 0) && (format != DXGI_FORMAT_UNKNOWN) && data;
+}
+
+u32 Image::pitch()
+{
+	return width * dxgi_format_size(format);
 }
 
 bool load_image_from_file(const char *full_path_to_file, DXGI_FORMAT format, Image *image)
@@ -112,7 +148,7 @@ bool load_image_from_file(const char *full_path_to_file, DXGI_FORMAT format, Ima
 	image->height = static_cast<u32>(height);
 	image->data = data;
 	image->format = format;
-	extract_file_name(full_path_to_file, image->file_name);
+	extract_file_name(full_path_to_file, image->name);
 
 	return true;
 }

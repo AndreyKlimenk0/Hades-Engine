@@ -42,6 +42,7 @@ struct Resource_Desc {
 	D3D12_RESOURCE_STATES d312_resource_state();
 };
 
+// TODO: Make two separated variables size and total_size. Maybe get rid of count
 struct D3D12_Resource {
 	D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *resource_desc);
 	D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resource> &existing_resource);

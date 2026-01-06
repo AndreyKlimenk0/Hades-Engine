@@ -15,7 +15,7 @@
 #include "../gui/test_gui.h"
 
 
-#define DRAW_TEST_GUI 0
+#define DRAW_TEST_GUI 1
 
 static Engine *engine = NULL;
 
@@ -63,103 +63,6 @@ void Engine::init_base()
 #include "../win32/win_helpers.h"
 
 
-//Command_Allocator command_allocators[MAX_BACK_BUFFER_NUMBER];
-//GPU_Resource back_buffers[MAX_BACK_BUFFER_NUMBER];
-//Command_Queue command_queue;
-//Graphics_Command_List command_list;
-//
-//Command_Allocator copy_command_allocator;
-//Command_Queue copy_command_queue;
-//Copy_Command_List copy_command_list;
-//
-//Fence fence;
-//HANDLE fence_event;
-//RT_Descriptor_Heap render_target_desc_heap;
-//DS_Descriptor_Heap depth_stencil_desc_heap;
-//Shader_Descriptor_Heap shader_visible_desc_heap;
-//Root_Signature box_shader_signature;
-//
-////ComPtr<ID3D12PipelineState> pipeline;
-//Pipeline_State pipeline;
-//
-//D3D12_RECT clip_rect;
-//D3D12_VIEWPORT viewport;
-//
-//DS_Descriptor depth_texture_descriptor;
-//GPU_Resource depth_texture;
-//
-//
-//
-//Buffer vertex_buffer;
-//Buffer index_buffer;
-//
-//u64 frame_fence_value = 0;
-//u64 frame_fence_values[MAX_BACK_BUFFER_NUMBER];
-//
-//Constant_Buffer world_matrix_buffer;
-//Constant_Buffer view_matrix_buffer;
-//Constant_Buffer pers_matrix_buffer;
-//
-//struct alignas(256) World_Matrix {
-//	Matrix4 world_matrix;
-//};
-//
-//struct alignas(256) View_Matrix {
-//	Matrix4 view_matrix;
-//};
-//
-//struct alignas(256) Perspective_Matrix {
-//	Matrix4 perspective_matrix;
-//};
-//
-//Descriptor_Heap matrix_buffer_descriptor_heap;
-//
-//struct Gpu_Input_Layout {
-//	u32 offset = 0;
-//	Array<D3D12_INPUT_ELEMENT_DESC> input_elements;
-//
-//	void add_layout(const char *semantic_name, DXGI_FORMAT format);
-//	D3D12_INPUT_LAYOUT_DESC d3d12_input_layout();
-//};
-//
-//void Gpu_Input_Layout::add_layout(const char *semantic_name, DXGI_FORMAT format)
-//{
-//	input_elements.push({ semantic_name, 0, format, 0, offset, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0});
-//	offset += dxgi_format_size(format);
-//}
-//
-//D3D12_INPUT_LAYOUT_DESC Gpu_Input_Layout::d3d12_input_layout()
-//{
-//	return { input_elements.items, input_elements.count };
-//}
-
-//void create_depth_texture(Gpu_Device &device, u32 width, u32 height, GPU_Resource &resource)
-//{
-//	D3D12_HEAP_PROPERTIES heap_properties = {};
-//	ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
-//	heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-//
-//	D3D12_RESOURCE_DESC resource_desc = {};
-//	ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
-//	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-//	resource_desc.Alignment = 0;
-//	resource_desc.Width = width;
-//	resource_desc.Height = height;
-//	resource_desc.DepthOrArraySize = 1;
-//	resource_desc.MipLevels = 1;
-//	resource_desc.Format = DXGI_FORMAT_D32_FLOAT;
-//	resource_desc.SampleDesc.Count = 1;
-//	resource_desc.SampleDesc.Quality = 0;
-//	resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-//	resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-//
-//	D3D12_CLEAR_VALUE optimizedClearValue = {};
-//	optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-//	optimizedClearValue.DepthStencil = { 1.0f, 0 };
-//
-//	device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &optimizedClearValue, IID_PPV_ARGS(resource.release_and_get_address()));
-//}
-
 void Engine::init(Win32_Window *window)
 {
 	bool windowed = true;
@@ -167,6 +70,8 @@ void Engine::init(Win32_Window *window)
 	s32 back_buffer_count = 3;
 
 	test();
+
+	font_manager.init();
 
 	Variable_Service *rendering_settings = var_service.find_namespace("rendering");
 	ATTACH(rendering_settings, vsync);
@@ -176,6 +81,8 @@ void Engine::init(Win32_Window *window)
 	shader_manager.init();
 
 	render_sys.init(window, &var_service);
+
+	gui::init_gui(this);
 	
 	// The editor dependence on render system because it uses the window size for initializing gui.
 	editor.init(this);
@@ -215,7 +122,11 @@ void Engine::frame()
 	editor.handle_events();
 	file_tracking_sys.update();
 
-	editor.update();
+#if DRAW_TEST_GUI
+	draw_test_gui();
+#else
+	editor.render();
+#endif
 	render_world.update();
 
 	render_sys.render();

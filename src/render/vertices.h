@@ -11,9 +11,9 @@ struct Vertex_XC {
 	Vector4 color;
 };
 
-struct Vertex_X2UV {
-	Vertex_X2UV() {}
-	Vertex_X2UV(const Vector2 &position, const Vector2 &uv) : position(position), uv(uv) {}
+struct Vertex_P2UV {
+	Vertex_P2UV() {}
+	Vertex_P2UV(const Vector2 &position, const Vector2 &uv) : position(position), uv(uv) {}
 
 	Vector2 position;
 	Vector2 uv;

@@ -102,6 +102,9 @@ struct D3D12_Command_List : Graphics_Command_List {
 
 	void reset();
 	void close();
+	
+	void begin_event(const char *name);
+	void end_event();
 
 	// Copy command list methods
 	void copy(Buffer *dest, Buffer *source);
@@ -141,6 +144,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count);
+	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 };
 
 struct D3D12_Fence : Fence {

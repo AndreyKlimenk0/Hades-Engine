@@ -10,8 +10,9 @@
 #include "../libs/math/structures.h"
 
 #include "gpu_data.h"
-#include "render_api/render.h"
+#include "renderer.h"
 #include "render_passes.h"
+#include "render_api/render.h"
 
 struct Win32_Window;
 struct Variable_Service;
@@ -95,6 +96,12 @@ struct Command_List_Allocator {
 	Command_List *allocate_command_list(Command_List_Type command_list_type);
 };
 
+struct Render_Pass_Submission {
+	Render_Pass *render_pass = NULL;
+	void *context = NULL;
+	void *args = NULL;
+};
+
 struct Render_System {
 	struct Window {
 		bool vsync = false;
@@ -118,12 +125,15 @@ struct Render_System {
 	struct Render_Passes {
 		Shadows_Pass shadows_pass;
 		Forward_Pass forward_pass;
+		Render_2D_Pass render2d_pass;
 	} passes;
 	
-	Array<Render_Pass *> render_passes_list;
+	Array<Render_Pass_Submission> render_pass_submissions;
 
 	Command_List_Allocator command_list_allocator;
 	Pipeline_Resource_Manager pipeline_resource_manager;
+
+	Render_2D render_2d;
 
 	void init(Win32_Window *win32_window, Variable_Service *variable_service);
 	void init_passes();

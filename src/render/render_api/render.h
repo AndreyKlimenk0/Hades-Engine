@@ -142,6 +142,9 @@ struct Graphics_Command_List : Compute_Command_List {
 	Graphics_Command_List() = default;
 	virtual ~Graphics_Command_List() = default;
 
+	virtual void begin_event(const char *name) = 0;
+	virtual void end_event() = 0;
+
 	virtual void set_graphics_root_signature(Root_Signature *root_signature) = 0;
 
 	virtual void set_primitive_type(Primitive_Type primitive_type) = 0;
@@ -175,6 +178,7 @@ struct Graphics_Command_List : Compute_Command_List {
 	
 	virtual void draw(u32 vertex_count) = 0;
 	virtual void draw_indexed(u32 index_count) = 0;
+	virtual void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset) = 0;
 };
 
 template <typename T>

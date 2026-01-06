@@ -1,3 +1,8 @@
+#define USE_PIX
+#include <d3d12.h>
+#include <Windows.h>
+#include <pix3.h>
+
 #include "d3d12_device.h"
 #include "d3d12_resources.h"
 #include "d3d12_descriptor_heap.h"
@@ -270,6 +275,9 @@ D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Graphic
 {
 	assert(type == PIPELINE_TYPE_UNKNOWN);
 
+	u32 layout_offset = 0;
+	Array<D3D12_INPUT_ELEMENT_DESC> d3d12_input_elements;
+
 	type = PIPELINE_TYPE_GRAPHICS;
 	primitive_type = pipeline_desc->primitive_type;
 	root_signature = pipeline_desc->root_signature;
@@ -281,7 +289,16 @@ D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Graphic
 	d3d12_graphics_pipeline_state.pRootSignature = internal_root_signature->get();
 	d3d12_graphics_pipeline_state.VS = tO_d3d12_shader_bytecode(pipeline_desc->vs_bytecode);
 	d3d12_graphics_pipeline_state.PS = tO_d3d12_shader_bytecode(pipeline_desc->ps_bytecode);
-
+	
+	if (!pipeline_desc->input_layouts.is_empty()) {
+		for (u32 i = 0; i < pipeline_desc->input_layouts.count; i++) {
+			Input_Layout input_layout = pipeline_desc->input_layouts[i];
+			d3d12_input_elements.push({ input_layout.semantic_name, 0, input_layout.format, 0, layout_offset, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+			layout_offset += dxgi_format_size(input_layout.format);
+		}
+		d3d12_graphics_pipeline_state.InputLayout.NumElements = pipeline_desc->input_layouts.count;
+		d3d12_graphics_pipeline_state.InputLayout.pInputElementDescs = d3d12_input_elements.items;
+	}
 	d3d12_graphics_pipeline_state.BlendState = to_d3d12_blend_desc(pipeline_desc->render_targets_formats.count, pipeline_desc->blending_desc);
 	d3d12_graphics_pipeline_state.RasterizerState = to_d3d12_rasterizer_desc(pipeline_desc->rasterization_desc);
 	d3d12_graphics_pipeline_state.DepthStencilState = to_d3d12_depth_stencil_desc(pipeline_desc->depth_stencil_desc);
@@ -336,6 +353,18 @@ void D3D12_Command_List::reset()
 void D3D12_Command_List::close()
 {
 	command_list->Close();
+}
+
+u8 color_index = 0;
+
+void D3D12_Command_List::begin_event(const char *name)
+{
+	PIXBeginEvent(command_list.Get(), PIX_COLOR_INDEX(++color_index), name);
+}
+
+void D3D12_Command_List::end_event()
+{
+	PIXEndEvent(command_list.Get());
 }
 
 void D3D12_Command_List::copy(Buffer *dest, Buffer *source)
@@ -537,11 +566,12 @@ void  D3D12_Command_List::set_vertex_buffer(Buffer *buffer)
 	D3D12_Buffer *internal_buffer = (D3D12_Buffer *)buffer;
 	D3D12_Base_Buffer *internal_base_buffer = internal_buffer->current_buffer();
 
-	assert((internal_base_buffer->total_size / internal_base_buffer->stride) == 0);
+	assert((internal_base_buffer->total_size % internal_base_buffer->stride) == 0);
 
 	D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
 	vertex_buffer_view.BufferLocation = internal_base_buffer->gpu_address();
-	vertex_buffer_view.SizeInBytes = internal_base_buffer->total_size;
+	vertex_buffer_view.SizeInBytes = internal_base_buffer->stride * internal_base_buffer->count;
+	//vertex_buffer_view.SizeInBytes = internal_base_buffer->total_size;
 	vertex_buffer_view.StrideInBytes = internal_base_buffer->stride;
 
 	command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
@@ -554,7 +584,8 @@ void  D3D12_Command_List::set_index_buffer(Buffer *buffer)
 
 	D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 	index_buffer_view.BufferLocation = internal_base_buffer->gpu_address();
-	index_buffer_view.SizeInBytes = internal_base_buffer->total_size;
+	//index_buffer_view.SizeInBytes = internal_base_buffer->total_size;
+	index_buffer_view.SizeInBytes = internal_base_buffer->stride * internal_base_buffer->count;
 	index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 	
 	command_list->IASetIndexBuffer(&index_buffer_view);
@@ -590,6 +621,11 @@ void  D3D12_Command_List::draw(u32 vertex_count)
 void  D3D12_Command_List::draw_indexed(u32 index_count)
 {
 	command_list->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
+}
+
+void D3D12_Command_List::draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset)
+{
+	command_list->DrawIndexedInstanced(index_count, 1, index_offset, vertex_offset, 0);
 }
 
 D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value)
