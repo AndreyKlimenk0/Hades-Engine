@@ -88,7 +88,6 @@ struct Model_Storage {
 	void add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, u32>> &result);
 	void upload_models_in_gpu();
 
-	Texture *create_texture_from_file(const char *full_path_to_texture);
 	Texture *find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture *default_texture);
 };
 

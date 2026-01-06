@@ -3,8 +3,10 @@
 
 #include "gui.h"
 #include "../render/font.h"
+#include "../render/helpers.h"
 #include "../render/renderer.h"
 #include "../render/render_system.h"
+#include "../render/render_api/render.h"
 
 #include "../sys/sys.h"
 #include "../sys/utils.h"
@@ -421,7 +423,7 @@ struct Column_Rendering_Data {
 	List_Line_Info_Type type;
 	union {
 		const char *text = NULL;
-		//Texture2D *texture;
+		Texture *texture;
 	};
 };
 
@@ -603,19 +605,20 @@ struct Gui_Manager {
 	Render_Font *render_font = NULL;
 	Render_2D *render_2d = NULL;
 
-	//Texture2D up_texture;
-	//Texture2D down_texture;
-	//Texture2D check_texture;
-	//Texture2D default_texture;
-	//Texture2D expand_down_texture;
+	struct Pre_Setup {
+		Rect_s32 window_rect;
+		Array<Pair<String, bool>> windows_params;
+	} pre_setup;
 
-	Rect_s32 window_rect;
 	Array<Context *> context_stack;
 
-	} pre_setup;
-		Array<Pair<String, bool>> windows_params;
-		Rect_s32 window_rect;
-	struct Pre_Setup {
+	Texture *cross_icon_texture = NULL;
+	Texture *up_texture = NULL;
+	Texture *down_texture = NULL;
+	Texture *check_texture = NULL;
+	Texture *default_texture = NULL;
+	Texture *expand_down_texture = NULL;
+	Texture *expand_right_texture = NULL;
 	Rect_s32 last_drawn_rect;
 	Cursor_Type cursor_type;
 
@@ -659,7 +662,7 @@ struct Gui_Manager {
 
 	void init(Engine *engine);
 	void init_from_save_file();
-	//void load_and_init_textures(Gpu_Device *gpu_device);
+	void load_and_init_textures(Render_Device *render_device);
 	void handle_events();
 	void handle_events(bool *update_editing_value, bool *update_next_time_editing_value, Rect_s32 *rect, Rect_s32 *editing_value_rect);
 	void set_font(const char *font_name, u32 font_size);
@@ -701,7 +704,7 @@ struct Gui_Manager {
 
 	void text(const char *some_text);
 
-	//void image(Texture2D *texture, s32 width, s32 height);
+	void image(Texture *texture, s32 width, s32 height);
 	void list_box(Array<String> *array, u32 *item_index);
 	void edit_field(const char *name, int *value);
 	void edit_field(const char *name, float *value);
@@ -710,9 +713,8 @@ struct Gui_Manager {
 	bool button(const char *name, bool *state = NULL);
 	void core_button(const char *name, bool *left_mouse_click, bool *right_mouse_click);
 	bool radio_button(const char *name, bool *state);
-	//bool image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect);
-	bool image_button(Image *image);
-	bool base_image_button(Rect_s32 *button_rect, Image *image);
+	bool image_button(Texture *texture);
+	bool base_image_button(Rect_s32 *button_rect, Texture *texture);
 
 	bool edit_field(const char *name, Vector3 *vector, const char *x, const char *y, const char *z);
 	bool edit_field(const char *name, const char *editing_value, u32 max_chars_number, bool(*symbol_validation)(char symbol));
@@ -720,7 +722,7 @@ struct Gui_Manager {
 
 	bool begin_menu(const char *name);
 	void end_menu();
-	bool menu_item(Image *image, const char *text, const char *shortcut = NULL, bool submenu = false);
+	bool menu_item(Texture *texture, const char *text, const char *shortcut = NULL, bool submenu = false);
 	void segment();
 
 	bool begin_tree(const char *name);
@@ -739,8 +741,8 @@ struct Gui_Manager {
 	void end_column();
 
 	void add_text(const char *text, Alignment alignment);
-	//void add_image(Texture2D *texture, Alignment alignment);
-	//void add_image_button(Texture2D *texture, Alignment alignment);
+	void add_image(Texture *texture, Alignment alignment);
+	void add_image_button(Texture *texture, Alignment alignment);
 
 	bool element_clicked(Key key);
 	bool window_active(Gui_Window *window);
@@ -824,9 +826,8 @@ Size_s32 Gui_Manager::get_window_size_with_padding()
 
 Rect_s32 Gui_Manager::get_win32_rect()
 {
-	//return Rect_s32(0, 0, (s32)Render_System::screen_width, (s32)Render_System::screen_height);
-	assert(false);
-	return Rect_s32(0, 0, 0, 0);
+	Size_u32 window_size = Engine::get_render_system()->get_window_size();
+	return Rect_s32(static_cast<Size_s32>(window_size));
 }
 
 Gui_Window *Gui_Manager::get_window()
@@ -1046,7 +1047,7 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 		render_list->push_clip_rect(&window->clip_rect);
 		if (*state) {
 			render_list->add_rect(&radio_rect, radio_button_theme.true_background_color, radio_button_theme.rounded_border);
-			//render_list->add_texture(&check_texture_rect, &check_texture);
+			render_list->add_texture(&check_texture_rect, check_texture);
 		} else {
 			render_list->add_rect(&radio_rect, radio_button_theme.default_background_color, radio_button_theme.rounded_border);
 		}
@@ -1057,34 +1058,9 @@ bool Gui_Manager::radio_button(const char *name, bool *state)
 	return was_click_by_mouse_key;
 }
 
-//bool Gui_Manager::image_button(Rect_s32 *rect, Texture2D *texture, Rect_s32 *window_view_rect)
-//{
-//	assert(rect);
-//	assert(texture);
-//	assert((rect->width > 0) && (rect->height > 0));
-//
-//	Gui_Window *window = get_window();
-//	Rect_s32 image_rect = *rect;
-//
-//	if ((image_rect.x < 0) && (image_rect.y < 0)) {
-//		place_rect_in_window(window, &image_rect, window->place_between_rects, window->horizontal_offset_from_sides, window->vertical_offset_from_sides);
-//	}
-//	Gui_ID image_button_gui_id = GET_IMAGE_BUTTON_GUI_ID();
-//	if (must_rect_be_drawn(&window->clip_rect, &image_rect)) {
-//		update_active_and_hot_state(image_button_gui_id, &image_rect);
-//
-//		Render_Primitive_List *render_list = GET_RENDER_LIST();
-//		render_list->push_clip_rect(&window->clip_rect);
-//		render_list->add_texture(&image_rect, texture);
-//		render_list->pop_clip_rect();
-//	}
-//	image_button_count++;
-//	return ((hot_item == image_button_gui_id) && was_click(KEY_LMOUSE));
-//}
-bool Gui_Manager::image_button(Image *image)
+bool Gui_Manager::image_button(Texture *texture)
 {
-	assert(image);
-	assert((image->width > 0) && (image->height > 0));
+	assert(texture);
 
 	Size_s32 button_size = image_button_theme.button_size;
 	if ((button_size.width < 0) || (button_size.height < 0)) {
@@ -1093,14 +1069,17 @@ bool Gui_Manager::image_button(Image *image)
 	Rect_s32 button_rect = button_size;
 	Context *context = get_context();
 	context->place_rect(&button_rect);
-	return base_image_button(&button_rect, image);
+	return base_image_button(&button_rect, texture);
 }
 
-bool Gui_Manager::base_image_button(Rect_s32 *button_rect, Image *image)
+bool Gui_Manager::base_image_button(Rect_s32 *button_rect, Texture *texture)
 {
+	Texture_Desc texture_desc = texture->get_texture_desc();
+	assert((texture_desc.width > 0) && (texture_desc.height > 0));
+
 	Size_s32 image_size = image_button_theme.image_size;
 	if ((image_size.width < 0) || (image_size.height < 0)) {
-		image_size = Size_s32(image->width, image->height);
+		image_size = Size_s32(texture_desc.width, texture_desc.height);
 	}
 	image_size.width = math::min(image_size.width, button_rect->width);
 	image_size.height = math::min(image_size.height, button_rect->height);
@@ -1122,7 +1101,7 @@ bool Gui_Manager::base_image_button(Rect_s32 *button_rect, Image *image)
 		render_list->push_clip_rect(&window->clip_rect);
 		Color button_color = (hot_item == image_button_gui_id) ? image_button_theme.hover_color : image_button_theme.color;
 		render_list->add_rect(button_rect, button_color, image_button_theme.rounded_border, image_button_theme.rect_rounding);
-		//render_list->add_texture(&image_rect, &image->texture);
+		render_list->add_texture(&image_rect, texture);
 		render_list->pop_clip_rect();
 	}
 	image_button_count++;
@@ -1421,7 +1400,7 @@ bool Gui_Manager::begin_menu(const char *name)
 	return false;
 }
 
-bool Gui_Manager::menu_item(Image *image, const char *text, const char *shortcut, bool submenu)
+bool Gui_Manager::menu_item(Texture *texture, const char *text, const char *shortcut, bool submenu)
 {
 	Context *context = get_context();
 	Gui_Window *window = get_window();
@@ -1442,11 +1421,11 @@ bool Gui_Manager::menu_item(Image *image, const char *text, const char *shortcut
 
 		Rect_s32 image_rect = { 0, 0, 0, 0 };
 		s32 image_padding = 0;
-		if (image) {
+		if (texture) {
 			image_rect.set(menu_theme.image_size);
 			place_in_middle_and_by_left(&menu_item_rect, &image_rect, menu_theme.image_padding);
 		}
-		if (image || menu_theme.layout_by_image) {
+		if (texture || menu_theme.layout_by_image) {
 			image_padding = menu_theme.image_padding + menu_theme.image_size.width;
 		}
 
@@ -1457,8 +1436,8 @@ bool Gui_Manager::menu_item(Image *image, const char *text, const char *shortcut
 		Rect_s32 clip_rect = calculate_clip_rect(&window->clip_rect, &menu_item_rect);
 		render_list->push_clip_rect(&clip_rect);
 		render_list->add_rect(&menu_item_rect, menu_item_color, 5);
-		if (image) {
-			//render_list->add_texture(&image_rect, &image->texture);
+		if (texture) {
+			render_list->add_texture(&image_rect, texture);
 		}
 		render_list->add_text(&text_rect, text);
 		render_list->pop_clip_rect();
@@ -1626,8 +1605,8 @@ bool Gui_Manager::begin_tree_node(const char *name, Gui_Tree_Style node_flags)
 		Color tree_node_color = (node_state & GUI_TREE_NODE_SELECTED) ? theme->picked_tree_node_color : mouse_over && (active_window == window->gui_id) ? theme->hover_tree_node_color : theme->tree_node_color;
 		render_list->add_rect(&tree_node_rect, tree_node_color, 0);
 		if (!(node_flags & GUI_TREE_NODE_FINAL)) {
-			//Texture2D *expand = (node_state & GUI_TREE_NODE_OPEN) ? &expand_down_texture : &expand_right_texture;
-			//render_list->add_texture(&down_image_rect, expand);
+			Texture *expand = (node_state & GUI_TREE_NODE_OPEN) ? expand_down_texture : expand_right_texture;
+			render_list->add_texture(&down_image_rect, expand);
 		}
 		if (!(node_flags & GUI_TREE_NODE_NOT_DISPLAY_NAME)) {
 			render_list->add_text(&node_text_rect, name);
@@ -1909,9 +1888,9 @@ bool Gui_Manager::begin_list(const char *name, Gui_List_Column columns[], u32 co
 				place_in_middle_and_by_right(&column_rect, &button_rect, list_theme.filter_button_offset);
 
 				if (columns[i].state == GUI_LIST_COLUMN_STATE_SORTING_UP) {
-					//render_list->add_texture(&button_rect, &up_texture);
+					render_list->add_texture(&button_rect, up_texture);
 				} else if (columns[i].state == GUI_LIST_COLUMN_STATE_SORTING_DOWN) {
-					//render_list->add_texture(&button_rect, &down_texture);
+					render_list->add_texture(&button_rect, down_texture);
 				}
 			}
 			if ((offset_in_persents < 100) && (i < (columns_count - 1))) {
@@ -2132,7 +2111,7 @@ void Gui_Manager::end_list()
 					} else if (rendering_data->type == LIST_LINE_INFO_TYPE_IMAGE) {
 						Rect_s32 texture_rect = { 0, 0, 20, 20 };
 						place_in_middle_and_by_left(&line_column_rect, &texture_rect, list_theme.line_text_offset);
-						//render_list->add_texture(&texture_rect, rendering_data->texture);
+						render_list->add_texture(&texture_rect, rendering_data->texture);
 						line_column_rect.x += texture_rect.width + 5;
 					}
 				}
@@ -2195,17 +2174,17 @@ void Gui_Manager::add_text(const char *text, Alignment alignment)
 	current_list_column.rendering_data_list.push(data);
 }
 
-//void Gui_Manager::add_image(Texture2D *texture, Alignment alignment)
-//{
-//	Column_Rendering_Data data;
-//	data.type = LIST_LINE_INFO_TYPE_IMAGE;
-//	data.texture = texture;
-//	current_list_column.rendering_data_list.push(data);
-//}
-//
-//void Gui_Manager::add_image_button(Texture2D *texture, Alignment alignment)
-//{
-//}
+void Gui_Manager::add_image(Texture *texture, Alignment alignment)
+{
+	Column_Rendering_Data data;
+	data.type = LIST_LINE_INFO_TYPE_IMAGE;
+	data.texture = texture;
+	current_list_column.rendering_data_list.push(data);
+}
+
+void Gui_Manager::add_image_button(Texture *texture, Alignment alignment)
+{
+}
 
 bool Gui_Manager::element_clicked(Key key)
 {
@@ -2590,24 +2569,24 @@ bool Gui_Manager::add_tab(const char *tab_name)
 	return current_tab_active;
 }
 
-//void Gui_Manager::image(Texture2D *texture, s32 width, s32 height)
-//{
-//	assert(texture);
-//
-//	Rect_s32 image_rect = { 0, 0, width, height };
-//
-//	Context *context = get_context();
-//	context->place_rect(&image_rect);
-//
-//	Gui_Window *window = get_window();
-//	if (must_rect_be_drawn(&window->clip_rect, &image_rect)) {
-//
-//		Render_Primitive_List *render_list = GET_RENDER_LIST();
-//		render_list->push_clip_rect(&window->clip_rect);
-//		render_list->add_texture(image_rect.x, image_rect.y, image_rect.width, image_rect.height, texture);
-//		render_list->pop_clip_rect();
-//	}
-//}
+void Gui_Manager::image(Texture *texture, s32 width, s32 height)
+{
+	assert(texture);
+
+	Rect_s32 image_rect = { 0, 0, width, height };
+
+	Context *context = get_context();
+	context->place_rect(&image_rect);
+
+	Gui_Window *window = get_window();
+	if (must_rect_be_drawn(&window->clip_rect, &image_rect)) {
+
+		Render_Primitive_List *render_list = GET_RENDER_LIST();
+		render_list->push_clip_rect(&window->clip_rect);
+		render_list->add_texture(image_rect.x, image_rect.y, image_rect.width, image_rect.height, texture);
+		render_list->pop_clip_rect();
+	}
+}
 
 static bool find_window_by_name(const Gui_Window &window, const String &name)
 {
@@ -2706,7 +2685,7 @@ void Gui_Manager::list_box(Array<String> *array, u32 *item_index)
 		render_list->push_clip_rect(&window->clip_rect);
 		render_list->add_rect(&list_box_rect, list_box_theme.background_color, list_box_theme.rounded_border);
 		render_list->add_text(&name_rect, array->get(*item_index));
-		//render_list->add_texture(&expand_down_texture_rect, &expand_down_texture);
+		render_list->add_texture(&expand_down_texture_rect, expand_down_texture);
 		render_list->pop_clip_rect();
 	}
 	list_box_count++;
@@ -2766,7 +2745,7 @@ void Gui_Manager::core_button(const char *name, bool *left_mouse_click, bool *ri
 
 void Gui_Manager::init(Engine *engine)
 {
-	//render_2d = &engine->render_sys.render_2d;
+	render_2d = &engine->render_sys.render_2d;
 
 	key_bindings.bind(KEY_CTRL, KEY_BACKSPACE);
 	key_bindings.bind(KEY_CTRL, KEY_ARROW_UP);
@@ -2784,7 +2763,7 @@ void Gui_Manager::init(Engine *engine)
 
 	set_font(font_name, (u32)font_size);
 	init_from_save_file();
-	//load_and_init_textures(&engine->render_sys.gpu_device);
+	load_and_init_textures(engine->render_sys.render_device);
 }
 
 void Gui_Manager::init_from_save_file()
@@ -2823,40 +2802,35 @@ void Gui_Manager::init_from_save_file()
 
 struct Name_Texture {
 	const char *name = NULL;
-	//Texture2D *texture = NULL;
+	Texture **texture = NULL;
 };
 
-//void Gui_Manager::load_and_init_textures(Gpu_Device *gpu_device)
-//{
-//	assert(gpu_device);
+void Gui_Manager::load_and_init_textures(Render_Device *render_device)
+{
+	assert(render_device);
 
-	//cross_icon_image.init_from_file("cross-small.png", "editor");
+	const u32 TEXTURE_COUNT = 6;
+	Name_Texture pairs[TEXTURE_COUNT] = { { "cross-small.png", &cross_icon_texture }, { "expand_down1.png", &expand_down_texture }, { "check2.png", &check_texture },
+										  { "up.png", &up_texture }, { "down.png", &down_texture }, { "expand_right.png", &expand_right_texture } };
 
-	//const u32 TEXTURE_COUNT = 5;
-	//Name_Texture pairs[TEXTURE_COUNT] = { { "expand_down1.png", &expand_down_texture }, { "check2.png", &check_texture }, { "up.png", &up_texture }, { "down.png", &down_texture }, { "expand_right.png", &expand_right_texture } };
+	Image default_image;
+	default_image.create(64, 64, DXGI_FORMAT_R8G8B8A8_UNORM, "Default Texture");
+	default_image.fill(Color(255, 255, 255, 0));
 
-	//Texture2D_Desc texture_desc;
-	//texture_desc.width = 64;
-	//texture_desc.height = 64;
-	//texture_desc.mip_levels = 1;
+	default_texture = create_texture_from_image(&default_image);
 
-	//gpu_device->create_texture_2d(&texture_desc, &default_texture);
-	//gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
-
-	//Color transparent_value = Color(255, 255, 255, 0);
-	//fill_texture((void *)&transparent_value, &default_texture);
-
-	//u8 *image_data = NULL;
-	//u32 width = 0;
-	//u32 height = 0;
-	//String full_path;
-	//for (u32 i = 0; i < TEXTURE_COUNT; i++) {
-	//	build_full_path_to_editor_file(pairs[i].name, full_path);
-	//	if (!create_texture2d_from_file(full_path, *pairs[i].texture)) {
-	//		*pairs[i].texture = default_texture;
-	//	}
-	//}
-//}
+	u8 *image_data = NULL;
+	u32 width = 0;
+	u32 height = 0;
+	String full_path;
+	for (u32 i = 0; i < TEXTURE_COUNT; i++) {
+		build_full_path_to_editor_file(pairs[i].name, full_path);
+		*pairs[i].texture = create_texture_from_file(full_path);
+		if (!*pairs[i].texture) {
+			*pairs[i].texture = default_texture;
+		}
+	}
+}
 
 void Gui_Manager::handle_events()
 {
@@ -2979,7 +2953,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 	Gui_Window *window = find_window(name);
 	if (!window) {
 		window = create_window(name, WINDOW_TYPE_PARENT, window_style, window_open);
-		setup_active_window(window);
+		//setup_active_window(window);
 	}
 
 	if (!window->open) {
@@ -3009,9 +2983,10 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 		if (window->style & WINDOW_OUTLINES) {
 			min_window_position = (s32)window_theme.outlines_width;
 		}
-		//s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)Render_System::screen_width - rect->width);
-		//s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)Render_System::screen_height - rect->height);
-		//window->set_position(x, y);
+		Size_u32 window_size = Engine::get_render_system()->get_window_size();
+		s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)window_size.width - rect->width);
+		s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)window_size.height - rect->height);
+		window->set_position(x, y);
 	}
 
 	if ((window_style & WINDOW_AUTO_WIDTH) && !((reset_window_params & SET_WINDOW_SIZE) && (pre_setup.window_rect.width > 0))) {
@@ -3066,21 +3041,22 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 				rect->width = math::max(rect->width - mouse_x_delta, MIN_WINDOW_WIDTH);
 			}
 		}
+		Size_u32 window_size = Engine::get_render_system()->get_window_size();
 		if ((rect_side == RECT_SIDE_RIGHT) || (rect_side == RECT_SIDE_RIGHT_BOTTOM)) {
-			//if ((rect->right() + mouse_x_delta) < (s32)Render_System::screen_width) {
-			//	rect->width = math::max(rect->width + mouse_x_delta, MIN_WINDOW_WIDTH);
-			//}
+			if ((rect->right() + mouse_x_delta) < (s32)window_size.width) {
+				rect->width = math::max(rect->width + mouse_x_delta, MIN_WINDOW_WIDTH);
+			}
 		}
 		if ((rect_side == RECT_SIDE_BOTTOM) || (rect_side == RECT_SIDE_RIGHT_BOTTOM) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
-			//if ((rect->bottom() + mouse_y_delta) < (s32)Render_System::screen_height) {
-			//	rect->height = math::max(rect->height + mouse_y_delta, MIN_WINDOW_HEIGHT);
-			//}
-			//if (window->display_vertical_scrollbar) {
-			//	if (prev_view_rect.bottom() == prev_content_rect.bottom()) {
-			//		s32 delta = rect->bottom() - prev_content_rect.bottom();
-			//		window->content_rect.y += delta;
-			//	}
-			//}
+			if ((rect->bottom() + mouse_y_delta) < (s32)window_size.height) {
+				rect->height = math::max(rect->height + mouse_y_delta, MIN_WINDOW_HEIGHT);
+			}
+			if (window->display_vertical_scrollbar) {
+				if (prev_view_rect.bottom() == prev_content_rect.bottom()) {
+					s32 delta = rect->bottom() - prev_content_rect.bottom();
+					window->content_rect.y += delta;
+				}
+			}
 		}
 		if (rect_side == RECT_SIDE_TOP) {
 			if ((mouse_y >= 0) && ((rect->height - mouse_y_delta) > MIN_WINDOW_HEIGHT)) {
@@ -3197,7 +3173,7 @@ void Gui_Manager::render_window(Gui_Window *window)
 		if (window->style & WINDOW_CLOSE_BUTTON) {
 			Rect_s32 cross_icon_image_rect = { 0, 0, header_rect.height, header_rect.height };
 			place_in_middle_and_by_right(&header_rect, &cross_icon_image_rect, 5);
-			if (base_image_button(&cross_icon_image_rect, &cross_icon_image)) {
+			if (base_image_button(&cross_icon_image_rect, cross_icon_texture)) {
 				window->open = false;
 			}
 		}
@@ -3546,10 +3522,10 @@ bool gui::add_tab(const char *tab_name)
 	return gui_manager.add_tab(tab_name);
 }
 
-//void gui::image(Texture2D *texture, s32 width, s32 height)
-//{
-//	gui_manager.image(texture, width, height);
-//}
+void gui::image(Texture *texture, s32 width, s32 height)
+{
+	gui_manager.image(texture, width, height);
+}
 
 void gui::list_box(Array<String> *array, u32 *item_index)
 {
@@ -3561,15 +3537,9 @@ bool gui::radio_button(const char *name, bool *state)
 	return gui_manager.radio_button(name, state);
 }
 
-//bool gui::image_button(u32 width, u32 height, Texture2D *texture)
-//{
-//	Gui_Window *window = gui_manager.get_window();
-//	Rect_s32 rect = { -1, -1, (s32)width, (s32)height };
-//	return gui_manager.image_button(&rect, texture, &window->view_rect);
-//}
-bool gui::image_button(Image *image)
+bool gui::image_button(Texture *texture)
 {
-	return gui_manager.image_button(image);
+	return gui_manager.image_button(texture);
 }
 
 void gui::edit_field(const char *name, int *value)
@@ -3602,9 +3572,9 @@ bool gui::menu_item(const char *text, const char *shortcut, bool submenu)
 	return gui_manager.menu_item(NULL, text, shortcut, submenu);
 }
 
-bool gui::menu_item(Image *image, const char *text, const char *shortcut, bool submenu)
+bool gui::menu_item(Texture *texture, const char *text, const char *shortcut, bool submenu)
 {
-	return gui_manager.menu_item(image, text, shortcut, submenu);
+	return gui_manager.menu_item(texture, text, shortcut, submenu);
 }
 
 void gui::end_menu()
@@ -3722,16 +3692,16 @@ void gui::add_text(const char *text, Alignment alignment)
 {
 	gui_manager.add_text(text, alignment);
 }
-//
-//void gui::add_image(Texture2D *texture, Alignment alignment)
-//{
-//	gui_manager.add_image(texture, alignment);
-//}
-//
-//void gui::add_image_button(Texture2D *texture, Alignment alignment)
-//{
-//	gui_manager.add_image_button(texture, alignment);
-//}
+
+void gui::add_image(Texture *texture, Alignment alignment)
+{
+	gui_manager.add_image(texture, alignment);
+}
+
+void gui::add_image_button(Texture *texture, Alignment alignment)
+{
+	gui_manager.add_image_button(texture, alignment);
+}
 
 bool gui::mouse_over_element()
 {

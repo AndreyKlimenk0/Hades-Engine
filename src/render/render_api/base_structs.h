@@ -151,8 +151,14 @@ struct Bytecode_Ref {
 	u32 size = 0;
 };
 
+struct Input_Layout {
+	const char *semantic_name = NULL;
+	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+};
+
 struct Graphics_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
+	Array<Input_Layout> input_layouts;
 	Bytecode_Ref vs_bytecode;
 	Bytecode_Ref ps_bytecode;
 	Primitive_Type primitive_type = PRIMITIVE_TYPE_TRIANGLE;
