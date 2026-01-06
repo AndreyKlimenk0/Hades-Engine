@@ -2953,6 +2953,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 	Gui_Window *window = find_window(name);
 	if (!window) {
 		window = create_window(name, WINDOW_TYPE_PARENT, window_style, window_open);
+		//@Note: Why I make a new window active
 		//setup_active_window(window);
 	}
 
