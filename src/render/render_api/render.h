@@ -88,6 +88,7 @@ struct Root_Signature  {
 	virtual void add_constant_buffer_parameter(u32 shader_register, u32 register_space) = 0;
 	//virtual void add_constant_buffer_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
 	virtual void add_shader_resource_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
+	virtual void add_unordered_access_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
 	virtual void add_sampler_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
 	//virtual void add_unordered_access_resource_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
 	//virtual void add_sampler_parameter(u32 shader_register, u32 register_space) = 0;
@@ -129,14 +130,20 @@ struct Compute_Command_List : Copy_Command_List {
 
 	virtual void apply(Pipeline_State *pipeline_state) = 0;
 	
-	//virtual void set_compute_constants(u32 parameter_index, void *data) = 0;
-	//virtual void set_compute_root_descriptor_table(u32 parameter_index, const GPU_Descriptor &base_descriptor) = 0;
+	template <typename T>
+	void set_compute_constants(u32 shader_register, u32 shader_space, T *data);
 
 	virtual void set_compute_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data) = 0;
 	virtual void set_compute_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor) = 0;
 
 	virtual void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z = 1) = 0;
 };
+
+template <typename T>
+inline void Compute_Command_List::set_compute_constants(u32 shader_register, u32 shader_space, T *data)
+{
+	set_compute_constants(shader_register, shader_space, sizeof(T), (void *)data);
+}
 
 struct Graphics_Command_List : Compute_Command_List {
 	Graphics_Command_List() = default;
@@ -158,22 +165,20 @@ struct Graphics_Command_List : Compute_Command_List {
 
 	// ?
 	void set_render_target(Texture *render_target_texture, Texture *depth_stencil_texture);
+	
 	void clear_render_target(Texture *texture, const Color &color);
 	void clear_depth_stencil(Texture *texture, float depth = 1.0f, u8 stencil = 0);
+	virtual void clear_unordered_access(Texture *texture, const Color &color) = 0;
 	
 	virtual void set_vertex_buffer(Buffer *buffer) = 0;
 	virtual void set_index_buffer(Buffer *buffer) = 0;
 	
-	//virtual void set_graphics_constants(u32 parameter_index, void *data) = 0;
-	//virtual void set_graphics_root_descriptor_table(u32 parameter_index, GPU_Descriptor *base_descriptor) = 0;
-	//virtual void set_graphics_constatns(u32 shader_register, u32 shader_space, Shader_Register register_type) = 0;
-	//SetGraphicsRootConstantBuffer
 	virtual void set_graphics_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer) = 0;
 
 	template <typename T>
 	void set_graphics_constants(u32 shader_register, u32 shader_space, T *data);
-	virtual void set_graphics_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data) = 0;
 
+	virtual void set_graphics_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data) = 0;
 	virtual void set_graphics_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor) = 0;
 	
 	virtual void draw(u32 vertex_count) = 0;

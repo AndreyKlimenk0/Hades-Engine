@@ -5,7 +5,7 @@ Clear_Value::Clear_Value() : type(CLEAR_VALUE_UNKNOWN)
 {
 }
 
-Clear_Value::Clear_Value(Color &_color)
+Clear_Value::Clear_Value(const Color &_color)
 {
     type = CLEAR_VALUE_COLOR;
     color = _color;
@@ -25,6 +25,11 @@ Clear_Value::~Clear_Value()
 bool Clear_Value::depth_stencil_set()
 {
     return type == CLEAR_VALUE_DEPTH_STENCIL;
+}
+
+bool Clear_Value::color_set()
+{
+    return type == CLEAR_VALUE_COLOR;
 }
 
 u64 Buffer_Desc::size()
