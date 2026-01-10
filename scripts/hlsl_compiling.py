@@ -161,5 +161,5 @@ def compile_hlsl_shaders(compilation_params : Compilation_Params):
 
 
 if __name__ == "__main__":
-        compilation_params = parse_command_line_args(sys.argv[1:])
-        compile_hlsl_shaders(compilation_params)
+    compilation_params = parse_command_line_args(sys.argv[1:])
+    compile_hlsl_shaders(compilation_params)

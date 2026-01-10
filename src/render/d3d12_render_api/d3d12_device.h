@@ -52,6 +52,7 @@ struct Root_Parameter {
 	void add_descriptor(u32 shader_register, u32 register_space);
 	void add_descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE range_type, u32 shader_register, u32 register_space, u32 descriptors_number);
 	void add_srv_descriptor_range(u32 shader_register, u32 register_space, u32 descriptors_number);
+	void add_uav_descriptor_range(u32 shader_register, u32 register_space, u32 descriptors_number);
 	void add_sampler_descriptor_range(u32 shader_register, u32 register_space, u32 descriptors_number);
 };
 
@@ -73,6 +74,7 @@ struct D3D12_Root_Signature : Root_Signature {
 	void add_32bit_constants_parameter(u32 shader_register, u32 register_space, u32 struct_size);
 	void add_constant_buffer_parameter(u32 shader_register, u32 register_space);
 	void add_shader_resource_parameter(u32 shader_register, u32 register_space, u32 descriptors_number);
+	void add_unordered_access_parameter(u32 shader_register, u32 register_space, u32 descriptors_number);
 	void add_sampler_parameter(u32 shader_register, u32 register_space, u32 descriptors_number);
 
 	ID3D12RootSignature *get();
@@ -131,6 +133,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 
 	void clear_render_target_view(RTV_Descriptor *descriptor, const Color &color);
 	void clear_depth_stencil_view(DSV_Descriptor *descriptor, float depth = 1.0f, u8 stencil = 0);
+	void clear_unordered_access(Texture *texture, const Color &color);
 
 	void set_render_target(RTV_Descriptor *render_target_descriptor, DSV_Descriptor *depth_stencil_descriptor);
 

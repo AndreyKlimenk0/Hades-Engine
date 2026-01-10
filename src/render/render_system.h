@@ -32,10 +32,7 @@ struct View_Plane {
 };
 
 struct Depth_Stencil_Texture_Desc {
-	Depth_Stencil_Texture_Desc() {};
-	Depth_Stencil_Texture_Desc(u32 width, u32 height) {};
-	~Depth_Stencil_Texture_Desc() {};
-
+	String name;
 	u32 width = 0;
 	u32 height = 0;
 	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
@@ -43,6 +40,7 @@ struct Depth_Stencil_Texture_Desc {
 };
 
 struct Render_Target_Texture_Desc {
+	String name;
 	u32 width = 0;
 	u32 height = 0;
 	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
@@ -63,16 +61,18 @@ struct Pipeline_Resource_Manager {
 	Array<Texture *> textures;
 	
 	Hash_Table<String, Texture *> texture_table;
+	Texture_Desc default_texture_desc;
 	Depth_Stencil_Texture_Desc default_depth_stencil_desc;
 	Render_Target_Texture_Desc default_render_target_desc;
 
 	void init(Render_Device *_render_device, Texture_Desc *back_buffer_texture_desc);
 	void update_common_constant_buffers();
+
+	Texture *read_texture(const char *texture_name);
 	
-	//Texture *create_texture(Texture_Desc *texture_desc);
-	
-	//Texture *find_depth_stencil_texture(const char *texture_name);
-	Texture *create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc = NULL);
+	Texture *create_texture(const char *texture_name, Texture_Desc *texture_desc = NULL);
+	Texture *create_render_target(const char *texture_name, Render_Target_Texture_Desc *render_target_desc = NULL);
+	Texture *create_depth_stencil(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc = NULL);
 };
 
 struct Command_List_Allocator {
@@ -125,6 +125,8 @@ struct Render_System {
 	struct Render_Passes {
 		Shadows_Pass shadows_pass;
 		Forward_Pass forward_pass;
+		Silhouette_Pass silhouette_pass;
+		Outlining_Pass outlining_pass;
 		Render_2D_Pass render2d_pass;
 	} passes;
 	

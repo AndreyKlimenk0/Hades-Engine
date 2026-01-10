@@ -17,7 +17,7 @@ enum Clear_Value_Type {
 
 struct Clear_Value {
 	Clear_Value();
-	Clear_Value(Color &_color);
+	Clear_Value(const Color &_color);
 	Clear_Value(float _depht, u8 _stencil);
 	~Clear_Value();
 
@@ -27,6 +27,7 @@ struct Clear_Value {
 	Color color;
 
 	bool depth_stencil_set();
+	bool color_set();
 };
 
 struct Buffer_Desc {
@@ -39,7 +40,7 @@ struct Buffer_Desc {
 	u64 size();
 };
 
-//const u32 ALLOW_RENDER_TARGET = 0x1,
+const u32 ALLOW_RENDER_TARGET = 0x1;
 const u32 DEPTH_STENCIL_RESOURCE = 0x2;
 const u32 ALLOW_UNORDERED_ACCESS = 0x4;
 //const u32 DENY_SHADER_RESOURCE = 0x8,
@@ -58,7 +59,7 @@ struct Texture_Desc {
 	u32 miplevels = 1;
 	u32 flags = 0;
 	void *data = NULL;
-	DXGI_FORMAT format;
+	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
 	Clear_Value clear_value;
 	String name = "Unknown";
 

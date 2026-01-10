@@ -71,5 +71,4 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
     float3 light_factor = calculate_light(vertex_out.world_position, frame_info.view_position, normal, diffuse, specular, frame_info.light_count, lights);
     return float4(light_factor, 1.0f) * shadow_factor;
 }
-
 #endif

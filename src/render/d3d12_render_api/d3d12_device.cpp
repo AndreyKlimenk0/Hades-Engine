@@ -109,6 +109,11 @@ void Root_Parameter::add_srv_descriptor_range(u32 shader_register, u32 register_
 	add_descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, shader_register, register_space, descriptors_number);
 }
 
+void Root_Parameter::add_uav_descriptor_range(u32 shader_register, u32 register_space, u32 descriptors_number)
+{
+	add_descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, shader_register, register_space, descriptors_number);
+}
+
 void Root_Parameter::add_sampler_descriptor_range(u32 shader_register, u32 register_space, u32 descriptors_number)
 {
 	add_descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, shader_register, register_space, descriptors_number);
@@ -238,6 +243,15 @@ void D3D12_Root_Signature::add_shader_resource_parameter(u32 shader_register, u3
 
 	u32 parameter_index = parameters.push(root_parameter);
 	store_parameter_index(parameter_index, shader_register, register_space, SHADER_RESOURCE_REGISTER);
+}
+
+void D3D12_Root_Signature::add_unordered_access_parameter(u32 shader_register, u32 register_space, u32 descriptors_number)
+{
+	Root_Parameter root_parameter = Root_Parameter(D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+	root_parameter.add_uav_descriptor_range(shader_register, register_space, descriptors_number);
+
+	u32 parameter_index = parameters.push(root_parameter);
+	store_parameter_index(parameter_index, shader_register, register_space, UNORDERED_ACCESS_REGISTER);
 }
 
 void D3D12_Root_Signature::add_sampler_parameter(u32 shader_register, u32 register_space, u32 descriptors_number)
@@ -550,6 +564,16 @@ void  D3D12_Command_List::clear_depth_stencil_view(DSV_Descriptor *descriptor, f
 	D3D12_CPU_Descriptor *internal_descriptor = static_cast<D3D12_CPU_Descriptor *>(descriptor);
 
 	command_list->ClearDepthStencilView(internal_descriptor->cpu_handle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, depth, stencil, 0, NULL);
+}
+
+void D3D12_Command_List::clear_unordered_access(Texture *texture, const Color &color)
+{
+	assert(true);
+	//float rgba[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
+	//D3D12_Texture *internal_texture = static_cast<D3D12_Texture *>(texture);
+	//D3D12_GPU_Descriptor *internal_descriptor = static_cast<D3D12_GPU_Descriptor *>(internal_texture->unordered_access_descriptor());
+	//
+	//command_list->ClearUnorderedAccessViewFloat(internal_descriptor->gpu_handle, internal_descriptor->cpu_handle, internal_texture->get(), rgba, 0, NULL);
 }
 
 void  D3D12_Command_List::set_render_target(RTV_Descriptor *render_target_descriptor, DSV_Descriptor *depth_stencil_descriptor)
@@ -932,7 +956,6 @@ D3D12_Swap_Chain::D3D12_Swap_Chain(bool allow_tearing, u32 buffer_count, u32 wid
 	HR(dxgi_swap_chain1.As(&dxgi_swap_chain));
 
 	back_buffers.resize(back_buffer_count);
-	//memset(back_buffers.to_void_ptr(), 0xff, back_buffers.get_size());
 	for (u32 i = 0; i < back_buffer_count; i++) {
 		back_buffers[i] = NULL;
 	}

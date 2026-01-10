@@ -124,10 +124,14 @@ void Render_System::init_passes()
 
 	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.silhouette_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.outlining_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.render2d_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.outlining_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.render2d_pass, (void *)&render_2d,   (void *)this });
 }
 
@@ -211,11 +215,19 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 {
 	render_device = _render_device;
 
+	default_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	default_texture_desc.width = back_buffer_texture_desc->width;
+	default_texture_desc.height = back_buffer_texture_desc->height;
+	default_texture_desc.depth = back_buffer_texture_desc->depth;
+	default_texture_desc.format = back_buffer_texture_desc->format;
+
+	default_render_target_desc.name = "Unknown";
 	default_render_target_desc.width = back_buffer_texture_desc->width;
 	default_render_target_desc.height = back_buffer_texture_desc->height;
 	default_render_target_desc.format = back_buffer_texture_desc->format;
 	default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
 
+	default_depth_stencil_desc.name = "Unknown";
 	default_depth_stencil_desc.width = back_buffer_texture_desc->width;
 	default_depth_stencil_desc.height = back_buffer_texture_desc->height;
 	default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
@@ -266,37 +278,80 @@ void Pipeline_Resource_Manager::update_common_constant_buffers()
 	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 256);
 }
 
-//Buffer *Resource_Manager::create_buffer(Buffer_Type buffer_type, Buffer_Desc *buffer_desc)
-//{
-//	auto buffer = new Buffer();
-//	buffer->create(buffer_type, buffer_desc, &resource_allocator, descriptors_pool, copy_manager);
-//	buffer->begin_frame(frame_count);
-//	buffers.push(buffer);
-//	return buffer;
-//}
+Texture *Pipeline_Resource_Manager::read_texture(const char *texture_name)
+{
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		error("Pipeline_Resource_Manager::create_texture: Failed to read texture. Texture '{}' doesn't exist.", texture_name);
+	}
+	return texture;
+}
 
-//Texture *Pipeline_Resource_Manager::create_texture(Texture_Desc *texture_desc)
-//{
-//	auto texture = new Texture();
-//	texture->create(texture_desc, &resource_allocator, descriptors_pool);
-//	textures.push(texture);
-//	return texture;
-//}
+Texture *Pipeline_Resource_Manager::create_texture(const char *texture_name, Texture_Desc *texture_desc)
+{
+	Texture_Desc filled_texture_desc;
+	if (texture_desc) {
+		filled_texture_desc.dimension = texture_desc->dimension != TEXTURE_DIMENSION_UNKNOWN ? texture_desc->dimension : default_texture_desc.dimension;
+		filled_texture_desc.resource_state = texture_desc->resource_state != RESOURCE_STATE_COMMON ? texture_desc->resource_state : default_texture_desc.resource_state;
+		filled_texture_desc.width = texture_desc->width > 0 ? texture_desc->width : default_texture_desc.width;
+		filled_texture_desc.height = texture_desc->height > 1 ? texture_desc->height : default_texture_desc.height;
+		filled_texture_desc.depth = texture_desc->depth > 1 ? texture_desc->depth : default_texture_desc.depth;
+		filled_texture_desc.miplevels = texture_desc->miplevels > 1 ? texture_desc->miplevels : default_texture_desc.miplevels;
+		filled_texture_desc.format = texture_desc->format != DXGI_FORMAT_UNKNOWN ? texture_desc->format : default_texture_desc.format;
+		filled_texture_desc.flags = texture_desc->flags != 0 ? texture_desc->flags : default_texture_desc.flags;
+		filled_texture_desc.data = texture_desc->data ? texture_desc->data : NULL;
+		filled_texture_desc.clear_value = texture_desc->clear_value.color_set() ? texture_desc->clear_value : default_texture_desc.clear_value;
+		filled_texture_desc.name = texture_desc->name != "Unknown" ? texture_desc->name : default_texture_desc.name;
+	} else {
+		filled_texture_desc = default_texture_desc;
+	}
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = render_device->create_texture(&filled_texture_desc);
+		texture_table.set(texture_name, texture);
+	} else {
+		error("Pipeline_Resource_Manager::create_texture: Failed to create texture. Texture '{}' already exists.", texture_name);
+	}
+	return texture;
+}
 
-//Texture *Pipeline_Resource_Manager::find_depth_stencil_texture(const char *texture_name)
-//{
-	//Texture *texture = NULL;
-	//if (!texture_table.get(texture_name, &texture)) {
-	//	texture = new Texture();
-	//	texture_table.set(texture_name, texture);
-	//}
-	//return texture;
-//}
+Texture *Pipeline_Resource_Manager::create_render_target(const char *texture_name, Render_Target_Texture_Desc *render_target_desc)
+{
+	Render_Target_Texture_Desc filled_render_target_desc;
+	if (render_target_desc) {
+		filled_render_target_desc.name = !render_target_desc->name.is_empty() ? render_target_desc->name : default_render_target_desc.name;
+		filled_render_target_desc.width = render_target_desc->width > 0 ? render_target_desc->width : default_render_target_desc.width;
+		filled_render_target_desc.height = render_target_desc->height > 0 ? render_target_desc->height : default_render_target_desc.height;
+		filled_render_target_desc.format = render_target_desc->format != DXGI_FORMAT_UNKNOWN ? render_target_desc->format : default_render_target_desc.format;
+		filled_render_target_desc.clear_value = render_target_desc->clear_value.depth_stencil_set() ? render_target_desc->clear_value : default_render_target_desc.clear_value;
+	} else {
+		filled_render_target_desc = default_render_target_desc;
+	}
+	Texture_Desc render_target_texture_desc;
+	render_target_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	render_target_texture_desc.width = filled_render_target_desc.width;
+	render_target_texture_desc.height = filled_render_target_desc.height;
+	render_target_texture_desc.format = filled_render_target_desc.format;
+	render_target_texture_desc.flags = ALLOW_RENDER_TARGET;
+	render_target_texture_desc.clear_value = filled_render_target_desc.clear_value;
+	render_target_texture_desc.resource_state = RESOURCE_STATE_RENDER_TARGET;
+	render_target_texture_desc.name = filled_render_target_desc.name;
 
-Texture *Pipeline_Resource_Manager::create_depth_stencil_texture(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = render_device->create_texture(&render_target_texture_desc);
+		texture_table.set(texture_name, texture);
+	} else {
+		error("Pipeline_Resource_Manager::create_render_target: Failed to create render target. Texture '{}' already exists.", texture_name);
+	}
+	return texture;
+}
+
+Texture *Pipeline_Resource_Manager::create_depth_stencil(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
 {
 	Depth_Stencil_Texture_Desc filled_depth_stencil_desc;
 	if (depth_stencil_desc) {
+		filled_depth_stencil_desc.name = !depth_stencil_desc->name.is_empty() ? depth_stencil_desc->name : default_depth_stencil_desc.name;
 		filled_depth_stencil_desc.width = depth_stencil_desc->width > 0 ? depth_stencil_desc->width : default_depth_stencil_desc.width;
 		filled_depth_stencil_desc.height = depth_stencil_desc->height > 0 ? depth_stencil_desc->height : default_depth_stencil_desc.height;
 		filled_depth_stencil_desc.format = depth_stencil_desc->format != DXGI_FORMAT_UNKNOWN ? depth_stencil_desc->format : default_depth_stencil_desc.format;
@@ -312,11 +367,14 @@ Texture *Pipeline_Resource_Manager::create_depth_stencil_texture(const char *tex
 	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
 	depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
 	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
+	depth_texture_desc.name = filled_depth_stencil_desc.name;
 
 	Texture *texture = NULL;
 	if (!texture_table.get(texture_name, &texture)) {
 		texture = render_device->create_texture(&depth_texture_desc);
 		texture_table.set(texture_name, texture);
+	} else {
+		error("Pipeline_Resource_Manager::create_depth_stencil: Failed to create depth stencil. Texture '{}' already exists.", texture_name);
 	}
 	return texture;
 }
