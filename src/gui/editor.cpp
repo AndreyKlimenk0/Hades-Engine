@@ -81,8 +81,8 @@ inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render
 
 inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix, Matrix4 &perspective_matrix, Ray *ray)
 {
-	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, 0, 0);
-	//Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
+	Size_u32 window_size = Engine::get_render_system()->get_window_size();
+	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, window_size.width, window_size.height);
 	Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
 
 	Vector4 mouse_point_in_world = ndc_point * inverse(view_matrix * perspective_matrix);
@@ -147,7 +147,7 @@ static bool detect_intersection(Matrix4 &entity_world_matrix, Ray *picking_ray, 
 struct Ray_Entity_Intersection {
 	struct Result {
 		Entity_Id entity_id;
-		//Render_Entity_Idx render_entity_idx;
+		Render_Entity_Idx render_entity_idx;
 		Vector3 intersection_point;
 	};
 	static bool detect_intersection(Ray *picking_ray, Game_World *game_world, Render_World *render_world, Result *result);
@@ -171,25 +171,25 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 					Geometry_Entity *geometry_entity = static_cast<Geometry_Entity *>(entity);
 					if (geometry_entity->geometry_type == GEOMETRY_TYPE_BOX) {
 						intersection_result.entity_id = entity_id;
-						//intersection_result.render_entity_idx = i;
+						intersection_result.render_entity_idx = i;
 						intersected_entities.push(intersection_result);
 					}
 				} else {
-					//Mesh_Id mesh_id = render_world->game_render_entities[i].mesh_id;
-					//Model_Storage::Mesh_Instance mesh_instance = render_world->model_storage.mesh_instances[mesh_id.instance_idx];
+					Mesh_Idx mesh_id = render_world->game_render_entities[i].mesh_idx;
+					Render_Model *render_model = render_world->model_storage.render_models[mesh_id];
 
-					//Vertex_PNTUV *vertices = &render_world->model_storage.unified_vertices[mesh_instance.vertex_offset];
-					//u32 *indices = &render_world->model_storage.unified_indices[mesh_instance.index_offset];
+					Vertex_PNTUV *vertices = render_model->mesh.vertices.items;
+					u32 *indices = render_model->mesh.indices.items;
 
-					//Matrix4 entity_world_matrix = get_world_matrix(entity);
+					Matrix4 entity_world_matrix = get_world_matrix(entity);
 
-					//Ray_Trinagle_Intersection_Result ray_mesh_intersection_result;
-					//if (::detect_intersection(entity_world_matrix, picking_ray, vertices, mesh_instance.vertex_count, indices, mesh_instance.index_count, &ray_mesh_intersection_result)) {
-					//	intersection_result.entity_id = entity_id;
-					//	intersection_result.render_entity_idx = i;
-					//	intersection_result.intersection_point = ray_mesh_intersection_result.intersection_point;
-					//	intersected_entities.push(intersection_result);
-					//}
+					Ray_Trinagle_Intersection_Result ray_mesh_intersection_result;
+					if (::detect_intersection(entity_world_matrix, picking_ray, vertices, render_model->mesh.vertex_count(), indices, render_model->mesh.index_count(), &ray_mesh_intersection_result)) {
+						intersection_result.entity_id = entity_id;
+						intersection_result.render_entity_idx = i;
+						intersection_result.intersection_point = ray_mesh_intersection_result.intersection_point;
+						intersected_entities.push(intersection_result);
+					}
 				}
 			}
 		}
@@ -645,13 +645,13 @@ void Render_World_Window::draw()
 			if (gui::begin_tree_node(str_entity_id, GUI_TREE_NODE_FINAL)) {
 				if (gui::element_clicked(KEY_LMOUSE) || gui::element_double_clicked(KEY_LMOUSE)) {
 					if ((entity_id.type != ENTITY_TYPE_LIGHT) && (entity_id.type != ENTITY_TYPE_CAMERA)) {
-						//Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-						//outlining_pass->reset_render_entity_indices();
+						Silhouette_Pass *silhouette_pass = &render_system->passes.silhouette_pass;
+						silhouette_pass->reset_render_entity_indices();
 						u32 index = 0;
 						Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, entity_id, &index);
 						if (render_entity) {
 							editor->picked_entity = entity_id;
-							//outlining_pass->add_render_entity_index(index);
+							silhouette_pass->add_render_entity_index(index);
 						}
 					} else {
 						editor->picked_entity = entity_id;
@@ -894,7 +894,8 @@ void Command_Window::init(Engine *engine)
 	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
-	//display.set_size(Render_System::screen_width, Render_System::screen_height);
+	Size_u32 window_size = render_system->get_window_size();
+	display.set_size(window_size.width, window_size.height);
 
 	command_window_rect.set_size(600, 80);
 	command_window_rect_with_additional_info.set_size(600, 500);
@@ -1130,7 +1131,7 @@ void Editor::picking()
 {
 	Camera *camera = game_world->get_camera(render_world->rendering_view.camera_id);
 	Ray picking_ray;
-	//calculate_picking_ray(camera->position, render_world->render_camera.debug_view_matrix, render_sys->view.perspective_matrix, &picking_ray);
+	calculate_picking_ray(camera->position, render_world->rendering_view.view_matrix, render_sys->window_view_plane.perspective_matrix, &picking_ray);
 
 	static Moving_Entity moving_entity_info;
 
@@ -1170,14 +1171,14 @@ void Editor::picking()
 				}
 			}
 		} else if (was_click(KEY_LMOUSE)) {
-			//Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-			//outlining_pass->reset_render_entity_indices();
+			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+			silhouette_pass->reset_render_entity_indices();
 
 			Ray_Entity_Intersection::Result intersection_result;
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 				//gui::make_tab_active(game_world_tab_gui_id);
 				picked_entity = intersection_result.entity_id;
-				//outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
+				silhouette_pass->add_render_entity_index(intersection_result.render_entity_idx);
 			} else {
 				picked_entity.reset();
 			}
@@ -1223,7 +1224,8 @@ void Editor::render_menus()
 		if (gui::menu_item("Delete")) {
 			game_world->delete_entity(picked_entity);
 			u32 render_entity_index = render_world->delete_render_entity(picked_entity);
-			//render_world->render_passes.outlining.delete_render_entity_index(render_entity_index);
+			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+			silhouette_pass->delete_render_entity_index(render_entity_index);
 		}
 		gui::end_menu();
 	}

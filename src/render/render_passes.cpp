@@ -49,107 +49,6 @@ void Render_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager
 {
 }
 
-struct Mipmaps_Info {
-	Mipmaps_Info() = default;
-	Mipmaps_Info(u32 source_mip_level, u32 number_mip_levels, float texel_width, float texel_height) : source_mip_level(source_mip_level), number_mip_levels(number_mip_levels), texel_size(texel_width, texel_height) {}
-	~Mipmaps_Info() = default;
-
-	u32 source_mip_level;
-	u32 number_mip_levels;
-	Vector2 texel_size;
-};
-
-//void Generate_Mipmaps::init(Render_Device *device, Shader_Manager *shader_manager, Resource_Manager *resource_manager)
-//{
-//	setup_root_signature(device);
-//	setup_pipeline(device, shader_manager);
-//}
-//
-//void Generate_Mipmaps::setup_pipeline(Render_Device *device, Shader_Manager *shader_manager)
-//{
-//	Shader *shaders[4];
-//	shaders[0] = GET_SHADER(shader_manager, generate_mips_linear);
-//	shaders[1] = GET_SHADER(shader_manager, generate_mips_linear_oddx);
-//	shaders[2] = GET_SHADER(shader_manager, generate_mips_linear_oddy);
-//	shaders[3] = GET_SHADER(shader_manager, generate_mips_linear_odd);
-//
-//	for (u32 pipeline_index = 0; pipeline_index < 4; pipeline_index++) {
-//		Compute_Pipeline_Desc compute_pipeline_desc;
-//		compute_pipeline_desc.compute_shader = shaders[pipeline_index];
-//		compute_pipeline_desc.root_signature = &root_signature;
-//		pipeline_states[pipeline_index].create(device, compute_pipeline_desc);
-//	}
-//}
-//
-//void Generate_Mipmaps::setup_root_signature(Render_Device *device)
-//{
-//	root_signature.add_32bit_constants_parameter(0, 0, sizeof(Mipmaps_Info));
-//	root_signature.add_sr_descriptor_table_parameter(0, 0);
-//	root_signature.add_ua_descriptor_table_parameter(0, 0, 4);
-//	root_signature.add_sampler_descriptor_table_parameter(0, 0);
-//
-//	root_signature.create(device);
-//}
-//
-//void Generate_Mipmaps::generate(Compute_Command_List *compute_command_list, Array<Texture *> &textures, Render_System *render_sys)
-//{
-//	compute_command_list->set_compute_root_signature(root_signature);
-//	compute_command_list->set_descriptor_heaps(render_sys->descriptors_pool.cbsrua_descriptor_heap, render_sys->descriptors_pool.sampler_descriptor_heap);
-//	compute_command_list->set_compute_root_descriptor_table(3, render_sys->resource_manager.linear_sampler_descriptor);
-//
-//	for (u32 i = 0; i < textures.count; i++) {
-//		Texture *texture = textures[i];
-//
-//		Texture_Desc texture_desc = texture->get_texture_desc();
-//		texture_desc.dimension = TEXTURE_DIMENSION_2D;
-//		if ((texture_desc.width == 0) || (texture_desc.height == 0)) {
-//			continue;
-//		}
-//
-//		if (texture_desc.miplevels <= 1) {
-//			continue;
-//		}
-//
-//		u32 x = 0;
-//		for (u32 mip_level = 0; mip_level < texture_desc.miplevels; mip_level++) {
-//			texture->get_unordered_access_descriptor(mip_level);
-//		}
-//
-//		u32 prev_pipeline_index = UINT_MAX;
-//		for (u32 mip_level = 0; mip_level < texture_desc.miplevels - 1;) {
-//			u32 source_width = texture_desc.width >> mip_level;
-//			u32 source_height = texture_desc.height >> mip_level;
-//			u32 dest_width = source_width >> 1;
-//			u32 dest_height = source_height >> 1;
-//
-//			u32 pipeline_index = (source_width & 1) | (source_height & 1) << 1;
-//			if (prev_pipeline_index != pipeline_index) {
-//				prev_pipeline_index = pipeline_index;
-//				compute_command_list->set_pipeline_state(pipeline_states[pipeline_index]);
-//			}
-//
-//			uint32_t AdditionalMips;
-//			_BitScanForward((unsigned long *)&AdditionalMips,
-//							(dest_width == 1 ? dest_height : dest_width) | (dest_height == 1 ? dest_width : dest_height));
-//			uint32_t number_mips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
-//			if (mip_level + number_mips > texture_desc.miplevels)
-//				number_mips = texture_desc.miplevels - mip_level;
-//
-//			if (dest_width == 0)
-//				dest_width = 1;
-//			if (dest_height == 0)
-//				dest_height = 1;
-//			
-//			compute_command_list->set_compute_constants(0, Mipmaps_Info(mip_level, number_mips, 1.0f / dest_width, 1.0f / dest_height));
-//			compute_command_list->set_compute_root_descriptor_table(1, texture->get_shader_resource_descriptor());
-//			compute_command_list->set_compute_root_descriptor_table(2, texture->get_unordered_access_descriptor(mip_level + 1));
-//			compute_command_list->dispatch(dest_width, dest_height);
-//
-//			mip_level += number_mips;
-//		}
-//	}
-//}
-
 void Shadows_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
 	Render_Pass::init("Shadows", device, shader_manager, resource_manager);
@@ -162,7 +61,7 @@ void Shadows_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
 	
-	shadow_atlas = resource_manager->create_depth_stencil_texture("Shadow_Atlas", &depth_stencil_desc);
+	shadow_atlas = resource_manager->create_depth_stencil("shadow_atlas", &depth_stencil_desc);
 }
 
 struct Depth_Map_Pass_Data {
@@ -249,7 +148,7 @@ void Forward_Pass::init(Render_Device *device, Shader_Manager *shader_manager, P
 
 void Forward_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
 {
-	shadow_atlas = resource_manager->create_depth_stencil_texture("Shadow_Atlas");
+	shadow_atlas = resource_manager->read_texture("shadow_atlas");
 }
 
 struct Shadow_Atlas {
@@ -288,8 +187,6 @@ void Forward_Pass::setup_root_signature(Render_Device *device)
 
 void Forward_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
 {
-	Shader *shader = GET_SHADER(shader_manager, forward_light);
-
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
 	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, forward_light)->vs_bytecode.bytecode_ref();
@@ -320,7 +217,6 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->apply(pipeline_state);
 	
 	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
-	pipeline_resource_manager->global_buffer;
 	
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
@@ -476,4 +372,186 @@ void Render_2D_Pass::render(Graphics_Command_List *graphics_command_list, void *
 		list->render_primitives.reset();
 	}
 	render_2d->draw_list.reset();
+}
+
+void Silhouette_Pass::add_render_entity_index(u32 entity_index)
+{
+	render_entity_indices.push(entity_index);
+}
+
+void Silhouette_Pass::delete_render_entity_index(u32 entity_index)
+{
+	for (u32 i = 0; i < render_entity_indices.count; i++) {
+		if (render_entity_indices[i] == entity_index) {
+			render_entity_indices.remove(i);
+		}
+	}
+}
+
+void Silhouette_Pass::reset_render_entity_indices()
+{
+	render_entity_indices.count = 0;
+}
+
+void Silhouette_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Silhouette", device, shader_manager, resource_manager);
+}
+
+void Silhouette_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Target_Texture_Desc render_target_desc;
+	render_target_desc.name = "Silhouette";
+	render_target_desc.format = DXGI_FORMAT_R32_UINT;
+	render_target_desc.clear_value = Clear_Value(Color(0.0f, 0.0f, 0.0f, 0.0f));
+	silhouette = resource_manager->create_render_target("silhouette", &render_target_desc);
+	
+	Depth_Stencil_Texture_Desc depth_stencil_texture_desc;
+	depth_stencil_texture_desc.name = "Silhouette depth";
+	depth_stencil_texture_desc.format = DXGI_FORMAT_D32_FLOAT;
+	depth_stencil_texture_desc.clear_value = Clear_Value(1.0f, 0);
+	silhouette_depth = resource_manager->create_depth_stencil("silhouette_depth", &depth_stencil_texture_desc);
+}
+
+void Silhouette_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature->add_shader_resource_parameter(0, 0); //World matrices
+	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
+	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
+
+	access = ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS;
+	Render_Pass::setup_root_signature(device);
+}
+
+void Silhouette_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = root_signature;
+	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, silhouette)->vs_bytecode.bytecode_ref();
+	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, silhouette)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R32_UINT);
+
+	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
+}
+
+void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+	Render_System *render_sys = (Render_System *)args;
+
+	u32 back_buffer_index = render_sys->swap_chain->get_current_back_buffer_index();
+
+	graphics_command_list->begin_event("Silhouette");
+	graphics_command_list->clear_render_target(silhouette, Color(0.0f, 0.0f, 0.0f, 0.0f));
+	graphics_command_list->clear_depth_stencil(silhouette_depth);
+
+	graphics_command_list->apply(pipeline_state);
+	graphics_command_list->set_render_target(silhouette, silhouette_depth);
+
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
+	
+	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+
+	Pass_Data pass_data;
+
+	Render_Entity *render_entity = NULL;
+	for (u32 i = 0; i < render_entity_indices.count; i++) {
+		u32 index = render_entity_indices[i];
+		Render_Entity *render_entity = &render_world->game_render_entities[index];
+
+		pass_data.parameter0 = render_entity->mesh_idx;
+		pass_data.parameter1 = render_entity->world_matrix_idx;
+		pass_data.parameter2 = i + 1;
+
+		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+	}	
+	graphics_command_list->end_event();
+}
+
+void Outlining_Pass::setup_outlining(u32 outlining_size_in_pixels, const Color &color)
+{
+	u32 samples_in_one_row = outlining_size_in_pixels * 2 + 1;
+	pass_data.offset_range = (s32)floor((float)samples_in_one_row * 0.5f);
+	pass_data.color = (Color)color;
+}
+
+void Outlining_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Outlining", device, shader_manager, resource_manager);
+	setup_outlining(2, Color(245, 176, 66));
+}
+
+void Outlining_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	Texture_Desc texture_desc;
+	texture_desc.resource_state = RESOURCE_STATE_UNORDERED_ACCESS;
+	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
+	texture_desc.name = "Outlining";
+
+	outlining = resource_manager->create_texture("outlining", &texture_desc);
+	silhouette = resource_manager->read_texture("silhouette");
+	silhouette_depth = resource_manager->read_texture("silhouette_depth");
+}
+
+void Outlining_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data));
+	root_signature->add_shader_resource_parameter(0, 0);
+	root_signature->add_shader_resource_parameter(1, 0);
+	root_signature->add_shader_resource_parameter(2, 0);
+	root_signature->add_unordered_access_parameter(0, 0);
+
+	access = 0;
+	Render_Pass::setup_root_signature(device);
+}
+
+void Outlining_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Compute_Pipeline_Desc compute_pipeline_desc;
+	compute_pipeline_desc.root_signature = root_signature;
+	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, outlining)->cs_bytecode.bytecode_ref();
+
+	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
+}
+
+void Outlining_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+	Render_System *render_sys = (Render_System *)args;
+
+	graphics_command_list->begin_event("Outlining");
+	
+	graphics_command_list->apply(pipeline_state);
+
+	graphics_command_list->set_compute_constants(0, 0, &pass_data);
+
+	graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, silhouette->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, silhouette_depth->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_sys->swap_chain->get_depth_stencil_buffer()->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, outlining->unordered_access_descriptor());
+
+	Viewport viewport = make_viewport_from_texture(render_sys->swap_chain->get_back_buffer());
+
+	float compute_shader_thread_number = 32.0f;
+	u32 thread_group_count_x = (u32)math::ceil(viewport.width / compute_shader_thread_number);
+	u32 thread_group_count_y = (u32)math::ceil(viewport.height / compute_shader_thread_number);
+
+	graphics_command_list->dispatch(thread_group_count_x, thread_group_count_y);
+
+	graphics_command_list->end_event();
 }

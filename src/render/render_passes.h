@@ -45,7 +45,7 @@ struct Shadows_Pass : Render_Pass {
 
 struct Forward_Pass : Render_Pass {
 	Texture *shadow_atlas = NULL;
-
+	
 	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
 	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
 	void setup_root_signature(Render_Device *device);
@@ -54,6 +54,41 @@ struct Forward_Pass : Render_Pass {
 };
 
 struct Render_2D_Pass : Render_Pass {
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
+struct Silhouette_Pass : Render_Pass {
+	Texture *silhouette = NULL;
+	Texture *silhouette_depth = NULL;
+	
+	Array<u32> render_entity_indices;
+	void add_render_entity_index(u32 entity_index);
+	void delete_render_entity_index(u32 entity_index);
+	void reset_render_entity_indices();
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
+struct Outlining_Pass : Render_Pass {
+	struct Pass_Data {
+		s32 offset_range = 0;
+		Pad3 pad;
+		Vector4 color;
+	};
+	Texture *outlining = NULL;
+	Texture *silhouette = NULL;
+	Texture *silhouette_depth = NULL;
+	Pass_Data pass_data;
+
+	void setup_outlining(u32 outlining_size_in_pixels, const Color &color);
 
 	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
 	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
