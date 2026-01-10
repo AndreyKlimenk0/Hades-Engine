@@ -1,5 +1,5 @@
 #ifndef __FORWARD_LIGHT__
-#define __FORWRAD_LIGHT__
+#define __FORWARD_LIGHT__
 
 #include "utils.hlsl"
 #include "mesh.hlsl"
