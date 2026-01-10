@@ -7,7 +7,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join("data", "shaders")
 PDB_FILES_DIR = os.path.join("build", "shader", "debug");
 HLSH_DIR = "hlsl"
-HLSL_VERSION = "5_1"
+TARGET_PROFILE = "6_6"
 
 
  # fxc /E vs_main /Od /Zi /T vs_5_0 /Fo PixelShader1.fxc demo.hlsl
@@ -42,16 +42,16 @@ shader_files = [
     Shader_File("render_2d.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
-    Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    # Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    # Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER),
-    Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("draw_box.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    Shader_File("generate_mips_linear.hlsl", Shader_Type.COMPUTE_SHADER),
-    Shader_File("generate_mips_linear_odd.hlsl", Shader_Type.COMPUTE_SHADER),
-    Shader_File("generate_mips_linear_oddx.hlsl", Shader_Type.COMPUTE_SHADER),
-    Shader_File("generate_mips_linear_oddy.hlsl", Shader_Type.COMPUTE_SHADER),
+    # Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER),
+    # Shader_File("draw_box.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    # Shader_File("generate_mips_linear.hlsl", Shader_Type.COMPUTE_SHADER),
+    # Shader_File("generate_mips_linear_odd.hlsl", Shader_Type.COMPUTE_SHADER),
+    # Shader_File("generate_mips_linear_oddx.hlsl", Shader_Type.COMPUTE_SHADER),
+    # Shader_File("generate_mips_linear_oddy.hlsl", Shader_Type.COMPUTE_SHADER),
 ]
 
 
@@ -68,11 +68,11 @@ def get_entry_point(shader_type: Shader_Type) -> str:
 
 def get_profile(shader_type: Shader_Type) -> str:
     shader_entry_points = { 
-        Shader_Type.VERTEX_SHADER : "vs_" + HLSL_VERSION,
-        Shader_Type.COMPUTE_SHADER : "cs_" + HLSL_VERSION,
-        Shader_Type.DOMAIN_SHADER : "ds_" + HLSL_VERSION,
-        Shader_Type.GEOMETRY_SHADER : "gs_" + HLSL_VERSION,
-        Shader_Type.PIXEL_SHADER : "ps_" + HLSL_VERSION,
+        Shader_Type.VERTEX_SHADER : "vs_" + TARGET_PROFILE,
+        Shader_Type.COMPUTE_SHADER : "cs_" + TARGET_PROFILE,
+        Shader_Type.DOMAIN_SHADER : "ds_" + TARGET_PROFILE,
+        Shader_Type.GEOMETRY_SHADER : "gs_" + TARGET_PROFILE,
+        Shader_Type.PIXEL_SHADER : "ps_" + TARGET_PROFILE,
     }
 
     return shader_entry_points[shader_type]
@@ -98,19 +98,21 @@ def find_shader_file_in_list(shader_name : str):
 
 
 def build_fxc_command_line_params(shader_name: str, profile : str, entry_point : str, full_path_to_output_file : str, full_path_to_shader : str, compilation_mode = Compilation_Mode.DEBUG) -> (bool, str):
-    row_major_oder_matrices = "/Zpr"
+    row_major_oder_matrices = "-Zpr"
     if compilation_mode == Compilation_Mode.DEBUG:
         path_to_shader_pdb_file = os.path.join(PROJECT_DIR, PDB_FILES_DIR, shader_name.replace("hlsl", "pdb"))
-        skip_optimization = "/Od"
-        enable_debugging_information = "/Zi"
-        strip_reflection = "/Qstrip_reflect"
-        shader_debug_file = f'/Fd "{path_to_shader_pdb_file}"'
-        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {skip_optimization} {row_major_oder_matrices} {enable_debugging_information} {strip_reflection} {shader_debug_file} /enable_unbounded_descriptor_tables'
+        hlsl_version = "-HV 2021" #(2016, 2017, 2018, 2021). Default is 2018
+        disable_optimizations = "-Od"
+        enable_debugging_information = "-Zi" #Enable debug information. Cannot be used together with -Zs
+        shader_debug_file = f'-Fd "{path_to_shader_pdb_file}"'
+        embed_pdb = "-Qembed_debug" #Embed PDB in shader container (must be used with /Zi)
+        #command_line_params = f'"{full_path_to_shader}" -E {entry_point} -T {profile} -Fo "{full_path_to_output_file}" {disable_optimizations} {row_major_oder_matrices} {enable_debugging_information} {shader_debug_file} /enable_unbounded_descriptor_tables'
+        command_line_params = f'"{full_path_to_shader}" -E {entry_point} -T {profile} -Fo "{full_path_to_output_file}" {disable_optimizations} {row_major_oder_matrices} {enable_debugging_information} {shader_debug_file} {hlsl_version} {embed_pdb}'
         return (True, command_line_params)
     
     elif compilation_mode == Compilation_Mode.RELEASE:
-        optimization = "/O0"
-        command_line_params = f'"{full_path_to_shader}" /E {entry_point} /T {profile} /Fo "{full_path_to_output_file}" {row_major_oder_matrices} {optimization} /enable_unbounded_descriptor_tables'
+        optimization = "-O3"
+        command_line_params = f'"{full_path_to_shader}" -E {entry_point} -T {profile} -Fo "{full_path_to_output_file}" {row_major_oder_matrices} {optimization}'
         return (True, command_line_params)
     else:
         return (False, "")
@@ -151,7 +153,7 @@ def compile_hlsl_shaders(compilation_params : Compilation_Params):
             
             result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
             if result:
-                result = subprocess.run(f'fxc {command_line_params}', shell=True, stdout=subprocess.PIPE)  
+                result = subprocess.run(f'dxc {command_line_params}', shell=True, stdout=subprocess.PIPE)  
                 if result.returncode != 0:
                     print(f"Shader: {shader_file.name} Type: {str(shader_type)} was not compiled.")
                 else:
