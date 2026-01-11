@@ -20,7 +20,7 @@
 
 static void load_meshes(Array<String> &mesh_names)
 {
-	BEGIN_TASK("Load meshes");
+	begin_profile_task("Load meshes");
 	Game_World *game_world = Engine::get_game_world();
 	Render_World *render_world = Engine::get_render_world();
 	Variable_Service *variable_service = Engine::get_variable_service();
@@ -46,6 +46,7 @@ static void load_meshes(Array<String> &mesh_names)
 			Array<Pair<Loading_Model *, u32>> result;
 			model_storage->add_models(loaded_models, result);
 
+			begin_profile_task("Make entities for models");
 			for (u32 j = 0; j < result.count; j++) {
 				Pair<Loading_Model *, u32> pair = result[j];
 				u32 mesh_idx = pair.second;
@@ -61,12 +62,13 @@ static void load_meshes(Array<String> &mesh_names)
 					render_world->add_render_entity(entity_id, mesh_idx);
 				}
 			}
+			end_profile_task();
 			free_memory(&loaded_models);
 			
 			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), delta_time_in_milliseconds());
 		}
 	}
-	END_TASK();
+	end_profile_task();
 }
 
 static void load_level(Array<String> &command_args)
