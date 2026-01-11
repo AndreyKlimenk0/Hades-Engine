@@ -92,8 +92,8 @@ void Engine::init(Win32_Window *window)
 
 	init_commands();
 	Array<String> temp;
-	temp.push("vampire.fbx");
-	//temp.push("Sponza.gltf");
+	//temp.push("vampire.fbx");
+	temp.push("Sponza.gltf");
 	//temp.push("Mutant.fbx");
 	run_command("load mesh", temp);
 
@@ -107,6 +107,8 @@ void Engine::init(Win32_Window *window)
 
 void Engine::frame()
 {
+	begin_profile_frame("Frame");
+
 	static s64 fps = 60;
 	static s64 frame_time = 1000;
 
@@ -136,6 +138,8 @@ void Engine::frame()
 
 	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
 	frame_time = milliseconds_counter() - start_time;
+	
+	end_profile_frame();
 }
 
 void Engine::shutdown()

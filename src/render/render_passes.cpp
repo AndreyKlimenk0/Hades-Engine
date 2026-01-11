@@ -555,3 +555,19 @@ void Outlining_Pass::render(Graphics_Command_List *graphics_command_list, void *
 
 	graphics_command_list->end_event();
 }
+
+void Back_Buffer_Output::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{}
+
+void Back_Buffer_Output::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{}
+
+void Back_Buffer_Output::setup_root_signature(Render_Device *device)
+{}
+
+void Back_Buffer_Output::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{}
+
+void Back_Buffer_Output::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+}
