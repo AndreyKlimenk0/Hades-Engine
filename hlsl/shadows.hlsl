@@ -56,7 +56,7 @@ float4 calculate_shadow_factor(float3 world_position, float2 screen_position, fl
     
         shadow_cascade_index = cascaded_shadows.shadow_map_start_index;
         for (; shadow_cascade_index <= cascaded_shadows.shadow_map_end_index; shadow_cascade_index++) {
-            float4x4 shadow_cascade_view_projection_matrix = transpose(shadow_cascade_view_projection_matrices[shadow_cascade_index]);        
+            float4x4 shadow_cascade_view_projection_matrix = shadow_cascade_view_projection_matrices[shadow_cascade_index];        
             float4 position_from_cascade_perspective = mul(float4(world_position, 1.0f), shadow_cascade_view_projection_matrix);
             float3 cascaded_ndc_coordinates = normalize_ndc_coordinates(position_from_cascade_perspective);
     

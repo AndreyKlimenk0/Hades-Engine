@@ -26,7 +26,7 @@ float4 vs_main(uint vertex_id : SV_VertexID) : SV_POSITION
 	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
 	Vertex_P3N3T3UV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
 
-	float4x4 world_matrix = transpose(world_matrices[pass_data.world_matrix_id]);
+	float4x4 world_matrix = world_matrices[pass_data.world_matrix_id];
 	
 	return mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(frame_info.view_matrix, frame_info.perspective_matrix))); 
 }
