@@ -38,7 +38,7 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
 	Vertex_P3N3T3UV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
 
-	float4x4 world_matrix = transpose(world_matrices[pass_data.world_matrix_idx]);
+	float4x4 world_matrix = world_matrices[pass_data.world_matrix_idx];
 	
 	Vertex_Out vertex_out;
 	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(frame_info.view_matrix, frame_info.perspective_matrix))); 
@@ -69,6 +69,8 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
     uint shadow_cascade_index;
     float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);       
     float3 light_factor = calculate_light(vertex_out.world_position, frame_info.view_position, normal, diffuse, specular, frame_info.light_count, lights);
-    return float4(light_factor, 1.0f) * shadow_factor;
+    return float4(light_factor, 1.0f) * float4(shadow_factor.xyz, 1.0f);
+    //return float4(light_factor, 1.0f);
+    //return float4(shadow_factor.xyz, 1.0f);
 }
 #endif
