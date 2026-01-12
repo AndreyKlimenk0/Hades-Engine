@@ -19,11 +19,11 @@
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
-#include "../render/render_api.h"
+#include "../render/helpers.h"
 #include "../render/render_world.h"
 #include "../render/render_passes.h"
 #include "../render/render_system.h"
-#include "../render/render_helpers.h"
+#include "../render/render_api/render.h"
 
 #include "../collision/collision.h"
 
@@ -38,7 +38,8 @@ static const String str_entity_types[STR_ENTITY_TYPES_COUNT] = {
 
 inline Rect_s32 get_display_screen_rect()
 {
-	return Rect_s32(0, 0, Render_System::screen_width, Render_System::screen_height);
+	Size_s32 window_size = static_cast<Size_s32>(Engine::get_render_system()->get_window_size());
+	return Rect_s32(window_size);
 }
 
 inline void place_rect_on_top_right(Rect_s32 *src, Rect_s32 *dest)
@@ -80,7 +81,8 @@ inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render
 
 inline void calculate_picking_ray(Vector3 &camera_position, Matrix4 &view_matrix, Matrix4 &perspective_matrix, Ray *ray)
 {
-	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, Render_System::screen_width, Render_System::screen_height);
+	Size_u32 window_size = Engine::get_render_system()->get_window_size();
+	Vector2 xy_ndc_point = from_raster_to_ndc_coordinates(Mouse_State::x, Mouse_State::y, window_size.width, window_size.height);
 	Vector4 ndc_point = Vector4(xy_ndc_point.x, xy_ndc_point.y, 1.0f, 1.0f);
 
 	Vector4 mouse_point_in_world = ndc_point * inverse(view_matrix * perspective_matrix);
@@ -173,16 +175,16 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 						intersected_entities.push(intersection_result);
 					}
 				} else {
-					Mesh_Id mesh_id = render_world->game_render_entities[i].mesh_id;
-					Model_Storage::Mesh_Instance mesh_instance = render_world->model_storage.mesh_instances[mesh_id.instance_idx];
+					Mesh_Idx mesh_id = render_world->game_render_entities[i].mesh_idx;
+					Render_Model *render_model = render_world->model_storage.render_models[mesh_id];
 
-					Vertex_PNTUV *vertices = &render_world->model_storage.unified_vertices[mesh_instance.vertex_offset];
-					u32 *indices = &render_world->model_storage.unified_indices[mesh_instance.index_offset];
+					Vertex_PNTUV *vertices = render_model->mesh.vertices.items;
+					u32 *indices = render_model->mesh.indices.items;
 
 					Matrix4 entity_world_matrix = get_world_matrix(entity);
 
 					Ray_Trinagle_Intersection_Result ray_mesh_intersection_result;
-					if (::detect_intersection(entity_world_matrix, picking_ray, vertices, mesh_instance.vertex_count, indices, mesh_instance.index_count, &ray_mesh_intersection_result)) {
+					if (::detect_intersection(entity_world_matrix, picking_ray, vertices, render_model->mesh.vertex_count(), indices, render_model->mesh.index_count(), &ray_mesh_intersection_result)) {
 						intersection_result.entity_id = entity_id;
 						intersection_result.render_entity_idx = i;
 						intersection_result.intersection_point = ray_mesh_intersection_result.intersection_point;
@@ -282,15 +284,15 @@ void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbi
 {
 	Vector2 mouse_position = Vector2((float)Mouse_State::x, (float)Mouse_State::y);
 
-	render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
-	render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
+	//render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
+	//render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
 
-	Vector2 sun_position = normalize(&Vector2(light->direction.x, light->direction.z));
+	Vector2 sun_position = normalize(Vector2(light->direction.x, light->direction.z));
 	sun_position *= (float)orbit_radius;
 	sun_position.y *= -1.0f;
 	sun_position += position.to_vector2();
 
-	render_list->add_circle((s32)sun_position.x, (s32)sun_position.y, sun_radius, Color(121, 121, 121));
+	//render_list->add_circle((s32)sun_position.x, (s32)sun_position.y, sun_radius, Color(121, 121, 121));
 
 	static bool update_light_direction = false;
 	if (was_key_just_pressed(KEY_LMOUSE) && detect_intersection((float)sun_radius, sun_position, mouse_position)) {
@@ -306,7 +308,7 @@ void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbi
 		//game_world->update_light_direction(light, Vector3(vec2.x, light->direction.y, vec2.y));
 		light->direction.x = new_light_direction.x;
 		light->direction.z = new_light_direction.y;
-		render_world->update_light(light);
+		render_world->upload_lights();
 	}
 }
 
@@ -315,7 +317,7 @@ void Entity_Window::display_light(Light *light)
 	if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
 		if (gui::edit_field("Direction", &light->direction)) {
 			game_world->update_light_direction(light, light->direction);
-			render_world->update_light(light);
+			render_world->upload_lights();
 		}
 		gui::edit_field("Color", &light->color);
 
@@ -405,13 +407,13 @@ void Entity_Tree_Window::draw_entity_list(Array<T> &entity_list, const char *nam
 			if (gui::begin_tree_node(str_entity_id, GUI_TREE_NODE_FINAL)) {
 				if (gui::element_clicked(KEY_LMOUSE) || gui::element_double_clicked(KEY_LMOUSE)) {
 					if ((entity_id.type != ENTITY_TYPE_LIGHT) && (entity_id.type != ENTITY_TYPE_CAMERA)) {
-						Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-						outlining_pass->reset_render_entity_indices();
+						Silhouette_Pass *silhouette_pass = &render_system->passes.silhouette_pass;
+						silhouette_pass->reset_render_entity_indices();
 						u32 index = 0;
 						Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, entity_id, &index);
 						if (render_entity) {
 							editor->picked_entity = entity_id;
-							outlining_pass->add_render_entity_index(index);
+							silhouette_pass->add_render_entity_index(index);
 						}
 					} else {
 						editor->picked_entity = entity_id;
@@ -648,7 +650,8 @@ void Command_Window::init(Engine *engine)
 	displaying_command("Create level", NULL);
 
 	Rect_s32 display;
-	display.set_size(Render_System::screen_width, Render_System::screen_height);
+	Size_u32 window_size = render_system->get_window_size();
+	display.set_size(window_size.width, window_size.height);
 
 	command_window_rect.set_size(600, 80);
 	command_window_rect_with_additional_info.set_size(600, 500);
@@ -727,7 +730,7 @@ void Command_Window::displaying_command(const char *command_name, Key modified_k
 void Command_Window::draw()
 {
 	assert(current_displaying_command);
-	
+
 	IF_THEN(!window_open, return);
 
 	if (was_click(KEY_ESC)) {
@@ -806,10 +809,10 @@ void Editor::init(Engine *engine)
 
 	if (game_world->cameras.is_empty()) {
 		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
-		engine->render_world.set_camera_for_rendering(editor_camera_id);
+		engine->render_world.set_rendering_view(editor_camera_id);
 	} else {
 		editor_camera_id = get_entity_id(&game_world->cameras.first());
-		engine->render_world.set_camera_for_rendering(editor_camera_id);
+		engine->render_world.set_rendering_view(editor_camera_id);
 	}
 
 	key_command_bindings.init();
@@ -838,10 +841,10 @@ void Editor::init_left_bar()
 	left_bar.button_theme.button_size = { 42, 42 };
 	left_bar.button_theme.rect_rounding = 0;
 
-	left_bar.images.adding.init_from_file("icons8-add-30.png", "editor");
-	left_bar.images.entity.init_from_file("entity2.png", "editor");
-	left_bar.images.entities.init_from_file("entities.png", "editor");
-	left_bar.images.rendering.init_from_file("rendering.png", "editor");
+	left_bar.textures.adding = create_texture_from_file("icons8-add-30.png", "editor");
+	left_bar.textures.entity = create_texture_from_file("entity2.png", "editor");
+	left_bar.textures.entities = create_texture_from_file("entities.png", "editor");
+	left_bar.textures.rendering = create_texture_from_file("rendering.png", "editor");
 }
 
 void Editor::handle_events()
@@ -882,9 +885,9 @@ struct Moving_Entity {
 
 void Editor::picking()
 {
-	Camera *camera = game_world->get_camera(render_world->render_camera.camera_id);
+	Camera *camera = game_world->get_camera(render_world->rendering_view.camera_id);
 	Ray picking_ray;
-	calculate_picking_ray(camera->position, render_world->render_camera.debug_view_matrix, render_sys->view.perspective_matrix, &picking_ray);
+	calculate_picking_ray(camera->position, render_world->rendering_view.view_matrix, render_sys->window_view_plane.perspective_matrix, &picking_ray);
 
 	static Moving_Entity moving_entity_info;
 
@@ -924,14 +927,14 @@ void Editor::picking()
 				}
 			}
 		} else if (was_click(KEY_LMOUSE)) {
-			Outlining_Pass *outlining_pass = &render_world->render_passes.outlining;
-			outlining_pass->reset_render_entity_indices();
+			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+			silhouette_pass->reset_render_entity_indices();
 
 			Ray_Entity_Intersection::Result intersection_result;
 			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
 				//gui::make_tab_active(game_world_tab_gui_id);
 				picked_entity = intersection_result.entity_id;
-				outlining_pass->add_render_entity_index(intersection_result.render_entity_idx);
+				silhouette_pass->add_render_entity_index(intersection_result.render_entity_idx);
 			} else {
 				picked_entity.reset();
 			}
@@ -946,7 +949,7 @@ void Editor::render_menus()
 		if (gui::menu_item("Direction light")) {
 			//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
 			Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-			render_world->add_light(entity_id);
+			render_world->upload_lights();
 		}
 		if (gui::menu_item("Point light")) {
 		}
@@ -977,7 +980,8 @@ void Editor::render_menus()
 		if (gui::menu_item("Delete")) {
 			game_world->delete_entity(picked_entity);
 			u32 render_entity_index = render_world->delete_render_entity(picked_entity);
-			render_world->render_passes.outlining.delete_render_entity_index(render_entity_index);
+			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+			silhouette_pass->delete_render_entity_index(render_entity_index);
 		}
 		gui::end_menu();
 	}
@@ -990,17 +994,17 @@ void Editor::render_left_bar()
 	gui::set_next_window_size(50, 270);
 	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
 		gui::set_theme(&left_bar.button_theme);
-		
-		if (gui::image_button(&left_bar.images.adding)) {
+
+		if (gui::image_button(left_bar.textures.adding)) {
 			gui::open_menu("Adding entity");
 		}
-		if (gui::image_button(&left_bar.images.entity)) {
+		if (gui::image_button(left_bar.textures.entity)) {
 			open_or_close_right_window(&entity_window);
 		}
-		if (gui::image_button(&left_bar.images.entities)) {
+		if (gui::image_button(left_bar.textures.entities)) {
 			open_or_close_right_window(&entities_window);
 		}
-		if (gui::image_button(&left_bar.images.rendering)) {
+		if (gui::image_button(left_bar.textures.rendering)) {
 		}
 
 		gui::reset_image_button_theme();
@@ -1022,7 +1026,8 @@ void Editor::render()
 void Editor::open_or_close_right_window(Editor_Window *window)
 {
 	Editor_Window *top_right_window = NULL;
-	For(top_right_windows, top_right_window) {
+	For(top_right_windows, top_right_window)
+	{
 		if (top_right_window != window) {
 			top_right_window->close();
 		}

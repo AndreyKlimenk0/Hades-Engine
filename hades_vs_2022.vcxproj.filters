@@ -63,12 +63,6 @@
     <ClCompile Include="src\render\font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\render_api.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\render_helpers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\render\render_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -127,6 +121,36 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\sys\profiling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render_api\base_structs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptor_heap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_device.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_functions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_resources.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_device.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render_api\render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -653,16 +677,10 @@
     <ClInclude Include="src\render\font.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\hlsl.h">
+    <ClInclude Include="src\render\gpu_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\render\render_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\render\render_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\render_pass.h">
@@ -767,6 +785,9 @@
     <ClInclude Include="src\libs\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\render\renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="src\libs\image\image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -774,6 +795,39 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\sys\profiling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\memory\base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\memory\pool_allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_api\base_structs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_descriptors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_resources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_descriptor_heap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\d3d12_render_api\to_d3d12_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_api\render.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_api\base_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

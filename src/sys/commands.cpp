@@ -20,6 +20,7 @@
 
 static void load_meshes(Array<String> &mesh_names)
 {
+	begin_profile_task("Load meshes");
 	Game_World *game_world = Engine::get_game_world();
 	Render_World *render_world = Engine::get_render_world();
 	Variable_Service *variable_service = Engine::get_variable_service();
@@ -42,17 +43,13 @@ static void load_meshes(Array<String> &mesh_names)
 		if (load_models_from_file(full_path_to_mesh, loaded_models, &info, &loading_options)) {
 			Model_Storage *model_storage = render_world->get_model_storage();
 			
-			Array<Pair<Loading_Model *, Mesh_Id>> result;
-			model_storage->reserve_memory_for_new_models(info.model_count, info.total_vertex_count, info.total_index_count);
+			Array<Pair<Loading_Model *, u32>> result;
 			model_storage->add_models(loaded_models, result);
 
-			if (!result.is_empty()) {
-				model_storage->add_models_file(mesh_names[i]);
-			}
-
+			begin_profile_task("Make entities for models");
 			for (u32 j = 0; j < result.count; j++) {
-				Pair<Loading_Model *, Mesh_Id> pair = result[j];
-				Mesh_Id mesh_id = pair.second;
+				Pair<Loading_Model *, u32> pair = result[j];
+				u32 mesh_idx = pair.second;
 				Loading_Model *loaded_model = pair.first;
 
 				AABB mesh_AABB = make_AABB(&loaded_model->mesh);
@@ -62,14 +59,16 @@ static void load_meshes(Array<String> &mesh_names)
 					Loading_Model::Transformation transformation = loaded_model->instances[k];
 					Entity_Id entity_id = game_world->make_entity(transformation.scaling, transformation.rotation, transformation.translation);
 					game_world->attach_AABB(entity_id, &mesh_AABB);
-					render_world->add_render_entity(entity_id, mesh_id);
+					render_world->add_render_entity(entity_id, mesh_idx);
 				}
 			}
+			end_profile_task();
 			free_memory(&loaded_models);
 			
 			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), delta_time_in_milliseconds());
 		}
 	}
+	end_profile_task();
 }
 
 static void load_level(Array<String> &command_args)
@@ -88,7 +87,8 @@ static void load_level(Array<String> &command_args)
 			game_world->release_all_resources();
 
 			render_world->release_render_entities_resources();
-			render_world->model_storage.init(get_current_gpu_device());
+			//render_world->triangle_meshes.init(get_current_gpu_device());
+			//render_world->model_storage.init(get_current_gpu_device());
 
 			init_game_and_render_world_from_level(engine->current_level_name, game_world, render_world);
 		} else {
@@ -112,10 +112,11 @@ static void create_level(Array<String> &command_args)
 		game_world->release_all_resources();
 		
 		render_world->release_render_entities_resources();
-		render_world->model_storage.init(get_current_gpu_device());
+		//render_world->triangle_meshes.init(get_current_gpu_device());
+		//render_world->model_storage.init(get_current_gpu_device());
 
 		Entity_Id camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
-		engine->render_world.set_camera_for_rendering(camera_id);
+		engine->render_world.set_rendering_view(camera_id);
 	} else {
 		print("create_level: The command can't get a level name, agruments is not valid.");
 	}

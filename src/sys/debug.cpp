@@ -58,8 +58,10 @@ void report_info(const char *info_message)
 
 void report_error(const char *error_message)
 {
-	int button = MessageBox(NULL, error_message, "Error", MB_OK | MB_ICONERROR | MB_APPLMODAL);
-	if (IDOK) {
+	int button = MessageBox(NULL, error_message, "Error", MB_ABORTRETRYIGNORE | MB_ICONERROR | MB_APPLMODAL );
+	if (IDABORT == button) {
 		ExitProcess(1);
+	} else if (IDRETRY == button){
+		__debugbreak();
 	}
 }

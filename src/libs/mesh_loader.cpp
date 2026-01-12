@@ -294,10 +294,10 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 	String file_name;
 	extract_file_name(full_path_to_model_file, file_name);
 
-	print("load: Started to load {}.", file_name);
+	print("load_models_from_file Started to load {}.", file_name);
 
 	if (!file_exists(full_path_to_model_file)) {
-		print("load: Failed to load. {} does not exist in model folder.", file_name);
+		print("load_models_from_file Failed to load. {} does not exist in model folder.", file_name);
 		return false;
 	}
 
@@ -310,12 +310,12 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 
 	bool result = true;
 	if (!scene) {
-		print("load: Failed to load a scene from {}.", file_name);
+		print("load_models_from_file Failed to load a scene from {}.", file_name);
 		result = false;
 	}
 	
 	if (scene && !scene->mRootNode) {
-		print("load: Failed to load a scene from {}.", file_name);
+		print("load_models_from_file Failed to load a scene from {}.", file_name);
 		result = false;
 	}
 	
@@ -330,7 +330,7 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 		Hash_Table<String, Loading_Model *> model_cache;
 		process_nodes(scene, scene->mRootNode, aiMatrix4x4(), models, model_cache);
 
-		print("load: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
+		print("load_models_from_file {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
 	}
 
 	if (loading_models_info) {

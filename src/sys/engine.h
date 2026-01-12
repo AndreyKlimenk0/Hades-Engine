@@ -15,6 +15,11 @@
 #include "../libs/number_types.h"
 
 struct Engine {
+	struct Swap_Chain_Present {
+		u32 sync_interval = 0;
+		u32 flags = 0;
+	} swap_chain_present;
+
 	bool is_initialized = false;
 	String current_level_name;
 	
@@ -22,8 +27,8 @@ struct Engine {
 	Variable_Service var_service;
 	File_Tracking_System file_tracking_sys;
 	Game_World game_world;
-	Render_World render_world;
 	Render_System render_sys;
+	Render_World render_world;
 	Font_Manager font_manager;
 	Shader_Manager shader_manager;
 
