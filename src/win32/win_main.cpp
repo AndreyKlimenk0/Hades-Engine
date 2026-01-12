@@ -8,6 +8,8 @@
 #include "../sys/engine.h"
 #include "../libs/os/event.h"
 
+static bool run_engine = true;
+
 int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE prev_instance, PWSTR cmd_line, int cmd_show)
 {
 	if (!create_console(hinstance)) {
@@ -37,7 +39,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE prev_instance, PWSTR cmd_line
 	//Test
 	test();
 
-	while (1) {
+	while (run_engine) {
 		engine.frame();
 	}
 
@@ -64,8 +66,7 @@ LRESULT CALLBACK Win32_Window::procedure(HWND hwnd, UINT message, WPARAM wparam,
 
 	switch (message) {
 		case  WM_CLOSE: {
-			Engine::get_instance()->shutdown();
-			ExitProcess(0);
+			run_engine = false;
 			break;
 		}
 		case WM_DESTROY: {

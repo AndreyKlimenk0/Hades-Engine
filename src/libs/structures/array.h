@@ -19,6 +19,7 @@ struct Array {
 	T *items = NULL;
 	u32 count;
 	u32 size;
+	u32 stride = sizeof(T);
 
 	Array(const Array<T> &other);
 	Array<T> &operator=(const Array<T> &other);
@@ -27,17 +28,21 @@ struct Array {
 	const T &operator[](u32 i) const;
 
 	void clear();
+	void reset();
 	void resize(u32 _size);
 	void remove(u32 index);
-	void reserve(u32 _count);
-	void set_pointer_to_item(T *ptr, u32 index);
-	void set_pointer_to_item(T **ptr, u32 index);
+	void reserve(u32 _count, bool clear_array = false);
+	void set_pointer_to_item(T* ptr, u32 index);
+	void set_pointer_to_item(T** ptr, u32 index);
 
+	void *to_void_ptr();
+	
 	bool is_empty();
 	bool find(const T &item);
 
 	u32 push(const T &item);
 	u32 get_size();
+
 	T &pop();
 	T &get(u32 index);
 	T &first();
@@ -45,9 +50,13 @@ struct Array {
 };
 
 template <typename T>
-inline void merge(Array<T> *dst, Array<T> *src);
+inline void merge(Array<T>* dst, Array<T>* src);
+
 template <typename T>
 inline void free_memory(Array<T *> *array);
+
+template <typename T>
+inline void zero_memory(Array<T> *array);
 
 template <typename T>
 Array<T>::Array(u32 _size)
@@ -112,6 +121,12 @@ inline void Array<T>::clear()
 	resize(size);
 }
 
+template<typename T>
+inline void Array<T>::reset()
+{
+	count = 0;
+}
+
 template <typename T>
 inline void Array<T>::resize(u32 new_size)
 {
@@ -147,9 +162,9 @@ inline void Array<T>::remove(u32 index)
 }
 
 template <typename T>
-inline void Array<T>::reserve(u32 _count)
+inline void Array<T>::reserve(u32 _count, bool clear_array)
 {
-	if (!is_empty()) {
+	if (clear_array && !is_empty()) {
 		clear();
 	}
 	resize(_count);
@@ -169,6 +184,12 @@ inline void Array<T>::set_pointer_to_item(T **ptr, u32 index)
 {
 	assert(count > index);
 	*ptr = &items[index];
+}
+
+template<typename T>
+inline void *Array<T>::to_void_ptr()
+{
+	return (void *)items;
 }
 
 template <typename T>
@@ -253,6 +274,7 @@ inline void free_memory(Array<T *> *array)
 			ptr = NULL;
 		}
 	}
+	array->clear();
 }
 
 template <typename T>
@@ -283,4 +305,11 @@ Find_Result<T> find_in_array(Array<T> &dynamic_array, const T &value, const F &c
 	return Find_Result<T>(false, UINT32_MAX, T());
 }
 
+template<typename T>
+inline void zero_memory(Array<T> *array)
+{
+	if (array->size > 0) {
+		memset((void *)array->items, 0, sizeof(T) * array->size);
+	}
+}
 #endif

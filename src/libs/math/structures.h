@@ -35,6 +35,9 @@ struct Size3D {
 	Size3D<T> &operator=(const Size3D<U> &other);
 
 	T &operator[](u32 index);
+	
+	template <typename U>
+	operator Size3D<U>();
 
 	Size3D<T> &operator+=(const T &value);
 	Size3D<T> &operator-=(const T &value);
@@ -45,6 +48,9 @@ struct Size3D {
 	Size3D<T> &operator-=(const Size3D<T> &other);
 	Size3D<T> &operator*=(const Size3D<T> &other);
 	Size3D<T> &operator/=(const Size3D<T> &other);
+
+	void set(const T &_width, const T &_height);
+	void set(const T &_width, const T &_height, const T &_depth);
 
 	T find_area();
 	Vector2 to_vector2();
@@ -162,7 +168,7 @@ template <typename T>
 struct Rect {
 	Rect();
 	Rect(T x, T y, T width, T height);
-	Rect(Size3D<T> &size);
+	Rect(const Size3D<T> &size);
 
 	T x;
 	T y;
@@ -171,6 +177,10 @@ struct Rect {
 
 	T &operator[](u32 index);
 
+	template <typename U>
+	operator Rect<U>();
+
+	void reset();
 	void set(Size3D<T> &size);
 	void set(T _x, T _y);
 	void move(T x_delta, T y_delta);
@@ -257,6 +267,13 @@ T &Size3D<T>::operator[](u32 index)
 }
 
 template<typename T>
+template<typename U>
+inline Size3D<T>::operator Size3D<U>()
+{
+	return Size3D<U>(static_cast<U>(width), static_cast<U>(height), static_cast<U>(depth));
+}
+
+template<typename T>
 Size3D<T> &Size3D<T>::operator+=(const T &value)
 {
 	width += value;
@@ -327,6 +344,22 @@ Size3D<T> &Size3D<T>::operator/=(const Size3D<T> &other)
 	depth /= other.depth;
 	return *this;
 }
+
+template<typename T>
+inline void Size3D<T>::set(const T &_width, const T &_height)
+{
+	width = _width;
+	height = _height;
+}
+
+template<typename T>
+inline void Size3D<T>::set(const T &_width, const T &_height, const T &_depth)
+{
+	width = _width;
+	height = _height;
+	depth = _depth;
+}
+
 
 template<typename T>
 inline T Size3D<T>::find_area()
@@ -690,7 +723,7 @@ inline Rect<T>::Rect(T _x, T _y, T _width, T _height)
 }
 
 template<typename T>
-inline Rect<T>::Rect(Size3D<T> &size)
+inline Rect<T>::Rect(const Size3D<T> &size)
 {
 	memset((void *)this, 0, sizeof(Rect<T>));
 
@@ -703,6 +736,19 @@ inline T &Rect<T>::operator[](u32 index)
 {
 	assert(index < 4);
 	return (&x)[index];
+}
+
+template<typename T>
+template<typename U>
+inline Rect<T>::operator Rect<U>()
+{
+	return Rect<U>(static_cast<U>(x), static_cast<U>(y), static_cast<U>(width), static_cast<U>(height));
+}
+
+template<typename T>
+inline void Rect<T>::reset()
+{
+	memset((void *)this, 0, sizeof(Rect<T>));
 }
 
 template <typename T>

@@ -13,6 +13,7 @@
 #include "../render/render_world.h"
 
 struct Editor;
+struct Texture;
 struct Engine;
 
 typedef Enum_Helper<Entity_Type> Entity_Type_Helper;
@@ -22,7 +23,7 @@ typedef Enum_Helper<Geometry_Type> Geometry_Type_Helper;
 struct Editor_Window {
 	Editor_Window();
 	virtual ~Editor_Window();
-	
+
 	Editor *editor = NULL;
 	Game_World *game_world = NULL;
 	Render_World *render_world = NULL;
@@ -60,7 +61,7 @@ struct Entity_Tree_Window : Top_Right_Window {
 
 	void init(Engine *engine);
 	void draw();
-	
+
 	template <typename T>
 	void draw_entity_list(Array<T> &entity_list, const char *name);
 };
@@ -135,11 +136,11 @@ struct Editor {
 
 	struct Left_Bar {
 		struct Images {
-			Image adding;
-			Image entity;
-			Image entities;
-			Image rendering;
-		} images;
+			Texture *adding = NULL;
+			Texture *entity = NULL;
+			Texture *entities = NULL;
+			Texture *rendering = NULL;
+		} textures;
 		Gui_Window_Theme window_theme;
 		Gui_Image_Button_Theme button_theme;
 	} left_bar;
@@ -161,7 +162,7 @@ struct Editor {
 	void handle_events();
 	void update();
 	void picking();
-	
+
 	void render();
 	void render_menus();
 	void render_left_bar();

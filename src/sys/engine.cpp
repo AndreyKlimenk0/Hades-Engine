@@ -11,14 +11,16 @@
 #include "../libs/mesh_loader.h"
 #include "../win32/win_time.h"
 
+#include "../win32/test.h"
 #include "../gui/test_gui.h"
+
 
 #define DRAW_TEST_GUI 0
 
 static Engine *engine = NULL;
 
 static Font *performance_font = NULL;
-static Render_Primitive_List render_list;
+//static Render_Primitive_List render_list;
 
 static const String DEFAULT_LEVEL_NAME = "unnamed_level";
 static const String LEVEL_EXTENSION = ".hl";
@@ -29,8 +31,8 @@ static void init_performance_displaying()
 	if (!performance_font) {
 		assert(false);
 	}
-	Render_Font *render_font = engine->render_sys.render_2d.get_render_font(performance_font);
-	render_list = Render_Primitive_List(&engine->render_sys.render_2d, performance_font, render_font);
+	//Render_Font *render_font = engine->render_sys.render_2d.get_render_font(performance_font);
+	//render_list = Render_Primitive_List(&engine->render_sys.render_2d, performance_font, render_font);
 }
 
 static void display_performance(s64 fps, s64 frame_time)
@@ -39,14 +41,14 @@ static void display_performance(s64 fps, s64 frame_time)
 	char *test2 = format("Frame time {} ms", frame_time);
 	u32 text_width = performance_font->get_text_width(test2);
 
-	s32 x = Render_System::screen_width - text_width - 10;
-	render_list.add_text(100, 5, test);
-	render_list.add_text(180, 5, test2);
+	//s32 x = Render_System::screen_width - text_width - 10;
+	//render_list.add_text(x, 5, test);
+	//render_list.add_text(x, 20, test2);
 
 	free_string(test);
 	free_string(test2);
 
-	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
+	//engine->render_sys.render_2d.add_render_primitive_list(&render_list);
 }
 
 void Engine::init_base()
@@ -57,49 +59,55 @@ void Engine::init_base()
 	var_service.load("all.variables");
 }
 
+#include <windows.h>
+#include "../win32/win_helpers.h"
+
+
 void Engine::init(Win32_Window *window)
 {
-	BEGIN_TASK("Initialize engine");
+	bool windowed = true;
+	bool vsync = false;
+	s32 back_buffer_count = 3;
+
+	test();
 
 	font_manager.init();
-	
-	BEGIN_TASK("Initialize render_system");
-	render_sys.init(window);
-	END_TASK();
-	
-	shader_manager.init(&render_sys.gpu_device);
-	
-	render_sys.init_input_layouts(&shader_manager);
-	render_sys.render_2d.init(&render_sys, &shader_manager);
-	render_sys.render_3d.init(&render_sys, &shader_manager);
+
+	Variable_Service *rendering_settings = var_service.find_namespace("rendering");
+	ATTACH(rendering_settings, vsync);
+	ATTACH(rendering_settings, windowed);
+	ATTACH(rendering_settings, back_buffer_count);
+
+	shader_manager.init();
+
+	render_sys.init(window, &var_service);
 
 	gui::init_gui(this);
 	
+	// The editor dependence on render system because it uses the window size for initializing gui.
 	editor.init(this);
-
+	
 	game_world.init();
 	render_world.init(this);
 
-	current_level_name = DEFAULT_LEVEL_NAME + LEVEL_EXTENSION;
-	Variable_Service *system = var_service.find_namespace("system");
-	system->attach("load_level", &current_level_name);
+	init_commands();
+	Array<String> temp;
+	//temp.push("vampire.fbx");
+	temp.push("Sponza.gltf");
+	//temp.push("Mutant.fbx");
+	run_command("load mesh", temp);
 
-	BEGIN_TASK("Load level");
-	init_game_and_render_world_from_level(current_level_name, &game_world, &render_world);
-	END_TASK();
+	Entity_Id entity_id = game_world.make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+	render_world.upload_lights();
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
-
-	init_performance_displaying();
-	
-	engine->is_initialized = true;
-
-	END_TASK()
 }
+
+#include "sys.h"
 
 void Engine::frame()
 {
-	BEGIN_FRAME();
+	begin_profile_frame("Frame");
 
 	static s64 fps = 60;
 	static s64 frame_time = 1000;
@@ -107,51 +115,37 @@ void Engine::frame()
 	s64 start_time = milliseconds_counter();
 	s64 ticks_counter = cpu_ticks_counter();
 
-	BEGIN_TASK("Update");
 	pump_events();
 	run_event_loop();
 
 	gui::handle_events();
 
 	editor.handle_events();
-
-	file_tracking_sys.update();
-
 	editor.update();
-
+	
+	file_tracking_sys.update();
+	
 	render_world.update();
-
-	render_sys.new_frame();
-
-	END_TASK();
-
-	BEGIN_TASK("Render world");
-	render_world.render();
-	END_TASK();
 
 #if DRAW_TEST_GUI
 	draw_test_gui();
 #else
 	editor.render();
 #endif
-	display_performance(fps, frame_time);
-
-	BEGIN_TASK("Render system end frame");
-
-	render_sys.end_frame();
-
-	END_TASK();
+	render_sys.render();
 
 	clear_event_queue();
 
 	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
 	frame_time = milliseconds_counter() - start_time;
 	
-	END_FRAME();
+	end_profile_frame();
 }
 
 void Engine::shutdown()
 {
+	render_sys.flush();
+
 	if (current_level_name.is_empty()) {
 		int counter = 0;
 		String index = "";
@@ -168,7 +162,7 @@ void Engine::shutdown()
 		}
 		current_level_name = DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION;
 	}
-	save_game_and_render_world_in_level(current_level_name, &game_world, &render_world);
+	//save_game_and_render_world_in_level(current_level_name, &game_world, &render_world);
 	gui::shutdown();
 	var_service.shutdown();
 }
