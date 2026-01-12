@@ -2979,7 +2979,6 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 
 	bool mouse_was_moved = (mouse_x_delta != 0) || (mouse_y_delta != 0);
 	if ((window_style & WINDOW_MOVE) && mouse_was_moved && !active_scrolling && (resizing_window == 0) && (active_window == window->gui_id) && Keys_State::is_key_down(KEY_LMOUSE)) {
-	Size_u32 window_size = Engine::get_render_system()->get_window_size();
 		s32 min_window_position = 0;
 		if (window->style & WINDOW_OUTLINES) {
 			min_window_position = (s32)window_theme.outlines_width;
