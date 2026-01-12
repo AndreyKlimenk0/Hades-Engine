@@ -209,25 +209,6 @@ Font_Manager *Engine::get_font_manager()
 	return &engine->font_manager;
 }
 
-//Descriptor_Table_Range::Descriptor_Table_Range()
-//{
-//	ZeroMemory(&d3d12_descriptr_range, sizeof(D3D12_DESCRIPTOR_RANGE));
-//}
-//
-//Descriptor_Table_Range::Descriptor_Table_Range(D3D12_DESCRIPTOR_RANGE_TYPE range_type, u32 descriptor_count, u32, u32 space, u32 descriptrs_table_offset) : Descriptor_Table_Range()
-//{
-//	d3d12_descriptr_range.RangeType;
-//	d3d12_descriptr_range.NumDescriptors;
-//	d3d12_descriptr_range.BaseShaderRegister;
-//	d3d12_descriptr_range.RegisterSpace;
-//	d3d12_descriptr_range.OffsetInDescriptorsFromTableStart;
-//}
-//
-//Descriptor_Table_Range::~Descriptor_Table_Range()
-//{
-//}
-
-
 Variable_Service *Engine::get_variable_service()
 {
 	return &engine->var_service;
