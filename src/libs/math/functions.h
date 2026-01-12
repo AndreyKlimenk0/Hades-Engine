@@ -77,6 +77,12 @@ namespace math
 	{
 		return (T)::ceil((double)value);
 	}
+
+	template <typename T>
+	inline T log2(T value)
+	{
+		return static_cast<T>(log2f(static_cast<float>(value)));
+	}
 };
 
 inline float radians_to_degrees(float radians)

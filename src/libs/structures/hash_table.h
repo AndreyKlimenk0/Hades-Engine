@@ -22,7 +22,15 @@ inline u32 hash(const char *string, int factor, int table_count)
 	return (u32)(hash % table_count);
 }
 
-inline u32 hash(int number, int table_count, int attempt)
+//inline u32 hash(int number, int table_count, int attempt)
+//{
+//	char *str = to_string(number);
+//	u32 h = hash(str, table_count, attempt);
+//	free_string(str);
+//	return h;
+//}
+
+inline u32 hash(u64 number, int table_count, int attempt)
 {
 	char *str = to_string(number);
 	u32 h = hash(str, table_count, attempt);
@@ -181,12 +189,12 @@ Hash_Node<_Key_, _Value_> *Hash_Table<_Key_, _Value_>::get_table_entry(const _Ke
 	return NULL;
 }
 
-
 template<typename _Key_, typename _Value_>
 inline void Hash_Table<_Key_, _Value_>::clear()
 {
 	Table_Entry *table_entry = NULL;
-	For(nodes, table_entry) {
+	For(nodes, table_entry)
+	{
 		if (table_entry) {
 			DELETE_PTR(table_entry);
 		}

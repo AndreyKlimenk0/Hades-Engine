@@ -28,6 +28,8 @@ struct Color {
 
 	u32 get_packed_rgba();
 	Vector3 get_rgb();
+
+	void store(float *color);
 };
 
 inline Color::operator Vector4()

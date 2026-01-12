@@ -2,17 +2,20 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "helpers.h"
+#include "render_world.h"
+
 #include "../sys/sys.h"
 #include "../sys/engine.h"
 
-#include "render_world.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "../libs/memory/base.h"
 #include "../libs/math/functions.h"
 
 const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
 
-Matrix4 get_world_matrix(Entity *entity) 
+Matrix4 get_world_matrix(Entity *entity)
 {
 	if (entity->type == ENTITY_TYPE_CAMERA) {
 		Camera *camera = static_cast<Camera *>(entity);
@@ -76,13 +79,16 @@ Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_
 	return NULL;
 }
 
-void Render_Camera::update(Camera *camera, Camera *camera_info)
+void Rendering_View::update(Game_World *game_world)
 {
-	view_matrix = make_look_at_matrix(camera->position, camera->target);
-	debug_view_matrix = make_look_at_matrix(camera_info->position, camera_info->target);
+	Camera *camera = game_world->get_camera(camera_id);
+	position = camera->position;
+	direction = normalize(camera->target - camera->position);
+	view_matrix = make_look_at_matrix(position, camera->target);
+	inverse_view_matrix = inverse(&view_matrix);
 }
 
-bool Render_Camera::is_entity_camera_set()
+bool Rendering_View::is_entity_camera_set()
 {
 	if (camera_id.type == ENTITY_TYPE_CAMERA) {
 		return true;
@@ -115,68 +121,43 @@ void Shadow_Cascade_Ranges::add_range(u32 start, u32 end)
 	ranges.push({ start, end });
 }
 
-inline Texture2D create_color_texture(Gpu_Device *gpu_device, u32 texture_width, u32 texture_height, const Color &color)
+void Model_Storage::init()
 {
-	assert(gpu_device);
-	assert(texture_width > 0);
-	assert(texture_height > 0);
+	u32 width = 256;
+	u32 height = 256;
 
-	Texture2D_Desc texture_desc;
-	texture_desc.width = texture_width;
-	texture_desc.height = texture_height;
-	texture_desc.mip_levels = 1;
+	Image color_buffer;
+	color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	Texture2D texture;
-	gpu_device->create_texture_2d(&texture_desc, &texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &texture);
-	fill_texture((void *)&color, &texture);
+	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
+	default_textures.normal = create_texture_from_image(&color_buffer);
 
-	return texture;
-}
-
-void Model_Storage::init(Gpu_Device *gpu_device)
-{
-	assert(gpu_device);
-
-	u32 width = 200;
-	u32 height = 200;
-
-	default_textures.normal = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 0.0f)));
-	default_textures.diffuse = textures.push(create_color_texture(gpu_device, width, height, DEFAULT_MESH_COLOR));
-	default_textures.specular = textures.push(create_color_texture(gpu_device, width, height, Color(0.2f, 0.2f, 0.2f)));
-	default_textures.displacement = textures.push(create_color_texture(gpu_device, width, height, Color(0.0f, 0.0f, 0.0f)));
-	default_textures.white = textures.push(create_color_texture(gpu_device, width, height, Color::White));
-	default_textures.black = textures.push(create_color_texture(gpu_device, width, height, Color::Black));
-	default_textures.green = textures.push(create_color_texture(gpu_device, width, height, Color(0.5f, 0.5f, 1.0f)));
+	color_buffer.fill(DEFAULT_MESH_COLOR);
+	default_textures.diffuse = create_texture_from_image(&color_buffer);
+	
+	color_buffer.fill(Color(0.01f, 0.01f, 0.01f));
+	default_textures.specular = create_texture_from_image(&color_buffer);
+	
+	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
+	default_textures.displacement = create_texture_from_image(&color_buffer);
+	
+	color_buffer.fill(Color::White);
+	default_textures.white = create_texture_from_image(&color_buffer);
+	
+	color_buffer.fill(Color::Black);
+	default_textures.black = create_texture_from_image(&color_buffer);
+	
+	color_buffer.fill(Color(0.5f, 0.5f, 1.0f));
+	default_textures.green = create_texture_from_image(&color_buffer);
 }
 
 void Model_Storage::release_all_resources()
 {
-	unified_vertices.clear();
-	unified_indices.clear();
-	textures.clear();
-	mesh_instances.clear();
-	meshes_textures.clear();
-	loaded_models_files.clear();
+	//textures.clear();
 
-	mesh_table.clear();
-	texture_table.clear();
-
-	vertex_struct_buffer.free();
-	index_struct_buffer.free();
-	mesh_struct_buffer.free();
-}
-
-void Model_Storage::add_models_file(const char *file_name)
-{
-	loaded_models_files.push(file_name);
-}
-
-void Model_Storage::reserve_memory_for_new_models(u32 mesh_count, u32 total_vertex_count, u32 total_index_count)
-{
-	mesh_instances.resize(mesh_instances.count + mesh_count);
-	unified_vertices.resize(unified_vertices.count + total_vertex_count);
-	unified_indices.resize(unified_indices.count + total_index_count);
+	//vertex_struct_buffer.free();
+	//index_struct_buffer.free();
+	//mesh_struct_buffer.free();
 }
 
 bool validate_model_name_and_get_string_id(String_Id *model_string_id, Loading_Model *model)
@@ -198,127 +179,177 @@ bool validate_model_name_and_get_string_id(String_Id *model_string_id, Loading_M
 	return false;
 }
 
-void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, Mesh_Id>> &result)
+void move(Triangle_Mesh *dest, Triangle_Mesh *source)
+{
+	if (!source->empty()) {
+		if (!dest->vertices.is_empty()) { DELETE_ARRAY(dest->vertices.items); };
+		if (!dest->indices.is_empty()) { DELETE_ARRAY(dest->indices.items); };
+
+		dest->vertices.items = source->vertices.items;
+		dest->vertices.count = source->vertices.count;
+		dest->vertices.size = source->vertices.size;
+
+		dest->indices.items = source->indices.items;
+		dest->indices.count = source->indices.count;
+		dest->indices.size = source->indices.size;
+
+		source->vertices.items = NULL;
+		source->vertices.count = 0;
+		source->vertices.size = 0;
+		
+		source->indices.items = NULL;
+		source->indices.count = 0;
+		source->indices.size = 0;
+	}
+}
+
+void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, u32>> &result)
 {
 	result.resize(models.count);
 
 	for (u32 i = 0; i < models.count; i++) {
-		Mesh_Id mesh_id;
-		Loading_Model *model = models[i];
+		Loading_Model *loading_model = models[i];
 
 		String_Id model_string_id;
-		if (!validate_model_name_and_get_string_id(&model_string_id, model)) {
+		if (!validate_model_name_and_get_string_id(&model_string_id, loading_model)) {
 			continue;
 		}
 
-		if (model->mesh.empty()) {
-			print("Render_World::add_mesh: {} mesh can be added because doesn't have all necessary data.", model->get_pretty_name());
+		if (loading_model->mesh.empty()) {
+			print("Render_World::add_mesh: {} mesh can be added because doesn't have all necessary data.", loading_model->get_pretty_name());
 			continue;
 		}
 
-		if (mesh_table.get(model_string_id, mesh_id)) {
-			print("[Mesh storage] Info: {} mesh has already been placed in the mesh storage.", model->get_pretty_name());
-			result.push({ model, mesh_id });
+		Pair<Render_Model *, u32> *temp = NULL;
+		if (render_models_table.get(model_string_id, temp)) {
+			print("[Mesh storage] Info: {} mesh has already been placed in the mesh storage.", loading_model->get_pretty_name());
+			result.push({ loading_model, temp->second });
 			continue;
 		}
 
-		Mesh_Textures mesh_textures;
-		mesh_textures.normal_idx = find_texture_or_get_default(model->normal_texture_name, model->file_name, default_textures.normal);
-		mesh_textures.diffuse_idx = find_texture_or_get_default(model->diffuse_texture_name, model->file_name, default_textures.diffuse);
-		mesh_textures.specular_idx = find_texture_or_get_default(model->specular_texture_name, model->file_name, default_textures.specular);
-		mesh_textures.displacement_idx = find_texture_or_get_default(model->displacement_texture_name, model->file_name, default_textures.displacement);
+		Render_Model *render_model = new Render_Model();
+		render_model->name = loading_model->name;
+		render_model->file_name = loading_model->file_name;
+		render_model->normal_texture = find_texture_or_get_default(loading_model->normal_texture_name, loading_model->file_name, default_textures.normal);
+		render_model->diffuse_texture = find_texture_or_get_default(loading_model->diffuse_texture_name, loading_model->file_name, default_textures.diffuse);
+		render_model->specular_texture = find_texture_or_get_default(loading_model->specular_texture_name, loading_model->file_name, default_textures.specular);
+		render_model->displacement_texture = find_texture_or_get_default(loading_model->displacement_texture_name, loading_model->file_name, default_textures.displacement);
+		move(&render_model->mesh, &loading_model->mesh);
 
-		mesh_id.textures_idx = meshes_textures.push(mesh_textures);
-
-		Mesh_Instance mesh_info;
-		mesh_info.vertex_count = model->mesh.vertices.count;
-		mesh_info.index_count = model->mesh.indices.count;
-		mesh_info.vertex_offset = unified_vertices.count;
-		mesh_info.index_offset = unified_indices.count;
-
-		mesh_id.instance_idx = mesh_instances.push(mesh_info);
-
-		merge(&unified_vertices, &model->mesh.vertices);
-		merge(&unified_indices, &model->mesh.indices);
-
-		result.push({ model, mesh_id });
-
-		mesh_table.set(model_string_id, mesh_id);
+		u32 mesh_instance_index = render_models.push(render_model);
+		render_models_table.set(model_string_id, { render_model, mesh_instance_index });
+		
+		result.push({ loading_model, mesh_instance_index });
 	}
-	
-	mesh_struct_buffer.update(&mesh_instances);
-	vertex_struct_buffer.update(&unified_vertices);
-	index_struct_buffer.update(&unified_indices);
+	upload_models_in_gpu();
 }
 
-void Model_Storage::allocate_gpu_memory()
+void Model_Storage::upload_models_in_gpu()
 {
-	mesh_struct_buffer.allocate<Mesh_Instance>(1000);
-	index_struct_buffer.allocate<u32>(100000);
-	vertex_struct_buffer.allocate<Vertex_PNTUV>(100000);
-}
+	Render_Device *render_device = Engine::get_render_system()->render_device;
+	Render_System *render_sys = Engine::get_render_system();
 
-bool Model_Storage::add_texture(const char *texture_name, const char *full_path_to_texture_file, Texture_Idx *texture_idx)
-{
-	assert(texture_name);
-	assert(texture_idx);
+	//render_sys->flush();
 
-	Gpu_Device *gpu_device = &Engine::get_render_system()->gpu_device;
-	Render_Pipeline *render_pipeline = &Engine::get_render_system()->render_pipeline;
+	//auto upload_command_list = &render_sys->upload_command_list;
 
-	if (strlen(texture_name) == 0) {
-		return false;
+	Array<Vertex_PNTUV> unified_vertex_list;
+	Array<u32> unified_index_list;
+	Array<Mesh_Instance> unified_mesh_instances_list;
+
+	u32 vertex_count = 0;
+	u32 index_count = 0;
+	for (u32 i = 0; i < render_models.count; i++) {
+		vertex_count += render_models[i]->mesh.vertex_count();
+		index_count += render_models[i]->mesh.index_count();
 	}
 
-	bool result = false;
-	String_Id string_id = fast_hash(texture_name);
-	if (!texture_table.get(string_id, texture_idx)) {
-		Texture2D texture;
-		if (create_texture2d_from_file(full_path_to_texture_file, texture, TEXTURE_LOADING_OPTION_GENERATE_MIPMAPS)) {
-			*texture_idx = textures.push(texture);
-			texture_table.set(string_id, *texture_idx);
-			return true;
-		}
-		return false;
+	unified_vertex_list.resize(vertex_count);
+	unified_index_list.resize(index_count);
+	unified_mesh_instances_list.resize(render_models.count);
+
+	u32 vertex_offset = 0;
+	u32 index_offset = 0;
+	for (u32 i = 0; i < render_models.count; i++) {
+		merge(&unified_vertex_list, &render_models[i]->mesh.vertices);
+		merge(&unified_index_list, &render_models[i]->mesh.indices);
+
+		GPU_Material material;
+		material.normal_idx = render_models[i]->normal_texture->shader_resource_descriptor()->index();
+		material.diffuse_idx = render_models[i]->diffuse_texture->shader_resource_descriptor()->index();
+		material.specular_idx = render_models[i]->specular_texture->shader_resource_descriptor()->index();
+		material.displacement_idx = render_models[i]->displacement_texture->shader_resource_descriptor()->index();
+
+		Mesh_Instance mesh_instance;
+		mesh_instance.vertex_count = render_models[i]->mesh.vertex_count();
+		mesh_instance.vertex_offset = vertex_offset;
+		mesh_instance.index_count = render_models[i]->mesh.index_count();
+		mesh_instance.index_offset = index_offset;
+		mesh_instance.material = material;
+		
+		unified_mesh_instances_list.push(mesh_instance);
+		
+		vertex_offset += render_models[i]->mesh.vertex_count();
+		index_offset += render_models[i]->mesh.index_count();
 	}
-	return true;
+
+	if (!unified_vertex_buffer || (unified_vertex_buffer->size() < (u64)unified_vertex_list.get_size())) {
+		DELETE_PTR(unified_vertex_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.count = unified_vertex_list.count;
+		buffer_desc.stride = unified_vertex_list.stride;
+		buffer_desc.data = unified_vertex_list.to_void_ptr();
+		buffer_desc.name = "Unified vertex buffer";
+
+		unified_vertex_buffer = render_device->create_buffer(&buffer_desc);
+	}
+
+	if (!unified_index_buffer || (unified_index_buffer->size() < (u64)unified_index_list.get_size())) {
+		DELETE_PTR(unified_index_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.count = unified_index_list.count;
+		buffer_desc.stride = unified_index_list.stride;
+		buffer_desc.data = unified_index_list.to_void_ptr();
+		buffer_desc.name = "Unified index buffer";
+
+		unified_index_buffer = render_device->create_buffer(&buffer_desc);
+	}
+
+	if (!mesh_instance_buffer || (mesh_instance_buffer->size() < (u64)unified_mesh_instances_list.get_size())) {
+		DELETE_PTR(mesh_instance_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.count = unified_mesh_instances_list.count;
+		buffer_desc.stride = unified_mesh_instances_list.stride;
+		buffer_desc.data = unified_mesh_instances_list.to_void_ptr();
+		buffer_desc.name = "Unified mesh instances buffer";
+
+		mesh_instance_buffer = render_device->create_buffer(&buffer_desc);
+	}
 }
 
-bool Model_Storage::update_mesh(Mesh_Id mesh_id, Triangle_Mesh *triangle_mesh)
+Texture *Model_Storage::find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture *default_texture)
 {
-	Mesh_Instance mesh_instance = mesh_instances[mesh_id.instance_idx];
-	if ((triangle_mesh->vertices.count == mesh_instance.vertex_count) && (triangle_mesh->indices.count == mesh_instance.index_count)) {
-		u32 vertex_offset = mesh_instance.vertex_offset > 0 ? mesh_instance.vertex_offset : 0;
-		u32 index_offset = mesh_instance.index_offset > 0 ? mesh_instance.index_offset : 0;
-		copy_array(&unified_vertices, &triangle_mesh->vertices, vertex_offset);
-		copy_array(&unified_indices, &triangle_mesh->indices, index_offset);
-
-		vertex_struct_buffer.update(&unified_vertices);
-		index_struct_buffer.update(&unified_indices);
-		return true;
-	}
-	return false;
-}
-
-Texture_Idx Model_Storage::find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture_Idx default_texture)
-{
-	Texture_Idx texture_idx;
 	if (!texture_file_name.is_empty()) {
-		String full_path_to_texture_file;
-		if (!mesh_file_name.is_empty()) {
-			String base_file_name;
-			extract_base_file_name(mesh_file_name, base_file_name);
+		Texture *texture = NULL;
+		String_Id texture_string_id = fast_hash(texture_file_name);
 
-			build_full_path_to_texture_file(texture_file_name, base_file_name, full_path_to_texture_file);
-			if (file_exists(full_path_to_texture_file) && add_texture(texture_file_name, full_path_to_texture_file, &texture_idx)) {
-				return texture_idx;
+		if (textures_table.get(texture_string_id, texture)) {
+			return texture;
+		}
+		Array<String> paths;
+		paths.reserve(2);
+
+		String base_file_name;
+		extract_base_file_name(mesh_file_name, base_file_name);
+		build_full_path_to_texture_file(texture_file_name, base_file_name, paths[0]);
+		build_full_path_to_texture_file(texture_file_name, paths[1]);
+
+		for (u32 i = 0; i < paths.count; i++) {
+			Texture *texture = create_texture_from_file(paths[i]);
+			if (texture) {
+				return texture;
 			}
 		}
-		build_full_path_to_texture_file(texture_file_name, full_path_to_texture_file);
-		if (file_exists(full_path_to_texture_file) && add_texture(texture_file_name, full_path_to_texture_file, &texture_idx)) {
-			return texture_idx;
-		}
-		print(" Mesh_Storate::find_texture_or_get_default: The engine can not find texture {}.", texture_file_name);
 	}
 	return default_texture;
 }
@@ -337,24 +368,29 @@ void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Ran
 	view_projection_matrix = make_identity_matrix();
 }
 
+Render_World::Render_World()
+{
+}
+
+Render_World::~Render_World()
+{
+}
+
 void Render_World::init(Engine *engine)
 {
 	//@Note: Why don't pass just the engine pointer ?
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
+	render_device = engine->render_sys.render_device;
 
-	ZeroMemory(&frame_info, sizeof(CB_Frame_Info));
-
-	model_storage.init(&render_sys->gpu_device);
-
-	init_shadow_rendering();
+	model_storage.init();
 
 	u32 x = 128;
 	voxel_grid.grid_size = { x, x, x };
 	u32 y = 20;
 	voxel_grid.ceil_size = { y, y, y };
 
-	voxels_sb.allocate<Voxel>(voxel_grid.grid_size.find_area());
+//	voxels_sb.allocate<Voxel>(voxel_grid.grid_size.find_area());
 
 	Size_f32 grid_size = voxel_grid.total_size();
 	float grid_depth = grid_size.depth;
@@ -362,32 +398,9 @@ void Render_World::init(Engine *engine)
 
 	voxel_matrix = XMMatrixOrthographicOffCenterLH(-grid_size.width, grid_size.width, -grid_size.height, grid_size.height, 1.0f, grid_depth + 1.0f);
 
-	init_render_passes(&engine->shader_manager);
-
-	render_sys->gpu_device.create_constant_buffer(sizeof(CB_Frame_Info), &frame_info_cbuffer);
-
-	lights_struct_buffer.allocate<Hlsl_Light>(100);
-	world_matrices_struct_buffer.allocate<Matrix4>(100);
-
-	if (!render_camera.is_entity_camera_set()) {
+	if (!rendering_view.is_entity_camera_set()) {
 		error("Render Camera was not initialized. There is no a view for rendering.");
 	}
-}
-
-void Render_World::init_shadow_rendering()
-{
-	Texture2D_Desc depth_stencil_desc;
-	depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
-	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
-	depth_stencil_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
-	depth_stencil_desc.mip_levels = 1;
-	depth_stencil_desc.bind |= BIND_DEPTH_STENCIL;
-
-	render_sys->gpu_device.create_texture_2d(&depth_stencil_desc, &shadow_atlas);
-	render_sys->gpu_device.create_depth_stencil_view(&depth_stencil_desc, &shadow_atlas);
-	render_sys->gpu_device.create_shader_resource_view(&depth_stencil_desc, &shadow_atlas);
-
-	fill_texture((void *)&DEFAULT_DEPTH_VALUE, &shadow_atlas);
 
 	shadow_cascade_ranges.push({ 1, 15 });
 	shadow_cascade_ranges.push({ 15, 150 });
@@ -402,81 +415,34 @@ void Render_World::init_shadow_rendering()
 	Array<Vector2> jittered_samples;
 	make_jittering_sampling_filters(jittering_tile_size, jittering_filter_size, jittered_samples);
 
-	Texture3D_Desc jittering_samples_texture_desc;
+	Texture_Desc jittering_samples_texture_desc;
+	jittering_samples_texture_desc.dimension = TEXTURE_DIMENSION_3D;
 	jittering_samples_texture_desc.width = math::pow2(jittering_filter_size);
 	jittering_samples_texture_desc.height = jittering_tile_size;
 	jittering_samples_texture_desc.depth = jittering_tile_size;
 	jittering_samples_texture_desc.format = DXGI_FORMAT_R32G32_FLOAT;
-	jittering_samples_texture_desc.bind = BIND_SHADER_RESOURCE;
-	jittering_samples_texture_desc.data = (void *)jittered_samples.items;
-	jittering_samples_texture_desc.mip_levels = 1;
+	jittering_samples_texture_desc.miplevels = 1;
+	//jittering_samples_texture_desc.resource_state = RESOURCE_STATE_COPY_DEST;
+	jittering_samples_texture_desc.resource_state = RESOURCE_STATE_COMMON;
+	jittering_samples_texture_desc.data = jittered_samples.to_void_ptr();
 
-	render_sys->gpu_device.create_texture_3d(&jittering_samples_texture_desc, &jittering_samples);
-	render_sys->gpu_device.create_shader_resource_view(&jittering_samples_texture_desc, &jittering_samples);
-}
-
-void Render_World::init_render_passes(Shader_Manager *shader_manager)
-{
-	assert(shader_manager);
-
-	print("Render_World::init: Initializing render passes.");
-
-	Array<Render_Pass *> render_pass_list;
-	render_passes.get_all_passes(&render_pass_list);
-
-	for (u32 i = 0; i < render_pass_list.count; i++) {
-		render_pass_list[i]->init(&render_sys->gpu_device, &render_sys->render_pipeline_states);
-	}
-
-	Viewport viewport;
-	viewport.width = Render_System::screen_width;
-	viewport.height = Render_System::screen_height;
-
-	render_passes.shadows.setup_render_pipeline(shader_manager, shadow_atlas.dsv);
-	render_passes.forward_light.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
-	render_passes.debug_cascade_shadows.setup_render_pipeline(shader_manager, render_sys->multisampling_depth_stencil_texture.dsv, render_sys->multisampling_back_buffer_texture.rtv, &viewport);
-	
-	render_passes.voxelization.setup_render_pipeline(shader_manager, voxels_sb.gpu_buffer.uav, render_sys->voxel_render_target.rtv);
-
-	render_passes.outlining.setup_outlining(2, Color(245, 176, 66));
-	render_passes.outlining.setup_render_pipeline(shader_manager, &render_sys->silhouette_buffer, &render_sys->silhouette_depth_stencil_buffer, &render_sys->back_buffer_texture, &render_sys->multisampling_depth_stencil_texture, &viewport);
-
-	Array<Render_Pass *> temp;
-	temp.push(&render_passes.shadows);
-	temp.push(&render_passes.forward_light);
-	temp.push(&render_passes.voxelization);
-
-	for (u32 i = 0; i < render_pass_list.count; i++) {
-		if (render_pass_list[i]->is_valid) {
-			print("  Render pass '{}' was successfully initialized.", &render_pass_list[i]->name);
-		} else {
-			print("  Render pass '{}' is not valid. The render pass will not be used for rendering.", &render_pass_list[i]->name);
-		}
-	}
-	for (u32 i = 0; i < temp.count; i++) {
-		if (temp[i]->is_valid) {
-			frame_render_passes.push(temp[i]);
-		}
-	}
+	jittering_samples = render_device->create_texture(&jittering_samples_texture_desc);
 }
 
 void Render_World::release_all_resources()
 {
 	release_render_entities_resources();
 	shadow_cascade_ranges.clear();
-
-	shadow_atlas.release();
-	jittering_samples.release();
-	frame_info_cbuffer.free();
 }
 
 void Render_World::release_render_entities_resources()
 {
-	light_info_list.clear();
-	shader_lights.clear();
+	cascaded_shadows_list.clear();
+	cascaded_shadows_info_list.clear();
+	shadow_cascade_ranges.clear();
+	lights.clear();
 
 	render_entity_world_matrices.clear();
-	light_view_matrices.clear();
 	cascaded_view_projection_matrices.clear();
 
 	game_render_entities.clear();
@@ -485,31 +451,14 @@ void Render_World::release_render_entities_resources()
 	cascaded_shadows_info_list.clear();
 
 	model_storage.release_all_resources();
-
-	lights_struct_buffer.free();
-	cascaded_shadows_info_sb.free();
-	world_matrices_struct_buffer.free();
-	cascaded_view_projection_matrices_sb.free();
 }
 
 void Render_World::update()
 {
+	rendering_view.update(game_world);
 	update_render_entities();
-
-	Camera *camera = game_world->get_camera(render_camera.camera_id);
-	Camera *camera_info = game_world->get_camera(render_camera.camera_info_id);
-	render_camera.update(camera, camera_info);
-
-	frame_info.view_matrix = render_camera.view_matrix;
-	frame_info.perspective_matrix = render_sys->view.perspective_matrix;
-	frame_info.orthographic_matrix = render_sys->view.orthogonal_matrix;
-	frame_info.camera_position = camera_info->position;
-	frame_info.camera_direction = camera_info->target;
-	frame_info.near_plane = render_sys->view.near_plane;
-	frame_info.far_plane = render_sys->view.far_plane;
-
 	update_shadows();
-	update_global_illumination();
+	//update_global_illumination();
 }
 
 void Render_World::update_render_entities()
@@ -519,65 +468,113 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
-	world_matrices_struct_buffer.update(&render_entity_world_matrices);
+
+	if (!world_matrices_buffer || (world_matrices_buffer->size() < (u64)render_entity_world_matrices.get_size())) {
+		DELETE_PTR(world_matrices_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.count = render_entity_world_matrices.count;
+		buffer_desc.stride = render_entity_world_matrices.stride;
+		buffer_desc.data = render_entity_world_matrices.to_void_ptr();
+		buffer_desc.name = "World matrices";
+
+		world_matrices_buffer = render_device->create_buffer(&buffer_desc);
+	}
 }
 
 void Render_World::update_global_illumination()
-{	
+{
 	Vector3 voxel_ceil_size = voxel_grid.ceil_size.to_vector3();
 	Vector3 voxel_grid_size = voxel_grid.total_size().to_vector3() * 0.5f; // Holdes the half of a total voxel grid size.
 
-	Camera *camera = game_world->get_camera(render_camera.camera_id);
+	Camera *camera = game_world->get_camera(rendering_view.camera_id);
 	auto dir = camera->target - camera->position;
 	voxel_grid_center = camera->position + (normalize(&dir) * voxel_grid_size);
 	voxel_grid_center /= voxel_ceil_size;
 	voxel_grid_center = floor(voxel_grid_center);
 	voxel_grid_center *= voxel_ceil_size;
-	
+
 	Vector3 left_to_right_view_position = { voxel_grid_center.x - voxel_grid_size.x, voxel_grid_center.y, voxel_grid_center.z };
 	Vector3 top_to_down_view_position = { voxel_grid_center.x, voxel_grid_center.y + voxel_grid_size.y, voxel_grid_center.z };
 	Vector3 back_to_front_view_position = { voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z - voxel_grid_size.z };
-	
+
 	left_to_right_voxel_view_matrix = make_look_to_matrix(left_to_right_view_position, Vector3::base_x);
 	top_to_down_voxel_view_matrix = make_look_to_matrix(top_to_down_view_position, negate(&Vector3::base_y), negate(&Vector3::base_z));
 	back_to_front_voxel_view_matrix = make_look_to_matrix(back_to_front_view_position, Vector3::base_z);
 }
 
-void Render_World::add_light(Entity_Id light_id)
+void Render_World::upload_lights()
 {
-	Light *light = (Light *)game_world->get_entity(light_id);
-	if (!light) {
-		return;
+	lights.reset();
+	cascaded_shadows_list.reset();
+	cascaded_shadows_info_list.reset();
+
+	Light *light = NULL;
+	For(game_world->lights, light) {
+		if (light->type == DIRECTIONAL_LIGHT_TYPE) {
+			Cascaded_Shadows cascaded_shadows;
+			cascaded_shadows.light_direction = light->direction;
+
+			bool shadow_atlas_has_space = true;
+			for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
+				Cascaded_Shadow_Map cascaded_shadow_map;
+				cascaded_shadow_map.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
+				cascaded_shadow_map.init(render_sys->window_view_plane.fov, render_sys->window_view_plane.ratio, &shadow_cascade_ranges[i]);
+
+				if (!get_shadow_atls_viewport(&cascaded_shadow_map.viewport)) {
+					shadow_atlas_has_space = false;
+					break;
+				}
+				cascaded_shadows.cascaded_shadow_maps.push(cascaded_shadow_map);
+			}
+
+			if (shadow_atlas_has_space) {
+				GPU_Light gpu_light;
+				gpu_light.position = light->position;
+				gpu_light.direction = normalize(&light->direction);
+				gpu_light.color = light->color;
+				gpu_light.radius = light->radius;
+				gpu_light.range = light->range;
+				gpu_light.light_type = light->light_type;
+				lights.push(gpu_light);
+
+				cascaded_shadows_list.push(cascaded_shadows);
+
+				GPU_Cascaded_Shadows_Info cascaded_shadows_info;
+				cascaded_shadows_info.light_direction = light->direction;
+				cascaded_shadows_info.shadow_map_start_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count;
+				cascaded_shadows_info.shadow_map_end_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count + (shadow_cascade_ranges.count - 1);
+				cascaded_shadows_info_list.push(cascaded_shadows_info);
+			}
+		}
 	}
-	frame_info.light_count++;
+	if (!lights_buffer || (lights_buffer->size() < (u64)lights.get_size())) {
+		DELETE_PTR(world_matrices_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.count = lights.count;
+		buffer_desc.stride = lights.stride;
+		buffer_desc.data = lights.to_void_ptr();
+		buffer_desc.name = "Lights";
+		
+		lights_buffer = render_device->create_buffer(&buffer_desc);
+	}
 
-	Light_Info light_info;
-	light_info.light_id = get_entity_id(light);
-	light_info.cascade_shadows_index = cascaded_shadows_list.count;
-	light_info.cascaded_shadows_info_index = cascaded_shadows_info_list.count;
-	light_info.hlsl_light_index = shader_lights.count;
+	if (!cascaded_shadows_info_buffer || (cascaded_shadows_info_buffer->size() < (u64)cascaded_shadows_info_list.get_size())) {
+		DELETE_PTR(cascaded_shadows_info_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.count = cascaded_shadows_info_list.count;
+		buffer_desc.stride = cascaded_shadows_info_list.stride;
+		buffer_desc.data = cascaded_shadows_info_list.to_void_ptr();
+		buffer_desc.name = "Cascaded shadows info";
 
-	if (add_shadow(light)) {
-		Hlsl_Light hlsl_light;
-		hlsl_light.position = light->position;
-		hlsl_light.direction = normalize(&light->direction);
-		hlsl_light.color = light->color;
-		hlsl_light.radius = light->radius;
-		hlsl_light.range = light->range;
-		hlsl_light.light_type = light->light_type;
-
-		shader_lights.push(hlsl_light);
-		lights_struct_buffer.update(&shader_lights);
-
-		light_info_list.push(light_info);
+		cascaded_shadows_info_buffer = render_device->create_buffer(&buffer_desc);
 	}
 }
 
-void Render_World::add_render_entity(Entity_Id entity_id, Mesh_Id mesh_id, void *args)
+void Render_World::add_render_entity(Entity_Id entity_id, u32 mesh_idx, void *args)
 {
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
-	render_entity.mesh_id = mesh_id;
+	render_entity.mesh_idx = mesh_idx;
 	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
 
 	game_render_entities.push(render_entity);
@@ -598,64 +595,6 @@ u32 Render_World::delete_render_entity(Entity_Id entity_id)
 	return render_entity_index;
 }
 
-bool Render_World::add_shadow(Light *light)
-{
-	u32 cascaded_shadows_info_index = cascaded_shadows_info_list.count;
-
-	Cascaded_Shadows_Info cascaded_shadows_info;
-	cascaded_shadows_info.light_direction = light->direction;
-	cascaded_shadows_info.shadow_map_start_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count;
-	cascaded_shadows_info.shadow_map_end_index = cascaded_shadows_info_list.count * shadow_cascade_ranges.count + (shadow_cascade_ranges.count - 1);
-	cascaded_shadows_info_list.push(cascaded_shadows_info);
-	cascaded_shadows_info_sb.update(&cascaded_shadows_info_list);
-
-	Cascaded_Shadows cascaded_shadows;
-	cascaded_shadows.light_direction = light->direction;
-
-	for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
-		Cascaded_Shadow_Map cascaded_shadow_map;
-		cascaded_shadow_map.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
-		cascaded_shadow_map.init(render_sys->view.fov, render_sys->view.ratio, &shadow_cascade_ranges[i]);
-
-		if (!get_shadow_atls_viewport(&cascaded_shadow_map.viewport)) {
-			assert(false);
-			return false;
-		}
-		cascaded_shadows.cascaded_shadow_maps.push(cascaded_shadow_map);
-		cascaded_shadow_map_count++;
-	}
-	cascaded_shadows_list.push(cascaded_shadows);
-	return true;
-}
-
-static bool find_cascade_shadows(const Light_Info &light_info, const Entity_Id &light_id)
-{
-	return light_info.light_id == light_id;
-}
-
-void Render_World::update_light(Light *light)
-{
-	Find_Result<Light_Info> result = find_in_array(light_info_list, get_entity_id(light), find_cascade_shadows);
-	if (result.found) {
-		Light_Info light_info = result.data;
-		cascaded_shadows_list[light_info.cascade_shadows_index].light_direction = light->direction;
-		
-		cascaded_shadows_info_list[light_info.cascaded_shadows_info_index].light_direction = light->direction;
-		cascaded_shadows_info_sb.update(&cascaded_shadows_info_list);
-
-		Hlsl_Light *hlsl_light = &shader_lights[light_info.hlsl_light_index];
-		hlsl_light->position = light->position;
-		hlsl_light->direction = normalize(&light->direction);
-		hlsl_light->color = light->color;
-		hlsl_light->radius = light->radius;
-		hlsl_light->range = light->range;
-		hlsl_light->light_type = light->light_type;
-		lights_struct_buffer.update(&shader_lights);
-	} else {
-		print("Render_World::update_cascade_shadows: A cascade shadows was not found. Can not update The cascade shadows");
-	}
-}
-
 void Render_World::update_shadows()
 {
 	for (u32 i = 0; i < cascaded_shadows_list.count; i++) {
@@ -664,7 +603,7 @@ void Render_World::update_shadows()
 		for (u32 j = 0; j < cascaded_shadows_list[i].cascaded_shadow_maps.count; j++) {
 			Cascaded_Shadow_Map *cascaded_shadow_map = &cascaded_shadows_list[i].cascaded_shadow_maps[j];
 
-			Vector3 view_position = cascaded_shadow_map->view_position * inverse(&render_camera.debug_view_matrix);
+			Vector3 view_position = cascaded_shadow_map->view_position * rendering_view.inverse_view_matrix;
 			Vector3 temp_view_position = view_position;
 
 			//float w = cascaded_shadow->cascade_width / CASCADE_WIDTH;
@@ -733,27 +672,27 @@ void Render_World::update_shadows()
 			cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index] = matrix;
 		}
 	}
-	world_matrices_struct_buffer.update(&render_entity_world_matrices);
-	cascaded_view_projection_matrices_sb.update(&cascaded_view_projection_matrices);
+
+	//if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->size() < (u64)cascaded_view_projection_matrices.get_size())) {
+		DELETE_PTR(casded_view_projection_matrices_buffer);
+		Buffer_Desc buffer_desc;
+		//buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.count = cascaded_view_projection_matrices.count;
+		buffer_desc.stride = cascaded_view_projection_matrices.stride;
+		buffer_desc.data = cascaded_view_projection_matrices.to_void_ptr();
+		buffer_desc.name = "View projection shadow matrices";
+
+		casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
+	//}
 }
 
-void Render_World::set_camera_for_rendering(Entity_Id camera_id)
+void Render_World::set_rendering_view(Entity_Id camera_id)
 {
 	if (camera_id.type != ENTITY_TYPE_CAMERA) {
 		print("Render_World::set_camera_for_rendering: Passed an camera id is not entity camera type.");
 		return;
 	}
-	render_camera.camera_id = camera_id;
-	render_camera.camera_info_id = camera_id;
-}
-
-void Render_World::set_camera_for_debuging(Entity_Id camera_info_id)
-{
-	if (camera_info_id.type != ENTITY_TYPE_CAMERA) {
-		print("Render_World::set_camera_for_debuging: Passed an camera id is not entity camera type.");
-		return;
-	}
-	render_camera.camera_info_id = camera_info_id;
+	rendering_view.camera_id = camera_id;
 }
 
 bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
@@ -788,26 +727,4 @@ bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
 Model_Storage *Render_World::get_model_storage()
 {
 	return &model_storage;
-}
-
-void Render_World::render()
-{
-	render_sys->render_pipeline.update_constant_buffer(&frame_info_cbuffer, (void *)&frame_info);
-
-	render_sys->render_pipeline.set_vertex_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
-	render_sys->render_pipeline.set_pixel_shader_resource(CB_FRAME_INFO_REGISTER, frame_info_cbuffer);
-
-	Render_Pass *render_pass = NULL;
-	For(frame_render_passes, render_pass) {
-		render_pass->render(this, &render_sys->render_pipeline);
-	}
-}
-
-void Render_World::Render_Passes::get_all_passes(Array<Render_Pass *> *render_passes_list)
-{
-	render_passes_list->push(&shadows);
-	render_passes_list->push(&forward_light);
-	render_passes_list->push(&debug_cascade_shadows);
-	render_passes_list->push(&outlining);
-	render_passes_list->push(&voxelization);
 }

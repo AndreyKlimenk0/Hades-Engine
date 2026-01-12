@@ -1,1121 +1,381 @@
 #include <assert.h>
 
-#include "hlsl.h"
 #include "font.h"
 #include "render_system.h"
-#include "render_helpers.h"
 
 #include "../sys/sys.h"
+#include "../sys/vars.h"
 #include "../sys/engine.h"
-#include "../sys/profiling.h"
-#include "../libs/utils.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
+#include "../libs/memory/base.h"
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
 
-#define TURN_ON_RECT_CLIPPING 1
+#include "d3d12_render_api/d3d12_functions.h"
 
-u32 Render_System::screen_width = 0;
-u32 Render_System::screen_height = 0;
 
-inline void from_win32_screen_space(u32 screen_width, u32 screen_height, const Point_s32 &win32_point, Point_s32 &normal_point)
+void View_Plane::update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane)
 {
-	normal_point.x = win32_point.x - (screen_width / 2);
-	normal_point.y = -win32_point.y + (screen_height / 2);
-}
-
-inline void to_win32_screen_space(const Point_s32 &point, u32 screen_width, u32 screen_height, u32 *screen_x, u32 *screen_y)
-{
-	*screen_x = point.x + (screen_width / 2);
-	*screen_y = -point.y + (screen_height / 2);
-}
-
-template< typename T >
-inline Vector2 make_vector2(const Point3D<T> &first_point, const Point3D<T> &second_point)
-{
-	Point3D<T> result = first_point - second_point;
-	return result.to_vector2();;
-}
-
-inline Vector2 quad(float t, Vector2 p0, Vector2 p1, Vector2 p2)
-{
-	return (float)pow((1.0f - t), 2.0f) * p0 + 2.0f * (1.0f - t) * t * p1 + (float)pow(t, 2.0f) * p2;
-}
-
-static int compare_rects_u32(const void *first_rect, const void *second_rect)
-{
-	assert(first_rect);
-	assert(second_rect);
-
-	const Rect_u32 *first = static_cast<const Rect_u32 *>(first_rect);
-	const Rect_u32 *second = static_cast<const Rect_u32 *>(second_rect);
-
-	return first->height > second->height;
-}
-
-inline void pack_rects_in_rect(Rect_u32 *main_rect, Array<Rect_u32 *> &rects)
-{
-	assert(main_rect);
-
-	qsort(rects.items, rects.count, sizeof(rects[0]), compare_rects_u32);
-
-	u32 x_pos = 0;
-	u32 y_pos = 0;
-	u32 large = 0;
-
-	Rect_u32 *rect = NULL;
-	For(rects, rect) {
-
-		if ((rect->width + x_pos) > main_rect->width) {
-			y_pos += large;
-			x_pos = 0;
-			large = 0;
-		}
-
-		if ((y_pos + rect->height) > main_rect->height) {
-			break;
-		}
-
-		rect->x = x_pos;
-		rect->y = y_pos;
-
-		x_pos += rect->width;
-
-		if (rect->height > large) {
-			large = rect->height;
-		}
-	}
-}
-
-void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, u32 rounding)
-{
-	add_rounded_points(x, y, width, height, rect_side, (float)rounding, (float)rounding);
-}
-
-void Primitive_2D::add_rounded_points(float x, float y, float width, float height, Rect_Side rect_side, float x_rounding, float y_rounding)
-{
-	Vector2 point0, point1, point2;
-	if (rect_side == RECT_SIDE_LEFT_TOP) {
-		point0 = Vector2(x, y + y_rounding);
-		point1 = Vector2(x, y);
-		point2 = Vector2(x + x_rounding, y);
-
-	} else if (rect_side == RECT_SIDE_RIGHT_TOP) {
-		point0 = Vector2(x + width - x_rounding, y);
-		point1 = Vector2(x + width, y);
-		point2 = Vector2(x + width, y + y_rounding);
-
-	} else if (rect_side == RECT_SIDE_LEFT_BOTTOM) {
-		point0 = Vector2(x + x_rounding, y + height);
-		point1 = Vector2(x, y + height);
-		point2 = Vector2(x, y + height - y_rounding);
-
-	} else if (rect_side == RECT_SIDE_RIGHT_BOTTOM) {
-		point0 = Vector2(x + width, y + height - y_rounding);
-		point1 = Vector2(x + width, y + height);
-		point2 = Vector2(x + width - x_rounding, y + height);
-	}
-
-	u32 points_count_in_rounding = 20;
-	float point_count = 1.0f / (float)points_count_in_rounding;
-	float point_position = 0.0f;
-
-	for (u32 i = 0; i < points_count_in_rounding; i++) {
-		Vector2 point = quad(point_position, point0, point1, point2);
-		add_point(point);
-		point_position += point_count;
-	}
-}
-
-void Primitive_2D::make_triangle_polygon()
-{
-	for (u32 i = 2; i < vertices.count; i++) {
-		indices.push(0);
-		indices.push(i - 1);
-		indices.push(i);
-		//indices.push(i - 1);
-		//indices.push(i);
-		//indices.push(0);
-	}
-	if ((vertices.count % 2) != 0) {
-		indices.push(0);
-		indices.push(vertices.count - 1);
-		indices.push(1);
-	}
-}
-
-void Primitive_2D::make_outline_triangle_polygons()
-{
-	assert((vertices.count % 2) == 0);
-
-	u32 count = vertices.count / 2;
-	for (u32 i = 0; i < count; i++) {
-		indices.push(i);
-		indices.push(i + 1);
-		indices.push(i + count);
-
-		if (i != (count - 1)) {
-			indices.push(i + count);
-			indices.push(i + 1);
-			indices.push(i + count + 1);
-		} else {
-			indices.push(count - 1);
-			indices.push(0);
-			indices.push(count);
-		}
-	}
-}
-
-Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d, Font *font, Render_Font *render_font) : render_2d(render_2d), font(font), render_font(render_font)
-{
-	Rect_s32 rect;
-	rect.set_size(Render_System::screen_width, Render_System::screen_height);
-	clip_rects.push(rect);
-}
-
-void Render_Primitive_List::push_clip_rect(Rect_s32 *rect)
-{
-#if TURN_ON_RECT_CLIPPING
-	clip_rects.push(*rect);
-#endif
-}
-
-void Render_Primitive_List::pop_clip_rect()
-{
-#if TURN_ON_RECT_CLIPPING
-	if (clip_rects.count > 0) {
-		clip_rects.pop();
-	}
-#endif
-}
-
-void Render_Primitive_List::get_clip_rect(Rect_s32 *rect)
-{
-	*rect = clip_rects.last();
-}
-
-void Render_Primitive_List::add_outlines(int x, int y, int width, int height, const Color &color, float outline_width, u32 rounding, u32 flags)
-{
-	String hash = String((int)width) + String((int)height) + String((int)outline_width) + String("outline");
-
-	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix = make_translation_matrix(&position);
-
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
-	if (!primitive) {
-		return;
-	}
-	bool is_rounded = rounding > 0;
-	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(-outline_width, -outline_width));
-	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2((float)width + outline_width, -outline_width));
-	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2((float)width + outline_width, (float)height + outline_width));
-	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(-outline_width, -outline_width, (float)width + outline_width * 2.0f, (float)height + outline_width * 2.0f, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(-outline_width, (float)height + outline_width));
-
-	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_LEFT_TOP, rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_RIGHT_TOP, rounding) : primitive->add_point(Vector2((float)width, 0.0f));
-	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_RIGHT_BOTTOM, rounding) : primitive->add_point(Vector2((float)width, (float)height));
-	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, (float)width, (float)height, RECT_SIDE_LEFT_BOTTOM, rounding) : primitive->add_point(Vector2(0.0f, (float)height));
-
-	primitive->make_outline_triangle_polygons();
-	render_2d->add_primitive(primitive);
-}
-
-void Render_Primitive_List::add_text(Rect_s32 *rect, const char *text, Text_Alignment text_alignmnet)
-{
-	add_text((int)rect->x, (int)rect->y, text, text_alignmnet);
-}
-
-void Render_Primitive_List::add_text(int x, int y, const char *text, Text_Alignment text_alignment)
-{
-	assert(text);
-
-	u32 len = (u32)strlen(text);
-	if (len == 0) {
-		return;
-	}
-
-	u32 max_height = font->get_text_size(text, text_alignment).height;
-	Font_Char *font_char = font->get_font_char(text[0]);
-	Vector2 position = { (float)x, (float)(y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height)) };
-
-	Render_Primitive_2D info;
-	info.texture = render_font->font_atlas;
-	info.transform_matrix = make_translation_matrix(&position);
-	info.color = Color::White;
-	info.primitive = render_font->lookup_table[text[0]];
-	get_clip_rect(&info.clip_rect);
-
-	x += font_char->advance;
-	render_primitives.push(info);
-
-	for (u32 i = 1; i < len; i++) {
-		Font_Char *font_char = font->get_font_char(text[i]);
-		Vector2 position = { (float)x + font_char->bearing.width, (float)(y + (max_height - font_char->size.height) + (font_char->size.height - font_char->bearing.height)) };
-
-		Render_Primitive_2D info;
-		info.texture = render_font->font_atlas;
-		info.transform_matrix = make_translation_matrix(&position);
-		info.color = Color::White;
-		info.primitive = render_font->lookup_table[text[i]];
-		get_clip_rect(&info.clip_rect);
-
-		x += font_char->advance;
-		render_primitives.push(info);
-	}
-}
-
-void Render_Primitive_List::add_rect(Rect_s32 *rect, const Color &color, u32 rounding, u32 flags)
-{
-	float _x = static_cast<float>(rect->x);
-	float _y = static_cast<float>(rect->y);
-	float _width = static_cast<float>(rect->width);
-	float _height = static_cast<float>(rect->height);
-
-	add_rect(_x, _y, _width, _height, color, rounding, flags);
-}
-
-void Render_Primitive_List::add_rect(s32 x, s32 y, s32 width, s32 height, const Color &color, u32 rounding, u32 flags)
-{
-	float _x = static_cast<float>(x);
-	float _y = static_cast<float>(y);
-	float _width = static_cast<float>(width);
-	float _height = static_cast<float>(height);
-
-	add_rect(_x, _y, _width, _height, color, rounding, flags);
-}
-
-void Render_Primitive_List::add_rect(float x, float y, float width, float height, const Color &color, u32 rounding, u32 flags)
-{
-	//////////////////////////////////////////////////////////
-	// &Note I am not sure that chache works for primitives //
-	//////////////////////////////////////////////////////////
-	String hash = String((int)width) + String((int)height) + String((int)rounding) + String((int)flags);
-
-
-	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix = make_translation_matrix(&position);
-
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
-	if (!primitive) {
-		return;
-	}
-
-	primitive->add_point(Vector2(width / 2.0f, height / 2.0f));
-
-	float x_divisor = (!(flags & ROUND_LEFT_RECT) || !(flags & ROUND_RIGHT_RECT)) ? 1.0f : 2.0f;
-	float y_divisor = (!(flags & ROUND_TOP_RECT) || !(flags & ROUND_BOTTOM_RECT)) ? 1.0f : 2.0f;
-	float x_rounding = math::min((float)rounding, (width / x_divisor));
-	float y_rounding = math::min((float)rounding, (height / y_divisor));
-
-	bool is_rounded = rounding > 0;
-	((flags & ROUND_TOP_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_TOP, x_rounding, y_rounding) : primitive->add_point(Vector2(0.0f, 0.0f));
-	((flags & ROUND_TOP_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_TOP, x_rounding, y_rounding) : primitive->add_point(Vector2(width, 0.0f));
-	((flags & ROUND_BOTTOM_RIGHT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_RIGHT_BOTTOM, x_rounding, y_rounding) : primitive->add_point(Vector2(width, height));
-	((flags & ROUND_BOTTOM_LEFT_RECT) && is_rounded) ? primitive->add_rounded_points(0.0f, 0.0f, width, height, RECT_SIDE_LEFT_BOTTOM, x_rounding, y_rounding) : primitive->add_point(Vector2(0.0f, height));
-
-	primitive->make_triangle_polygon();
-	render_2d->add_primitive(primitive);
-}
-
-void Render_Primitive_List::add_texture(Rect_s32 *rect, Texture2D *resource)
-{
-	add_texture(rect->x, rect->y, rect->width, rect->height, resource);
-}
-
-void Render_Primitive_List::add_texture(int x, int y, int width, int height, Texture2D *resource)
-{
-	String hash = String(width + height);
-
-	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix = make_translation_matrix(&position);
-
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, resource, Color::White, hash);
-	if (!primitive) {
-		return;
-	}
-
-	primitive->add_point(Vector2(0.0f, 0.0f), Vector2(0.0f, 0.0f));
-	primitive->add_point(Vector2((float)width, 0.0f), Vector2(1.0f, 0.0f));
-	primitive->add_point(Vector2((float)width, (float)height), Vector2(1.0f, 1.0f));
-	primitive->add_point(Vector2(0.0f, (float)height), Vector2(0.0f, 1.0f));
-
-	primitive->make_triangle_polygon();
-	render_2d->add_primitive(primitive);
-}
-
-void Render_Primitive_List::add_line(const Point_s32 &first_point, const Point_s32 &second_point, const Color &color, float thickness)
-{
-	u32 window_width = Render_System::screen_width;
-	u32 window_height = Render_System::screen_height;
-
-	Point_s32 converted_point1;
-	from_win32_screen_space(window_width, window_height, first_point, converted_point1);
-
-	Point_s32 converted_point2;
-	from_win32_screen_space(window_width, window_height, second_point, converted_point2);
-
-	Vector2 temp = make_vector2(converted_point2, converted_point1);
-	Vector2 line_direction = normalize(&temp);
-
-	float angle = get_angle(&line_direction, &Vector2::base_x);
-
-	Matrix4 rotation_matrix;
-	if (line_direction.y < 0.0f) {
-		angle = math::abs(RADIANS_360 - angle);
-	}
-
-	Vector2 position = first_point.to_vector2();
-	Matrix4 transform_matrix;
-	transform_matrix = rotate_about_z(-angle) * make_translation_matrix(&position);
-
-	Vector2 temp1 = first_point.to_vector2();
-	Vector2 temp2 = second_point.to_vector2();
-	float line_width = (float)find_distance(temp1, temp2);
-	String hash = String(line_width + thickness);
-
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
-	if (!primitive) {
-		return;
-	}
-
-	primitive->add_point(Vector2(0.0f, 0.0f));
-	primitive->add_point(Vector2(line_width, 0.0f));
-	primitive->add_point(Vector2(line_width, thickness));
-	primitive->add_point(Vector2(0.0f, thickness));
-
-	primitive->make_triangle_polygon();
-	render_2d->add_primitive(primitive);
-}
-
-// Flips degrees from the first quadrant to the fourth quadrant 
-// and from the second quadrant to the third quadrant.
-static u32 flip_degrees(u32 value)
-{
-	assert(in_range(0, 360, (s32)value));
-
-	if (in_range(0, 90, (s32)value)) {
-		return 270 + (90 - value);
-	}
-	if (in_range(90, 180, (s32)value)) {
-		return 180 + (180 - value);
-	}
-	if (in_range(180, 270, (s32)value)) {
-		return 90 + (270 - value);
-	}
-	if (in_range(270, 360, (s32)value)) {
-		return (360 - value);
-	}
-	return value;
-}
-
-void Render_Primitive_List::add_circle(int x, int y, u32 radius, const Color &color, const Circle_Range &circle_range)
-{
-	assert(((circle_range.start <= 360) && (circle_range.end <= 360)));
-	assert(circle_range.start < circle_range.end);
-
-	Circle_Range range = { flip_degrees(circle_range.end), flip_degrees(circle_range.start) };
-
-	String hash = "filled_circle" + String(x) + String(y);
-	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix = make_translation_matrix(&position);
-
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
-	if (!primitive) {
-		return;
-	}
-	primitive->add_point(Vector2::zero);
-	for (u32 i = range.start; i < range.end; i++) {
-		float angle = degrees_to_radians((float)i);
-		Vector2 point = Vector2(math::cos(angle), math::sin(angle)) * (float)radius;
-		primitive->add_point(point);
-	}
-	primitive->make_triangle_polygon();
-	render_2d->add_primitive(primitive);
-}
-
-void Render_Primitive_List::add_outline_circle(int x, int y, u32 radius, float thickness, const Color &color)
-{
-	String hash = "filled_outline_circle" + String(x) + String(y);
-	Vector2 position = { (float)x, (float)y };
-	Matrix4 transform_matrix = make_translation_matrix(&position);
-
-	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, &render_2d->default_texture, color, hash);
-	if (!primitive) {
-		return;
-	}
-
-	for (u32 i = 0; i < 360; i++) {
-		float angle = degrees_to_radians((float)i);
-		Vector2 outer_point = Vector2(math::cos(angle), math::sin(angle)) * (float)radius;
-		primitive->add_point(outer_point);
-	}
-	for (u32 i = 0; i < 360; i++) {
-		float angle = degrees_to_radians((float)i);
-		Vector2 inner_point = Vector2(math::cos(angle), math::sin(angle)) * (float)radius;
-		inner_point.x -= math::cos(angle) * thickness;
-		inner_point.y -= math::sin(angle) * thickness;
-
-		primitive->add_point(inner_point);
-	}
-	primitive->make_outline_triangle_polygons();
-	render_2d->add_primitive(primitive);
-}
-
-Primitive_2D *Render_Primitive_List::make_or_find_primitive(Matrix4 &transform_matrix, Texture2D *texture, const Color &color, String &primitve_hash)
-{
-	Render_Primitive_2D render_primitive;
-	render_primitive.color.value = color.value;
-	render_primitive.texture = *texture;
-	render_primitive.transform_matrix = transform_matrix;
-	get_clip_rect(&render_primitive.clip_rect);
-
-	// if we found primitve we can just push it in render primitives array
-	Primitive_2D *found_primitive = NULL;
-	if (render_2d->lookup_table.get(primitve_hash, found_primitive)) {
-		render_primitive.primitive = found_primitive;
-		render_primitives.push(render_primitive);
-		return NULL;
-	}
-
-	Primitive_2D *primitive = new Primitive_2D;
-	render_2d->lookup_table.set(primitve_hash, primitive);
-	render_primitive.primitive = primitive;
-	render_primitives.push(render_primitive);
-	return primitive;
-}
-
-Render_2D::~Render_2D()
-{
-	Primitive_2D *primitive = NULL;
-	For(primitives, primitive) {
-		DELETE_PTR(primitive);
-	}
-
-	for (u32 i = 0; i < render_fonts.count; i++) {
-		DELETE_PTR(render_fonts.get_node(i)->value);
-	}
-}
-
-void Render_2D::init(Render_System *render_sys, Shader_Manager *shader_manager)
-{
-	render_system = render_sys;
-	gpu_device = &render_system->gpu_device;
-	render_pipeline = &render_system->render_pipeline;
-
-	render_2d = GET_SHADER(shader_manager, render_2d);
-	if (!is_valid(render_2d, VALIDATE_RENDERING_SHADER)) {
-		print("Render_2D::init: Failed to initialize Render_2D. {} is not valid.", render_2d->file_name);
-		return;
-	}
-
-	gpu_device->create_constant_buffer(sizeof(CB_Render_2d_Info), &constant_buffer);
-
-	Texture2D_Desc texture_desc;
-	texture_desc.width = 100;
-	texture_desc.height = 100;
-	texture_desc.mip_levels = 1;
-	gpu_device->create_texture_2d(&texture_desc, &default_texture);
-	gpu_device->create_shader_resource_view(&texture_desc, &default_texture);
-
-	fill_texture((void *)&Color::White, &default_texture);
-
-	Rasterizer_Desc rasterizer_desc;
-	rasterizer_desc.set_sciccor(true);
-
-	gpu_device->create_rasterizer_state(&rasterizer_desc, &rasterizer_state);
-
-	Depth_Stencil_State_Desc depth_stencil_test_desc;
-	depth_stencil_test_desc.enable_depth_test = true;
-	depth_stencil_test_desc.depth_compare_func = COMPARISON_ALWAYS;
-
-	gpu_device->create_depth_stencil_state(&depth_stencil_test_desc, &depth_stencil_state);
-
-	Blend_State_Desc blending_test_desc;
-	blending_test_desc.enable = true;
-	blending_test_desc.src = BLEND_SRC_ALPHA;
-	blending_test_desc.dest = BLEND_INV_SRC_ALPHA;
-	blending_test_desc.blend_op = BLEND_OP_ADD;
-	blending_test_desc.src = BLEND_SRC_ALPHA;
-	blending_test_desc.src_alpha = BLEND_ONE;
-	blending_test_desc.dest_alpha = BLEND_INV_SRC_ALPHA;
-	blending_test_desc.blend_op_alpha = BLEND_OP_ADD;
-
-	gpu_device->create_blend_state(&blending_test_desc, &blend_state);
-
-	initialized = true;
-}
-
-void Render_2D::add_primitive(Primitive_2D *primitive)
-{
-	primitive->vertex_offset = total_vertex_count;
-	primitive->index_offset = total_index_count;
-
-	total_vertex_count += primitive->vertices.count;
-	total_index_count += primitive->indices.count;
-
-	primitives.push(primitive);
-}
-
-void Render_2D::add_render_primitive_list(Render_Primitive_List *render_primitive_list)
-{
-	draw_list.push(render_primitive_list);
-}
-
-Render_Font *Render_2D::get_render_font(Font *font)
-{
-	Render_Font *render_font = NULL;
-	if (!render_fonts.get(font->name, &render_font)) {
-		render_font = new Render_Font();
-		render_font->init(this, font);
-		render_fonts.set(font->name, render_font);
-	}
-	return render_font;
-}
-
-void Render_2D::new_frame()
-{
-	Render_Primitive_List *list = NULL;
-	For(draw_list, list) {
-		list->render_primitives.count = 0;
-	}
-	draw_list.count = 0;
-}
-
-void Render_2D::render_frame()
-{
-	begin_mark_rendering_event(L"2D Rendering");
-
-	if ((total_vertex_count == 0) || !initialized) {
-		return;
-	}
-
-	static u32 privious_total_vertex_count;
-
-	if (vertex_buffer.is_empty() || (privious_total_vertex_count != total_vertex_count)) {
-		privious_total_vertex_count = total_vertex_count;
-
-		if (!vertex_buffer.is_empty()) {
-			vertex_buffer.free();
-			index_buffer.free();
-		}
-
-		Gpu_Buffer_Desc vertex_buffer_desc;
-		vertex_buffer_desc.data_count = total_vertex_count;
-		vertex_buffer_desc.data_size = sizeof(Vertex_X2UV);
-		vertex_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
-		vertex_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
-		vertex_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
-
-		gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
-
-		Gpu_Buffer_Desc index_buffer_desc;
-		index_buffer_desc.data_count = total_index_count;
-		index_buffer_desc.data_size = sizeof(u32);
-		index_buffer_desc.usage = RESOURCE_USAGE_DYNAMIC;
-		index_buffer_desc.bind_flags = BIND_INDEX_BUFFER;
-		index_buffer_desc.cpu_access = CPU_ACCESS_WRITE;
-
-		gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
-
-		Vertex_X2UV *vertices = (Vertex_X2UV *)render_pipeline->map(vertex_buffer);
-		u32 *indices = (u32 *)render_pipeline->map(index_buffer);
-
-		Primitive_2D *primitive = NULL;
-		For(primitives, primitive) {
-
-			memcpy((void *)vertices, primitive->vertices.items, primitive->vertices.count * sizeof(Vertex_X2UV));
-			memcpy((void *)indices, primitive->indices.items, primitive->indices.count * sizeof(u32));
-			vertices += primitive->vertices.count;
-			indices += primitive->indices.count;
-		}
-
-		render_pipeline->unmap(vertex_buffer);
-		render_pipeline->unmap(index_buffer);
-	}
-
-	render_pipeline->set_input_layout(render_system->input_layouts.vertex_P2UV2);
-	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
-
-	render_pipeline->set_vertex_buffer(&vertex_buffer);
-	render_pipeline->set_index_buffer(&index_buffer);
-
-	render_pipeline->set_vertex_shader(render_2d);
-	render_pipeline->set_pixel_shader(render_2d);
-	render_pipeline->set_pixel_shader_sampler(POINT_SAMPLING_REGISTER, render_system->render_pipeline_states.point_sampling);
-
-	Viewport viewport;
-	viewport.width = Render_System::screen_width;
-	viewport.height = Render_System::screen_height;
-	render_pipeline->set_viewport(&viewport);
-	render_pipeline->set_rasterizer_state(rasterizer_state);
-	render_pipeline->set_blend_state(blend_state);
-	render_pipeline->set_depth_stencil_state(depth_stencil_state);
-	render_pipeline->set_render_target(render_system->multisampling_back_buffer_texture.rtv, render_system->multisampling_depth_stencil_texture.dsv);
-
-	CB_Render_2d_Info cb_render_info;
-
-	Render_Primitive_List *list = NULL;
-	For(draw_list, list) {
-		Render_Primitive_2D *render_primitive = NULL;
-		For(list->render_primitives, render_primitive) {
-
-			render_pipeline->set_scissor(&render_primitive->clip_rect);
-
-			cb_render_info.position_orthographic_matrix = render_primitive->transform_matrix * render_system->view.orthogonal_matrix;
-
-			cb_render_info.color = render_primitive->color.value;
-
-			render_pipeline->update_constant_buffer(&constant_buffer, &cb_render_info);
-			render_pipeline->set_vertex_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
-			render_pipeline->set_pixel_shader_resource(CB_RENDER_2D_INFO_REGISTER, constant_buffer);
-			render_pipeline->set_pixel_shader_resource(0, render_primitive->texture.srv);
-
-			Primitive_2D *primitive = render_primitive->primitive;
-			render_pipeline->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
-		}
-	}
-
-	render_pipeline->reset_rasterizer();
-	render_pipeline->reset_blending_state();
-	render_pipeline->reset_depth_stencil_state();
-
-	end_mark_rendering_event();
-}
-
-void View::update_projection_matries(u32 fov_in_degrees, u32 width, u32 height, float _near_plane, float _far_plane)
-{
+	width = _width;
+	height = _height;
 	ratio = (float)width / (float)height;
-	fov = degrees_to_radians(60.0f);
+	fov = degrees_to_radians((float)_fov);
 	near_plane = _near_plane;
 	far_plane = _far_plane;
 	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
-	orthogonal_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
+	orthographic_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
 }
 
-void Render_System::init(Win32_Window *window)
+Command_List_Allocator::Command_List_Allocator()
 {
-	assert(window);
-	assert(window->width > 0);
-	assert(window->height > 0);
-
-	Render_System::screen_width = window->width;
-	Render_System::screen_height = window->height;
-
-	view.update_projection_matries(60, Render_System::screen_width, Render_System::screen_height, 1.0f, 10000.0f);
-
-	init_render_api(&gpu_device, &render_pipeline);
-
-	swap_chain.init(&gpu_device, window);
-	init_render_targets(Render_System::screen_width, Render_System::screen_height);
-
-	render_pipeline_states.init(&gpu_device);
-
-	print("Rendering system info:");
-	print("  Window resolution {}x{}.", Render_System::screen_width, Render_System::screen_height);
-	print("  FOV {} degrees.", 60);
-	print("  Render API based on Directx 11.");
 }
 
-void Render_System::init_render_targets(u32 window_width, u32 window_height)
+Command_List_Allocator::~Command_List_Allocator()
 {
-	swap_chain.get_back_buffer_as_texture(&back_buffer_texture);
-
-	Texture2D_Desc back_buffer_texture_desc;
-	back_buffer_texture.get_desc(&back_buffer_texture_desc);
-
-	gpu_device.create_render_target_view(&back_buffer_texture);
-	gpu_device.create_unordered_access_view(&back_buffer_texture_desc, &back_buffer_texture);
-
-	Texture2D_Desc temp_desc;
-	temp_desc.width = 512;
-	temp_desc.height = 512;
-	temp_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	temp_desc.mip_levels = 1;
-	temp_desc.bind = BIND_RENDER_TARGET;
-	temp_desc.multisampling = { 1, 0 };
-
-	gpu_device.create_texture_2d(&temp_desc, &voxel_render_target);
-	gpu_device.create_render_target_view(&voxel_render_target);
-
-	u32 temp = 8;
-	Texture2D_Desc multisampling_back_buffer_texture_desc;
-	multisampling_back_buffer_texture_desc.width = window_width;
-	multisampling_back_buffer_texture_desc.height = window_height;
-	multisampling_back_buffer_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	multisampling_back_buffer_texture_desc.mip_levels = 1;
-	multisampling_back_buffer_texture_desc.bind = BIND_RENDER_TARGET;
-	multisampling_back_buffer_texture_desc.multisampling = { temp, 0 };
-
-	gpu_device.create_texture_2d(&multisampling_back_buffer_texture_desc, &multisampling_back_buffer_texture);
-	gpu_device.create_render_target_view(&multisampling_back_buffer_texture);
-
-	Texture2D_Desc multisampling_depth_stencil_buffer_texture_desc;
-	multisampling_depth_stencil_buffer_texture_desc.width = window_width;
-	multisampling_depth_stencil_buffer_texture_desc.height = window_height;
-	multisampling_depth_stencil_buffer_texture_desc.format = DXGI_FORMAT_R24G8_TYPELESS;
-	multisampling_depth_stencil_buffer_texture_desc.mip_levels = 1;
-	multisampling_depth_stencil_buffer_texture_desc.bind = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE; // The texture has bind shader resource because it is bound to outlining computer shader.
-	multisampling_depth_stencil_buffer_texture_desc.multisampling = { temp, 0 };
 	
-	gpu_device.create_texture_2d(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
-	gpu_device.create_depth_stencil_view(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
-	gpu_device.create_shader_resource_view(&multisampling_depth_stencil_buffer_texture_desc, &multisampling_depth_stencil_texture);
-
-	Texture2D_Desc silhouette_texture_desc;
-	silhouette_texture_desc.width = window_width;
-	silhouette_texture_desc.height = window_height;
-	silhouette_texture_desc.format = DXGI_FORMAT_R32_UINT;
-	silhouette_texture_desc.mip_levels = 1;
-	silhouette_texture_desc.bind = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-
-	gpu_device.create_texture_2d(&silhouette_texture_desc, &silhouette_buffer);
-	gpu_device.create_shader_resource_view(&silhouette_texture_desc, &silhouette_buffer);
-	gpu_device.create_render_target_view(&silhouette_buffer);
-
-	Texture2D_Desc depth_texture_desc2;
-	depth_texture_desc2.width = window_width;
-	depth_texture_desc2.height = window_height;
-	depth_texture_desc2.format = DXGI_FORMAT_R24G8_TYPELESS;
-	depth_texture_desc2.mip_levels = 1;
-	depth_texture_desc2.bind = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-
-	gpu_device.create_texture_2d(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
-	gpu_device.create_depth_stencil_view(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
-	gpu_device.create_shader_resource_view(&depth_texture_desc2, &silhouette_depth_stencil_buffer);
 }
 
-void Render_System::init_input_layouts(Shader_Manager *shader_manager)
+void Command_List_Allocator::init(Render_Device *_render_device, u64 frame_start)
 {
-	Input_Layout_Elements position_uv_input_layout;
-	position_uv_input_layout.add("POSITION", DXGI_FORMAT_R32G32_FLOAT);
-	position_uv_input_layout.add("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT);
-
-	Input_Layout_Elements position_input_layout;
-	position_input_layout.add("POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
-
-	Extend_Shader *render_2d = GET_SHADER(shader_manager, render_2d);
-	Extend_Shader *draw_vertices = GET_SHADER(shader_manager, draw_vertices);
+	frame_number = frame_start;
+	render_device = _render_device;
 	
-	gpu_device.create_input_layout((void *)render_2d->bytecode, render_2d->bytecode_size, &position_uv_input_layout, input_layouts.vertex_P2UV2);
-	gpu_device.create_input_layout((void *)draw_vertices->bytecode, draw_vertices->bytecode_size, &position_input_layout, input_layouts.vertex_P3);
+	command_list_table[COMMAND_LIST_TYPE_COPY] = &copy_command_lists;
+	command_list_table[COMMAND_LIST_TYPE_COMPUTE] = &compute_command_lists;
+	command_list_table[COMMAND_LIST_TYPE_DIRECT] = &graphics_command_lists;
+}
+
+void Command_List_Allocator::finish_frame(u64 completed_frame)
+{
+	while (!flight_command_lists.empty() && (flight_command_lists.front().first <= completed_frame)) {
+		Command_List *command_list = flight_command_lists.front().second;
+		flight_command_lists.pop();
+		command_list_table[command_list->type]->push(command_list);
+	}
+	frame_number++;
+}
+
+Command_List *Command_List_Allocator::allocate_command_list(Command_List_Type command_list_type)
+{
+	Command_List *command_list = NULL;
+	if (command_list_table[command_list_type]->is_empty()) {
+		command_list = render_device->create_command_list(command_list_type);
+	} else {
+		command_list = command_list_table[command_list_type]->last();
+		command_list_table[command_list_type]->pop();
+	}
+	flight_command_lists.push({ frame_number, command_list });
+	return command_list;
+}
+
+void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_service)
+{
+	assert(win32_window->width > 0);
+	assert(win32_window->height > 0);
+
+	window.width = win32_window->width;
+	window.height = win32_window->height;
+
+	u32 back_buffer_count = 2;
+
+	Variable_Service *rendering = variable_service->find_namespace("rendering");
+	rendering->attach("vsync", &window.vsync);
+	rendering->attach("windowed", &window.windowed);
+	rendering->attach("back_buffer_count", (s32 *)&back_buffer_count);
+
+	window_view_plane.update(60, window.width, window.height, 1.0f, 10000.0f);
+
+	render_device = create_render_device(back_buffer_count);
+	if (!render_device) {
+		error("Failed to create render device.");
+	}
+
+	frame_fence = render_device->create_fence(back_buffer_count);
+
+	compute_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_COMPUTE, "Compute Queue");
+	graphics_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_DIRECT, "Graphics Queue");
+
+	bool allow_tearing = false;
+	if (!window.vsync && window.windowed && check_tearing_support()) {
+		sync_interval = 0;
+		present_flags = DXGI_PRESENT_ALLOW_TEARING;
+		allow_tearing = true;
+	}
+	swap_chain = create_swap_chain(allow_tearing, back_buffer_count, window.width, window.height, win32_window->handle, graphics_queue);
+
+	Texture_Desc back_buffer_texture_desc;
+	back_buffer_texture_desc.width = window.width;
+	back_buffer_texture_desc.height = window.height;
+	back_buffer_texture_desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	pipeline_resource_manager.init(render_device, &back_buffer_texture_desc);
+	command_list_allocator.init(render_device, back_buffer_count);
+
+	render_2d.init(this);
+
+	init_passes();
+}
+
+void Render_System::init_passes()
+{
+	Shader_Manager *shader_manager = &Engine::get_instance()->shader_manager;
+	Render_World *render_world = Engine::get_render_world();
+
+	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.silhouette_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.outlining_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.render2d_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+
+	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.outlining_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.render2d_pass, (void *)&render_2d,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
 {
-	Render_System::screen_width = window_width;
-	Render_System::screen_height = window_height;
-
 	if (Engine::initialized()) {
-		view.update_projection_matries(60, window_width, window_height, 1.0f, 100000.0f);
-		assert(false);
-		//swap_chain.resize(window_width, window_height);
 	}
 }
 
-void Render_System::new_frame()
+void Render_System::flush()
 {
-	swap_chain.get_back_buffer_as_texture(&back_buffer_texture);
-
-	begin_mark_rendering_event(L"Frame rendering");
-
-	render_pipeline.clear_render_target_view(voxel_render_target.rtv, Color::Red);
-	render_pipeline.clear_render_target_view(back_buffer_texture.rtv, Color::LightSteelBlue);
-
-	render_pipeline.clear_render_target_view(multisampling_back_buffer_texture.rtv, Color::LightSteelBlue);
-	render_pipeline.clear_depth_stencil_view(multisampling_depth_stencil_texture.dsv);
-
-	render_pipeline.clear_depth_stencil_view(silhouette_depth_stencil_buffer.dsv);
-	render_pipeline.clear_render_target_view(silhouette_buffer.rtv, Color(0.0f, 0.0f, 0.0f, 0.0f));
-
-	 render_2d.new_frame();
+	/*Fence fence;
+	fence.create(gpu_device, 1);
+	graphics_queue.signal(fence);
+	fence.wait_for_gpu();*/
 }
 
-void Render_System::end_frame()
+void Render_System::notify_start_frame()
 {
-	render_2d.render_frame();
-
-	begin_mark_rendering_event(L"Resoulve back buffer");
-	render_pipeline.resolve_subresource(&back_buffer_texture, &multisampling_back_buffer_texture, DXGI_FORMAT_R8G8B8A8_UNORM);
-	end_mark_rendering_event();
-
-	Engine::get_render_world()->render_passes.outlining.render(Engine::get_render_world(), &render_pipeline);
-
-	BEGIN_TASK("Swap chain");
-	HR(swap_chain.dxgi_swap_chain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
-	END_TASK();
-
-	end_mark_rendering_event();
-
-#ifdef REPORT_LIVE_OBJECTS
-	gpu_device.debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
-#endif
 }
 
-void Render_Font::init(Render_2D *render_2d, Font *font)
+void Render_System::notify_end_frame()
 {
-	assert(font);
-	assert(render_2d);
+	command_list_allocator.finish_frame(frame_fence->expected_value - 1);
 
-	Hash_Table<char, Rect_f32> uvs;
-	make_font_atlas(font, &uvs);
-
-	// Exp (MAX_CHARACTERS - 1) skips DEL char
-	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
-
-		Size_u32 size = font->get_font_char(c)->size;
-		Rect_f32 &uv = uvs[c];
-
-		Primitive_2D *primitive = new Primitive_2D();
-
-		primitive->add_point(Vector2(0.0f, 0.0f), Vector2(uv.x, uv.y));
-		primitive->add_point(Vector2((float)size.width, 0.0f), Vector2(uv.right(), uv.y));
-		primitive->add_point(Vector2((float)size.width, (float)size.height), Vector2(uv.right(), uv.bottom()));
-		primitive->add_point(Vector2(0.0f, (float)size.height), Vector2(uv.x, uv.bottom()));
-
-		primitive->make_triangle_polygon();
-		render_2d->add_primitive(primitive);
-
-		lookup_table.set(c, primitive);
-	}
+	render_device->finish_frame(frame_fence->expected_value - 1);
 }
 
-void Render_Font::make_font_atlas(Font *font, Hash_Table<char, Rect_f32> *font_uvs)
+//void wait_for_gpu(Fence *fence, u64 expected_value)
+//{
+//	u64 completed_value = fence->get()->GetCompletedValue();
+//	if (completed_value < expected_value) {
+//		fence->get()->SetEventOnCompletion(expected_value, fence->handle);
+//		WaitForSingleObject(fence->handle, INFINITE);
+//	}
+//}
+
+void Render_System::render()
 {
-	assert(font);
-	assert(font_uvs);
-
-	Texture2D_Desc texture_atlas_desc;
-	texture_atlas_desc.width = 200;
-	texture_atlas_desc.height = 200;
-	texture_atlas_desc.mip_levels = 1;
-
-	Engine::get_render_system()->gpu_device.create_texture_2d(&texture_atlas_desc, &font_atlas);
-	Engine::get_render_system()->gpu_device.create_shader_resource_view(&texture_atlas_desc, &font_atlas);
-
-	fill_texture((void *)&Color::Black, &font_atlas);
-
-	Array<Rect_u32 *> rect_pointers;
-	Array<Rect_u32> rects;
-	rects.reserve(MAX_CHARACTERS);
-
-	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
-		Font_Char *font_char = font->get_font_char(c);
-		rects[c] = Rect_u32(font_char->size);
-		rect_pointers.push(&rects[c]);
-	}
-
-	Rect_u32 atlas_rect;
-	atlas_rect.set_size(texture_atlas_desc.width, texture_atlas_desc.height);
-
-	pack_rects_in_rect(&atlas_rect, rect_pointers);
-
-	for (u8 c = CONTORL_CHARACTERS; c < (MAX_CHARACTERS - 1); c++) {
-		Font_Char *font_char = font->get_font_char(c);
-		Rect_u32 rect = rects[c];
-
-		Rect_f32 uv;
-		uv.x = static_cast<float>(rect.x) / static_cast<float>(texture_atlas_desc.width);
-		uv.y = static_cast<float>(rect.y) / static_cast<float>(texture_atlas_desc.height);
-		uv.width = static_cast<float>(rect.width) / static_cast<float>(texture_atlas_desc.width);
-		uv.height = static_cast<float>(rect.height) / static_cast<float>(texture_atlas_desc.height);
-
-		font_uvs->set((char)c, uv);
-
-		if ((rect.width == 0) && (rect.height == 0)) {
-			continue;
-		}
-		Engine::get_render_system()->render_pipeline.update_subresource(&font_atlas, (void *)font_char->bitmap, sizeof(u32) * font_char->size.width, &rect);
-	}
-}
-
-void Render_Pipeline_States::init(Gpu_Device *gpu_device)
-{
-	Rasterizer_Desc default_rasterizer_state_desc;
-	gpu_device->create_rasterizer_state(&default_rasterizer_state_desc, &default_rasterizer_state);
-
-	Rasterizer_Desc disabled_multisampling_rasterizer_state_desc;
-	disabled_multisampling_rasterizer_state_desc.none_culling();
-	disabled_multisampling_rasterizer_state_desc.set_multisampling(false);
-	disabled_multisampling_rasterizer_state_desc.set_depthclip(false);
-	gpu_device->create_rasterizer_state(&disabled_multisampling_rasterizer_state_desc, &disabled_multisampling_state);
-
-	Depth_Stencil_State_Desc default_depth_stencil_state_desc;
-	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &default_depth_stencil_state);
-
-	default_depth_stencil_state_desc.enable_depth_test = false;
-	gpu_device->create_depth_stencil_state(&default_depth_stencil_state_desc, &disabled_depth_test);
-
-	Blend_State_Desc blend_state_desc;
-	gpu_device->create_blend_state(&blend_state_desc, &default_blend_state);
-
-	Blend_State_Desc transparent_blend_state_desc;
-	transparent_blend_state_desc.enable = true;
-	transparent_blend_state_desc.src = BLEND_SRC_ALPHA;
-	transparent_blend_state_desc.dest = BLEND_INV_SRC_ALPHA;
-	transparent_blend_state_desc.blend_op = BLEND_OP_ADD;
-	transparent_blend_state_desc.src_alpha = BLEND_ONE;
-	transparent_blend_state_desc.dest_alpha = BLEND_ZERO;
-	transparent_blend_state_desc.blend_op_alpha = BLEND_OP_ADD;
-
-	gpu_device->create_blend_state(&transparent_blend_state_desc, &transparent_blend_state);
-
-	Blend_State_Desc disabled_blend_state_desc;
-	disabled_blend_state_desc.enable = false;
-
-	gpu_device->create_blend_state(&disabled_blend_state_desc, &disabled_blend_state);
-
-	D3D11_SAMPLER_DESC point_sampling_desc;
-	ZeroMemory(&point_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
-	point_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	point_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	point_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	point_sampling_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	point_sampling_desc.MinLOD = -FLT_MAX;
-	point_sampling_desc.MaxLOD = FLT_MAX;
-	point_sampling_desc.MipLODBias = 0.0f;
-	point_sampling_desc.MaxAnisotropy = 1;
-	point_sampling_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	point_sampling_desc.BorderColor[0] = 1.0f;
-	point_sampling_desc.BorderColor[0] = 1.0f;
-	point_sampling_desc.BorderColor[0] = 1.0f;
-	point_sampling_desc.BorderColor[0] = 1.0f;
-
-	HR(gpu_device->dx11_device.Get()->CreateSamplerState(&point_sampling_desc, point_sampling.ReleaseAndGetAddressOf()));
-
-	D3D11_SAMPLER_DESC linear_sampling_desc;
-	ZeroMemory(&linear_sampling_desc, sizeof(D3D11_SAMPLER_DESC));
-	linear_sampling_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	linear_sampling_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	linear_sampling_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	linear_sampling_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	linear_sampling_desc.MinLOD = -FLT_MAX;
-	linear_sampling_desc.MaxLOD = FLT_MAX;
-	linear_sampling_desc.MipLODBias = 0.0f;
-	linear_sampling_desc.MaxAnisotropy = 1;
-	linear_sampling_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	linear_sampling_desc.BorderColor[0] = 1.0f;
-	linear_sampling_desc.BorderColor[0] = 1.0f;
-	linear_sampling_desc.BorderColor[0] = 1.0f;
-	linear_sampling_desc.BorderColor[0] = 1.0f;
-
-	HR(gpu_device->dx11_device.Get()->CreateSamplerState(&linear_sampling_desc, linear_sampling.ReleaseAndGetAddressOf()));
-
-	Depth_Stencil_State_Desc temp;
-	temp.enable_depth_test = true;
-	temp.enable_stencil_test = true;
-	temp.stencil_failed = STENCIL_OP_KEEP;
-	temp.stencil_passed_depth_failed = STENCIL_OP_KEEP;
-	temp.stencil_and_depth_passed = STENCIL_OP_REPLACE;
-
-	gpu_device->create_depth_stencil_state(&temp, &pre_outlining_depth_stencil_state);
-
-	Depth_Stencil_State_Desc temp2;
-	//temp2.enable_depth_test = false;
-	temp2.enable_stencil_test = true;
-	temp2.stencil_compare_func = COMPARISON_NOT_EQUAL;
-
-	gpu_device->create_depth_stencil_state(&temp2, &outlining_depth_stencil_state);
-
-}
-
-void Render_3D::init(Render_System *_render_system, Shader_Manager *shader_manager)
-{
-	assert(_render_system);
-	assert(shader_manager);
-
-	render_system = _render_system;
-	draw_vertices = GET_SHADER(shader_manager, draw_vertices);
-	gpu_device = &render_system->gpu_device;
-	render_pipeline = &render_system->render_pipeline;
-
-	gpu_device->create_constant_buffer(sizeof(Draw_Info), &draw_info_cbuffer);
-}
-
-void Render_3D::shutdown()
-{
-	vertex_buffer.free();
-	index_buffer.free();
-	draw_info_cbuffer.free();
-}
-
-void Render_3D::set_mesh(Vertex_Mesh *mesh)
-{
-	assert(mesh);
-
-	if (mesh->empty()) {
-		return;
-	}
-	index_count = mesh->indices.count;
-	vertex_buffer.free();
-	index_buffer.free();
-
-	Gpu_Buffer_Desc vertex_buffer_desc;
-	vertex_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
-	vertex_buffer_desc.bind_flags = BIND_VERTEX_BUFFER;
-	vertex_buffer_desc.data = (void *)mesh->vertices.items;
-	vertex_buffer_desc.data_size = sizeof(Vector3);
-	vertex_buffer_desc.data_count = mesh->vertices.count;
-
-	gpu_device->create_gpu_buffer(&vertex_buffer_desc, &vertex_buffer);
-
-	Gpu_Buffer_Desc index_buffer_desc;
-	index_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
-	index_buffer_desc.bind_flags = BIND_INDEX_BUFFER;
-	index_buffer_desc.data = (void *)mesh->indices.items;
-	index_buffer_desc.data_size = sizeof(u32);
-	index_buffer_desc.data_count = mesh->indices.get_size();
-
-	gpu_device->create_gpu_buffer(&index_buffer_desc, &index_buffer);
-}
-
-void Render_3D::reset_mesh()
-{
-	index_count = 0;
-	vertex_buffer.free();
-	index_buffer.free();
-}
-
-void Render_3D::draw_lines(const Vector3 &position, const Color &mesh_color)
-{
-	render_pipeline->set_primitive(RENDER_PRIMITIVE_LINES);
-	draw(position, mesh_color);
-}
-
-void Render_3D::draw(const Vector3 &position, const Color &mesh_color)
-{
-	render_pipeline->set_input_layout(render_system->input_layouts.vertex_P3);
-	render_pipeline->set_vertex_buffer(&vertex_buffer);
-	render_pipeline->set_index_buffer(&index_buffer);
-
-	render_pipeline->set_vertex_shader(draw_vertices);
-
-	render_pipeline->set_blend_state(render_system->render_pipeline_states.default_blend_state);
-	render_pipeline->set_depth_stencil_state(render_system->render_pipeline_states.default_depth_stencil_state);
-	render_pipeline->set_rasterizer_state(render_system->render_pipeline_states.default_rasterizer_state);
-
-	Viewport viewport;
-	viewport.width = Render_System::screen_width;
-	viewport.height = Render_System::screen_height;
+	notify_start_frame();
 	
-	render_pipeline->set_viewport(&viewport);
-	render_pipeline->set_pixel_shader(draw_vertices);
+	render_2d.prepare_for_rendering(render_device);
 
-	render_pipeline->set_render_target(render_system->multisampling_back_buffer_texture.rtv, render_system->multisampling_depth_stencil_texture.dsv);
+	pipeline_resource_manager.update_common_constant_buffers();
 
-	Draw_Info draw_info;
-	draw_info.color = mesh_color;
-	draw_info.world_matrix = make_translation_matrix((Vector3 *)&position);
-	render_pipeline->update_constant_buffer(&draw_info_cbuffer, (void *)&draw_info);
+	Fence *uploading_fence = render_device->execute_uploading();
 
-	render_pipeline->set_vertex_shader_resource(0, draw_info_cbuffer);
-	render_pipeline->set_pixel_shader_resource(0, draw_info_cbuffer);
+	Graphics_Command_List *graphics_command_list = static_cast<Graphics_Command_List *>(command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_DIRECT));
+	graphics_command_list->reset();
 
-	render_pipeline->draw_indexed(index_count, index_offset, vertex_offset);
+	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET);
+	
+	for (u32 i = 0; i < render_pass_submissions.count; i++) {
+		Render_Pass_Submission render_pass_submission = render_pass_submissions[i];
+		render_pass_submission.render_pass->render(graphics_command_list, render_pass_submission.context, render_pass_submission.args);
+	}
+
+	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT);
+	graphics_command_list->close();
+
+	graphics_queue->wait(uploading_fence);
+	graphics_queue->execute_command_list(graphics_command_list);
+	
+	swap_chain->present(sync_interval, present_flags);
+
+	graphics_queue->signal(frame_fence);
+
+	frame_fence->wait_for_gpu(frame_fence->expected_value - 1);
+
+	notify_end_frame();
+
+	frame_fence->increment_expected_value();
 }
 
-void Render_3D::draw_triangles(const Vector3 &position, const Color &mesh_color)
+Size_u32 Render_System::get_window_size()
 {
-	render_pipeline->set_primitive(RENDER_PRIMITIVE_TRIANGLES);
-	draw(position, mesh_color);
+	return { window.width, window.height };
 }
+
+void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc *back_buffer_texture_desc)
+{
+	render_device = _render_device;
+
+	default_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	default_texture_desc.width = back_buffer_texture_desc->width;
+	default_texture_desc.height = back_buffer_texture_desc->height;
+	default_texture_desc.depth = back_buffer_texture_desc->depth;
+	default_texture_desc.format = back_buffer_texture_desc->format;
+
+	default_render_target_desc.name = "Unknown";
+	default_render_target_desc.width = back_buffer_texture_desc->width;
+	default_render_target_desc.height = back_buffer_texture_desc->height;
+	default_render_target_desc.format = back_buffer_texture_desc->format;
+	default_render_target_desc.clear_value = Clear_Value(Color::LightSteelBlue);
+
+	default_depth_stencil_desc.name = "Unknown";
+	default_depth_stencil_desc.width = back_buffer_texture_desc->width;
+	default_depth_stencil_desc.height = back_buffer_texture_desc->height;
+	default_depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
+	default_depth_stencil_desc.clear_value = Clear_Value(1.0f, 0);
+
+	anisotropic_sampler = render_device->create_sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
+	linear_sampler = render_device->create_sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
+	point_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
+
+	GPU_Global_Info global_info;
+	global_info.anisotropic_sampler_idx = anisotropic_sampler->sampler_descriptor()->index();
+	global_info.linear_sampler_idx = linear_sampler->sampler_descriptor()->index();
+	global_info.point_sampler_idx = point_sampler->sampler_descriptor()->index();
+
+	Buffer_Desc global_buffer_desc;
+	global_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
+	global_buffer_desc.stride = sizeof(GPU_Global_Info) + 256;
+	global_buffer_desc.name = "Global Info";
+
+	global_buffer = render_device->create_buffer(&global_buffer_desc);
+	global_buffer->request_write();
+	global_buffer->write(&global_info, sizeof(GPU_Global_Info), 256);
+
+	Buffer_Desc frame_info_buffer_desc;
+	frame_info_buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+	frame_info_buffer_desc.stride = sizeof(GPU_Frame_Info) + 256;
+	frame_info_buffer_desc.name = "Frame Info";
+
+	frame_info_buffer = render_device->create_buffer(&frame_info_buffer_desc);
+}
+
+void Pipeline_Resource_Manager::update_common_constant_buffers()
+{
+	Render_System *render_sys = Engine::get_render_system();
+	Render_World *render_world = Engine::get_render_world();
+
+	GPU_Frame_Info frame_info;
+	frame_info.view_matrix = render_world->rendering_view.view_matrix;
+	frame_info.perspective_matrix = render_sys->window_view_plane.perspective_matrix;
+	frame_info.orthographic_matrix = render_sys->window_view_plane.orthographic_matrix;
+	frame_info.near_plane = render_sys->window_view_plane.near_plane;
+	frame_info.far_plane = render_sys->window_view_plane.far_plane;
+
+	frame_info.view_position = render_world->rendering_view.position;
+	frame_info.view_direction = render_world->rendering_view.direction;
+	frame_info.light_count = render_world->lights.count;
+
+	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 256);
+}
+
+Texture *Pipeline_Resource_Manager::read_texture(const char *texture_name)
+{
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		error("Pipeline_Resource_Manager::create_texture: Failed to read texture. Texture '{}' doesn't exist.", texture_name);
+	}
+	return texture;
+}
+
+Texture *Pipeline_Resource_Manager::create_texture(const char *texture_name, Texture_Desc *texture_desc)
+{
+	Texture_Desc filled_texture_desc;
+	if (texture_desc) {
+		filled_texture_desc.dimension = texture_desc->dimension != TEXTURE_DIMENSION_UNKNOWN ? texture_desc->dimension : default_texture_desc.dimension;
+		filled_texture_desc.resource_state = texture_desc->resource_state != RESOURCE_STATE_COMMON ? texture_desc->resource_state : default_texture_desc.resource_state;
+		filled_texture_desc.width = texture_desc->width > 0 ? texture_desc->width : default_texture_desc.width;
+		filled_texture_desc.height = texture_desc->height > 1 ? texture_desc->height : default_texture_desc.height;
+		filled_texture_desc.depth = texture_desc->depth > 1 ? texture_desc->depth : default_texture_desc.depth;
+		filled_texture_desc.miplevels = texture_desc->miplevels > 1 ? texture_desc->miplevels : default_texture_desc.miplevels;
+		filled_texture_desc.format = texture_desc->format != DXGI_FORMAT_UNKNOWN ? texture_desc->format : default_texture_desc.format;
+		filled_texture_desc.flags = texture_desc->flags != 0 ? texture_desc->flags : default_texture_desc.flags;
+		filled_texture_desc.data = texture_desc->data ? texture_desc->data : NULL;
+		filled_texture_desc.clear_value = texture_desc->clear_value.color_set() ? texture_desc->clear_value : default_texture_desc.clear_value;
+		filled_texture_desc.name = texture_desc->name != "Unknown" ? texture_desc->name : default_texture_desc.name;
+	} else {
+		filled_texture_desc = default_texture_desc;
+	}
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = render_device->create_texture(&filled_texture_desc);
+		texture_table.set(texture_name, texture);
+	} else {
+		error("Pipeline_Resource_Manager::create_texture: Failed to create texture. Texture '{}' already exists.", texture_name);
+	}
+	return texture;
+}
+
+Texture *Pipeline_Resource_Manager::create_render_target(const char *texture_name, Render_Target_Texture_Desc *render_target_desc)
+{
+	Render_Target_Texture_Desc filled_render_target_desc;
+	if (render_target_desc) {
+		filled_render_target_desc.name = !render_target_desc->name.is_empty() ? render_target_desc->name : default_render_target_desc.name;
+		filled_render_target_desc.width = render_target_desc->width > 0 ? render_target_desc->width : default_render_target_desc.width;
+		filled_render_target_desc.height = render_target_desc->height > 0 ? render_target_desc->height : default_render_target_desc.height;
+		filled_render_target_desc.format = render_target_desc->format != DXGI_FORMAT_UNKNOWN ? render_target_desc->format : default_render_target_desc.format;
+		filled_render_target_desc.clear_value = render_target_desc->clear_value.depth_stencil_set() ? render_target_desc->clear_value : default_render_target_desc.clear_value;
+	} else {
+		filled_render_target_desc = default_render_target_desc;
+	}
+	Texture_Desc render_target_texture_desc;
+	render_target_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	render_target_texture_desc.width = filled_render_target_desc.width;
+	render_target_texture_desc.height = filled_render_target_desc.height;
+	render_target_texture_desc.format = filled_render_target_desc.format;
+	render_target_texture_desc.flags = ALLOW_RENDER_TARGET;
+	render_target_texture_desc.clear_value = filled_render_target_desc.clear_value;
+	render_target_texture_desc.resource_state = RESOURCE_STATE_RENDER_TARGET;
+	render_target_texture_desc.name = filled_render_target_desc.name;
+
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = render_device->create_texture(&render_target_texture_desc);
+		texture_table.set(texture_name, texture);
+	} else {
+		error("Pipeline_Resource_Manager::create_render_target: Failed to create render target. Texture '{}' already exists.", texture_name);
+	}
+	return texture;
+}
+
+Texture *Pipeline_Resource_Manager::create_depth_stencil(const char *texture_name, Depth_Stencil_Texture_Desc *depth_stencil_desc)
+{
+	Depth_Stencil_Texture_Desc filled_depth_stencil_desc;
+	if (depth_stencil_desc) {
+		filled_depth_stencil_desc.name = !depth_stencil_desc->name.is_empty() ? depth_stencil_desc->name : default_depth_stencil_desc.name;
+		filled_depth_stencil_desc.width = depth_stencil_desc->width > 0 ? depth_stencil_desc->width : default_depth_stencil_desc.width;
+		filled_depth_stencil_desc.height = depth_stencil_desc->height > 0 ? depth_stencil_desc->height : default_depth_stencil_desc.height;
+		filled_depth_stencil_desc.format = depth_stencil_desc->format != DXGI_FORMAT_UNKNOWN ? depth_stencil_desc->format : default_depth_stencil_desc.format;
+		filled_depth_stencil_desc.clear_value = depth_stencil_desc->clear_value.depth_stencil_set() ? depth_stencil_desc->clear_value : default_depth_stencil_desc.clear_value;
+	} else {
+		filled_depth_stencil_desc = default_depth_stencil_desc;
+	}
+	Texture_Desc depth_texture_desc;
+	depth_texture_desc.dimension = TEXTURE_DIMENSION_2D;
+	depth_texture_desc.width = filled_depth_stencil_desc.width;
+	depth_texture_desc.height = filled_depth_stencil_desc.height;
+	depth_texture_desc.format = filled_depth_stencil_desc.format;
+	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
+	depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
+	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
+	depth_texture_desc.name = filled_depth_stencil_desc.name;
+
+	Texture *texture = NULL;
+	if (!texture_table.get(texture_name, &texture)) {
+		texture = render_device->create_texture(&depth_texture_desc);
+		texture_table.set(texture_name, texture);
+	} else {
+		error("Pipeline_Resource_Manager::create_depth_stencil: Failed to create depth stencil. Texture '{}' already exists.", texture_name);
+	}
+	return texture;
+}
+

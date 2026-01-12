@@ -5,9 +5,9 @@
 build/
 desktop.ini
 desktop
-data/textures/Scene_Demo*/
-data/models/Scene_Demo*
-data/levels/scene_demo*
+/data/textures/Scene_Demo/
+/data/models/Scene_Demo*
+/data/levels/scene_demo*
 
 # User-specific files
 *.suo

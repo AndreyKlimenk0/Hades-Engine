@@ -31,6 +31,11 @@ void free_string(const char *string)
 	string = NULL;
 }
 
+void free_string(const wchar_t *string)
+{
+	DELETE_ARRAY(string);
+}
+
 void format_(Array<char *> *array) {}
 
 void split(const char *string, const char *characters, Array<char *> *array)
@@ -106,7 +111,7 @@ bool is_alphabet(const char *string)
 	return true;
 }
 
-static void format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars)
+static void _format_string(const char *format_string, Array<char> *formatting_string, Array<char *> *vars)
 {
 	assert(format_string);
 	assert(formatting_string);
@@ -149,7 +154,7 @@ char *__do_formatting(Array<char *> *strings)
 			for (int j = 0; j < result; j++, i++) {
 				vars_buffer.push(strings->get(var_index++));
 			}
-			format_string(string, &formatting_string, &vars_buffer);
+			_format_string(string, &formatting_string, &vars_buffer);
 			vars_buffer.clear();
 			formatting_string.push(' ');
 		} else {
@@ -276,14 +281,11 @@ char *to_string(double num)
 
 char *to_string(bool val)
 {
-	static char _true[] = "true";
-	static char _false[] = "false";
-	return val ? _true : _false;
-}
-
-char *to_string(const char *string)
-{
-	return const_cast<char *>(string);
+	u32 str_len = val ? 5 : 6;
+	char *str = new char [str_len];
+	memset((void *)str, 0, str_len);
+	strcpy(str, val ? "true" : "false");
+	return str;
 }
 
 char *to_string(char c)
@@ -292,6 +294,26 @@ char *to_string(char c)
 	str[0] = c;
 	str[1] = '\0';
 	return str;
+}
+
+char *to_string(const char *string)
+{
+	return _strdup(string);
+}
+
+wchar_t *to_wstring(const char *string)
+{
+	assert(string);
+
+	size_t converted_characters = 0;
+	size_t str_len = strlen(string);
+	wchar_t *wstr_buffer = new wchar_t[str_len + 1];
+
+	errno_t result = mbstowcs_s(&converted_characters, wstr_buffer, str_len + 1, string, str_len);
+	assert(result == 0);
+	assert(converted_characters == (str_len + 1));
+
+	return wstr_buffer;
 }
 
 char *to_string(String &string)

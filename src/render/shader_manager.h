@@ -2,13 +2,14 @@
 #define SHADER_MANAGER
 
 #include <stdio.h>
+#include <d3d12.h>
 
-#include "render_api.h"
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
+#include "render_api/base_structs.h"
 
-#define GET_SHADER(shader_manager, shader_name) ((Extend_Shader *)&shader_manager->shaders.shader_name)
+#define GET_SHADER(shader_manager, shader_name) ((Shader *)&shader_manager->shaders.shader_name)
 
 enum Shader_Type {
 	VERTEX_SHADER,
@@ -19,13 +20,33 @@ enum Shader_Type {
 	PIXEL_SHADER,
 };
 
-//@Note: I think it is better in the future to split the struct on Render_Shader(it shader holds vertex and pixel shaders), Computer_Shader, Geometry_Shader and Tessellation_Shader.
-struct Extend_Shader : Shader {
-	Extend_Shader();
-	~Extend_Shader();
+struct Shader_Bytecode {
+	Shader_Bytecode();
+	~Shader_Bytecode();
 
-	u8 *bytecode = NULL;
-	u32 bytecode_size = 0;
+	u8 *data = NULL;
+	u32 size = 0; // Should it be s64 ?
+
+	Shader_Bytecode(const Shader_Bytecode &other) = delete;
+	Shader_Bytecode &operator=(const Shader_Bytecode &other) = delete;
+
+	void free();
+	void move(u8 *bytecode, u32 bytecode_size);
+
+	Bytecode_Ref bytecode_ref();
+};
+
+struct Shader {
+	Shader();
+	~Shader();
+
+	Shader_Bytecode vs_bytecode;
+	Shader_Bytecode gs_bytecode;
+	Shader_Bytecode cs_bytecode;
+	Shader_Bytecode hs_bytecode;
+	Shader_Bytecode ds_bytecode;
+	Shader_Bytecode ps_bytecode;
+
 	String file_name;
 	Array<Shader_Type> types;
 
@@ -40,28 +61,30 @@ const u32 VALIDATE_DOMAIN_SHADER = 0x10;
 const u32 VALIDATE_PIXEL_SHADER = 0x20;
 const u32 VALIDATE_RENDERING_SHADER = VALIDATE_VERTEX_SHADER | VALIDATE_PIXEL_SHADER;
 
-bool is_valid(Shader *shader, u32 flags);
 
 struct Shader_Manager {
 	Shader_Manager();
 	~Shader_Manager();
 
 	struct Shader_List {
-		Extend_Shader debug_cascaded_shadows;
-		Extend_Shader depth_map;
-		Extend_Shader draw_vertices;
-		Extend_Shader forward_light;
-		Extend_Shader outlining;
-		Extend_Shader render_2d;
-		Extend_Shader silhouette;
-		Extend_Shader voxelization;
+		Shader debug_cascaded_shadows;
+		Shader depth_map;
+		Shader draw_vertices;
+		Shader forward_light;
+		Shader outlining;
+		Shader render_2d;
+		Shader silhouette;
+		Shader voxelization;
+		Shader draw_box;
+		Shader generate_mips_linear;
+		Shader generate_mips_linear_odd;
+		Shader generate_mips_linear_oddx;
+		Shader generate_mips_linear_oddy;
 	} shaders;
 
-	Gpu_Device *gpu_device = NULL;
-
-	void init(Gpu_Device *gpu_device);
+	void init();
 	void reload(void *arg);
-	void recompile_and_reload_shaders(Array<Extend_Shader *> &shaders);
+	void recompile_and_reload_shaders(Array<Shader *> &shaders);
 	void shutdown();
 };
 #endif

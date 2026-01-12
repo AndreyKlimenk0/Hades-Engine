@@ -71,3 +71,13 @@ bool create_win32_window(HINSTANCE hinstance, Win32_Window *window, s32 window_w
 	}
 	return false;
 }
+
+HANDLE create_event_handle()
+{
+	return CreateEvent(NULL, FALSE, FALSE, NULL);
+}
+
+void close_event_handle(HANDLE handle)
+{
+	CloseHandle(handle);
+}

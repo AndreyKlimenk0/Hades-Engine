@@ -7,10 +7,9 @@
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
 
-#define DISALLOW_COPY_AND_ASSIGN(Type_Name)	\
+#define DISABLE_COPY_AND_ASSIGN(Type_Name)	\
     Type_Name(const Type_Name &other) = delete;       \
 	Type_Name &operator=(const Type_Name &other) = delete  \
-
 
 template <typename T>
 struct Mesh {
@@ -18,12 +17,26 @@ struct Mesh {
 	Array<u32> indices;
 
 	bool empty();
+	u32 vertex_count();
+	u32 index_count();
 };
 
 template<typename T>
 inline bool Mesh<T>::empty()
 {
 	return (vertices.is_empty() || indices.is_empty());
+}
+
+template<typename T>
+inline u32 Mesh<T>::vertex_count()
+{
+	return vertices.count;
+}
+
+template<typename T>
+inline u32 Mesh<T>::index_count()
+{
+	return indices.count;
 }
 
 typedef Mesh<Vertex_PNTUV> Triangle_Mesh;
@@ -40,7 +53,7 @@ struct Loading_Model {
 		Vector3 rotation = Vector3::zero; // stores angles in radians
 		Vector3 translation = Vector3::zero;
 	};
-	
+
 	String name;
 	String file_name;
 	
@@ -52,10 +65,9 @@ struct Loading_Model {
 	Triangle_Mesh mesh;
 	Array<Transformation> instances;
 
-	DISALLOW_COPY_AND_ASSIGN(Loading_Model);
+	DISABLE_COPY_AND_ASSIGN(Loading_Model);
 
 	const char *get_name();
 	String get_pretty_name();
 };
-
 #endif

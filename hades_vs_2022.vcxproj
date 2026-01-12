@@ -109,7 +109,7 @@
     <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\release</OutDir>
-    <IntDir>$(SolutionDir)build\relese</IntDir>
+    <IntDir>$(SolutionDir)build\release</IntDir>
     <TargetName>hades</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VTune profiling|x64'">
@@ -137,11 +137,15 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>assimp-vc143-mtd.lib;d3d11.lib;d3dcompiler.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mtd.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib;d3d12.lib;zlib.lib;freetype.lib;Dbghelp.lib;WinPixEventRuntime.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <MapExports>true</MapExports>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -171,7 +175,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
@@ -181,7 +185,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>assimp-vc143-mt.lib;d3d11.lib;d3dcompiler.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mt.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib;d3d12.lib;zlib.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='VTune profiling|x64'">
@@ -197,7 +201,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>assimp-vc143-mt.lib;d3d11.lib;d3dcompiler.lib;zlib.lib;freetype.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mt.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib;d3d12.lib;zlib.lib;freetype.lib;libittnotify.lib;WinPixEventRuntime.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -221,9 +225,17 @@
     <ClCompile Include="src\libs\structures\dict.cpp" />
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\font.cpp" />
+    <ClCompile Include="src\render\helpers.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
-    <ClCompile Include="src\render\render_api.cpp" />
-    <ClCompile Include="src\render\render_helpers.cpp" />
+    <ClCompile Include="src\render\renderer.cpp" />
+    <ClCompile Include="src\render\render_api\base_structs.cpp" />
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptor_heap.cpp" />
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_device.cpp" />
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_functions.cpp" />
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_resources.cpp" />
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptors.cpp" />
+    <ClCompile Include="src\render\d3d12_render_api\d3d12_device.h" />
+    <ClCompile Include="src\render\render_api\render.cpp" />
     <ClCompile Include="src\render\render_passes.cpp" />
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\render\render_world.cpp" />
@@ -410,6 +422,8 @@
     <ClInclude Include="src\libs\math\matrix.h" />
     <ClInclude Include="src\libs\math\structures.h" />
     <ClInclude Include="src\libs\math\vector.h" />
+    <ClInclude Include="src\libs\memory\base.h" />
+    <ClInclude Include="src\libs\memory\pool_allocator.h" />
     <ClInclude Include="src\libs\mesh_loader.h" />
     <ClInclude Include="src\libs\number_types.h" />
     <ClInclude Include="src\libs\os\event.h" />
@@ -428,11 +442,19 @@
     <ClInclude Include="src\libs\structures\tree.h" />
     <ClInclude Include="src\libs\utils.h" />
     <ClInclude Include="src\render\font.h" />
-    <ClInclude Include="src\render\hlsl.h" />
+    <ClInclude Include="src\render\gpu_data.h" />
+    <ClInclude Include="src\render\helpers.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
-    <ClInclude Include="src\render\render_api.h" />
-    <ClInclude Include="src\render\render_helpers.h" />
+    <ClInclude Include="src\render\renderer.h" />
+    <ClInclude Include="src\render\render_api\base_structs.h" />
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_descriptors.h" />
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_functions.h" />
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_resources.h" />
+    <ClInclude Include="src\render\d3d12_render_api\d3d12_descriptor_heap.h" />
+    <ClInclude Include="src\render\d3d12_render_api\to_d3d12_types.h" />
+    <ClInclude Include="src\render\render_api\render.h" />
+    <ClInclude Include="src\render\render_api\base_types.h" />
     <ClInclude Include="src\render\render_pass.h" />
     <ClInclude Include="src\render\render_passes.h" />
     <ClInclude Include="src\render\render_system.h" />
