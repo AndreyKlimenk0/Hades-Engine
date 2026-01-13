@@ -14,6 +14,9 @@
 #include "../win32/test.h"
 #include "../gui/test_gui.h"
 
+#include "sys.h"
+#include <windows.h>
+#include "../win32/win_helpers.h"
 
 #define DRAW_TEST_GUI 0
 
@@ -51,59 +54,71 @@ static void display_performance(s64 fps, s64 frame_time)
 	//engine->render_sys.render_2d.add_render_primitive_list(&render_list);
 }
 
-void Engine::init_base()
+inline String build_default_level_name()
 {
-	engine = this;
-	init_os_path();
-	init_commands();
-	var_service.load("all.variables");
+	int counter = 0;
+	String index = "";
+	while (true) {
+		String full_path_to_map_file;
+		build_full_path_to_level_file(DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION, full_path_to_map_file);
+		if (file_exists(full_path_to_map_file.c_str())) {
+			char *str_counter = ::to_string(counter++);
+			index = str_counter;
+			free_string(str_counter);
+			continue;
+		}
+		break;
+	}
+	return DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION;
 }
 
-#include <windows.h>
-#include "../win32/win_helpers.h"
+inline void build_default_world(Game_World *game_world, Render_World *render_world)
+{
+	Array<String> command_args;
+	command_args.push("vampire.fbx");
+	run_command("load mesh", command_args);
 
+	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+	render_world->upload_lights();
+
+	Entity_Id editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
+	render_world->set_rendering_view(editor_camera_id);
+}
 
 void Engine::init(Win32_Window *window)
 {
-	bool windowed = true;
-	bool vsync = false;
-	s32 back_buffer_count = 3;
+	engine = this;
 
-	test();
+	init_os_path();
+	init_commands(this);
+
+	var_service.load("all.variables");
+	global_config.init(&var_service);
 
 	font_manager.init();
-
-	Variable_Service *rendering_settings = var_service.find_namespace("rendering");
-	ATTACH(rendering_settings, vsync);
-	ATTACH(rendering_settings, windowed);
-	ATTACH(rendering_settings, back_buffer_count);
 
 	shader_manager.init();
 
 	render_sys.init(window, &var_service);
 
 	gui::init_gui(this);
-	
-	// The editor dependence on render system because it uses the window size for initializing gui.
-	editor.init(this);
-	
+
 	game_world.init();
 	render_world.init(this);
 
-	init_commands();
-	Array<String> temp;
-	//temp.push("vampire.fbx");
-	temp.push("Sponza.gltf");
-	//temp.push("Mutant.fbx");
-	run_command("load mesh", temp);
-
-	Entity_Id entity_id = game_world.make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-	render_world.upload_lights();
+	current_level_name = global_config.level_name;
+	if (!load_level(current_level_name, &game_world, &render_world)) {
+		current_level_name = build_default_level_name();
+		build_default_world(&game_world, &render_world);
+	}
+	editor.init(this);
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
-}
 
-#include "sys.h"
+	init_performance_displaying();
+
+	engine->is_initialized = true;
+}
 
 void Engine::frame()
 {
@@ -146,23 +161,7 @@ void Engine::shutdown()
 {
 	render_sys.flush();
 
-	if (current_level_name.is_empty()) {
-		int counter = 0;
-		String index = "";
-		while (true) {
-			String full_path_to_map_file;
-			build_full_path_to_level_file(DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION, full_path_to_map_file);
-			if (file_exists(full_path_to_map_file.c_str())) {
-				char *str_counter = ::to_string(counter++);
-				index = str_counter;
-				free_string(str_counter);
-				continue;
-			}
-			break;
-		}
-		current_level_name = DEFAULT_LEVEL_NAME + index + LEVEL_EXTENSION;
-	}
-	//save_game_and_render_world_in_level(current_level_name, &game_world, &render_world);
+	save_level(current_level_name, &game_world, &render_world);
 	gui::shutdown();
 	var_service.shutdown();
 }

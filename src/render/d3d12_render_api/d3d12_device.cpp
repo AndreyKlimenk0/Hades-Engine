@@ -1036,8 +1036,8 @@ bool create_d3d12_device(ComPtr<ID3D12Device> &device)
 		}
 		if (SUCCEEDED(D3D12CreateDevice(dxgi_adapter1.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(device.ReleaseAndGetAddressOf())))) {
 			char *device_desc = to_string(dxgi_adapter_desc.Description);
-			print("init_GPU_device: {} created a new D3D12 device.", device_desc);
-			DELETE_PTR(device_desc);
+			print("create_d3d12_device: {} created a new D3D12 device.", device_desc);
+			free_string(device_desc);
 			result = true;
 			break;
 		}
@@ -1072,7 +1072,7 @@ bool create_d3d12_device(ComPtr<ID3D12Device> &device)
 	}
 #endif
 	if (!result) {
-		print("init_GPU_device: Failed to create D3D12 device. There are no adapters support D3D12.");
+		print("create_d3d12_device: Failed to create D3D12 device. There are no adapters support D3D12.");
 	}
 	return result;
 }

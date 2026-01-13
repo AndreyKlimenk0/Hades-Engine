@@ -251,20 +251,21 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	file_handle = CreateFile(path_to_file, file_mode_to_win32(mode), 0, NULL, file_creation_to_win32(file_creation), FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (file_handle == INVALID_HANDLE_VALUE) {
-		DWORD error_id = GetLastError();
-		char *error_message = get_error_message_from_error_code(error_id);
-		u32 len = (u32)strlen(error_message);
-		if (len > 0) {
-			error_message[len - 1] = '\0';
-			print("[Error] File::open: ", error_message);
-			is_file_open = false;
-			free_string(error_message);
-		}
+		//DWORD error_id = GetLastError();
+		//char *error_message = get_error_message_from_error_code(error_id);
+		//u32 len = (u32)strlen(error_message);
+		//if (len > 0) {
+		//	error_message[len - 1] = '\0';
+		//	print("File::open: {}.", error_message);
+		//	is_file_open = false;
+		//	free_string(error_message);
+		//}
+		print("File::Open: Could not open file '{}'.", path_to_file);
 		return false;
 	}
 	LARGE_INTEGER size;
 	if (!GetFileSizeEx(file_handle, &size)) {
-		print("[Error] File::open: Failed to get file size from {}.", file_name);
+		print("File::open: Failed to get file size from {}.", file_name);
 	}
 	file_size = (u32)size.QuadPart;
 	is_file_open = true;

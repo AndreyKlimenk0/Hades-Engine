@@ -18,13 +18,14 @@
 #include "../render/render_world.h"
 #include "../collision/collision.h"
 
+static Engine *engine = NULL;
+static Game_World *game_world = NULL;
+static Render_World *render_world = NULL;
+static Variable_Service *variable_service = NULL;
+
 static void load_meshes(Array<String> &mesh_names)
 {
 	begin_profile_task("Load meshes");
-	Game_World *game_world = Engine::get_game_world();
-	Render_World *render_world = Engine::get_render_world();
-	Variable_Service *variable_service = Engine::get_variable_service();
-	
 	Variable_Service *models_loading = variable_service->find_namespace("models_loading");
 	Loading_Models_Options loading_options;
 	models_loading->attach("scene_logging", &loading_options.scene_logging);
@@ -71,26 +72,48 @@ static void load_meshes(Array<String> &mesh_names)
 	end_profile_task();
 }
 
+void prepare_for_level_loading(Game_World *game_world)
+{
+	game_world->entities.reset();
+	game_world->cameras.reset();
+	game_world->lights.reset();
+	game_world->geometry_entities.reset();
+}
+
+void prepare_for_level_loading(Render_World *render_world)
+{
+	render_world->cascaded_shadows_list.reset();
+	render_world->cascaded_shadows_info_list.reset();
+	render_world->shadow_cascade_ranges.reset();
+	render_world->lights.reset();
+	
+	render_world->render_entity_world_matrices.reset();
+	render_world->cascaded_view_projection_matrices.reset();
+	
+	render_world->game_render_entities.reset();
+
+	Model_Storage *model_storage = &render_world->model_storage;
+
+	model_storage->textures.reset();
+	model_storage->render_models.reset();
+	model_storage->textures_table.clear();
+	model_storage->render_models_table.clear();
+}
+
 static void load_level(Array<String> &command_args)
 {
 	if (!(command_args.is_empty() || command_args.first().is_empty())) {
 		String full_path_to_level_file;
 		build_full_path_to_level_file(command_args.first(), full_path_to_level_file);
 		if (file_exists(full_path_to_level_file)) {
-			Engine *engine = Engine::get_instance();
-			Game_World *game_world = &engine->game_world;
-			Render_World *render_world = &engine->render_world;
-
-			save_game_and_render_world_in_level(engine->current_level_name, game_world, render_world);
+			save_level(engine->current_level_name, game_world, render_world);
 
 			engine->current_level_name = command_args.first();
-			game_world->release_all_resources();
+			
+			prepare_for_level_loading(game_world);
+			prepare_for_level_loading(render_world);
 
-			render_world->release_render_entities_resources();
-			//render_world->triangle_meshes.init(get_current_gpu_device());
-			//render_world->model_storage.init(get_current_gpu_device());
-
-			init_game_and_render_world_from_level(engine->current_level_name, game_world, render_world);
+			load_level(engine->current_level_name, game_world, render_world);
 		} else {
 			print("load_level: Can not load a level. {} does not exist.", command_args.first());
 		}
@@ -102,18 +125,12 @@ static void load_level(Array<String> &command_args)
 static void create_level(Array<String> &command_args)
 {
 	if (!(command_args.is_empty() || command_args.first().is_empty())) {
-		Engine *engine = Engine::get_instance();
-		Game_World *game_world = &engine->game_world;
-		Render_World *render_world = &engine->render_world;
-		
-		save_game_and_render_world_in_level(engine->current_level_name, game_world, render_world);
+		save_level(engine->current_level_name, game_world, render_world);
 		
 		engine->set_current_level_name(command_args.first());
-		game_world->release_all_resources();
 		
-		render_world->release_render_entities_resources();
-		//render_world->triangle_meshes.init(get_current_gpu_device());
-		//render_world->model_storage.init(get_current_gpu_device());
+		prepare_for_level_loading(game_world);
+		prepare_for_level_loading(render_world);
 
 		Entity_Id camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
 		engine->render_world.set_rendering_view(camera_id);
@@ -142,8 +159,13 @@ static void add_command(const char *command_name, void (*procedure)(Array<String
 	commands.push(command);
 }
 
-void init_commands()
+void init_commands(Engine *_engine)
 {
+	engine = _engine;
+	game_world = &engine->game_world;
+	render_world = &engine->render_world;
+	variable_service = &engine->var_service;
+
 	add_command("load mesh", load_meshes);
 	add_command("load level", load_level);
 	add_command("create level", create_level);

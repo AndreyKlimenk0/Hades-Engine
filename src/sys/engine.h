@@ -3,6 +3,7 @@
 
 #include "vars.h"
 #include "file_tracking.h"
+#include "global_config.h"
 #include "../gui/editor.h"
 #include "../game/world.h"
 #include "../win32/win_helpers.h"
@@ -23,9 +24,11 @@ struct Engine {
 	bool is_initialized = false;
 	String current_level_name;
 	
-	Editor editor;
+	Global_Config global_config;
 	Variable_Service var_service;
 	File_Tracking_System file_tracking_sys;
+	
+	Editor editor;
 	Game_World game_world;
 	Render_System render_sys;
 	Render_World render_world;
@@ -48,6 +51,7 @@ struct Engine {
 	static Render_System *get_render_system();
 	static Font_Manager *get_font_manager();
 	static Variable_Service *get_variable_service();
+	static Global_Config *get_global_config();
 };
 
 #endif

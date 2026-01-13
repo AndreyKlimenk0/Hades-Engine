@@ -249,10 +249,6 @@ void Model_Storage::upload_models_in_gpu()
 	Render_Device *render_device = Engine::get_render_system()->render_device;
 	Render_System *render_sys = Engine::get_render_system();
 
-	//render_sys->flush();
-
-	//auto upload_command_list = &render_sys->upload_command_list;
-
 	Array<Vertex_PNTUV> unified_vertex_list;
 	Array<u32> unified_index_list;
 	Array<Mesh_Instance> unified_mesh_instances_list;
@@ -399,7 +395,7 @@ void Render_World::init(Engine *engine)
 	voxel_matrix = XMMatrixOrthographicOffCenterLH(-grid_size.width, grid_size.width, -grid_size.height, grid_size.height, 1.0f, grid_depth + 1.0f);
 
 	if (!rendering_view.is_entity_camera_set()) {
-		error("Render Camera was not initialized. There is no a view for rendering.");
+		//error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 
 	shadow_cascade_ranges.push({ 1, 15 });
@@ -673,17 +669,17 @@ void Render_World::update_shadows()
 		}
 	}
 
-	//if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->size() < (u64)cascaded_view_projection_matrices.get_size())) {
+	if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->size() < (u64)cascaded_view_projection_matrices.get_size())) {
 		DELETE_PTR(casded_view_projection_matrices_buffer);
 		Buffer_Desc buffer_desc;
-		//buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
 		buffer_desc.count = cascaded_view_projection_matrices.count;
 		buffer_desc.stride = cascaded_view_projection_matrices.stride;
 		buffer_desc.data = cascaded_view_projection_matrices.to_void_ptr();
 		buffer_desc.name = "View projection shadow matrices";
 
 		casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
-	//}
+	}
 }
 
 void Render_World::set_rendering_view(Entity_Id camera_id)
