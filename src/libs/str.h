@@ -99,6 +99,8 @@ char *to_string(char c);
 char *to_string(String &string);
 char *to_string(String *string);
 char *to_string(const char *string);
+
+char *to_string(const wchar_t *unicode_string);
 wchar_t *to_wstring(const char *string);
 
 char *to_string(Vector2 *vector);

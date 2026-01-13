@@ -244,6 +244,7 @@
     <ClCompile Include="src\sys\debug.cpp" />
     <ClCompile Include="src\sys\engine.cpp" />
     <ClCompile Include="src\sys\file_tracking.cpp" />
+    <ClCompile Include="src\sys\global_config.cpp" />
     <ClCompile Include="src\sys\level.cpp" />
     <ClCompile Include="src\sys\profiling.cpp" />
     <ClCompile Include="src\sys\vars.cpp" />
@@ -465,6 +466,7 @@
     <ClInclude Include="src\sys\commands.h" />
     <ClInclude Include="src\sys\engine.h" />
     <ClInclude Include="src\sys\file_tracking.h" />
+    <ClInclude Include="src\sys\global_config.h" />
     <ClInclude Include="src\sys\level.h" />
     <ClInclude Include="src\sys\map.h" />
     <ClInclude Include="src\sys\profiling.h" />

@@ -4,9 +4,9 @@ vsync false
 back_buffer_count 2
 
 :/system
-window_width 1900
-window_height 980
-create_entities_for_meshes true
+#window_width 1900
+#window_height 980
+#create_entities_for_meshes true
 
 #load_level "scene_demo.hl"
 
@@ -19,4 +19,4 @@ use_scaling_value true
 
 :/gui
 font_name "FiraCode-Regular"
-font_sise 12
+font_size 12

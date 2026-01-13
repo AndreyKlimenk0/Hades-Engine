@@ -1,8 +1,9 @@
 #include <assert.h>
+#include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
+#include <wchar.h>
 
 #include "str.h"
 #include "math/vector.h"
@@ -299,6 +300,22 @@ char *to_string(char c)
 char *to_string(const char *string)
 {
 	return _strdup(string);
+}
+
+char *to_string(const wchar_t *unicode_string)
+{
+	char *new_string = NULL;
+	u32 unicode_string_len = (u32)wcslen(unicode_string);
+	if (unicode_string_len > 0) {
+		u32 new_string_len = unicode_string_len + 1;
+		new_string = new char[new_string_len];
+
+		size_t new_string_size_in_bytes = 0;
+		errno_t result = wcstombs_s(&new_string_size_in_bytes, new_string, new_string_len, unicode_string, unicode_string_len);
+		assert(result == 0);
+		assert((new_string_size_in_bytes / sizeof(u8)) == new_string_len);
+	}
+	return new_string;
 }
 
 wchar_t *to_wstring(const char *string)
@@ -607,8 +624,7 @@ void String::append(char c)
 
 void String::append(const char *string)
 {
-	assert(string != NULL);
-	if (string[0] == '\0') {
+	if (string_null_or_empty(string)) {
 		return;
 	}
 

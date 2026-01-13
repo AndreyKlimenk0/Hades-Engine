@@ -86,7 +86,7 @@ struct D3D12_Buffer : Buffer {
 	D3D12_Render_Device *render_device = NULL;
 
 	Buffer_Desc buffer_desc;
-	D3D12_Base_Buffer *default_buffer;
+	D3D12_Base_Buffer *default_buffer = NULL;
 	Queue<Pair<u64, D3D12_Base_Buffer *>> upload_buffers;
 	Queue<D3D12_Base_Buffer *> completed_upload_buffer;
 	

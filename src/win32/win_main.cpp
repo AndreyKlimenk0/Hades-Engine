@@ -16,24 +16,15 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE prev_instance, PWSTR cmd_line
 		info("Faield to create win32 console.");
 	}
 
-	Engine engine;
-	engine.init_base();
-	Variable_Service *system = engine.var_service.find_namespace("system");
-
-	s32 window_width = CW_USEDEFAULT;
-	s32 window_height = CW_USEDEFAULT;
-	
-	ATTACH(system, window_width);
-	ATTACH(system, window_height);
-
 	Win32_Window window;
-	if (!create_win32_window(hinstance, &window, window_width, window_height)) {
+	if (!create_win32_window(hinstance, &window, 1900, 980)) {
 		error("Failed to create main win32 window.");
 	}
 
 	ShowWindow(window.handle, cmd_show);
 	set_cursor(CURSOR_TYPE_ARROW);
 
+	Engine engine;
 	engine.init(&window);
 
 	//Test

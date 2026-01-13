@@ -202,20 +202,10 @@ struct Render_World {
 
 	Model_Storage model_storage;
 
-	//Texture2D shadow_atlas;
-	//Texture3D jittering_samples;
-
-	//Gpu_Buffer frame_info_cbuffer;
-
-	//Gpu_RWStruct_Buffer voxels_sb;
-	//Gpu_Struct_Buffer lights_struct_buffer;
-	//Gpu_Struct_Buffer cascaded_shadows_info_sb;
 	Buffer *world_matrices_buffer = NULL;
 	Buffer *casded_view_projection_matrices_buffer = NULL;
 	Buffer *cascaded_shadows_info_buffer = NULL;
 	Buffer *lights_buffer = NULL;
-
-	//Gpu_Struct_Buffer cascaded_view_projection_matrices_sb;
 
 	void init(Engine *engine);
 	void release_all_resources();

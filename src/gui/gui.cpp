@@ -2773,7 +2773,7 @@ void Gui_Manager::init_from_save_file()
 
 	File save_file;
 	if (!save_file.open(path_to_save_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
-		print("Gui_Manager::init_from_save_file: Hades gui file was not found.");
+		print("Gui_Manager: Hades gui file was not found.");
 		return;
 	}
 
@@ -2781,7 +2781,7 @@ void Gui_Manager::init_from_save_file()
 	save_file.read((void *)&window_count, sizeof(u32));
 
 	if (window_count > 0) {
-		print("Gui_Manager::init_from_save_file: Create windows from a save file.");
+		print("Gui_Manager: Create windows from a save file.");
 	}
 
 	for (u32 i = 0; i < window_count; i++) {

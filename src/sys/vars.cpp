@@ -208,10 +208,10 @@ void Variable_Service::attach(const char *variable_name, bool *value)
         if (binding->rvalue.type == BOOLEAN_VALUE) {
             *value = binding->rvalue.boolean;
         } else {
-            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("Variable_Service: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = bool' does not exist.", variable_name, variable_name);
+        print("Variable_Service: A value can not be attached to '{}' because binding '{} = bool' does not exist.", variable_name, variable_name);
     }
 }
 
@@ -225,10 +225,10 @@ void Variable_Service::attach(const char *variable_name, int *value)
         if (binding->rvalue.type == INTEGER_VALUE) {
             *value = binding->rvalue.integer;
         } else {
-            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("Variable_Service: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = integer' does not exist.", variable_name, variable_name);
+        print("Variable_Service: A value can not be attached to '{}' because binding '{} = integer' does not exist.", variable_name, variable_name);
     }
 }
 
@@ -242,10 +242,10 @@ void Variable_Service::attach(const char *variable_name, float *value)
         if (binding->rvalue.type == FLOAT_VALUE) {
             *value = binding->rvalue.real;
         } else {
-            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("Variable_Service: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = float' does not exist.", variable_name, variable_name);
+        print("Variable_Service: A value can not be attached to '{}' because binding '{} = float' does not exist.", variable_name, variable_name);
     }
 }
 
@@ -259,10 +259,10 @@ void Variable_Service::attach(const char *variable_name, String *string)
         if (binding->rvalue.type == STRING_VALUE) {
             *string = binding->rvalue.string;
         } else {
-            print("[variable service] Error: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
+            print("Variable_Service: A value can not be attached to '{}'. A passed variable type doesn't not match with a binding value type.", variable_name);
         }
     } else {
-        print("[variable service] Error: A value can not be attached to '{}' because binding '{} = string' does not exist.", variable_name, variable_name);
+        print("Variable_Service: A value can not be attached to '{}' because binding '{} = string' does not exist.", variable_name, variable_name);
     }
 }
 
@@ -352,17 +352,17 @@ void Variable_Service::load(const char *file_name)
 {
     assert(file_name);
 
-    print("[var service] Info: Loading variables from '{}'.", file_name);
+    print("Variable_Service: Loading variables from '{}'.", file_name);
 
     String file_extension;
     if (!(extract_file_extension(file_name, file_extension) || (file_extension == VARIABLE_FILE_EXTENSION))) {
-        print("[variable service] Error: The variable file name '{}' is wrong. A variable file name must have format 'some_file_name.variables'", file_name);
+        print("Variable_Service: The variable file name '{}' is wrong. A variable file name must have format 'some_file_name.variables'", file_name);
         return;
     }
 
     String full_path_to_variable_file = join_paths(get_full_path_to_data_directory(), file_name);
     if (!file_exists(full_path_to_variable_file)) {
-        print("[variable service] Error: File {} doesn't exist in the data directory.", file_name);
+        print("Variable_Service: File {} doesn't exist in the data directory.", file_name);
         return;
     }
 
