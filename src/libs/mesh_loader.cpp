@@ -146,6 +146,7 @@ void print_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_node_ma
 				print_texture_info(material, aiTextureType_OPACITY,      "Opacity textures",      spaces.c_str());
 				
 				print_texture_info(material, aiTextureType_BASE_COLOR,        "Base color textures",        spaces.c_str());
+				print_texture_info(material, aiTextureType_BASE_COLOR,        "Base color textures",        spaces.c_str());
 				print_texture_info(material, aiTextureType_NORMAL_CAMERA,     "Normal camera textures",     spaces.c_str());
 				print_texture_info(material, aiTextureType_EMISSION_COLOR,    "Emission color textures",    spaces.c_str());
 				print_texture_info(material, aiTextureType_METALNESS,         "Metalness textures",         spaces.c_str());

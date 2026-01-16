@@ -147,6 +147,8 @@ void Engine::frame()
 #else
 	editor.render();
 #endif
+	render_world.prepare_for_rendering();
+
 	render_sys.render();
 
 	clear_event_queue();

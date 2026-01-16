@@ -239,7 +239,7 @@ u32 D3D12_Resource::subresource_count()
 
 u64 D3D12_Resource::size()
 {
-	return total_size;
+	return stride * count;
 }
 
 u64 D3D12_Resource::gpu_address()
@@ -314,6 +314,7 @@ D3D12_Buffer::~D3D12_Buffer()
 		completed_upload_buffer.pop();
 		DELETE_PTR(upload_buffer);
 	}
+	render_device->delete_buffer(this);
 }
 
 void D3D12_Buffer::begin_frame()

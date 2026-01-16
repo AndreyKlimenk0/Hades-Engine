@@ -84,9 +84,9 @@ void prepare_for_level_loading(Render_World *render_world)
 {
 	render_world->cascaded_shadows_list.reset();
 	render_world->cascaded_shadows_info_list.reset();
-	render_world->shadow_cascade_ranges.reset();
+	//render_world->shadow_cascade_ranges.reset();
 	render_world->lights.reset();
-	
+	render_world->shadows_atlas.reset();
 	render_world->render_entity_world_matrices.reset();
 	render_world->cascaded_view_projection_matrices.reset();
 	

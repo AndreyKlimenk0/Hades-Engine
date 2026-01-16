@@ -628,7 +628,7 @@ static bool display_all_commands(String *edit_field, Array<String> &command_args
 	return false;
 }
 
-static const char *MAIN_COMMAND_NAME = "Display all commands";
+static const char *ROOT_COMMAND_NAME = "Display all commands";
 
 Command_Window::Command_Window()
 {
@@ -642,7 +642,7 @@ void Command_Window::init(Engine *engine)
 {
 	Editor_Window::init("Command window", engine);
 
-	displaying_command(MAIN_COMMAND_NAME, display_all_commands);
+	displaying_command(ROOT_COMMAND_NAME, display_all_commands);
 	current_displaying_command = &displaying_commands.last();
 
 	displaying_command("Load mesh", KEY_CTRL, KEY_L, display_and_get_info_for_load_mesh_command);
@@ -734,10 +734,11 @@ void Command_Window::draw()
 	IF_THEN(!window_open, return);
 
 	if (was_click(KEY_ESC)) {
-		if (current_displaying_command->command_name == MAIN_COMMAND_NAME) {
+		if (current_displaying_command->command_name == ROOT_COMMAND_NAME) {
 			close();
 		} else {
 			current_displaying_command = &displaying_commands.first();
+			list_line_states.reset();
 			list_line_states.reserve(displaying_commands.count);
 			select_line(0, list_line_states);
 		}

@@ -241,7 +241,7 @@ void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loadin
 		
 		result.push({ loading_model, mesh_instance_index });
 	}
-	upload_models_in_gpu();
+	upload_models = true;
 }
 
 void Model_Storage::upload_models_in_gpu()
@@ -298,6 +298,9 @@ void Model_Storage::upload_models_in_gpu()
 		buffer_desc.name = "Unified vertex buffer";
 
 		unified_vertex_buffer = render_device->create_buffer(&buffer_desc);
+	} else {
+		unified_vertex_buffer->request_write();
+		unified_vertex_buffer->write(unified_vertex_list.to_void_ptr(), unified_vertex_list.get_size());
 	}
 
 	if (!unified_index_buffer || (unified_index_buffer->size() < (u64)unified_index_list.get_size())) {
@@ -309,6 +312,9 @@ void Model_Storage::upload_models_in_gpu()
 		buffer_desc.name = "Unified index buffer";
 
 		unified_index_buffer = render_device->create_buffer(&buffer_desc);
+	} else {
+		unified_index_buffer->request_write();
+		unified_index_buffer->write(unified_index_list.to_void_ptr(), unified_index_list.get_size());
 	}
 
 	if (!mesh_instance_buffer || (mesh_instance_buffer->size() < (u64)unified_mesh_instances_list.get_size())) {
@@ -320,6 +326,9 @@ void Model_Storage::upload_models_in_gpu()
 		buffer_desc.name = "Unified mesh instances buffer";
 
 		mesh_instance_buffer = render_device->create_buffer(&buffer_desc);
+	} else {
+		mesh_instance_buffer->request_write();
+		mesh_instance_buffer->write(unified_mesh_instances_list.to_void_ptr(), unified_mesh_instances_list.get_size());
 	}
 }
 
@@ -464,16 +473,19 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
-
 	if (!world_matrices_buffer || (world_matrices_buffer->size() < (u64)render_entity_world_matrices.get_size())) {
 		DELETE_PTR(world_matrices_buffer);
 		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
 		buffer_desc.count = render_entity_world_matrices.count;
 		buffer_desc.stride = render_entity_world_matrices.stride;
 		buffer_desc.data = render_entity_world_matrices.to_void_ptr();
 		buffer_desc.name = "World matrices";
 
 		world_matrices_buffer = render_device->create_buffer(&buffer_desc);
+	}
+	if (!render_entity_world_matrices.is_empty()) {
+		world_matrices_buffer->write(render_entity_world_matrices.to_void_ptr(), render_entity_world_matrices.get_size());
 	}
 }
 
@@ -516,7 +528,7 @@ void Render_World::upload_lights()
 				cascaded_shadow_map.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
 				cascaded_shadow_map.init(render_sys->window_view_plane.fov, render_sys->window_view_plane.ratio, &shadow_cascade_ranges[i]);
 
-				if (!get_shadow_atls_viewport(&cascaded_shadow_map.viewport)) {
+				if (!shadows_atlas.get_viewport(&cascaded_shadow_map.viewport)) {
 					shadow_atlas_has_space = false;
 					break;
 				}
@@ -544,14 +556,17 @@ void Render_World::upload_lights()
 		}
 	}
 	if (!lights_buffer || (lights_buffer->size() < (u64)lights.get_size())) {
-		DELETE_PTR(world_matrices_buffer);
+		DELETE_PTR(lights_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.count = lights.count;
 		buffer_desc.stride = lights.stride;
 		buffer_desc.data = lights.to_void_ptr();
 		buffer_desc.name = "Lights";
-		
+
 		lights_buffer = render_device->create_buffer(&buffer_desc);
+	} else {
+		lights_buffer->request_write();
+		lights_buffer->write(lights.to_void_ptr(), lights.get_size());
 	}
 
 	if (!cascaded_shadows_info_buffer || (cascaded_shadows_info_buffer->size() < (u64)cascaded_shadows_info_list.get_size())) {
@@ -563,6 +578,17 @@ void Render_World::upload_lights()
 		buffer_desc.name = "Cascaded shadows info";
 
 		cascaded_shadows_info_buffer = render_device->create_buffer(&buffer_desc);
+	} else {
+		cascaded_shadows_info_buffer->request_write();
+		cascaded_shadows_info_buffer->write(cascaded_shadows_info_list.to_void_ptr(), cascaded_shadows_info_list.get_size());
+	}
+}
+
+void Render_World::prepare_for_rendering()
+{
+	if (model_storage.upload_models) {
+		model_storage.upload_models_in_gpu();
+		model_storage.upload_models = false;
 	}
 }
 
@@ -675,10 +701,12 @@ void Render_World::update_shadows()
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
 		buffer_desc.count = cascaded_view_projection_matrices.count;
 		buffer_desc.stride = cascaded_view_projection_matrices.stride;
-		buffer_desc.data = cascaded_view_projection_matrices.to_void_ptr();
 		buffer_desc.name = "View projection shadow matrices";
 
 		casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
+	}
+	if (cascaded_view_projection_matrices.get_size() > 0) {
+		casded_view_projection_matrices_buffer->write(cascaded_view_projection_matrices.to_void_ptr(), cascaded_view_projection_matrices.get_size());
 	}
 }
 
@@ -691,11 +719,19 @@ void Render_World::set_rendering_view(Entity_Id camera_id)
 	rendering_view.camera_id = camera_id;
 }
 
-bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
+Model_Storage *Render_World::get_model_storage()
 {
-	static u32 x = 0;
-	static u32 y = 0;
+	return &model_storage;
+}
 
+void Shadows_Atlas::reset()
+{
+	x = 0;
+	y = 0;
+}
+
+bool Shadows_Atlas::get_viewport(Viewport *viewport)
+{
 	Point_u32 shadow_map_position;
 	shadow_map_position.x = CASCADE_SIZE + x;
 	shadow_map_position.y = CASCADE_SIZE + y;
@@ -707,20 +743,15 @@ bool Render_World::get_shadow_atls_viewport(Viewport *viewport)
 		viewport->height = CASCADE_SIZE;
 		x += CASCADE_SIZE;
 	} else if ((shadow_map_position.x > SHADOW_ATLAS_SIZE) && (shadow_map_position.y < SHADOW_ATLAS_SIZE)) {
-		viewport->x = 0;
+		x = 0;
+		y += CASCADE_SIZE;
+		viewport->x = x;
 		viewport->y = y;
 		viewport->width = CASCADE_SIZE;
 		viewport->height = CASCADE_SIZE;
-		x = 0;
-		y += CASCADE_SIZE;
 	} else {
 		print("Render_World::get_shadow_atls_view_port: The shadow atlas is out of space.");
 		return false;
 	}
 	return true;
-}
-
-Model_Storage *Render_World::get_model_storage()
-{
-	return &model_storage;
 }

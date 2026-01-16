@@ -73,6 +73,7 @@ struct Model_Storage {
 		Texture *black;
 		Texture *green;
 	};
+	bool upload_models = false;
 	Default_Textures default_textures;
 
 	Array<Texture *> textures;
@@ -165,6 +166,13 @@ inline Size_u32 Voxel_Grid::total_size()
 	return grid_size * ceil_size;
 }
 
+struct Shadows_Atlas {
+	s32 x = 0;
+	s32 y = 0;
+	void reset();
+	bool get_viewport(Viewport *viewport);
+};
+
 struct Render_World {
 	Render_World();
 	~Render_World();
@@ -181,6 +189,8 @@ struct Render_World {
 	Voxel_Grid voxel_grid;
 	Vector3 voxel_grid_center;
 	Texture *jittering_samples = NULL;
+
+	Shadows_Atlas shadows_atlas;
 
 	Matrix4 left_to_right_voxel_view_matrix;
 	Matrix4 top_to_down_voxel_view_matrix;
@@ -218,12 +228,12 @@ struct Render_World {
 
 	void upload_lights();
 
+	void prepare_for_rendering();
+
 	void add_render_entity(Entity_Id entity_id, u32 mesh_idx, void *args = NULL);
 	u32 delete_render_entity(Entity_Id entity_id);
 
 	void set_rendering_view(Entity_Id camera_id);
-
-	bool get_shadow_atls_viewport(Viewport *viewport);
 
 	Vector3 get_light_position(Vector3 light_direction);
 
