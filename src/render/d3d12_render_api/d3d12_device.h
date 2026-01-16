@@ -227,6 +227,7 @@ struct D3D12_Render_Device : Render_Device {
 	//internal
 	void safe_release(D3D12_Resource *resource, u64 resource_frame_number = 0);
 	void safe_release(ComPtr<ID3D12Resource> &resource, u64 resource_frame_number = 0);
+	void delete_buffer(D3D12_Buffer *ptr);
 	
 	D3D12_Command_List *upload_command_list();
 

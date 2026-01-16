@@ -901,6 +901,16 @@ void D3D12_Render_Device::safe_release(ComPtr<ID3D12Resource> &resource, u64 res
 	resource_release_queue.push({ resource_frame_number, resource });
 }
 
+void D3D12_Render_Device::delete_buffer(D3D12_Buffer *ptr)
+{
+	assert(ptr);
+
+	Find_Result<D3D12_Buffer *> result = find_in_array(buffers, ptr, [](D3D12_Buffer *first, D3D12_Buffer *second) { return first == second; });
+	if (result.found) {
+		buffers.remove(result.index);
+	}
+}
+
 D3D12_Command_List *D3D12_Render_Device::upload_command_list()
 {
 	return current_upload_command_list;

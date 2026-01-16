@@ -327,6 +327,9 @@ void Descriptor_Heap_Pool::free(GPU_Descriptor *descriptor)
 	if (descriptor->valid()) {
 		assert(static_cast<u8>(d3d12_descriptor->type) < 4);
 		descriptor_indices[d3d12_descriptor->type]->push(d3d12_descriptor->index_in_heap);
+		d3d12_descriptor->index_in_heap = UINT_MAX;
+		d3d12_descriptor->cpu_handle.ptr = 0;
+		d3d12_descriptor->gpu_handle.ptr = 0;
 	}
 }
 
@@ -343,5 +346,7 @@ void Descriptor_Heap_Pool::free(CPU_Descriptor *descriptor)
 	if (descriptor->valid()) {
 		assert(static_cast<u8>(d3d12_descriptor->type) < 4);
 		descriptor_indices[d3d12_descriptor->type]->push(d3d12_descriptor->index_in_heap);
+		d3d12_descriptor->index_in_heap = UINT_MAX;
+		d3d12_descriptor->cpu_handle.ptr = 0;
 	}
 }
