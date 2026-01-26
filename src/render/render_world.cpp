@@ -231,9 +231,9 @@ void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loadin
 		render_model->name = loading_model->name;
 		render_model->file_name = loading_model->file_name;
 		render_model->normal_texture = find_texture_or_get_default(loading_model->normal_texture_name, loading_model->file_name, default_textures.normal);
-		render_model->diffuse_texture = find_texture_or_get_default(loading_model->diffuse_texture_name, loading_model->file_name, default_textures.diffuse);
-		render_model->specular_texture = find_texture_or_get_default(loading_model->specular_texture_name, loading_model->file_name, default_textures.specular);
-		render_model->displacement_texture = find_texture_or_get_default(loading_model->displacement_texture_name, loading_model->file_name, default_textures.displacement);
+		render_model->albedo_texture = find_texture_or_get_default(loading_model->albedo_texture_name, loading_model->file_name, default_textures.diffuse);
+		render_model->roughness_metalic_texture = find_texture_or_get_default(loading_model->roughness_metalic_texture_name, loading_model->file_name, default_textures.specular);
+
 		move(&render_model->mesh, &loading_model->mesh);
 
 		u32 mesh_instance_index = render_models.push(render_model);
@@ -272,9 +272,8 @@ void Model_Storage::upload_models_in_gpu()
 
 		GPU_Material material;
 		material.normal_idx = render_models[i]->normal_texture->shader_resource_descriptor()->index();
-		material.diffuse_idx = render_models[i]->diffuse_texture->shader_resource_descriptor()->index();
-		material.specular_idx = render_models[i]->specular_texture->shader_resource_descriptor()->index();
-		material.displacement_idx = render_models[i]->displacement_texture->shader_resource_descriptor()->index();
+		material.diffuse_idx = render_models[i]->albedo_texture->shader_resource_descriptor()->index();
+		material.roughness_metalic_idx = render_models[i]->roughness_metalic_texture->shader_resource_descriptor()->index();
 
 		Mesh_Instance mesh_instance;
 		mesh_instance.vertex_count = render_models[i]->mesh.vertex_count();
@@ -395,7 +394,7 @@ void Render_World::init(Engine *engine)
 	u32 y = 20;
 	voxel_grid.ceil_size = { y, y, y };
 
-//	voxels_sb.allocate<Voxel>(voxel_grid.grid_size.find_area());
+	//	voxels_sb.allocate<Voxel>(voxel_grid.grid_size.find_area());
 
 	Size_f32 grid_size = voxel_grid.total_size();
 	float grid_depth = grid_size.depth;
@@ -432,6 +431,37 @@ void Render_World::init(Engine *engine)
 	jittering_samples_texture_desc.data = jittered_samples.to_void_ptr();
 
 	jittering_samples = render_device->create_texture(&jittering_samples_texture_desc);
+
+	//{
+	//	DELETE_PTR(lights_buffer);
+	//	Buffer_Desc buffer_desc;
+	//	buffer_desc.count = 2;
+	//	buffer_desc.stride = lights.stride;
+	//	buffer_desc.data = lights.to_void_ptr();
+	//	buffer_desc.name = "Lights";
+	//	
+	//	lights_buffer = render_device->create_buffer(&buffer_desc);
+	//}
+	//{
+	//	DELETE_PTR(cascaded_shadows_info_buffer);
+	//	Buffer_Desc buffer_desc;
+	//	buffer_desc.count = 4;
+	//	buffer_desc.stride = cascaded_shadows_info_list.stride;
+	//	buffer_desc.data = cascaded_shadows_info_list.to_void_ptr();
+	//	buffer_desc.name = "Cascaded shadows info";
+
+	//	cascaded_shadows_info_buffer = render_device->create_buffer(&buffer_desc);
+	//}
+	//{
+	//	DELETE_PTR(casded_view_projection_matrices_buffer);
+	//	Buffer_Desc buffer_desc;
+	//	buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+	//	buffer_desc.count = 4;
+	//	buffer_desc.stride = cascaded_view_projection_matrices.stride;
+	//	buffer_desc.name = "View projection shadow matrices";
+
+	//	casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
+	//}
 }
 
 void Render_World::release_all_resources()
@@ -558,7 +588,7 @@ void Render_World::upload_lights()
 	if (!lights_buffer || (lights_buffer->size() < (u64)lights.get_size())) {
 		DELETE_PTR(lights_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = lights.count;
+		buffer_desc.count = lights.count ? lights.count : 1;
 		buffer_desc.stride = lights.stride;
 		buffer_desc.data = lights.to_void_ptr();
 		buffer_desc.name = "Lights";

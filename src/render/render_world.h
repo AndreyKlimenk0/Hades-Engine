@@ -37,13 +37,6 @@ struct Render_Entity {
 Matrix4 get_world_matrix(Entity *entity);
 Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
 
-struct GPU_Material {
-	u32 normal_idx;
-	u32 diffuse_idx;
-	u32 specular_idx;
-	u32 displacement_idx;
-};
-
 struct Mesh_Instance {
 	u32 vertex_count = 0;
 	u32 index_count = 0;
@@ -57,9 +50,8 @@ struct Render_Model {
 	String name;
 	String file_name;
 	Texture *normal_texture;
-	Texture *diffuse_texture;
-	Texture *specular_texture;
-	Texture *displacement_texture;
+	Texture *albedo_texture;
+	Texture *roughness_metalic_texture;
 	Triangle_Mesh mesh;
 };
 

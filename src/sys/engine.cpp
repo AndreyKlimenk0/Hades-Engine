@@ -75,10 +75,16 @@ inline String build_default_level_name()
 inline void build_default_world(Game_World *game_world, Render_World *render_world)
 {
 	Array<String> command_args;
-	command_args.push("vampire.fbx");
+	//command_args.push("vampire.fbx");
+	//command_args.push("sphere1.gltf");
+	//command_args.push("sphere2.gltf");
+	//command_args.push("sphere3.gltf");
+	//command_args.push("DamagedHelmet.gltf");
+	command_args.push("Sponza.gltf");
 	run_command("load mesh", command_args);
 
 	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+	//Entity_Id entity_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, 0.5f), Color::White.get_rgb());
 	render_world->upload_lights();
 
 	Entity_Id editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
@@ -106,7 +112,7 @@ void Engine::init(Win32_Window *window)
 	game_world.init();
 	render_world.init(this);
 
-	current_level_name = global_config.level_name;
+	current_level_name = global_config.load_level;
 	if (!load_level(current_level_name, &game_world, &render_world)) {
 		current_level_name = build_default_level_name();
 		build_default_world(&game_world, &render_world);

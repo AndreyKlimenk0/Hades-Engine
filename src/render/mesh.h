@@ -58,9 +58,8 @@ struct Loading_Model {
 	String file_name;
 	
 	String normal_texture_name;
-	String diffuse_texture_name;
-	String specular_texture_name;
-	String displacement_texture_name;
+	String albedo_texture_name;
+	String roughness_metalic_texture_name;
 
 	Triangle_Mesh mesh;
 	Array<Transformation> instances;

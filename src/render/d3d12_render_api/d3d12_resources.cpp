@@ -366,13 +366,13 @@ void D3D12_Buffer::request_write()
 
 void D3D12_Buffer::write(void *data, u64 data_size, u64 alignment)
 {
-	assert(data);
-	assert(data_size > 0);
 	assert(data_size <= size());
 
-	D3D12_Base_Buffer *upload_buffer = current_upload_buffer();
-	void *mapped_memory = upload_buffer->map();
-	memcpy(mapped_memory, data, data_size);
+	if (data && (data_size > 0)) {
+		D3D12_Base_Buffer *upload_buffer = current_upload_buffer();
+		void *mapped_memory = upload_buffer->map();
+		memcpy(mapped_memory, data, data_size);
+	}
 }
 
 u64 D3D12_Buffer::size()
