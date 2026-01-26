@@ -146,11 +146,11 @@ void print_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_node_ma
 				print_texture_info(material, aiTextureType_OPACITY,      "Opacity textures",      spaces.c_str());
 				
 				print_texture_info(material, aiTextureType_BASE_COLOR,        "Base color textures",        spaces.c_str());
-				print_texture_info(material, aiTextureType_BASE_COLOR,        "Base color textures",        spaces.c_str());
 				print_texture_info(material, aiTextureType_NORMAL_CAMERA,     "Normal camera textures",     spaces.c_str());
 				print_texture_info(material, aiTextureType_EMISSION_COLOR,    "Emission color textures",    spaces.c_str());
 				print_texture_info(material, aiTextureType_METALNESS,         "Metalness textures",         spaces.c_str());
 				print_texture_info(material, aiTextureType_DIFFUSE_ROUGHNESS, "Roughness textures",         spaces.c_str());
+				print_texture_info(material, aiTextureType_GLTF_METALLIC_ROUGHNESS, "Metallic roughness textures", spaces.c_str());
 				print_texture_info(material, aiTextureType_AMBIENT_OCCLUSION, "Ambient occlusion textures", spaces.c_str());
 			}
 		}
@@ -237,9 +237,10 @@ inline void process_material(aiMaterial *material, Loading_Model *loading_model)
 	if (!get_texture_file_name(material, aiTextureType_NORMALS, loading_model->normal_texture_name)) {
 		get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->normal_texture_name);
 	}
-	get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->diffuse_texture_name);
-	get_texture_file_name(material, aiTextureType_SPECULAR, loading_model->specular_texture_name);
-	get_texture_file_name(material, aiTextureType_DISPLACEMENT, loading_model->displacement_texture_name);
+	if (!get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->albedo_texture_name)) {
+		get_texture_file_name(material, aiTextureType_BASE_COLOR, loading_model->albedo_texture_name);
+	}
+	get_texture_file_name(material, aiTextureType_GLTF_METALLIC_ROUGHNESS, loading_model->roughness_metalic_texture_name);
 }
 
 inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Hash_Table<String, Loading_Model *> &models_cache)
@@ -307,7 +308,7 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 		Assimp::DefaultLogger::get()->attachStream(new Assimp_Logger(), Assimp::Logger::Debugging | Assimp::Logger::Info | Assimp::Logger::Err | Assimp::Logger::Warn);
 	}
 	Assimp::Importer importer;
-	aiScene *scene = (aiScene *)importer.ReadFile(full_path_to_model_file, aiProcessPreset_TargetRealtime_Fast | aiProcess_ConvertToLeftHanded);
+	aiScene *scene = (aiScene *)importer.ReadFile(full_path_to_model_file, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded);
 
 	bool result = true;
 	if (!scene) {

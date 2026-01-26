@@ -3,9 +3,8 @@
 
 struct Material {
     uint normal_texture_index;
-    uint diffuse_texture_index;
-    uint specular_texture_index;
-    uint displacement_texture_index;
+    uint albedo_texture_index;
+    uint roughness_metalic_texture_index;
 };
 
 struct Mesh_Instance {

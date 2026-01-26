@@ -54,4 +54,9 @@ struct GPU_Cascaded_Shadows_Info {
 	u32 shadow_map_end_index;
 };
 
+struct GPU_Material {
+	u32 normal_idx;
+	u32 diffuse_idx;
+	u32 roughness_metalic_idx;
+};
 #endif

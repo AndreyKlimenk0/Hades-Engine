@@ -20,7 +20,7 @@ struct Global_Config {
 	//s32 window_height;
 	bool create_entities_for_meshes;
 
-	String level_name;
+	String load_level;
 
 	//loading models
 	bool scene_logging;

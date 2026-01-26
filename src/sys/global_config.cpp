@@ -19,7 +19,7 @@ void Global_Config::init(Variable_Service *variable_service)
 	Variable_Service *system = variable_service->find_namespace("system");
 	//ATTACH(system, window_width);
 	//ATTACH(system, window_height);
-	ATTACH(system, level_name);
+	ATTACH(system, load_level);
 
 	Variable_Service *models_loading = variable_service->find_namespace("models_loading");
 	ATTACH(models_loading, scene_logging);

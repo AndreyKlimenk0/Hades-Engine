@@ -7,6 +7,8 @@
 #include "vertex.hlsl"
 #include "globals.hlsl"
 #include "shadows.hlsl"
+#include "BRDF.hlsl"
+#include "color_conversion.hlsl"
 
 struct Pass_Data {
 	uint mesh_idx;
@@ -53,24 +55,35 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
 {    
     Material material = mesh_instances[pass_data.mesh_idx].material;
     Texture2D<float4> normal_texture = textures[material.normal_texture_index];
-    Texture2D<float4> diffuse_texture = textures[material.diffuse_texture_index];
-    Texture2D<float4> specular_texture = textures[material.specular_texture_index];
+    Texture2D<float4> albedo_texture = textures[material.albedo_texture_index];
+    Texture2D<float4> roughness_metalic_texture = textures[material.roughness_metalic_texture_index];
     
     float3 local_normal = normal_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
-    float3 normal = normal_mapping(local_normal, vertex_out.normal, vertex_out.tangent);
-    float3 diffuse = diffuse_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
-    float3 specular = specular_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
-
+    float3 normal = normal_mapping(local_normal, normalize(vertex_out.normal), normalize(vertex_out.tangent));
+    float3 albedo = albedo_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
+    float3 roughness_metalic = roughness_metalic_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
+    
+    float3 V = normalize(frame_info.view_position - vertex_out.world_position);
+    float3 L;
     
     //@Note: hard code
 	if (frame_info.light_count == 0) {
-		return float4(diffuse, 1.0f);
+		return float4(albedo, 1.0f);
 	}
+	float3 color = { 0.0f, 0.0f, 0.0f};
+    for (uint i = 0; i < frame_info.light_count; i++) {
+        Light light = lights[i];
+        switch (light.light_type) {
+    		case DIRECTIONAL_LIGHT_TYPE:
+    		    L = normalize(-light.direction);
+    			break;
+    	}
+        color += cook_torrance_BRDF(normalize(normal), V, L, SRGB_to_linear(albedo), roughness_metalic.y, roughness_metalic.z);
+    }
     uint shadow_cascade_index;
-    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);       
-    float3 light_factor = calculate_light(vertex_out.world_position, frame_info.view_position, normal, diffuse, specular, frame_info.light_count, lights);
-    return float4(light_factor, 1.0f) * float4(shadow_factor.xyz, 1.0f);
-    //return float4(light_factor, 1.0f);
-    //return float4(shadow_factor.xyz, 1.0f);
+    float4 shadow_factor = calculate_shadow_factor(vertex_out.world_position, vertex_out.position.xy, normal, shadow_cascade_index);
+    color *= shadow_factor.xyz;
+    color = linear_to_SRGB(color);
+    return float4(color, 1.0f);
 }
 #endif
