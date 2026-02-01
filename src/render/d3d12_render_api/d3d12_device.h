@@ -151,7 +151,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 };
 
 struct D3D12_Fence : Fence {
-	D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value);
+	D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value, const char *name);
 	virtual ~D3D12_Fence();
 
 	HANDLE handle;
@@ -207,7 +207,7 @@ struct D3D12_Render_Device : Render_Device {
 	Buffer *create_buffer(Buffer_Desc *buffer_desc);
 	Texture *create_texture(Texture_Desc *texture_desc);
 	
-	Fence *create_fence(u64 initial_expected_value);
+	Fence *create_fence(u64 initial_expected_value, const char *name = NULL);
 	Sampler *create_sampler(Sampler_Filter filter, Address_Mode uvw);
 	//GPU_Heap *create_gpu_heap(u64 size, GPU_Heap_Type heap_type, GPU_Heap_Content conten);
 	

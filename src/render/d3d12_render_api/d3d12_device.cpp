@@ -337,6 +337,13 @@ ID3D12PipelineState *D3D12_Pipeline_State::get()
 	return d3d12_pipeline.Get();
 }
 
+template <typename... Args>
+inline void set_name(D3D12_Command_List *command_list, Args... args)
+{
+	set_name(command_list->command_allocator.Get(), "[Command Allocator]", args...);
+	set_name(command_list->command_list.Get(), "[Command List]", args...);
+}
+
 D3D12_Command_List::D3D12_Command_List(Command_List_Type command_list_type, D3D12_Render_Device *_render_device)
 {
 	type = command_list_type;
@@ -652,11 +659,14 @@ void D3D12_Command_List::draw_indexed(u32 index_count, u32 index_offset, u32 ver
 	command_list->DrawIndexedInstanced(index_count, 1, index_offset, vertex_offset, 0);
 }
 
-D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value)
+D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value, const char *name)
 {
 	handle = create_event_handle();
 	expected_value = initial_expected_value;
 	HR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(d3d12_fence.ReleaseAndGetAddressOf())));
+	if (name) {
+		set_name(d3d12_fence.Get(), name);
+	}
 }
 
 D3D12_Fence::~D3D12_Fence()
@@ -749,10 +759,11 @@ D3D12_Render_Device::D3D12_Render_Device(u64 initial_expected_value, ComPtr<ID3D
 	device = _device;
 
 	current_upload_command_list = new D3D12_Command_List(COMMAND_LIST_TYPE_COPY, this);
+	set_name(current_upload_command_list, "name: Rende device uploading list, frame: {}", frame_number);
 	current_upload_command_list->reset();
 	flight_command_lists.push({frame_number, current_upload_command_list });
 
-	copy_fence = static_cast<D3D12_Fence *>(create_fence(initial_expected_value));
+	copy_fence = static_cast<D3D12_Fence *>(create_fence(initial_expected_value, "Uploading fence"));
 	copy_queue = static_cast<D3D12_Command_Queue *>(create_command_queue(COMMAND_LIST_TYPE_COPY, "Render device copy queue"));
 
 	descriptor_pool = new Descriptor_Heap_Pool();
@@ -802,6 +813,7 @@ void D3D12_Render_Device::finish_frame(u64 completed_frame)
 		current_upload_command_list->reset();
 		completed_command_lists.pop();
 	}
+	set_name(current_upload_command_list, "name: Render device uploading list, frame: {}", frame_number);
 
 	For(buffers, buffer) {
 		buffer->begin_frame();
@@ -821,9 +833,9 @@ Texture *D3D12_Render_Device::create_texture(Texture_Desc *texture_desc)
 	return new D3D12_Texture(this, texture_desc);
 }
 
-Fence *D3D12_Render_Device::create_fence(u64 initial_expected_value)
+Fence *D3D12_Render_Device::create_fence(u64 initial_expected_value, const char *name)
 {
-	return new D3D12_Fence(device, initial_expected_value);
+	return new D3D12_Fence(device, initial_expected_value, name);
 }
 
 Sampler *D3D12_Render_Device::create_sampler(Sampler_Filter filter, Address_Mode uvw)

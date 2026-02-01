@@ -283,16 +283,16 @@ void Entity_Window::init(Engine *engine)
 void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbit_radius, const Point_s32 &position, Light *light, Render_Primitive_List *render_list)
 {
 	Vector2 mouse_position = Vector2((float)Mouse_State::x, (float)Mouse_State::y);
-
-	//render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
-	//render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
+	
+	render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
+	render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
 
 	Vector2 sun_position = normalize(Vector2(light->direction.x, light->direction.z));
 	sun_position *= (float)orbit_radius;
 	sun_position.y *= -1.0f;
 	sun_position += position.to_vector2();
 
-	//render_list->add_circle((s32)sun_position.x, (s32)sun_position.y, sun_radius, Color(121, 121, 121));
+	render_list->add_circle((s32)sun_position.x, (s32)sun_position.y, sun_radius, Color(121, 121, 121));
 
 	static bool update_light_direction = false;
 	if (was_key_just_pressed(KEY_LMOUSE) && detect_intersection((float)sun_radius, sun_position, mouse_position)) {
@@ -308,7 +308,12 @@ void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbi
 		//game_world->update_light_direction(light, Vector3(vec2.x, light->direction.y, vec2.y));
 		light->direction.x = new_light_direction.x;
 		light->direction.z = new_light_direction.y;
-		render_world->upload_lights();
+
+		static u64 x = 0;
+		if ((x % 3) == 0) {
+			render_world->upload_lights();
+		}
+		x++;
 	}
 }
 

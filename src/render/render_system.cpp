@@ -91,7 +91,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 		error("Failed to create render device.");
 	}
 
-	frame_fence = render_device->create_fence(back_buffer_count);
+	frame_fence = render_device->create_fence(back_buffer_count, "Frame fence");
 
 	compute_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_COMPUTE, "Compute Queue");
 	graphics_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_DIRECT, "Graphics Queue");

@@ -143,16 +143,15 @@ void Engine::frame()
 
 	editor.handle_events();
 	editor.update();
-	
-	file_tracking_sys.update();
-	
-	render_world.update();
-
 #if DRAW_TEST_GUI
 	draw_test_gui();
 #else
 	editor.render();
 #endif
+	
+	file_tracking_sys.update();
+	
+	render_world.update();
 	render_world.prepare_for_rendering();
 
 	render_sys.render();

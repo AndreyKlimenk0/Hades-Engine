@@ -32,23 +32,11 @@ Resource_Desc::Resource_Desc(Buffer_Desc *_buffer_desc)
 	
 	ZeroMemory(&buffer_desc, sizeof(Buffer_Desc));
 	buffer_desc = *_buffer_desc;
-
-	if (buffer_desc.usage == RESOURCE_USAGE_DEFAULT) {
-		resource_state = RESOURCE_STATE_COMMON;
-	} else if (buffer_desc.usage == RESOURCE_USAGE_UPLOAD) {
-		resource_state = RESOURCE_STATE_COMMON;
-	}
 }
 
 Resource_Desc::Resource_Desc(Buffer_Desc *_buffer_desc, Resource_Usage usage) : Resource_Desc(_buffer_desc)
 {
 	buffer_desc.usage = usage;
-
-	if (buffer_desc.usage == RESOURCE_USAGE_DEFAULT) {
-		resource_state = RESOURCE_STATE_COMMON;
-	} else if (buffer_desc.usage == RESOURCE_USAGE_UPLOAD) {
-		resource_state = RESOURCE_STATE_COMMON;
-	}
 }
 
 Resource_Desc::Resource_Desc(Texture_Desc *_texture_desc)
@@ -57,8 +45,6 @@ Resource_Desc::Resource_Desc(Texture_Desc *_texture_desc)
 	
 	ZeroMemory(&texture_desc, sizeof(Texture_Desc));
 	texture_desc = *_texture_desc;
-	
-	resource_state = texture_desc.resource_state;
 }
 
 Resource_Desc::~Resource_Desc()
@@ -124,9 +110,21 @@ D3D12_RESOURCE_DESC Resource_Desc::d3d12_resource_desc()
 	return resource_desc;
 }
 
+Resource_State Resource_Desc::resource_state()
+{
+	switch (type) {
+		case RESOURCE_TYPE_BUFFER:
+			return buffer_desc.resource_state;
+		case RESOURCE_TYPE_TEXTURE:
+			return texture_desc.resource_state;
+	}
+	assert(false);
+	return RESOURCE_STATE_COMMON;
+}
+
 D3D12_RESOURCE_STATES Resource_Desc::d312_resource_state()
 {
-	return to_d3d12_resource_state(resource_state);
+	return to_d3d12_resource_state(resource_state());
 }
 
 D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *resource_desc)
@@ -156,7 +154,10 @@ D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *reso
 	ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
 	heap_properties.Type = to_d3d12_heap_type(resource_desc->resource_usage());
 
-	HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &d3d12_resource_desc, resource_desc->d312_resource_state(), d3d12_clear_value_ptr, IID_PPV_ARGS(d3d12_resource.ReleaseAndGetAddressOf())));
+	bool result = (resource_desc->resource_usage() == RESOURCE_USAGE_UPLOAD) && (resource_desc->resource_state() == RESOURCE_STATE_COMMON);
+	D3D12_RESOURCE_STATES d3d12_resource_state = result ? D3D12_RESOURCE_STATE_GENERIC_READ :  resource_desc->d312_resource_state();
+
+	HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &d3d12_resource_desc, d3d12_resource_state, d3d12_clear_value_ptr, IID_PPV_ARGS(d3d12_resource.ReleaseAndGetAddressOf())));
 }
 
 D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resource> &existing_resource)
@@ -193,6 +194,7 @@ void D3D12_Resource::unmap()
 {
 	if (mapped_memory != NULL) {
 		d3d12_resource->Unmap(0, NULL);
+		mapped_memory = NULL;
 	}
 }
 
@@ -338,6 +340,7 @@ void D3D12_Buffer::finish_frame(u64 frame_number)
 	if (buffer_desc.usage == RESOURCE_USAGE_DEFAULT) {
 		while (!upload_buffers.empty() && (upload_buffers.front().first <= frame_number)) {
 			D3D12_Base_Buffer *upload_buffer = upload_buffers.front().second;
+			set_name(upload_buffer->get(), "[Upload Buffer] name: {}, frame_number: {} completed", buffer_desc.name, frame_number);
 			upload_buffers.pop();
 			DELETE_PTR(upload_buffer);
 		}
@@ -366,13 +369,13 @@ void D3D12_Buffer::request_write()
 
 void D3D12_Buffer::write(void *data, u64 data_size, u64 alignment)
 {
+	assert(data_size > 0);
 	assert(data_size <= size());
-
-	if (data && (data_size > 0)) {
+	//if (data && (data_size > 0)) {
 		D3D12_Base_Buffer *upload_buffer = current_upload_buffer();
 		void *mapped_memory = upload_buffer->map();
 		memcpy(mapped_memory, data, data_size);
-	}
+	//}
 }
 
 u64 D3D12_Buffer::size()
