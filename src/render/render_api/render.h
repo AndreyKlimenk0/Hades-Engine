@@ -237,7 +237,7 @@ struct Render_Device {
 
 	virtual void finish_frame(u64 completed_frame) = 0;
 	
-	virtual Fence *create_fence(u64 initial_expected_value = 0) = 0;
+	virtual Fence *create_fence(u64 initial_expected_value = 0, const char *name = NULL) = 0;
 
 	virtual Buffer *create_buffer(Buffer_Desc *buffer_desc) = 0;
 	virtual Texture *create_texture(Texture_Desc *texture_desc) = 0;

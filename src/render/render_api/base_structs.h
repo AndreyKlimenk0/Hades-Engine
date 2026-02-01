@@ -32,6 +32,7 @@ struct Clear_Value {
 
 struct Buffer_Desc {
 	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
+	Resource_State resource_state = RESOURCE_STATE_COMMON;
 	u32 stride = 0;
 	u32 count = 1;
 	void *data = NULL;

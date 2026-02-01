@@ -29,7 +29,6 @@ struct Resource_Desc {
 	~Resource_Desc();
 
 	Resource_Type type;
-	Resource_State resource_state;
 
 	union {
 		Buffer_Desc buffer_desc;
@@ -39,6 +38,7 @@ struct Resource_Desc {
 	String &resource_name();
 	Resource_Usage resource_usage();
 	D3D12_RESOURCE_DESC d3d12_resource_desc();
+	Resource_State resource_state();
 	D3D12_RESOURCE_STATES d312_resource_state();
 };
 

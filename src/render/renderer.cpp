@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "../sys/engine.h"
 #include "helpers.h"
+#include "../libs/utils.h"
 
 #define TRUN_ON_RECT_CLIPPING 1
 
@@ -369,6 +370,80 @@ void Render_Primitive_List::add_line(const Point_s32 &first_point, const Point_s
 	primitive->add_point(Vector2(0.0f, thickness));
 
 	primitive->make_triangle_polygon();
+	render_2d->add_primitive(primitive);
+}
+
+// Flips degrees from the first quadrant to the fourth quadrant 
+// and from the second quadrant to the third quadrant.
+static u32 flip_degrees(u32 value)
+{
+	assert(in_range(0, 360, (s32)value));
+
+	if (in_range(0, 90, (s32)value)) {
+		return 270 + (90 - value);
+	}
+	if (in_range(90, 180, (s32)value)) {
+		return 180 + (180 - value);
+	}
+	if (in_range(180, 270, (s32)value)) {
+		return 90 + (270 - value);
+	}
+	if (in_range(270, 360, (s32)value)) {
+		return (360 - value);
+	}
+	return value;
+}
+
+void Render_Primitive_List::add_circle(int x, int y, u32 radius, const Color &color, const Circle_Range &circle_range)
+{
+	assert(((circle_range.start <= 360) && (circle_range.end <= 360)));
+	assert(circle_range.start < circle_range.end);
+
+	Circle_Range range = { flip_degrees(circle_range.end), flip_degrees(circle_range.start) };
+
+	String hash = "filled_circle" + String(x) + String(y);
+	Vector2 position = { (float)x, (float)y };
+	Matrix4 transform_matrix = make_translation_matrix(&position);
+
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, render_2d->default_texture, color, hash);
+	if (!primitive) {
+		return;
+	}
+	primitive->add_point(Vector2::zero);
+	for (u32 i = range.start; i < range.end; i++) {
+		float angle = degrees_to_radians((float)i);
+		Vector2 point = Vector2(math::cos(angle), math::sin(angle)) * radius;
+		primitive->add_point(point);
+	}
+	primitive->make_triangle_polygon();
+	render_2d->add_primitive(primitive);
+}
+
+void Render_Primitive_List::add_outline_circle(int x, int y, u32 radius, float thickness, const Color &color)
+{
+	String hash = "filled_outline_circle" + String(x) + String(y);
+	Vector2 position = { (float)x, (float)y };
+	Matrix4 transform_matrix = make_translation_matrix(&position);
+
+	Primitive_2D *primitive = make_or_find_primitive(transform_matrix, render_2d->default_texture, color, hash);
+	if (!primitive) {
+		return;
+	}
+
+	for (u32 i = 0; i < 360; i++) {
+		float angle = degrees_to_radians((float)i);
+		Vector2 outer_point = Vector2(math::cos(angle), math::sin(angle)) * radius;
+		primitive->add_point(outer_point);
+	}
+	for (u32 i = 0; i < 360; i++) {
+		float angle = degrees_to_radians((float)i);
+		Vector2 inner_point = Vector2(math::cos(angle), math::sin(angle)) * radius;
+		inner_point.x -= math::cos(angle) * thickness;
+		inner_point.y -= math::sin(angle) * thickness;
+
+		primitive->add_point(inner_point);
+	}
+	primitive->make_outline_triangle_polygons();
 	render_2d->add_primitive(primitive);
 }
 

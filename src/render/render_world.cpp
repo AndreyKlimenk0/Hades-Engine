@@ -492,6 +492,7 @@ void Render_World::update()
 {
 	rendering_view.update(game_world);
 	update_render_entities();
+	//upload_lights();
 	update_shadows();
 	//update_global_illumination();
 }
@@ -514,9 +515,7 @@ void Render_World::update_render_entities()
 
 		world_matrices_buffer = render_device->create_buffer(&buffer_desc);
 	}
-	if (!render_entity_world_matrices.is_empty()) {
-		world_matrices_buffer->write(render_entity_world_matrices.to_void_ptr(), render_entity_world_matrices.get_size());
-	}
+	world_matrices_buffer->write(render_entity_world_matrices.to_void_ptr(), render_entity_world_matrices.get_size());
 }
 
 void Render_World::update_global_illumination()
@@ -545,6 +544,8 @@ void Render_World::upload_lights()
 	lights.reset();
 	cascaded_shadows_list.reset();
 	cascaded_shadows_info_list.reset();
+	shadows_atlas.reset();
+	cascaded_view_projection_matrices.reset();
 
 	Light *light = NULL;
 	For(game_world->lights, light) {
@@ -735,9 +736,7 @@ void Render_World::update_shadows()
 
 		casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
 	}
-	if (cascaded_view_projection_matrices.get_size() > 0) {
-		casded_view_projection_matrices_buffer->write(cascaded_view_projection_matrices.to_void_ptr(), cascaded_view_projection_matrices.get_size());
-	}
+	casded_view_projection_matrices_buffer->write(cascaded_view_projection_matrices.to_void_ptr(), cascaded_view_projection_matrices.get_size());
 }
 
 void Render_World::set_rendering_view(Entity_Id camera_id)
