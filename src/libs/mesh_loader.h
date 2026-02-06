@@ -43,7 +43,5 @@ struct Scene_Loader {
 	//bool load_scene(const char *full_path_to_model_file);
 };
 
-bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Loading_Models_Info *loading_models_info = NULL, Loading_Models_Options *options = NULL);
-
+bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Array<String> &textures, Loading_Models_Info *loading_models_info = NULL, Loading_Models_Options *options = NULL);
 #endif
-

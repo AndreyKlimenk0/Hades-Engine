@@ -4,6 +4,7 @@
 
 #include "helpers.h"
 #include "render_world.h"
+#include "d3d12_render_api/d3d12_functions.h" // call dxgi_format_size
 
 #include "../sys/sys.h"
 #include "../sys/engine.h"
@@ -203,6 +204,99 @@ void move(Triangle_Mesh *dest, Triangle_Mesh *source)
 	}
 }
 
+void resolve_texture_file_path(const char *texture_file_name, const char *textures_subdirectory, String &full_path_to_texture)
+{
+	if (texture_file_name && textures_subdirectory) {
+		build_full_path_to_texture_file(texture_file_name, textures_subdirectory, full_path_to_texture);
+	} else if (texture_file_name) {
+		build_full_path_to_texture_file(texture_file_name, full_path_to_texture);
+	}
+}
+
+void Model_Storage::pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory)
+{
+	Render_System *render_system = Engine::get_render_system();
+	Render_Device *render_device = Engine::get_render_system()->render_device;
+
+	Fence *copy_fence = render_device->create_fence(1, "Textures copy fence");
+	
+	Copy_Command_List *copy_command_list = (Copy_Command_List *)render_system->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_COPY);
+
+	u32 textures_number = textures_names.count;
+	u32 textures_uploading_chunk = 100;
+	u32 uploaded_textures_number = 0;
+
+	assert(textures_uploading_chunk > 0);
+
+	Array<Buffer *> staging_buffers;
+	staging_buffers.reserve(math::min(textures_number, textures_uploading_chunk));
+	zero_memory(&staging_buffers);
+
+	while (uploaded_textures_number < textures_number) {
+		copy_command_list->reset();
+		u32 textures_uploading_number = math::min(textures_number - uploaded_textures_number, textures_uploading_chunk);
+		for (u32 j = 0; j < textures_uploading_number; j++) {
+			u32 texture_name_index = uploaded_textures_number + j;
+			String &texture_name = textures_names[texture_name_index];
+			String_Id string_id = fast_hash(texture_name);
+			if (textures_table.key_in_table(string_id)) {
+				continue;
+			}
+
+			String full_path_to_texture;
+			resolve_texture_file_path(texture_name, textures_subdirectory, full_path_to_texture);
+
+			Image image;
+			if (load_image_from_file(full_path_to_texture, DXGI_FORMAT_R8G8B8A8_UNORM, &image)) {
+				Texture_Desc texture_desc;
+				extract_file_name(full_path_to_texture, texture_desc.name);
+				texture_desc.dimension = TEXTURE_DIMENSION_2D;
+				texture_desc.width = image.width;
+				texture_desc.height = image.height;
+				texture_desc.format = image.format;
+				texture_desc.miplevels = find_max_mip_level(image.width, image.height);
+				texture_desc.resource_state = RESOURCE_STATE_COMMON;
+				texture_desc.name = texture_name;
+
+				Texture *new_texture = render_device->create_texture(&texture_desc);
+				textures_table.set(string_id, new_texture);
+
+				Buffer *staging_buffer = staging_buffers[j];
+				if (!staging_buffer || staging_buffer->size() < new_texture->size()) {
+					DELETE_PTR(staging_buffer);
+					Buffer_Desc buffer_desc;
+					buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+					buffer_desc.stride = new_texture->size();
+					buffer_desc.name = "Image data";
+					staging_buffer = render_device->create_buffer(&buffer_desc);
+					staging_buffers[j] = staging_buffer;
+				}
+				u8 *mapped_memory = static_cast<u8 *>(staging_buffer->write_only_ptr());
+
+				u32 row_pitch = texture_desc.width * dxgi_format_size(texture_desc.format);
+				u32 aligned_row_pitch = align_address<u32>(row_pitch, get_texture_pitch_alignment());
+
+				for (u32 y = 0; y < texture_desc.height; y++) {
+					u8 *buffer_row = mapped_memory + y * aligned_row_pitch;
+					u8 *bitmap_row = image.data + y * row_pitch;
+					memcpy((void *)buffer_row, (void *)bitmap_row, row_pitch);
+				}
+				Subresource_Footprint footprint = new_texture->subresource_footprint(0);
+				copy_command_list->copy_buffer_to_texture(new_texture, staging_buffer, &footprint);
+			}
+		}
+		uploaded_textures_number += textures_uploading_chunk;
+
+		copy_command_list->close();
+		render_system->copy_queue->execute_command_list(copy_command_list);
+		render_system->copy_queue->signal(copy_fence);
+		copy_fence->wait_for_gpu();
+		copy_fence->increment_expected_value();
+	}
+	DELETE_PTR(copy_fence);
+	free_memory(&staging_buffers);
+}
+
 void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, u32>> &result)
 {
 	result.resize(models.count);
@@ -339,20 +433,6 @@ Texture *Model_Storage::find_texture_or_get_default(String &texture_file_name, S
 
 		if (textures_table.get(texture_string_id, texture)) {
 			return texture;
-		}
-		Array<String> paths;
-		paths.reserve(2);
-
-		String base_file_name;
-		extract_base_file_name(mesh_file_name, base_file_name);
-		build_full_path_to_texture_file(texture_file_name, base_file_name, paths[0]);
-		build_full_path_to_texture_file(texture_file_name, paths[1]);
-
-		for (u32 i = 0; i < paths.count; i++) {
-			Texture *texture = create_texture_from_file(paths[i]);
-			if (texture) {
-				return texture;
-			}
 		}
 	}
 	return default_texture;

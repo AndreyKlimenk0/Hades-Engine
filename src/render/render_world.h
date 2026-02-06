@@ -80,6 +80,7 @@ struct Model_Storage {
 	void init();
 	void release_all_resources();
 
+	void pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory = NULL);
 	void add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, u32>> &result);
 	void upload_models_in_gpu();
 

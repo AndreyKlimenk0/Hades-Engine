@@ -378,6 +378,12 @@ void D3D12_Buffer::write(void *data, u64 data_size, u64 alignment)
 	//}
 }
 
+void *D3D12_Buffer::write_only_ptr()
+{
+	D3D12_Base_Buffer *upload_buffer = current_upload_buffer();
+	return upload_buffer->map();
+}
+
 u64 D3D12_Buffer::size()
 {
 	D3D12_Base_Buffer *temp = current_buffer();
@@ -525,6 +531,11 @@ D3D12_Texture::~D3D12_Texture()
 ID3D12Resource *D3D12_Texture::get()
 {
 	return resource->get();
+}
+
+u64 D3D12_Texture::size()
+{
+	return resource->size();
 }
 
 u32 D3D12_Texture::subresource_count()

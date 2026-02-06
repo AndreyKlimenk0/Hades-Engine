@@ -40,11 +40,15 @@ static void load_meshes(Array<String> &mesh_names)
 		build_full_path_to_model_file(mesh_names[i], full_path_to_mesh);
 
 		Loading_Models_Info info;
+		Array<String> textures;
 		Array<Loading_Model *> loaded_models;
-		if (load_models_from_file(full_path_to_mesh, loaded_models, &info, &loading_options)) {
+		if (load_models_from_file(full_path_to_mesh, loaded_models, textures, &info, &loading_options)) {
 			Model_Storage *model_storage = render_world->get_model_storage();
 			
 			Array<Pair<Loading_Model *, u32>> result;
+			String base_file_name;
+			extract_base_file_name(mesh_names[i], base_file_name);
+			model_storage->pre_load_textures(textures, base_file_name);
 			model_storage->add_models(loaded_models, result);
 
 			begin_profile_task("Make entities for models");

@@ -1,5 +1,11 @@
+#include <d3d12.h>
 #include "render.h"
 #include "../d3d12_render_api/d3d12_device.h"
+
+u32 get_texture_pitch_alignment()
+{
+	return D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+}
 
 Render_Device *create_render_device(u64 initial_expected_value)
 {

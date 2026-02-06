@@ -81,6 +81,7 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("sphere3.gltf");
 	//command_args.push("DamagedHelmet.gltf");
 	command_args.push("Sponza.gltf");
+	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
 
 	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());

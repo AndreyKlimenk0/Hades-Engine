@@ -226,7 +226,7 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)
 	loading_info.total_index_count += mesh->indices.count;
 }
 
-inline void process_material(aiMaterial *material, Loading_Model *loading_model)
+inline void process_material(aiMaterial *material, Loading_Model *loading_model, Array<String> &textures)
 {
 	float shininess = 0.0f;
 	float shininess_strength = 1.0f;
@@ -234,16 +234,18 @@ inline void process_material(aiMaterial *material, Loading_Model *loading_model)
 	material->Get(AI_MATKEY_SHININESS, shininess);
 	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
 
-	if (!get_texture_file_name(material, aiTextureType_NORMALS, loading_model->normal_texture_name)) {
-		get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->normal_texture_name);
+	if (get_texture_file_name(material, aiTextureType_NORMALS, loading_model->normal_texture_name) || get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->normal_texture_name)) {
+		textures.push(loading_model->normal_texture_name);
 	}
-	if (!get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->albedo_texture_name)) {
-		get_texture_file_name(material, aiTextureType_BASE_COLOR, loading_model->albedo_texture_name);
+	if (get_texture_file_name(material, aiTextureType_DIFFUSE, loading_model->albedo_texture_name) || get_texture_file_name(material, aiTextureType_BASE_COLOR, loading_model->albedo_texture_name)) {
+		textures.push(loading_model->albedo_texture_name);
 	}
-	get_texture_file_name(material, aiTextureType_GLTF_METALLIC_ROUGHNESS, loading_model->roughness_metalic_texture_name);
+	if (get_texture_file_name(material, aiTextureType_GLTF_METALLIC_ROUGHNESS, loading_model->roughness_metalic_texture_name)) {
+		textures.push(loading_model->roughness_metalic_texture_name);
+	}
 }
 
-inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Hash_Table<String, Loading_Model *> &models_cache)
+inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Array<String> &textures, Hash_Table<String, Loading_Model *> &models_cache)
 {
 	aiMatrix4x4 transform_matrix = node->mTransformation * parent_matrix;
 
@@ -268,23 +270,23 @@ inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &paren
 			
 			if (scene->HasMaterials()) {
 				aiMaterial *material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-				process_material(scene->mMaterials[assimp_mesh->mMaterialIndex], loading_model);
+				process_material(scene->mMaterials[assimp_mesh->mMaterialIndex], loading_model, textures);
 			}
 			
 			models_cache.set(mesh_name, loading_model);
 			models.push(loading_model);
-		}		
+		}
 		Loading_Model::Transformation transformation;
 		decompose_matrix(transform_matrix, transformation.scaling, transformation.rotation, transformation.translation);
-		loading_model->instances.push(transformation);	
+		loading_model->instances.push(transformation);
 	}
-	
+
 	for (u32 i = 0; i < node->mNumChildren; i++) {
-		process_nodes(scene, node->mChildren[i], transform_matrix, models, models_cache);
+		process_nodes(scene, node->mChildren[i], transform_matrix, models, textures, models_cache);
 	}
 }
 
-bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Loading_Models_Info *loading_models_info, Loading_Models_Options *options)
+bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Model *> &models, Array<String> &textures, Loading_Models_Info *loading_models_info, Loading_Models_Options *options)
 {
 	s64 start = milliseconds_counter();
 	begin_load_models();
@@ -308,7 +310,7 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 		Assimp::DefaultLogger::get()->attachStream(new Assimp_Logger(), Assimp::Logger::Debugging | Assimp::Logger::Info | Assimp::Logger::Err | Assimp::Logger::Warn);
 	}
 	Assimp::Importer importer;
-	aiScene *scene = (aiScene *)importer.ReadFile(full_path_to_model_file, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded);
+	aiScene *scene = (aiScene *)importer.ReadFile(full_path_to_model_file, aiProcessPreset_TargetRealtime_Fast | aiProcess_ConvertToLeftHanded);
 
 	bool result = true;
 	if (!scene) {
@@ -329,8 +331,8 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 		current_file_name = file_name;
 		models.resize(scene->mNumMeshes);
 
-		Hash_Table<String, Loading_Model *> model_cache;
-		process_nodes(scene, scene->mRootNode, aiMatrix4x4(), models, model_cache);
+		Hash_Table<String, Loading_Model *> models_cache;
+		process_nodes(scene, scene->mRootNode, aiMatrix4x4(), models, textures, models_cache);
 
 		print("load_models: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
 	}
