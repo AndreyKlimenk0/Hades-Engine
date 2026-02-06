@@ -9,6 +9,8 @@
 #include "../../libs/color.h"
 #include "../../libs/number_types.h"
 
+u32 get_texture_pitch_alignment();
+
 struct CPU_Descriptor {
 	CPU_Descriptor() = default;
 	virtual ~CPU_Descriptor() = default;
@@ -40,6 +42,7 @@ struct Buffer {
 	virtual u64 gpu_virtual_address() = 0;
 	virtual void request_write() = 0; // Call only for default buffer
 	virtual void write(void *data, u64 data_size, u64 alignment = 0) = 0;
+	virtual void *write_only_ptr() = 0;
 
 	virtual CBV_Descriptor *constant_buffer_descriptor() = 0;
 	virtual SRV_Descriptor *shader_resource_descriptor(u32 mipmap_level = 0) = 0;
@@ -50,6 +53,7 @@ struct Texture {
 	Texture() = default;
 	virtual ~Texture() = default;
 
+	virtual u64 size() = 0;
 	virtual u32 subresource_count() = 0;
 	virtual Subresource_Footprint subresource_footprint(u32 subresource_index) = 0;
 

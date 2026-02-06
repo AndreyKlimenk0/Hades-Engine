@@ -84,7 +84,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	rendering->attach("windowed", &window.windowed);
 	rendering->attach("back_buffer_count", (s32 *)&back_buffer_count);
 
-	window_view_plane.update(60, window.width, window.height, 1.0f, 10000.0f);
+	window_view_plane.update(60, window.width, window.height, 1.0f, 100000.0f);
 
 	render_device = create_render_device(back_buffer_count);
 	if (!render_device) {
@@ -93,6 +93,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 	frame_fence = render_device->create_fence(back_buffer_count, "Frame fence");
 
+	copy_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_COPY, "Copy Queue");
 	compute_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_COMPUTE, "Compute Queue");
 	graphics_queue = render_device->create_command_queue(COMMAND_LIST_TYPE_DIRECT, "Graphics Queue");
 

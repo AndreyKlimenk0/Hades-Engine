@@ -119,6 +119,7 @@ struct Render_System {
 	Swap_Chain *swap_chain = NULL;
 
 	Fence *frame_fence = NULL;
+	Command_Queue *copy_queue = NULL;
 	Command_Queue *compute_queue = NULL;
 	Command_Queue *graphics_queue = NULL;
 

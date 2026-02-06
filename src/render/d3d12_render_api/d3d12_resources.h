@@ -95,6 +95,7 @@ struct D3D12_Buffer : Buffer {
 	
 	void request_write();
 	void write(void *data, u64 data_size, u64 alignment = 0);
+	void *write_only_ptr();
 
 	u64 size();
 	u64 gpu_virtual_address();
@@ -123,6 +124,7 @@ struct D3D12_Texture : Texture {
 
 	ID3D12Resource *get();
 
+	u64 size();
 	u32 subresource_count();
 	Subresource_Footprint subresource_footprint(u32 subresource_index);
 

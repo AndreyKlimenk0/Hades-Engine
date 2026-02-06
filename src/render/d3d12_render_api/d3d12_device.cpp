@@ -408,13 +408,13 @@ void D3D12_Command_List::copy_buffer_to_texture(Texture *texture, Buffer *buffer
 
 	D3D12_TEXTURE_COPY_LOCATION dest_texture_copy_location;
 	ZeroMemory(&dest_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
-	dest_texture_copy_location.pResource = internal_buffer->current_buffer()->get();
+	dest_texture_copy_location.pResource = internal_texture->get();
 	dest_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 	dest_texture_copy_location.SubresourceIndex = subresource_footprint->subresource_index;
 
 	D3D12_TEXTURE_COPY_LOCATION source_texture_copy_location;
 	ZeroMemory(&source_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
-	source_texture_copy_location.pResource = internal_texture->get();
+	source_texture_copy_location.pResource = internal_buffer->current_buffer()->get();
 	source_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 	source_texture_copy_location.PlacedFootprint.Footprint = to_d3d12_subresource_footprint(subresource_footprint);
 

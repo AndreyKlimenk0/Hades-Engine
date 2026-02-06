@@ -65,12 +65,16 @@ inline void load_saved_meshes(File *level_file, Render_World *render_world)
 		build_full_path_to_model_file(mesh_names[i].c_str(), full_path_to_mesh_file);
 
 		Loading_Models_Info info;
+		Array<String> texture_names;
 		Array<Loading_Model *> loaded_models;
-		if (load_models_from_file(full_path_to_mesh_file, loaded_models, &info, &loading_options)) {
+		if (load_models_from_file(full_path_to_mesh_file, loaded_models, texture_names, &info, &loading_options)) {
 			begin_time_stamp();
 			Model_Storage *model_storage = render_world->get_model_storage();
 			
 			Array<Pair<Loading_Model *, Mesh_Idx>> result;
+			String base_file_name;
+			extract_base_file_name(mesh_names[i], base_file_name);
+			model_storage->pre_load_textures(texture_names, base_file_name);
 			model_storage->add_models(loaded_models, result);
 
 			free_memory(&loaded_models);
