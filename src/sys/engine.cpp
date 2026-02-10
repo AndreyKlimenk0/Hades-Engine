@@ -18,7 +18,7 @@
 #include <windows.h>
 #include "../win32/win_helpers.h"
 
-#define DRAW_TEST_GUI 0
+#define DRAW_TEST_GUI 1
 
 static Engine *engine = NULL;
 
@@ -75,12 +75,13 @@ inline String build_default_level_name()
 inline void build_default_world(Game_World *game_world, Render_World *render_world)
 {
 	Array<String> command_args;
+	command_args.push("cube.gltf");
 	//command_args.push("vampire.fbx");
 	//command_args.push("sphere1.gltf");
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
 	//command_args.push("DamagedHelmet.gltf");
-	command_args.push("Sponza.gltf");
+	//command_args.push("Sponza.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
 
@@ -142,12 +143,12 @@ void Engine::frame()
 
 	gui::handle_events();
 
-	editor.handle_events();
-	editor.update();
+	//editor.handle_events();
+	//editor.update();
 #if DRAW_TEST_GUI
 	draw_test_gui();
 #else
-	editor.render();
+	//editor.render();
 #endif
 	
 	file_tracking_sys.update();

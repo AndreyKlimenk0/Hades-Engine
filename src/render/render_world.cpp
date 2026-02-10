@@ -215,6 +215,9 @@ void resolve_texture_file_path(const char *texture_file_name, const char *textur
 
 void Model_Storage::pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory)
 {
+	if (textures_names.is_empty()) {
+		return;
+	}
 	Render_System *render_system = Engine::get_render_system();
 	Render_Device *render_device = Engine::get_render_system()->render_device;
 
