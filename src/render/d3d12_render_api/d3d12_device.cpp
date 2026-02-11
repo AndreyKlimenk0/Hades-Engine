@@ -827,11 +827,11 @@ void D3D12_Render_Device::finish_frame(u64 completed_frame)
 	if (completed_command_lists.empty()) {
 		current_upload_command_list = new D3D12_Command_List(COMMAND_LIST_TYPE_COPY, this);
 		current_upload_command_list->reset();
-		//print("Create command list");
 		flight_command_lists.push({ frame_number, current_upload_command_list });
 	} else {
 		current_upload_command_list = completed_command_lists.front();
 		current_upload_command_list->reset();
+		flight_command_lists.push({ frame_number, current_upload_command_list });
 		completed_command_lists.pop();
 	}
 	set_name(current_upload_command_list, "name: Render device uploading list, frame: {}", frame_number);
