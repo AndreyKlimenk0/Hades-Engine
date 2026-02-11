@@ -59,7 +59,8 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
     Texture2D<float4> roughness_metalic_texture = textures[material.roughness_metalic_texture_index];
     
     float3 local_normal = normal_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
-    float3 normal = normal_mapping(local_normal, normalize(vertex_out.normal), normalize(vertex_out.tangent));
+    //float3 normal = normal_mapping(local_normal, normalize(vertex_out.normal), normalize(vertex_out.tangent));
+    float3 normal = vertex_out.normal;
     float3 albedo = albedo_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
     float3 roughness_metalic = roughness_metalic_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
     

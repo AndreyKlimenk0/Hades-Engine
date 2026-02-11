@@ -99,8 +99,7 @@ D3D12_RESOURCE_DESC Resource_Desc::d3d12_resource_desc()
 		resource_desc.Width = static_cast<u64>(texture_desc.width);
 		resource_desc.Height = texture_desc.height;
 		resource_desc.DepthOrArraySize = texture_desc.depth;
-		//resource_desc.MipLevels = texture_desc.miplevels;
-		resource_desc.MipLevels = 1;
+		resource_desc.MipLevels = texture_desc.miplevels;
 		resource_desc.Format = texture_desc.format;
 		resource_desc.SampleDesc.Count = 1;
 		resource_desc.SampleDesc.Quality = 0;
@@ -451,6 +450,9 @@ D3D12_Texture::D3D12_Texture(D3D12_Render_Device *_render_device, Texture_Desc *
 	texture_desc = *_texture_desc;
 	render_device = _render_device;
 
+	shader_resource_descriptors.resize(12);
+	unordered_access_descriptors.resize(12);
+
 	Resource_Desc resource_desc = { &texture_desc };
 	resource = new D3D12_Resource(render_device->device, &resource_desc);
 	//set_name(resource->get(), "(type: Texture, name: {})", texture_desc.name);
@@ -513,6 +515,9 @@ D3D12_Texture::D3D12_Texture(D3D12_Render_Device *_render_device, ComPtr<ID3D12R
 {
 	render_device = _render_device;
 	resource = new D3D12_Resource(render_device->device, existing_resource);
+
+	shader_resource_descriptors.resize(12);
+	unordered_access_descriptors.resize(12);
 	
 	D3D12_RESOURCE_DESC d3d12_resource_desc = resource->d3d12_resource_desc();
 	texture_desc.dimension = to_texture_dimension(d3d12_resource_desc.Dimension);

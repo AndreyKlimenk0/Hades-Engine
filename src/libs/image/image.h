@@ -30,8 +30,16 @@ struct Image {
 
 bool load_image_from_file(const char *full_path_to_file, DXGI_FORMAT format, Image *image);
 
+inline bool power_of_two(u32 value)
+{
+	return (value != 0) && ((value & (value - 1)) == 0);
+}
+
 inline u32 find_max_mip_level(u32 width, u32 height)
 {
-	return math::log2(math::max(width, height));
+	if (power_of_two(width) && power_of_two(height)){
+		return math::log2(math::max(width, height));
+	}
+	return static_cast<u32>(math::floor(math::log2(math::max(static_cast<float>(width), static_cast<float>(height))))) + 1.0;
 }
 #endif

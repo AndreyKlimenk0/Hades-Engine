@@ -122,6 +122,7 @@ struct Copy_Command_List : Command_List {
 	virtual ~Copy_Command_List() = default;
 
 	virtual void copy(Buffer *dest, Buffer *source) = 0;
+	virtual void copy(Texture *dest_texture, Texture *source_texture, u32 subresource_index = 0) = 0;
 	virtual void copy_buffer_to_texture(Texture *texture, Buffer *buffer, Subresource_Footprint *subresource_footprint = NULL) = 0;
 
 	virtual void transition_resource_barrier(Buffer *buffer, Resource_State state_before, Resource_State state_after) = 0;

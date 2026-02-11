@@ -129,6 +129,8 @@ struct Render_System {
 		Silhouette_Pass silhouette_pass;
 		Outlining_Pass outlining_pass;
 		Render_2D_Pass render2d_pass;
+		Generate_HZB generate_hzb;
+		Depth_Pass depth_pass;
 	} passes;
 	
 	Array<Render_Pass_Submission> render_pass_submissions;

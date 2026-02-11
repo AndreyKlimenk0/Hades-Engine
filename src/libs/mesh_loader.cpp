@@ -170,7 +170,7 @@ inline void decompose_matrix(aiMatrix4x4 &matrix, Vector3 &s, Vector3 &r, Vector
 
 	s = loading_options.use_scaling_value ? Vector3(loading_options.scaling_value, loading_options.scaling_value, loading_options.scaling_value) : to_vector3(scaling);
 	r = to_vector3(rotation);
-	p = to_vector3(position);
+	p = 100.0f * to_vector3(position);
 }
 
 inline bool get_texture_file_name(aiMaterial *material, aiTextureType texture_type, String &texture_file_name)
@@ -189,9 +189,9 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)
 {
 	for (u32 i = 0; i < ai_mesh->mNumVertices; i++) {
 		Vertex_PNTUV vertex;
-		vertex.position.x = ai_mesh->mVertices[i].x;
-		vertex.position.y = ai_mesh->mVertices[i].y;
-		vertex.position.z = ai_mesh->mVertices[i].z;
+		vertex.position.x = 100.0f * ai_mesh->mVertices[i].x;
+		vertex.position.y = 100.0f * ai_mesh->mVertices[i].y;
+		vertex.position.z = 100.0f * ai_mesh->mVertices[i].z;
 
 		if (ai_mesh->HasTextureCoords(0)) {
 			vertex.uv.x = (float)ai_mesh->mTextureCoords[0][i].x;

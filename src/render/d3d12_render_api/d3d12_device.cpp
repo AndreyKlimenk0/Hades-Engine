@@ -396,6 +396,26 @@ void D3D12_Command_List::copy(Buffer *dest, Buffer *source)
 	command_list->CopyResource(_dest->current_buffer()->get(), _source->current_buffer()->get());
 }
 
+void D3D12_Command_List::copy(Texture *dest_texture, Texture *source_texture, u32 subresource_index)
+{
+	D3D12_Texture *internal_dest_texture = (D3D12_Texture *)dest_texture;
+	D3D12_Texture *internal_src_texture = (D3D12_Texture *)source_texture;
+
+	D3D12_TEXTURE_COPY_LOCATION dest_texture_copy_location;
+	ZeroMemory(&dest_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+	dest_texture_copy_location.pResource = internal_dest_texture->get();
+	dest_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	dest_texture_copy_location.SubresourceIndex = subresource_index;
+
+	D3D12_TEXTURE_COPY_LOCATION source_texture_copy_location;
+	ZeroMemory(&source_texture_copy_location, sizeof(D3D12_TEXTURE_COPY_LOCATION));
+	source_texture_copy_location.pResource = internal_src_texture->get();
+	source_texture_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	source_texture_copy_location.SubresourceIndex = subresource_index;
+
+	command_list->CopyTextureRegion(&dest_texture_copy_location, 0, 0, 0, &source_texture_copy_location, NULL);
+}
+
 void D3D12_Command_List::copy(D3D12_Resource *dest, D3D12_Resource *source)
 {
 	command_list->CopyResource(dest->get(), source->get());
@@ -807,6 +827,7 @@ void D3D12_Render_Device::finish_frame(u64 completed_frame)
 	if (completed_command_lists.empty()) {
 		current_upload_command_list = new D3D12_Command_List(COMMAND_LIST_TYPE_COPY, this);
 		current_upload_command_list->reset();
+		//print("Create command list");
 		flight_command_lists.push({ frame_number, current_upload_command_list });
 	} else {
 		current_upload_command_list = completed_command_lists.front();

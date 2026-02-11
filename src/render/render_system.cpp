@@ -128,12 +128,18 @@ void Render_System::init_passes()
 	passes.silhouette_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.outlining_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.render2d_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	
+	passes.depth_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.generate_hzb.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.outlining_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.render2d_pass, (void *)&render_2d,   (void *)this });
+	
+	render_pass_submissions.push({ &passes.depth_pass, (void *)render_world,   (void *)this });
+	render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -219,6 +225,7 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 	default_texture_desc.dimension = TEXTURE_DIMENSION_2D;
 	default_texture_desc.width = back_buffer_texture_desc->width;
 	default_texture_desc.height = back_buffer_texture_desc->height;
+	default_texture_desc.miplevels = find_max_mip_level(default_texture_desc.width, default_texture_desc.height);
 	default_texture_desc.depth = back_buffer_texture_desc->depth;
 	default_texture_desc.format = back_buffer_texture_desc->format;
 
@@ -297,7 +304,7 @@ Texture *Pipeline_Resource_Manager::create_texture(const char *texture_name, Tex
 		filled_texture_desc.width = texture_desc->width > 0 ? texture_desc->width : default_texture_desc.width;
 		filled_texture_desc.height = texture_desc->height > 1 ? texture_desc->height : default_texture_desc.height;
 		filled_texture_desc.depth = texture_desc->depth > 1 ? texture_desc->depth : default_texture_desc.depth;
-		filled_texture_desc.miplevels = texture_desc->miplevels > 1 ? texture_desc->miplevels : default_texture_desc.miplevels;
+		filled_texture_desc.miplevels = texture_desc->miplevels != 0 ? texture_desc->miplevels : default_texture_desc.miplevels;
 		filled_texture_desc.format = texture_desc->format != DXGI_FORMAT_UNKNOWN ? texture_desc->format : default_texture_desc.format;
 		filled_texture_desc.flags = texture_desc->flags != 0 ? texture_desc->flags : default_texture_desc.flags;
 		filled_texture_desc.data = texture_desc->data ? texture_desc->data : NULL;
@@ -368,7 +375,7 @@ Texture *Pipeline_Resource_Manager::create_depth_stencil(const char *texture_nam
 	depth_texture_desc.flags = DEPTH_STENCIL_RESOURCE;
 	depth_texture_desc.clear_value = filled_depth_stencil_desc.clear_value;
 	depth_texture_desc.resource_state = RESOURCE_STATE_DEPTH_WRITE;
-	depth_texture_desc.name = filled_depth_stencil_desc.name;
+	depth_texture_desc.name = texture_name;
 
 	Texture *texture = NULL;
 	if (!texture_table.get(texture_name, &texture)) {

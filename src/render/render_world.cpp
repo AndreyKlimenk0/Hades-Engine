@@ -130,13 +130,16 @@ void Model_Storage::init()
 	Image color_buffer;
 	color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
+	color_buffer.name = "default normal";
+	color_buffer.fill(Color(0.0f, 1.0f, 0.0f));
 	default_textures.normal = create_texture_from_image(&color_buffer);
 
 	color_buffer.fill(DEFAULT_MESH_COLOR);
+	color_buffer.name = "default diffuse";
 	default_textures.diffuse = create_texture_from_image(&color_buffer);
 	
-	color_buffer.fill(Color(0.01f, 0.01f, 0.01f));
+	color_buffer.fill(Color(0.2f, 0.2f, 0.01f));
+	color_buffer.name = "default specular";
 	default_textures.specular = create_texture_from_image(&color_buffer);
 	
 	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
@@ -215,6 +218,9 @@ void resolve_texture_file_path(const char *texture_file_name, const char *textur
 
 void Model_Storage::pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory)
 {
+	if (textures_names.is_empty()) {
+		return;
+	}
 	Render_System *render_system = Engine::get_render_system();
 	Render_Device *render_device = Engine::get_render_system()->render_device;
 

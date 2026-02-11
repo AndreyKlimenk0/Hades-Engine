@@ -111,6 +111,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 	// Copy command list methods
 	void copy(Buffer *dest, Buffer *source);
 	void copy(D3D12_Resource *dest, D3D12_Resource *source);
+	void copy(Texture *dest_texture, Texture *source_texture, u32 subresource_index = 0);
 	void copy_buffer_to_texture(Texture *texture, Buffer *buffer, Subresource_Footprint *subresource_footprint = NULL);
 	void copy_buffer_to_texture(D3D12_Resource *texture, D3D12_Resource *buffer, Subresource_Footprint *subresource_footprint);
 	

@@ -80,6 +80,7 @@ struct Shader_Manager {
 		Shader generate_mips_linear_odd;
 		Shader generate_mips_linear_oddx;
 		Shader generate_mips_linear_oddy;
+		Shader downsample_hzb;
 	} shaders;
 
 	void init();

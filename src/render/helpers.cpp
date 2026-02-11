@@ -13,7 +13,7 @@ Texture *create_texture_from_image(Image *image)
 	}
 
 	Texture_Desc texture_desc;
-	texture_desc.name = "Temp texture";
+	texture_desc.name = image->name;
 	texture_desc.dimension = TEXTURE_DIMENSION_2D;
 	texture_desc.width = image->width;
 	texture_desc.height = image->height;

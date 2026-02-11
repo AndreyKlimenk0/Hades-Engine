@@ -73,6 +73,12 @@ namespace math
 	}
 
 	template< typename T>
+	inline T floor(T value)
+	{
+		return (T)::floor((double)value);
+	}
+
+	template< typename T>
 	inline T ceil(T value)
 	{
 		return (T)::ceil((double)value);

@@ -6,6 +6,7 @@
 #include "render_passes.h"
 #include "shader_manager.h"
 #include "renderer.h"
+#include "../libs/image/image.h" // use find_max_mip_level
 
 #include "render_api/base_structs.h"
 
@@ -553,6 +554,187 @@ void Outlining_Pass::render(Graphics_Command_List *graphics_command_list, void *
 
 	graphics_command_list->dispatch(thread_group_count_x, thread_group_count_y);
 
+	graphics_command_list->end_event();
+}
+
+void Depth_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Depth Buffer", device, shader_manager, resource_manager);
+}
+
+void Depth_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	depth_texture = resource_manager->create_depth_stencil("Z buffer");
+}
+
+void Depth_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	root_signature->add_shader_resource_parameter(0, 0); //World matrices
+	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
+	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
+
+	access = ALLOW_VERTEX_SHADER_ACCESS;
+	Render_Pass::setup_root_signature(device);
+}
+
+void Depth_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = root_signature;
+	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, depth_map)->vs_bytecode.bytecode_ref();
+	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, depth_map)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+
+	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
+}
+
+void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+	Render_System *render_sys = (Render_System *)args;
+
+	graphics_command_list->begin_event("Depth buffer");
+
+	graphics_command_list->clear_depth_stencil(depth_texture);
+	graphics_command_list->set_render_target(NULL, depth_texture);
+
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+	pipeline_resource_manager->global_buffer;
+
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+
+	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()), true);
+
+	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+
+	Depth_Map_Pass_Data pass_data;
+	pass_data.view_projection_matrix = render_world->rendering_view.view_matrix * render_sys->window_view_plane.perspective_matrix;
+
+	Render_Entity *render_entity = NULL;
+	For(render_world->game_render_entities, render_entity) {
+		pass_data.mesh_idx = render_entity->mesh_idx;
+		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+
+		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+	}
+	graphics_command_list->end_event();
+}
+
+void Generate_HZB::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Generate HZB", device, shader_manager, resource_manager);
+}
+
+void Generate_HZB::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	Texture_Desc texture_desc;
+	texture_desc.miplevels = 0; // calculate max mip map level
+	texture_desc.format = DXGI_FORMAT_R32_FLOAT;
+	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
+	texture_desc.name = "HZB";
+
+	hzb_texture = resource_manager->create_texture("HZB", &texture_desc);
+	depth_texture = resource_manager->read_texture("Z buffer");
+}
+
+struct Downsampling {
+	u32 src_mip_level;
+	u32 pad;
+	Vector2 texel_size;
+};
+
+void Generate_HZB::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	root_signature->add_shader_resource_parameter(0, 0);
+	root_signature->add_unordered_access_parameter(0, 0);
+
+	Render_Pass::setup_root_signature(device);
+}
+
+void Generate_HZB::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Compute_Pipeline_Desc compute_pipeline_desc;
+	compute_pipeline_desc.root_signature = root_signature;
+	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, downsample_hzb)->cs_bytecode.bytecode_ref();
+
+	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
+}
+
+void Generate_HZB::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_System *render_sys = (Render_System *)args;
+
+	Copy_Command_List *copy_command_list = static_cast<Copy_Command_List *>(render_sys->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_COPY));
+	copy_command_list->reset();
+
+	Fence *fence1 = render_sys->render_device->create_fence(1);
+	Copy_Command_List *temp = static_cast<Copy_Command_List *>(render_sys->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_DIRECT));
+	temp->reset();
+	temp->transition_resource_barrier(depth_texture, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COMMON);
+	temp->close();
+	render_sys->graphics_queue->execute_command_list(temp);
+	render_sys->graphics_queue->signal(fence1);
+	fence1->wait_for_gpu();
+	DELETE_PTR(fence1);
+	
+	//copy_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST);
+	copy_command_list->copy(hzb_texture, depth_texture);
+	//copy_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON);
+	copy_command_list->close();
+	Fence *fence3 = render_sys->render_device->create_fence(3);
+	render_sys->copy_queue->execute_command_list(copy_command_list);
+	render_sys->copy_queue->signal(fence3);
+	fence3->wait_for_gpu();
+	DELETE_PTR(fence3);
+
+	Fence *fence2 = render_sys->render_device->create_fence(2);
+	Copy_Command_List *x = static_cast<Copy_Command_List *>(render_sys->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_DIRECT));
+	x->reset();
+	x->transition_resource_barrier(depth_texture, RESOURCE_STATE_COMMON, RESOURCE_STATE_DEPTH_WRITE);
+	x->close();
+	render_sys->graphics_queue->execute_command_list(x);
+	render_sys->graphics_queue->signal(fence2);
+	fence2->wait_for_gpu();
+	DELETE_PTR(fence2);
+
+
+	graphics_command_list->begin_event("Downsample HZB");
+	graphics_command_list->apply(pipeline_state);
+
+	Texture_Desc hzb_texture_desc = hzb_texture->get_texture_desc();
+	for (u32 mip_level = 0; mip_level < hzb_texture_desc.miplevels; mip_level++) {
+		hzb_texture->unordered_access_descriptor(mip_level);
+	}
+
+	for (u32 mip_level = 0; mip_level < hzb_texture_desc.miplevels - 1; mip_level++) {
+		u32 source_width = hzb_texture_desc.width >> mip_level;
+		u32 source_height = hzb_texture_desc.height >> mip_level;
+		u32 dest_width = source_width >> 1;
+		u32 dest_height = source_height >> 1;
+
+		if (dest_width == 0)
+			dest_width = 1;
+		if (dest_height == 0)
+			dest_height = 1;
+
+		Downsampling desc = { mip_level, 0, Vector2(1.0f / float(dest_width), 1.0f / float(dest_height)) };
+		graphics_command_list->set_compute_constants(0, 0, &desc);
+		graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor());
+		graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, hzb_texture->unordered_access_descriptor(mip_level + 1));
+		graphics_command_list->dispatch(dest_width, dest_height);
+	}
 	graphics_command_list->end_event();
 }
 

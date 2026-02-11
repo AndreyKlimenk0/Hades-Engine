@@ -23,7 +23,7 @@
 static Engine *engine = NULL;
 
 static Font *performance_font = NULL;
-//static Render_Primitive_List render_list;
+static Render_Primitive_List render_list;
 
 static const String DEFAULT_LEVEL_NAME = "unnamed_level";
 static const String LEVEL_EXTENSION = ".hl";
@@ -34,8 +34,8 @@ static void init_performance_displaying()
 	if (!performance_font) {
 		assert(false);
 	}
-	//Render_Font *render_font = engine->render_sys.render_2d.get_render_font(performance_font);
-	//render_list = Render_Primitive_List(&engine->render_sys.render_2d, performance_font, render_font);
+	Render_Font *render_font = engine->render_sys.render_2d.get_render_font(performance_font);
+	render_list = Render_Primitive_List(&engine->render_sys.render_2d, performance_font, render_font);
 }
 
 static void display_performance(s64 fps, s64 frame_time)
@@ -44,14 +44,14 @@ static void display_performance(s64 fps, s64 frame_time)
 	char *test2 = format("Frame time {} ms", frame_time);
 	u32 text_width = performance_font->get_text_width(test2);
 
-	//s32 x = Render_System::screen_width - text_width - 10;
-	//render_list.add_text(x, 5, test);
-	//render_list.add_text(x, 20, test2);
+	s32 x = Engine::get_render_system()->get_window_size().width - text_width - 10;
+	render_list.add_text(x, 5, test);
+	render_list.add_text(x, 20, test2);
 
 	free_string(test);
 	free_string(test2);
 
-	//engine->render_sys.render_2d.add_render_primitive_list(&render_list);
+	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
 }
 
 inline String build_default_level_name()
@@ -80,7 +80,8 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
 	//command_args.push("DamagedHelmet.gltf");
-	command_args.push("Sponza.gltf");
+	//command_args.push("Sponza.gltf");
+	command_args.push("occlusion_culling_scene.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
 
@@ -156,6 +157,8 @@ void Engine::frame()
 	render_world.prepare_for_rendering();
 
 	render_sys.render();
+
+	display_performance(fps, frame_time);
 
 	clear_event_queue();
 
