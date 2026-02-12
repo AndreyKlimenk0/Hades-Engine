@@ -23,15 +23,27 @@ static Game_World *game_world = NULL;
 static Render_World *render_world = NULL;
 static Variable_Service *variable_service = NULL;
 
-static void load_meshes(Array<String> &mesh_names)
+static void load_meshes(Array<String> &command_args)
 {
 	begin_profile_task("Load meshes");
+
+	bool convert_cm_to_m = false;
+	Array<String> mesh_names;
+	for (u32 i = 0; i < command_args.count; i++) {
+		if (command_args[i].find(".") > -1) {
+			mesh_names.push(command_args[i]);
+		} else if (command_args[i] == "cm_to_m") {
+			convert_cm_to_m = true;
+		}
+	}
+
 	Variable_Service *models_loading = variable_service->find_namespace("models_loading");
 	Loading_Models_Options loading_options;
 	models_loading->attach("scene_logging", &loading_options.scene_logging);
 	models_loading->attach("assimp_logging", &loading_options.assimp_logging);
 	models_loading->attach("scaling_value", &loading_options.scaling_value);
 	models_loading->attach("use_scaling_value", &loading_options.use_scaling_value);
+	loading_options.convert_cm_to_m = convert_cm_to_m;
 
 	for (u32 i = 0; i < mesh_names.count; i++) {
 		begin_time_stamp();

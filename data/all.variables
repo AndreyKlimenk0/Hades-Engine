@@ -15,7 +15,7 @@ back_buffer_count 2
 scene_logging false
 assimp_logging false
 scaling_value 1.0
-use_scaling_value true
+use_scaling_value false
 
 :/gui
 font_name "FiraCode-Regular"

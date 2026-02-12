@@ -29,6 +29,7 @@ static void begin_load_models()
 {
 	unknown_model_name_count = 0;
 	current_file_name.free();
+	loading_options.convert_cm_to_m = false;
 	loading_options.scene_logging = false;
 	loading_options.assimp_logging = false;
 	loading_options.use_scaling_value = false;
@@ -161,16 +162,18 @@ void print_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_node_ma
 	}
 }
 
-inline void decompose_matrix(aiMatrix4x4 &matrix, Vector3 &s, Vector3 &r, Vector3 &p)
+inline void decompose_matrix(aiMatrix4x4 &matrix, Vector3 &s, Vector3 &r, Vector3 &p, Loading_Models_Options *options)
 {
 	aiVector3t<float> scaling;
 	aiVector3t<float> rotation;
 	aiVector3t<float> position;
 	matrix.Decompose(scaling, rotation, position);
 
-	s = loading_options.use_scaling_value ? Vector3(loading_options.scaling_value, loading_options.scaling_value, loading_options.scaling_value) : to_vector3(scaling);
+	//s = loading_options.use_scaling_value ? Vector3(loading_options.scaling_value, loading_options.scaling_value, loading_options.scaling_value) : to_vector3(scaling);
+	float scale = options->convert_cm_to_m ? 0.01f : 1.0f;
+	s = to_vector3(scaling);
 	r = to_vector3(rotation);
-	p = 100.0f * to_vector3(position);
+	p = to_vector3(position) * scale;
 }
 
 inline bool get_texture_file_name(aiMaterial *material, aiTextureType texture_type, String &texture_file_name)
@@ -185,13 +188,17 @@ inline bool get_texture_file_name(aiMaterial *material, aiTextureType texture_ty
 	return false;
 }
 
-inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh)
+inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh, Loading_Models_Options *options)
 {
+	float scale = 1.0f;
+	if (options->convert_cm_to_m) {
+		scale = 0.01f;
+	}
 	for (u32 i = 0; i < ai_mesh->mNumVertices; i++) {
 		Vertex_PNTUV vertex;
-		vertex.position.x = 100.0f * ai_mesh->mVertices[i].x;
-		vertex.position.y = 100.0f * ai_mesh->mVertices[i].y;
-		vertex.position.z = 100.0f * ai_mesh->mVertices[i].z;
+		vertex.position.x = scale * ai_mesh->mVertices[i].x;
+		vertex.position.y = scale * ai_mesh->mVertices[i].y;
+		vertex.position.z = scale * ai_mesh->mVertices[i].z;
 
 		if (ai_mesh->HasTextureCoords(0)) {
 			vertex.uv.x = (float)ai_mesh->mTextureCoords[0][i].x;
@@ -245,7 +252,7 @@ inline void process_material(aiMaterial *material, Loading_Model *loading_model,
 	}
 }
 
-inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Array<String> &textures, Hash_Table<String, Loading_Model *> &models_cache)
+inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &parent_matrix, Array<Loading_Model *> &models, Array<String> &textures, Hash_Table<String, Loading_Model *> &models_cache, Loading_Models_Options *options)
 {
 	aiMatrix4x4 transform_matrix = node->mTransformation * parent_matrix;
 
@@ -266,7 +273,7 @@ inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &paren
 		Loading_Model *loading_model = NULL;
 		if (!models_cache.get(mesh_name, loading_model)) {
 			loading_model = new Loading_Model(mesh_name, current_file_name);
-			process_mesh(assimp_mesh, &loading_model->mesh);
+			process_mesh(assimp_mesh, &loading_model->mesh, options);
 			
 			if (scene->HasMaterials()) {
 				aiMaterial *material = scene->mMaterials[assimp_mesh->mMaterialIndex];
@@ -277,12 +284,12 @@ inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &paren
 			models.push(loading_model);
 		}
 		Loading_Model::Transformation transformation;
-		decompose_matrix(transform_matrix, transformation.scaling, transformation.rotation, transformation.translation);
+		decompose_matrix(transform_matrix, transformation.scaling, transformation.rotation, transformation.translation, options);
 		loading_model->instances.push(transformation);
 	}
 
 	for (u32 i = 0; i < node->mNumChildren; i++) {
-		process_nodes(scene, node->mChildren[i], transform_matrix, models, textures, models_cache);
+		process_nodes(scene, node->mChildren[i], transform_matrix, models, textures, models_cache, options);
 	}
 }
 
@@ -332,7 +339,7 @@ bool load_models_from_file(const char *full_path_to_model_file, Array<Loading_Mo
 		models.resize(scene->mNumMeshes);
 
 		Hash_Table<String, Loading_Model *> models_cache;
-		process_nodes(scene, scene->mRootNode, aiMatrix4x4(), models, textures, models_cache);
+		process_nodes(scene, scene->mRootNode, aiMatrix4x4(), models, textures, models_cache, options);
 
 		print("load_models: {} was successfully loaded. Loading time is {}ms.", file_name, milliseconds_counter() - start);
 	}

@@ -492,11 +492,18 @@ void Render_World::init(Engine *engine)
 		//error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 
-	shadow_cascade_ranges.push({ 1, 15 });
+	/*shadow_cascade_ranges.push({ 1, 15 });
 	shadow_cascade_ranges.push({ 15, 150 });
 	shadow_cascade_ranges.push({ 150, 500 });
 	shadow_cascade_ranges.push({ 500, 1000 });
-	shadow_cascade_ranges.push({ 1000, 5000 });
+	shadow_cascade_ranges.push({ 1000, 5000 });*/
+
+	shadow_cascade_ranges.push({ 1, 5 });
+	shadow_cascade_ranges.push({ 5, 15 });
+	shadow_cascade_ranges.push({ 15, 50 });
+	shadow_cascade_ranges.push({ 50, 100 });
+	shadow_cascade_ranges.push({ 100, 500 });
+
 
 	jittering_tile_size = 16;
 	jittering_filter_size = 8;
@@ -785,7 +792,7 @@ void Render_World::update_shadows()
 			//radius = std::floor(radius);
 			//radius *= r;
 
-			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius, -5000.0f, 5000.0f);
+			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius, -200.0f, 200.0f);
 
 			cascaded_shadow_map->view_projection_matrix = light_view_matrix * projection_matrix;
 

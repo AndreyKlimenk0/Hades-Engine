@@ -670,6 +670,7 @@ void Command_Window::init(Engine *engine)
 
 	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_padding * 2, 30);
 	command_edit_field_theme.draw_label = false;
+	command_edit_field_theme.float_precision = 20;
 	command_edit_field_theme.color = Color(30);
 	command_edit_field_theme.rounded_border = 0;
 
@@ -768,6 +769,10 @@ void Command_Window::draw()
 		if (display_additional_info) {
 			gui::set_window_padding(0);
 			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
+				run_command(current_displaying_command->command_name, command_args);
+				command_edit_field.free();
+			} else if (was_click(KEY_ENTER)) {
+				split(&command_edit_field, " ", &command_args);
 				run_command(current_displaying_command->command_name, command_args);
 				command_edit_field.free();
 			}

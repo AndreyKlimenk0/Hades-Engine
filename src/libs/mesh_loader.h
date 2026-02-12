@@ -13,6 +13,7 @@ struct Loading_Models_Info {
 };
 
 struct Loading_Models_Options {
+	bool convert_cm_to_m;
 	bool scene_logging;
 	bool assimp_logging;
 	bool use_scaling_value;
