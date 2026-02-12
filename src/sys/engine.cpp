@@ -75,13 +75,13 @@ inline String build_default_level_name()
 inline void build_default_world(Game_World *game_world, Render_World *render_world)
 {
 	Array<String> command_args;
-	command_args.push("vampire.fbx");
-	command_args.push("cm_to_m");
+	//command_args.push("vampire.fbx");
+	//command_args.push("cm_to_m");
 	//command_args.push("sphere1.gltf");
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
 	//command_args.push("DamagedHelmet.gltf");
-	//command_args.push("Sponza.gltf");
+	command_args.push("Sponza.gltf");
 	//command_args.push("occlusion_culling_scene.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
@@ -90,7 +90,7 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//Entity_Id entity_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, 0.5f), Color::White.get_rgb());
 	render_world->upload_lights();
 
-	Entity_Id editor_camera_id = game_world->make_camera(Vector3(-5.0f, 1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f));
+	Entity_Id editor_camera_id = game_world->make_camera(Vector3(-5.0f, 10.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f));
 	render_world->set_rendering_view(editor_camera_id);
 }
 

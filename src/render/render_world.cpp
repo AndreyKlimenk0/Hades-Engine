@@ -320,10 +320,10 @@ void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loadin
 			continue;
 		}
 
-		Pair<Render_Model *, u32> *temp = NULL;
+		Pair<Render_Model *, u32> temp;
 		if (render_models_table.get(model_string_id, temp)) {
 			print("[Mesh storage] Info: {} mesh has already been placed in the mesh storage.", loading_model->get_pretty_name());
-			result.push({ loading_model, temp->second });
+			result.push({ loading_model, temp.second });
 			continue;
 		}
 
@@ -498,12 +498,11 @@ void Render_World::init(Engine *engine)
 	shadow_cascade_ranges.push({ 500, 1000 });
 	shadow_cascade_ranges.push({ 1000, 5000 });*/
 
-	shadow_cascade_ranges.push({ 1, 5 });
+	//shadow_cascade_ranges.push({ 0, 1 });
+	shadow_cascade_ranges.push({ 0, 5 });
 	shadow_cascade_ranges.push({ 5, 15 });
-	shadow_cascade_ranges.push({ 15, 50 });
-	shadow_cascade_ranges.push({ 50, 100 });
-	shadow_cascade_ranges.push({ 100, 500 });
-
+	shadow_cascade_ranges.push({ 15, 100 });
+	//shadow_cascade_ranges.push({ 500, 2000 });
 
 	jittering_tile_size = 16;
 	jittering_filter_size = 8;
@@ -792,7 +791,7 @@ void Render_World::update_shadows()
 			//radius = std::floor(radius);
 			//radius *= r;
 
-			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius, -200.0f, 200.0f);
+			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius, -100.0f, 100.0f);
 
 			cascaded_shadow_map->view_projection_matrix = light_view_matrix * projection_matrix;
 

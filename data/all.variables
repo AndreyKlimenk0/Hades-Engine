@@ -8,7 +8,7 @@ back_buffer_count 2
 #window_height 980
 #create_entities_for_meshes true
 
-#load_level "shperes.hl"
+#load_level "temp0.hl"
 
 
 :/models_loading

@@ -6,7 +6,7 @@
 #include "vertex.hlsl"
 #include "globals.hlsl"
 
-static const float BIAS = 0.005f;
+static const float BIAS = 0.0005f;
 
 struct Cascaded_Shadows {
     float3 light_direction;
@@ -51,8 +51,8 @@ float4 calculate_shadow_factor(float3 world_position, float2 screen_position, fl
     for (uint shadows_index = 0; shadows_index < cascaded_shadows_count; shadows_index++) {
         Cascaded_Shadows cascaded_shadows = cascaded_shadows_list[shadows_index];
 
-        float offset = saturate(1.0f - dot(-cascaded_shadows.light_direction, normal));
-        world_position = world_position + normal + offset;
+        //float offset = saturate(1.0f - dot(-cascaded_shadows.light_direction, normal));
+        //world_position = world_position + normal + offset;
     
         shadow_cascade_index = cascaded_shadows.shadow_map_start_index;
         for (; shadow_cascade_index <= cascaded_shadows.shadow_map_end_index; shadow_cascade_index++) {
