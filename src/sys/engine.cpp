@@ -109,7 +109,7 @@ void Engine::init(Win32_Window *window)
 
 	render_sys.init(window, &var_service);
 
-	gui::init_gui(this);
+	//gui::init_gui(this);
 
 	game_world.init();
 	render_world.init(this);
