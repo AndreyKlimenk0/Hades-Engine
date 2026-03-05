@@ -10,12 +10,31 @@
 
 #include "render_api/base_structs.h"
 
+struct Shadow_Atlas {
+	u32 atlas_size;
+	u32 cascade_size;
+	Pad2 pad;
+};
+
+struct Jittering_Filter {
+	u32 tile_size;
+	u32 filter_size;
+	u32 scaling;
+	Pad1 pad;
+};
+
 struct Pass_Data {
 	u32 parameter0;
 	u32 parameter1;
 	u32 parameter2;
 	u32 parameter3;
 };
+
+inline Viewport make_viewport_from_texture(Texture *texture)
+{
+	Texture_Desc texture_desc = texture->get_texture_desc();
+	return { Size_f32(texture_desc.width, texture_desc.height) };
+}
 
 Render_Pass::Render_Pass()
 {
@@ -142,6 +161,111 @@ void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->end_event();
 }
 
+void Debug_Shadows_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Debug shadows", device, shader_manager, resource_manager);
+}
+
+void Debug_Shadows_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	shadow_atlas = resource_manager->read_texture("shadow_atlas");
+}
+
+void Debug_Shadows_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature->add_shader_resource_parameter(0, 0); //World matrices
+	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
+	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
+	root_signature->add_shader_resource_parameter(4, 0); //Lights buffer
+
+	root_signature->add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
+	root_signature->add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
+
+	root_signature->add_shader_resource_parameter(0, 2); //shadow atlas texture
+	root_signature->add_shader_resource_parameter(1, 2); //jittering_samples
+	root_signature->add_shader_resource_parameter(2, 2); //cascaded_shadows_list
+	root_signature->add_shader_resource_parameter(3, 2); //shadow_cascade_view_projection_matrices
+
+	access = ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS;
+	Render_Pass::setup_root_signature(device);
+}
+
+void Debug_Shadows_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = root_signature;
+	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, debug_cascaded_shadows)->vs_bytecode.bytecode_ref();
+	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, debug_cascaded_shadows)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
+}
+
+void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+	Render_System *render_sys = (Render_System *)args;
+
+	graphics_command_list->begin_event("Debug shadows");
+
+	graphics_command_list->clear_depth_stencil(render_sys->swap_chain->get_depth_stencil_buffer());
+	graphics_command_list->clear_render_target(render_sys->swap_chain->get_back_buffer(), Color::LightSteelBlue);
+	graphics_command_list->set_render_target(render_sys->swap_chain->get_back_buffer(), render_sys->swap_chain->get_depth_stencil_buffer());
+
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
+
+	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
+
+	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+
+	graphics_command_list->set_graphics_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, render_world->lights_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(0, 2, SHADER_RESOURCE_REGISTER, shadow_atlas->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 2, SHADER_RESOURCE_REGISTER, render_world->jittering_samples->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 2, SHADER_RESOURCE_REGISTER, render_world->cascaded_shadows_info_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 2, SHADER_RESOURCE_REGISTER, render_world->casded_view_projection_matrices_buffer->shader_resource_descriptor());
+
+	Shadow_Atlas shadow_atlas_info;
+	shadow_atlas_info.atlas_size = SHADOW_ATLAS_SIZE;
+	shadow_atlas_info.cascade_size = CASCADE_SIZE;
+
+	Jittering_Filter filter;
+	filter.tile_size = render_world->jittering_tile_size;
+	filter.filter_size = render_world->jittering_filter_size;
+	filter.scaling = render_world->jittering_scaling;
+
+	graphics_command_list->set_graphics_constants(0, 2, &shadow_atlas_info);
+	graphics_command_list->set_graphics_constants(1, 2, &filter);
+
+	Pass_Data pass_data;
+	Render_Entity *render_entity = NULL;
+	For(render_world->game_render_entities, render_entity) {
+		pass_data.parameter0 = render_entity->mesh_idx;
+		pass_data.parameter1 = render_entity->world_matrix_idx;
+		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+
+		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+	}
+
+	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_ALL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE);
+	graphics_command_list->end_event();
+}
+
 void Forward_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
 	Render_Pass::init("Forward rendering", device, shader_manager, resource_manager);
@@ -151,19 +275,6 @@ void Forward_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 {
 	shadow_atlas = resource_manager->read_texture("shadow_atlas");
 }
-
-struct Shadow_Atlas {
-	u32 atlas_size;
-	u32 cascade_size;
-	Pad2 pad;
-};
-
-struct Jittering_Filter {
-	u32 tile_size;
-	u32 filter_size;
-	u32 scaling;
-	Pad1 pad;
-};
 
 void Forward_Pass::setup_root_signature(Render_Device *device)
 {
@@ -196,12 +307,6 @@ void Forward_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
-}
-
-inline Viewport make_viewport_from_texture(Texture *texture)
-{
-	Texture_Desc texture_desc = texture->get_texture_desc();
-	return { Size_f32(texture_desc.width, texture_desc.height) };
 }
 
 void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)

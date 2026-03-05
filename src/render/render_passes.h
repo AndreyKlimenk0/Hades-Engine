@@ -43,6 +43,16 @@ struct Shadows_Pass : Render_Pass {
 	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
 };
 
+struct Debug_Shadows_Pass : Render_Pass {
+	Texture *shadow_atlas = NULL;
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
 struct Forward_Pass : Render_Pass {
 	Texture *shadow_atlas = NULL;
 	

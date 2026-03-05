@@ -1,6 +1,8 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include <assert.h>
+#include "../number_types.h"
 #include "vector.h"
 #include <DirectXMath.h>
 
@@ -60,6 +62,8 @@ struct Matrix4 : XMFLOAT4X4 {
 	{
 	}
 
+	Vector4 get_row(u32 row_index);
+
 	void set_row_0(const Vector4 &vector);
 	void set_row_1(const Vector4 &vector);
 	void set_row_2(const Vector4 &vector);
@@ -94,6 +98,7 @@ inline Matrix4 make_look_at_matrix(const Vector3 &view_position, const Vector3 &
 inline Matrix4 make_look_to_matrix(const Vector3 &view_position, const Vector3 &view_direction, const Vector3 &up = Vector3(0.0f, 1.0f, 0.0f));
 inline Matrix4 make_perspective_matrix(float fov, float aspect_ratio, float near_plane, float far_plane);
 inline Matrix4 make_orthographic_matrix(float width, float height, float near_plane, float far_plane);
+inline Matrix4 make_orthographic_matrix(float left, float right, float bottom, float top, float near_plane, float far_plane);
 
 inline Matrix4 operator*(const Matrix3 &first_matrix, const Matrix4 second_matrix);
 inline Matrix4 operator*(const Matrix4 &first_matrix, const Matrix4 &second_matrix);
@@ -162,6 +167,12 @@ inline Matrix3 Matrix4::to_matrix3()
 	return Matrix3(_11, _12, _13,
 				   _21, _22, _23,
 				   _31, _32, _33);
+}
+
+inline Vector4 Matrix4::get_row(u32 row_index)
+{
+	assert(row_index < 4);
+	return Vector4(m[row_index][0], m[row_index][1], m[row_index][2], m[row_index][3]);
 }
 
 inline void Matrix4::set_row_0(const Vector4 &vector)
@@ -293,6 +304,11 @@ inline Matrix4 make_perspective_matrix(float fov, float aspect_ratio, float near
 inline Matrix4 make_orthographic_matrix(float width, float height, float near_plane, float far_plane)
 {
 	return XMMatrixOrthographicLH(width, height, near_plane, far_plane);
+}
+
+inline Matrix4 make_orthographic_matrix(float left, float right, float bottom, float top, float near_plane, float far_plane)
+{
+	return XMMatrixOrthographicOffCenterLH(left, right, bottom, top, near_plane, far_plane);
 }
 
 inline Matrix4 operator*(const Matrix3 &first_matrix, const Matrix4 second_matrix)

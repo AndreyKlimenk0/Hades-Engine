@@ -125,6 +125,7 @@ void Render_System::init_passes()
 
 	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	//passes.debug_shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.silhouette_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.outlining_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.render2d_pass.init(render_device, shader_manager, &pipeline_resource_manager);
@@ -134,6 +135,7 @@ void Render_System::init_passes()
 
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
+	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.outlining_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.render2d_pass, (void *)&render_2d,   (void *)this });

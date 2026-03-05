@@ -34,12 +34,31 @@ inline u32 encode_color(const Vector3 &rgb_value)
 	return result;
 }
 
+struct Shadow_Atlas {
+	u32 atlas_size = 8192;
+	u32 cascade_size = 1024;
+};
 
+Shadow_Atlas shadow_atlas;
 
-void test()
+Vector2 cascade_ndc_to_atlas_ndc(Vector2 cascade_ndc_coordinates, u32 shadow_cascade_index)
 {
+	u32 shadow_cascade_rows = shadow_atlas.atlas_size / shadow_atlas.cascade_size;
+	u32 shadow_cascade_cols = shadow_atlas.atlas_size / shadow_atlas.cascade_size;
+	u32 shadow_cascade_row_index = shadow_cascade_index % shadow_cascade_rows;
+	u32 shadow_cascade_col_index = shadow_cascade_index / shadow_cascade_cols;
+	Vector2 shadow_atlas_ndc_coordinates;
+	shadow_atlas_ndc_coordinates.x = ((cascade_ndc_coordinates.x * (shadow_atlas.cascade_size - 1)) + ((shadow_atlas.cascade_size - 1) * shadow_cascade_row_index)) / shadow_atlas.atlas_size;
+	shadow_atlas_ndc_coordinates.y = ((cascade_ndc_coordinates.y * (shadow_atlas.cascade_size - 1)) + ((shadow_atlas.cascade_size - 1) * shadow_cascade_col_index)) / shadow_atlas.atlas_size;
+	return shadow_atlas_ndc_coordinates;
 }
 
 void update_test()
 {
+}
+
+void test()
+{
+	auto resutl = cascade_ndc_to_atlas_ndc(Vector2(1.0f, 1.0f), 0);
+	print(resutl);
 }

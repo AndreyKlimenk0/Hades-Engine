@@ -129,6 +129,8 @@ inline Vector4 negate(Vector4 *vector);
 inline Vector4 normalize(Vector4 *vector);
 inline Vector4 cross(const Vector4 &first_vector, const Vector4 &second_vector, const Vector4 &third_vector);
 inline Vector4 floor(const Vector4 &vector);
+inline Vector4 round(const Vector4 &vector);
+
 
 inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector);
 inline Vector4 operator-(const Vector4 &first_vector, const Vector4 &second_vector);
@@ -701,6 +703,12 @@ inline Vector4 floor(const Vector4 &vector)
 {
 	XMVECTOR temp = XMLoadFloat4(&vector);
 	return XMVectorFloor(temp);
+}
+
+inline Vector4 round(const Vector4 &vector)
+{
+	XMVECTOR temp = XMLoadFloat4(&vector);
+	return XMVectorRound(temp);
 }
 
 inline Vector4 operator+(const Vector4 &first_vector, const Vector4 &second_vector)

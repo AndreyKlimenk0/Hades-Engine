@@ -126,6 +126,7 @@ struct Render_System {
 	struct Render_Passes {
 		Shadows_Pass shadows_pass;
 		Forward_Pass forward_pass;
+		Debug_Shadows_Pass debug_shadows_pass;
 		Silhouette_Pass silhouette_pass;
 		Outlining_Pass outlining_pass;
 		Render_2D_Pass render2d_pass;

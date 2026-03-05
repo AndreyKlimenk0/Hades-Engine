@@ -14,7 +14,7 @@
 #include "../libs/memory/base.h"
 #include "../libs/math/functions.h"
 
-const Color DEFAULT_MESH_COLOR = Color(105, 105, 105);
+const Color DEFAULT_MESH_COLOR = Color(242, 242, 242);
 
 Matrix4 get_world_matrix(Entity *entity)
 {
@@ -131,7 +131,7 @@ void Model_Storage::init()
 	color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	color_buffer.name = "default normal";
-	color_buffer.fill(Color(0.0f, 1.0f, 0.0f));
+	color_buffer.fill(Color(0.0f, 0.0f, 1.0f));
 	default_textures.normal = create_texture_from_image(&color_buffer);
 
 	color_buffer.fill(DEFAULT_MESH_COLOR);
@@ -492,21 +492,14 @@ void Render_World::init(Engine *engine)
 		//error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 
-	/*shadow_cascade_ranges.push({ 1, 15 });
-	shadow_cascade_ranges.push({ 15, 150 });
-	shadow_cascade_ranges.push({ 150, 500 });
-	shadow_cascade_ranges.push({ 500, 1000 });
-	shadow_cascade_ranges.push({ 1000, 5000 });*/
-
-	//shadow_cascade_ranges.push({ 0, 1 });
 	shadow_cascade_ranges.push({ 0, 5 });
 	shadow_cascade_ranges.push({ 5, 15 });
-	shadow_cascade_ranges.push({ 15, 100 });
-	//shadow_cascade_ranges.push({ 500, 2000 });
+	shadow_cascade_ranges.push({ 15, 50 });
+	shadow_cascade_ranges.push({ 50, 200 });
 
-	jittering_tile_size = 16;
+	jittering_tile_size = 8;
 	jittering_filter_size = 8;
-	jittering_scaling = jittering_filter_size / 2;
+	jittering_scaling = 4;
 
 	Array<Vector2> jittered_samples;
 	make_jittering_sampling_filters(jittering_tile_size, jittering_filter_size, jittered_samples);
@@ -523,37 +516,6 @@ void Render_World::init(Engine *engine)
 	jittering_samples_texture_desc.data = jittered_samples.to_void_ptr();
 
 	jittering_samples = render_device->create_texture(&jittering_samples_texture_desc);
-
-	//{
-	//	DELETE_PTR(lights_buffer);
-	//	Buffer_Desc buffer_desc;
-	//	buffer_desc.count = 2;
-	//	buffer_desc.stride = lights.stride;
-	//	buffer_desc.data = lights.to_void_ptr();
-	//	buffer_desc.name = "Lights";
-	//	
-	//	lights_buffer = render_device->create_buffer(&buffer_desc);
-	//}
-	//{
-	//	DELETE_PTR(cascaded_shadows_info_buffer);
-	//	Buffer_Desc buffer_desc;
-	//	buffer_desc.count = 4;
-	//	buffer_desc.stride = cascaded_shadows_info_list.stride;
-	//	buffer_desc.data = cascaded_shadows_info_list.to_void_ptr();
-	//	buffer_desc.name = "Cascaded shadows info";
-
-	//	cascaded_shadows_info_buffer = render_device->create_buffer(&buffer_desc);
-	//}
-	//{
-	//	DELETE_PTR(casded_view_projection_matrices_buffer);
-	//	Buffer_Desc buffer_desc;
-	//	buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-	//	buffer_desc.count = 4;
-	//	buffer_desc.stride = cascaded_view_projection_matrices.stride;
-	//	buffer_desc.name = "View projection shadow matrices";
-
-	//	casded_view_projection_matrices_buffer = render_device->create_buffer(&buffer_desc);
-	//}
 }
 
 void Render_World::release_all_resources()
@@ -744,77 +706,32 @@ void Render_World::update_shadows()
 {
 	for (u32 i = 0; i < cascaded_shadows_list.count; i++) {
 		Vector3 light_direction = cascaded_shadows_list[i].light_direction;
-
 		for (u32 j = 0; j < cascaded_shadows_list[i].cascaded_shadow_maps.count; j++) {
 			Cascaded_Shadow_Map *cascaded_shadow_map = &cascaded_shadows_list[i].cascaded_shadow_maps[j];
 
 			Vector3 view_position = cascaded_shadow_map->view_position * rendering_view.inverse_view_matrix;
-			Vector3 temp_view_position = view_position;
-
-			//float w = cascaded_shadow->cascade_width / CASCADE_WIDTH;
-			//float h = cascaded_shadow->cascade_width / CASCADE_WIDTH;
-			//float d = cascaded_shadow->cascade_width / CASCADE_WIDTH;
-
-			//temp_view_position.x /= w;
-			//temp_view_position.x = std::floor(temp_view_position.x);
-			//temp_view_position.x *= w;
-
-			//temp_view_position.y /= h;
-			//temp_view_position.y = std::floor(temp_view_position.y);
-			//temp_view_position.y *= h;
-
-			//temp_view_position.z /= d;
-			//temp_view_position.z = std::floor(temp_view_position.z);
-			//temp_view_position.z *= d;
-
-			//Vector3 old_view_position = view_position;
-
-			float radius = cascaded_shadow_map->cascade_width / 2.0f;
-			//float texel_per_unit = CASCADE_WIDTH / (radius * 2.0f);
-
-			//Matrix4 scalar = make_scale_matrix(texel_per_unit);
-			//Matrix4 look_at = make_look_at_matrix(Vector3::zero, negate(&cascaded_shadow->light_direction)) * scalar;
-			//Matrix4 inverse_look_at = inverse(&look_at);
-
-			//view_position = view_position * look_at;
-			//view_position.x = std::floor(view_position.x);
-			//view_position.y = std::floor(view_position.y);
-			//view_position.z = std::floor(view_position.z);
-			//view_position = view_position * inverse_look_at;
-
-
 			Vector3 view_direction = view_position + light_direction;
 			Matrix4 light_view_matrix = make_look_at_matrix(view_position, view_direction);
 
-			//auto r = cascaded_shadow->cascade_width / CASCADE_WIDTH;
-			//radius /= r;
-			//radius = std::floor(radius);
-			//radius *= r;
+			float radius = cascaded_shadow_map->cascade_width / 2.0f;
+			Matrix4 projection_matrix = make_orthographic_matrix(-radius, radius, -radius, radius, -200.0f, 200.0f);
 
-			Matrix4 projection_matrix = XMMatrixOrthographicOffCenterLH(-radius, radius, -radius, radius, -100.0f, 100.0f);
+			Matrix4 shadow_matrix = light_view_matrix * projection_matrix;
+			Vector4 shadow_origin = Vector4(Vector3::zero, 1.0f);
+			shadow_origin *= shadow_matrix;
+			shadow_origin *= (float)CASCADE_SIZE / 2.0f;
 
-			cascaded_shadow_map->view_projection_matrix = light_view_matrix * projection_matrix;
+			Vector4 rounded_origin = round(shadow_origin);
+			Vector4 round_offset = rounded_origin - shadow_origin;
+			round_offset *= 2.0f / (float)CASCADE_SIZE;
+			round_offset.z = 0.0f;
+			round_offset.w = 0.0f;
 
-			XMMATRIX shadowMatrix = XMLoadFloat4x4(&cascaded_shadow_map->view_projection_matrix);
-			XMVECTOR shadowOrigin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-			shadowOrigin = XMVector4Transform(shadowOrigin, shadowMatrix);
-			shadowOrigin = XMVectorScale(shadowOrigin, (float)CASCADE_SIZE / 2.0f);
-
-			XMVECTOR roundedOrigin = XMVectorRound(shadowOrigin);
-			XMVECTOR roundOffset = XMVectorSubtract(roundedOrigin, shadowOrigin);
-			roundOffset = XMVectorScale(roundOffset, 2.0f / (float)CASCADE_SIZE);
-			roundOffset = XMVectorSetZ(roundOffset, 0.0f);
-			roundOffset = XMVectorSetW(roundOffset, 0.0f);
-
-			Matrix4 matrix = cascaded_shadow_map->view_projection_matrix;
-			Vector4 vector = roundOffset;
-			vector.x += matrix.m[3][0];
-			vector.y += matrix.m[3][1];
-			vector.z += matrix.m[3][2];
-			vector.w += matrix.m[3][3];
-			matrix.set_row_3(vector);
-			cascaded_shadow_map->view_projection_matrix = matrix;
-			cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index] = matrix;
+			round_offset += shadow_matrix.get_row(3);
+			shadow_matrix.set_row_3(round_offset);
+			
+			cascaded_shadow_map->view_projection_matrix = shadow_matrix;
+			cascaded_view_projection_matrices[cascaded_shadow_map->view_projection_matrix_index] = shadow_matrix;
 		}
 	}
 
