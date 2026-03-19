@@ -47,6 +47,7 @@ struct String {
 	void place_end_char();
 	void copy(const String &string, u32 start, u32 end);
 	void move(char *string);
+	void replace(const char *current_substring, const char *new_substring);
 
 	bool is_empty();
 	s32 find(const char *substring, u32 start_index = 0, bool case_sensitive = true);

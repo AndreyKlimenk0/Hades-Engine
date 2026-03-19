@@ -2,8 +2,11 @@
 #include "guiv2.h"
 #include "../sys/engine.h"
 
+using namespace imgui;
+
 const Color TEAL = Color(0, 128, 128);
-const Color NAVY = Color(0, 128, 128);
+const Color NAVY = Color(0, 0, 128);
+const Color GRAY = Color(128, 128, 128);
 const Color DARK_ORANGE = Color(255, 140, 0);
 const Color CABET_BLUE = Color(95, 158, 160);
 const Color STEEL_BLUE = Color(70, 130, 180);
@@ -50,6 +53,31 @@ void test_default_element_cliping()
 	end_ui_element();
 }
 
+void test_elements_layouting(u32 x, u32 y, Layout layout_direction, u32 alignment_flags)
+{
+	begin_ui_element("Gray rect #id");
+	set_position(x, y);
+	//set_size(filled_size(), filled_size());
+	set_size(fixed_size(400), fixed_size(300));
+	set_layout(layout_direction);
+	set_alignment(alignment_flags);
+	set_background_color(GRAY);
+
+	begin_ui_element("Teal rect");
+	//set_position(200, 300);
+	set_size(fixed_size(200), fixed_size(100));
+	set_background_color(TEAL);
+	end_ui_element();
+
+	begin_ui_element("Dark Orange");
+	//set_position(200, 300);
+	set_size(fixed_size(100), fixed_size(100));
+	set_background_color(DARK_ORANGE);
+	end_ui_element();
+
+	end_ui_element();
+}
+
 void draw_test_gui()
 {
 	static bool init_gui = true;
@@ -66,26 +94,37 @@ void draw_test_gui()
 	//test_forget_open_ui_element();
 	//test_two_elements_have_same_name();
 	//test_default_element_cliping();
-	
-	begin_ui_element("Red rect");
-	set_position(100, 100);
-	set_size(filled_size(), filled_size());
-	set_background_color(Color::Red);
 
-	begin_ui_element("Green rect");
-	//set_position(200, 300);
-	set_size(fixed_size(400), fixed_size(200));
-	set_background_color(Color::Green);
-	end_ui_element();
+	test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_CENTER);
+	test_elements_layouting(500, 10, ROW_LAYOUT, ALIGNMENT_CENTER);
 
-	begin_ui_element("Dark Orange");
-	//set_position(200, 300);
-	set_size(fixed_size(400), fixed_size(200));
-	set_background_color(DARK_ORANGE);
-	end_ui_element();
+	//test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_HORIZONTAL_CENTER);
+	//test_elements_layouting(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_HORIZONTAL_CENTER);
+	//test_elements_layouting(1000, 10, COLUMN_LAYOUT, ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	//test_elements_layouting(1450, 10, COLUMN_LAYOUT, ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
 
-	end_ui_element();
-	
+	//test_elements_layouting(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_HORIZONTAL_CENTER);
+	//test_elements_layouting(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_HORIZONTAL_CENTER);
+
+	//test_elements_layouting(1000, 400, ROW_LAYOUT, ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	//test_elements_layouting(1450, 400, ROW_LAYOUT, ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
+
+
+	//test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
+	//test_elements_layouting(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
+
+	//test_elements_layouting(1000, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
+	//test_elements_layouting(1450, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
+
+	//test_elements_layouting(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
+	//test_elements_layouting(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
+
+	//test_elements_layouting(1000, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
+	//test_elements_layouting(1450, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
+
+
+	//begin_ui_element("Empty element");
+	//end_ui_element();
 	
 	end_frame();
 }

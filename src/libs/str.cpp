@@ -741,6 +741,39 @@ void String::move(char *string)
 	}
 }
 
+void String::replace(const char *substring, const char *new_substring)
+{
+	s32 substring_index = -1;
+	while ((substring_index = find(substring)) >= 0) {
+		s32 substring_len = (s32)strlen(substring);
+		s32 new_substring_len = (s32)strlen(new_substring);
+		s32 new_len = (s32)len + new_substring_len - substring_len;
+		
+		char *new_data = new char[new_len + 1];
+		char *copy_ptr = new_data;
+		memset((void *)new_data, 0, new_len + 1);
+
+		if (substring_index > 0) {
+			memcpy((void *)copy_ptr, (void *)data, substring_index);
+			copy_ptr += substring_index;
+		}
+		
+		memcpy(copy_ptr, (void *)new_substring, new_substring_len);
+		copy_ptr += new_substring_len;
+		
+		if ((substring_index + new_substring_len) < new_len) {
+			s32 remaining_chars_count = new_len - (substring_index + new_substring_len);
+			u32 offset = (u32)(substring_index + substring_len);
+			char *remaining_chars = data + offset;
+			memcpy((void *)copy_ptr, (void *)remaining_chars, remaining_chars_count);
+		}
+
+		DELETE_PTR(data);
+		data = new_data;
+		len = new_len;
+	}
+}
+
 bool String::is_empty()
 {
 	if ((data == NULL) && (len == 0)) {
