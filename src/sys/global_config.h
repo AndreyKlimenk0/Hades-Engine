@@ -14,6 +14,9 @@ struct Global_Config {
 	bool windowed;
 	bool vsync;
 	s32 back_buffer_count;
+	float fov;
+	float near_plane;
+	float far_plane;
 
 	//system
 	//s32 window_width;

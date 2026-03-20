@@ -819,7 +819,8 @@ void Editor::init(Engine *engine)
 	}
 
 	if (game_world->cameras.is_empty()) {
-		editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
+		//editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
+		Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 		engine->render_world.set_rendering_view(editor_camera_id);
 	} else {
 		editor_camera_id = get_entity_id(&game_world->cameras.first());
@@ -896,9 +897,9 @@ struct Moving_Entity {
 
 void Editor::picking()
 {
-	Camera *camera = game_world->get_camera(render_world->rendering_view.camera_id);
+	Camera *camera = render_world->get_camera();
 	Ray picking_ray;
-	calculate_picking_ray(camera->position, render_world->rendering_view.view_matrix, render_sys->window_view_plane.perspective_matrix, &picking_ray);
+	calculate_picking_ray(camera->position, camera->view_matrix, camera->perspective_matrix, &picking_ray);
 
 	static Moving_Entity moving_entity_info;
 

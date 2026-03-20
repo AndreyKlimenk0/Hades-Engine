@@ -3,6 +3,7 @@
 #include "../sys/sys.h"
 #include "../libs/color.h"
 #include "../libs/math/matrix.h"
+#include <DirectXMath.h>
 
 inline void init_entity(Entity *entity, Entity_Type type, const Vector3 &position)
 {
@@ -62,12 +63,19 @@ Entity_Id Game_World::make_entity(const Vector3 &scaling, const Vector3 &rotatio
 	return get_entity_id(&entity);
 }
 
-Entity_Id Game_World::make_camera(const Vector3 &position, const Vector3 &target)
+Entity_Id Game_World::make_perspective_camera(const Vector3 &position, const Vector3 &target, float fov_in_degrees, float aspect_ration, float near_plane, float far_plane)
 {
 	Camera camera;
 	init_entity(&camera, ENTITY_TYPE_CAMERA, position);
+	camera.fov = degrees_to_radians(fov_in_degrees);
+	camera.aspect_ratio = aspect_ration;
+	camera.near_plane = near_plane;
+	camera.far_plane = far_plane;
 	camera.up = Vector3::base_y;
 	camera.target = target;
+	camera.perspective_matrix = XMMatrixPerspectiveFovLH(camera.fov, aspect_ration, near_plane, far_plane);
+	camera.x_rotation = 0.0f;
+	camera.y_rotation = 0.0f;
 	camera.idx = cameras.count;
 	cameras.push(camera);
 	return get_entity_id(&camera);
@@ -247,20 +255,17 @@ void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
 
 	For((*entity_commands), entity_command) {
 		switch (entity_command->type) {
-			case ENTITY_COMMAND_MOVE:
-			{
+			case ENTITY_COMMAND_MOVE: {
 				Entity_Command_Move *move_command = static_cast<Entity_Command_Move *>(entity_command);
 				switch (move_command->move_direction) {
 					case MOVE_DIRECTION_FORWARD: {
-						Vector3 target_direction = (target - position);
-						Vector3 move_distance = normalize(&target_direction) * move_command->distance;
+						Vector3 move_distance = direction * move_command->distance;
 						position += move_distance;
 						target += move_distance;
 						break;
 					}
 					case MOVE_DIRECTION_BACK: {
-						Vector3 target_direction = (target - position);
-						Vector3 move_distance = normalize(&target_direction) * move_command->distance;
+						Vector3 move_distance = direction * move_command->distance;
 						position -= move_distance;
 						target -= move_distance;
 						break;
@@ -287,15 +292,17 @@ void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
 			case ENTITY_COMMAND_ROTATE: {
 				Entity_Command_Rotate *rotate_command = static_cast<Entity_Command_Rotate *>(entity_command);
 
-				Matrix4 rotation_matrix = rotate_about_x(rotate_command->y_angle) * rotate_about_y(rotate_command->x_angle);
-				//@Note: Why I just don't normalize target vector ?
-				Vector3 target_direction = target - position;
-				Vector3 normalized_target = normalize(&target_direction);
-				target = (normalized_target * rotation_matrix) + position;
+				x_rotation = math::clamp(x_rotation + -rotate_command->y_angle, -XM_PIDIV2, XM_PIDIV2);
+				y_rotation = XMScalarModAngle(y_rotation + rotate_command->x_angle);
+				world_matrix = XMMatrixRotationQuaternion(XMQuaternionRotationRollPitchYaw(x_rotation, y_rotation, 0));
 				break;
 			}
 		}
+		world_matrix.set_row_3(Vector4(position, 1.0f));
+		direction = world_matrix.get_row(2);
+		view_matrix = inverse(world_matrix);
 	}
+	view_perspective_matrix = view_matrix * perspective_matrix;
 }
 
 bool operator==(const Entity_Id &first, const Entity_Id &second)

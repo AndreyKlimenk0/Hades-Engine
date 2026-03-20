@@ -148,7 +148,7 @@ static void create_level(Array<String> &command_args)
 		prepare_for_level_loading(game_world);
 		prepare_for_level_loading(render_world);
 
-		Entity_Id camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
+		Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 		engine->render_world.set_rendering_view(camera_id);
 	} else {
 		print("create_level: The command can't get a level name, agruments is not valid.");

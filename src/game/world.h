@@ -125,8 +125,21 @@ struct Entity_Command_Rotate : Entity_Command {
 };
 
 struct Camera : Entity {
+	float fov; 
+	float aspect_ratio; 
+	float near_plane; 
+	float far_plane;
 	Vector3 up;
 	Vector3 target;
+	Vector3 direction;
+
+	float x_rotation;
+	float y_rotation;
+
+	Matrix4 world_matrix;
+	Matrix4 view_matrix;
+	Matrix4 perspective_matrix;
+	Matrix4 view_perspective_matrix;
 
 	void handle_commands(Array<Entity_Command *> *entity_commands);
 };
@@ -161,7 +174,7 @@ struct Game_World {
 	Entity_Id make_entity(const Vector3 &position);
 	Entity_Id make_entity(const Vector3 &scaling, const Vector3 &rotation, const Vector3 &position);
 
-	Entity_Id make_camera(const Vector3 &position, const Vector3 &target);
+	Entity_Id make_perspective_camera(const Vector3 &position, const Vector3 &target, float fov_in_degrees, float aspect_ration, float near_plane, float far_plane);
 
 	Entity_Id make_geometry_entity(const Vector3 &position, Geometry_Type geometry_type, void *data);
 

@@ -454,6 +454,9 @@ void Render_2D_Pass::render(Graphics_Command_List *graphics_command_list, void *
 	graphics_command_list->set_vertex_buffer(render_2d->vertex_buffer);
 	graphics_command_list->set_index_buffer(render_2d->index_buffer);
 
+	Size_u32 window_size = render_sys->get_window_size();
+	Matrix4 orthographic_matrix = make_orthographic_matrix(0.0f, (float)window_size.width, (float)window_size.height, 0.0f, 1.0f, 10000.0f);
+
 	Render_2D_Info cb_render_info;
 
 	Render_Primitive_List *list = NULL;
@@ -462,7 +465,7 @@ void Render_2D_Pass::render(Graphics_Command_List *graphics_command_list, void *
 		For(list->render_primitives, render_primitive) {
 
 			graphics_command_list->set_clip_rect(render_primitive->clip_rect);
-			cb_render_info.orthographics_matrix = render_primitive->transform_matrix * render_sys->window_view_plane.orthographic_matrix;
+			cb_render_info.orthographics_matrix = render_primitive->transform_matrix * orthographic_matrix;
 
 			cb_render_info.primitive_color = render_primitive->color.value;
 			graphics_command_list->set_graphics_constants(0, 0, &cb_render_info);
@@ -723,7 +726,7 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;
-	pass_data.view_projection_matrix = render_world->rendering_view.view_matrix * render_sys->window_view_plane.perspective_matrix;
+	pass_data.view_projection_matrix = render_world->get_camera()->view_perspective_matrix;
 
 	Render_Entity *render_entity = NULL;
 	For(render_world->game_render_entities, render_entity) {

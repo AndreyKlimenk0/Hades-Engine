@@ -87,14 +87,16 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
 
+	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 20.0f, -20.0f), Vector3(0.0f, 0.0f, -1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
+	render_world->set_rendering_view(camera_id);
+
 	//Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
 	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.0f, -1.0f, -0.4f), Color::White.get_rgb());
 	//Entity_Id entity_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, 0.5f), Color::White.get_rgb());
 	render_world->upload_lights();
 
 	//Entity_Id editor_camera_id = game_world->make_camera(Vector3(-5.0f, 10.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f));
-	Entity_Id editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -5.0f), Vector3(1.0f, 0.0f, 0.0f));
-	render_world->set_rendering_view(editor_camera_id);
+	//Entity_Id editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -5.0f), Vector3(1.0f, 0.0f, 0.0f));
 }
 
 void Engine::init(Win32_Window *window)

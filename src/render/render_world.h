@@ -124,17 +124,6 @@ struct Cascaded_Shadows {
 	Array<Cascaded_Shadow_Map> cascaded_shadow_maps;
 };
 
-struct Rendering_View {
-	Entity_Id camera_id;
-	Vector3 position;
-	Vector3 direction;
-	Matrix4 view_matrix;
-	Matrix4 inverse_view_matrix;
-	
-	void update(Game_World *game_world);
-	bool is_entity_camera_set();
-};
-
 struct Voxel {
 	u32 packed_color;
 	u32 packed_normal;
@@ -189,7 +178,7 @@ struct Render_World {
 	Matrix4 top_to_down_voxel_view_matrix;
 	Matrix4 back_to_front_voxel_view_matrix;
 
-	Rendering_View rendering_view;
+	Entity_Id camera_id;
 
 	Bounding_Sphere world_bounding_sphere;
 
@@ -226,11 +215,12 @@ struct Render_World {
 	void add_render_entity(Entity_Id entity_id, u32 mesh_idx, void *args = NULL);
 	u32 delete_render_entity(Entity_Id entity_id);
 
-	void set_rendering_view(Entity_Id camera_id);
+	void set_rendering_view(Entity_Id new_camera_id);
 
 	Vector3 get_light_position(Vector3 light_direction);
 
 	Model_Storage *get_model_storage();
+	Camera *get_camera();
 };
 #endif
 

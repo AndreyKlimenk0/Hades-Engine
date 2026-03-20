@@ -20,8 +20,7 @@ Matrix4 get_world_matrix(Entity *entity)
 {
 	if (entity->type == ENTITY_TYPE_CAMERA) {
 		Camera *camera = static_cast<Camera *>(entity);
-		Matrix4 view_matrix = make_look_at_matrix(camera->position, camera->target);
-		return inverse(&view_matrix);
+		return inverse(camera->view_matrix);
 	}
 	return make_scale_matrix(&entity->scaling) * rotate(&entity->rotation) * make_translation_matrix(&entity->position);
 }
@@ -78,23 +77,6 @@ Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_
 		}
 	}
 	return NULL;
-}
-
-void Rendering_View::update(Game_World *game_world)
-{
-	Camera *camera = game_world->get_camera(camera_id);
-	position = camera->position;
-	direction = normalize(camera->target - camera->position);
-	view_matrix = make_look_at_matrix(position, camera->target);
-	inverse_view_matrix = inverse(&view_matrix);
-}
-
-bool Rendering_View::is_entity_camera_set()
-{
-	if (camera_id.type == ENTITY_TYPE_CAMERA) {
-		return true;
-	}
-	return false;
 }
 
 u32 Shadow_Cascade_Range::get_length()
@@ -488,7 +470,7 @@ void Render_World::init(Engine *engine)
 
 	voxel_matrix = XMMatrixOrthographicOffCenterLH(-grid_size.width, grid_size.width, -grid_size.height, grid_size.height, 1.0f, grid_depth + 1.0f);
 
-	if (!rendering_view.is_entity_camera_set()) {
+	if (camera_id.type != ENTITY_TYPE_CAMERA) {
 		//error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 
@@ -544,7 +526,7 @@ void Render_World::release_render_entities_resources()
 
 void Render_World::update()
 {
-	rendering_view.update(game_world);
+	//rendering_view.update(game_world);
 	update_render_entities();
 	//upload_lights();
 	update_shadows();
@@ -577,8 +559,8 @@ void Render_World::update_global_illumination()
 	Vector3 voxel_ceil_size = voxel_grid.ceil_size.to_vector3();
 	Vector3 voxel_grid_size = voxel_grid.total_size().to_vector3() * 0.5f; // Holdes the half of a total voxel grid size.
 
-	Camera *camera = game_world->get_camera(rendering_view.camera_id);
-	auto dir = camera->target - camera->position;
+	Camera *camera = game_world->get_camera(camera_id);
+	auto dir = camera->direction;
 	voxel_grid_center = camera->position + (normalize(&dir) * voxel_grid_size);
 	voxel_grid_center /= voxel_ceil_size;
 	voxel_grid_center = floor(voxel_grid_center);
@@ -601,6 +583,8 @@ void Render_World::upload_lights()
 	shadows_atlas.reset();
 	cascaded_view_projection_matrices.reset();
 
+	Camera *camera = get_camera();
+
 	Light *light = NULL;
 	For(game_world->lights, light) {
 		if (light->type == DIRECTIONAL_LIGHT_TYPE) {
@@ -611,7 +595,7 @@ void Render_World::upload_lights()
 			for (u32 i = 0; i < shadow_cascade_ranges.count; i++) {
 				Cascaded_Shadow_Map cascaded_shadow_map;
 				cascaded_shadow_map.view_projection_matrix_index = cascaded_view_projection_matrices.push(Matrix4());
-				cascaded_shadow_map.init(render_sys->window_view_plane.fov, render_sys->window_view_plane.ratio, &shadow_cascade_ranges[i]);
+				cascaded_shadow_map.init(camera->fov, camera->aspect_ratio, &shadow_cascade_ranges[i]);
 
 				if (!shadows_atlas.get_viewport(&cascaded_shadow_map.viewport)) {
 					shadow_atlas_has_space = false;
@@ -704,12 +688,15 @@ u32 Render_World::delete_render_entity(Entity_Id entity_id)
 
 void Render_World::update_shadows()
 {
+	Camera *camera = game_world->get_camera(camera_id);
+	Matrix4 inverse_view_matrix = inverse(camera->view_matrix);
+
 	for (u32 i = 0; i < cascaded_shadows_list.count; i++) {
 		Vector3 light_direction = cascaded_shadows_list[i].light_direction;
 		for (u32 j = 0; j < cascaded_shadows_list[i].cascaded_shadow_maps.count; j++) {
 			Cascaded_Shadow_Map *cascaded_shadow_map = &cascaded_shadows_list[i].cascaded_shadow_maps[j];
 
-			Vector3 view_position = cascaded_shadow_map->view_position * rendering_view.inverse_view_matrix;
+			Vector3 view_position = cascaded_shadow_map->view_position * inverse_view_matrix;
 			Vector3 view_direction = view_position + light_direction;
 			Matrix4 light_view_matrix = make_look_at_matrix(view_position, view_direction);
 
@@ -748,18 +735,23 @@ void Render_World::update_shadows()
 	casded_view_projection_matrices_buffer->write(cascaded_view_projection_matrices.to_void_ptr(), cascaded_view_projection_matrices.get_size());
 }
 
-void Render_World::set_rendering_view(Entity_Id camera_id)
+void Render_World::set_rendering_view(Entity_Id new_camera_id)
 {
-	if (camera_id.type != ENTITY_TYPE_CAMERA) {
+	if (new_camera_id.type != ENTITY_TYPE_CAMERA) {
 		print("Render_World::set_camera_for_rendering: Passed an camera id is not entity camera type.");
 		return;
 	}
-	rendering_view.camera_id = camera_id;
+	camera_id = new_camera_id;
 }
 
 Model_Storage *Render_World::get_model_storage()
 {
 	return &model_storage;
+}
+
+Camera *Render_World::get_camera()
+{
+	return (Camera *)game_world->get_entity(camera_id);
 }
 
 void Shadows_Atlas::reset()

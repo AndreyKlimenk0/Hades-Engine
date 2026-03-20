@@ -15,6 +15,9 @@ void Global_Config::init(Variable_Service *variable_service)
 	ATTACH(rendering, vsync);
 	ATTACH(rendering, windowed);
 	ATTACH(rendering, back_buffer_count);
+	ATTACH(rendering, fov);
+	ATTACH(rendering, near_plane);
+	ATTACH(rendering, far_plane);
 
 	Variable_Service *system = variable_service->find_namespace("system");
 	//ATTACH(system, window_width);

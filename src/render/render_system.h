@@ -17,20 +17,6 @@
 struct Win32_Window;
 struct Variable_Service;
 
-struct View_Plane {
-	u32 width;
-	u32 height;
-	float ratio;
-	float fov;
-	float near_plane;
-	float far_plane;
-
-	Matrix4 perspective_matrix;
-	Matrix4 orthographic_matrix;
-
-	void update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane);
-};
-
 struct Depth_Stencil_Texture_Desc {
 	String name;
 	u32 width = 0;
@@ -108,12 +94,11 @@ struct Render_System {
 		bool windowed = true;
 		u32 width = 0;
 		u32 height = 0;
+		float aspect_ration = 0.0f;
 	} window;
 
 	u32 sync_interval = 0;
 	u32 present_flags = 0;
-
-	View_Plane window_view_plane;
 
 	Render_Device *render_device = NULL;
 	Swap_Chain *swap_chain = NULL;

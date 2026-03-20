@@ -15,18 +15,6 @@
 #include "d3d12_render_api/d3d12_functions.h"
 
 
-void View_Plane::update(u32 _fov, u32 _width, u32 _height, float _near_plane, float _far_plane)
-{
-	width = _width;
-	height = _height;
-	ratio = (float)width / (float)height;
-	fov = degrees_to_radians((float)_fov);
-	near_plane = _near_plane;
-	far_plane = _far_plane;
-	perspective_matrix = XMMatrixPerspectiveFovLH(fov, ratio, near_plane, far_plane);
-	orthographic_matrix = XMMatrixOrthographicOffCenterLH(0.0f, (float)width, (float)height, 0.0f, near_plane, far_plane);
-}
-
 Command_List_Allocator::Command_List_Allocator()
 {
 }
@@ -76,6 +64,7 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 	window.width = win32_window->width;
 	window.height = win32_window->height;
+	window.aspect_ration = (float)window.width / (float)window.height;
 
 	u32 back_buffer_count = 2;
 
@@ -83,8 +72,6 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	rendering->attach("vsync", &window.vsync);
 	rendering->attach("windowed", &window.windowed);
 	rendering->attach("back_buffer_count", (s32 *)&back_buffer_count);
-
-	window_view_plane.update(60, window.width, window.height, 1.0f, 100000.0f);
 
 	render_device = create_render_device(back_buffer_count);
 	if (!render_device) {
@@ -273,16 +260,20 @@ void Pipeline_Resource_Manager::update_common_constant_buffers()
 {
 	Render_System *render_sys = Engine::get_render_system();
 	Render_World *render_world = Engine::get_render_world();
+	Game_World *game_world = Engine::get_game_world();
+
+	Camera *camera = (Camera *)game_world->get_entity(render_world->camera_id);
+	Size_s32 window_size = render_sys->get_window_size();
 
 	GPU_Frame_Info frame_info;
-	frame_info.view_matrix = render_world->rendering_view.view_matrix;
-	frame_info.perspective_matrix = render_sys->window_view_plane.perspective_matrix;
-	frame_info.orthographic_matrix = render_sys->window_view_plane.orthographic_matrix;
-	frame_info.near_plane = render_sys->window_view_plane.near_plane;
-	frame_info.far_plane = render_sys->window_view_plane.far_plane;
+	frame_info.view_matrix = camera->view_matrix;
+	frame_info.perspective_matrix = camera->perspective_matrix;
+	frame_info.orthographic_matrix = make_orthographic_matrix(0.0f, (float)window_size.width, (float)window_size.height, 0.0f, camera->near_plane, camera->far_plane);
+	frame_info.near_plane = camera->near_plane;
+	frame_info.far_plane = camera->far_plane;
 
-	frame_info.view_position = render_world->rendering_view.position;
-	frame_info.view_direction = render_world->rendering_view.direction;
+	frame_info.view_position = camera->position;
+	frame_info.view_direction = camera->direction;
 	frame_info.light_count = render_world->lights.count;
 
 	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 256);
