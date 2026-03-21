@@ -78,6 +78,66 @@ void test_elements_layouting(u32 x, u32 y, Layout layout_direction, u32 alignmen
 	end_ui_element();
 }
 
+void test_center_layout()
+{
+	test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_CENTER);
+	test_elements_layouting(500, 10, ROW_LAYOUT, ALIGNMENT_CENTER);
+}
+
+void test_horizontal_and_vertical_center_layout()
+{
+	test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_HORIZONTAL_CENTER);
+	test_elements_layouting(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_HORIZONTAL_CENTER);
+	
+	test_elements_layouting(1000, 10, COLUMN_LAYOUT, ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	test_elements_layouting(1450, 10, COLUMN_LAYOUT, ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
+
+	test_elements_layouting(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_HORIZONTAL_CENTER);
+	test_elements_layouting(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_HORIZONTAL_CENTER);
+
+	test_elements_layouting(1000, 400, ROW_LAYOUT, ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	test_elements_layouting(1450, 400, ROW_LAYOUT, ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
+}
+
+void test_layout()
+{
+	test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
+	test_elements_layouting(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
+
+	test_elements_layouting(1000, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
+	test_elements_layouting(1450, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
+
+	test_elements_layouting(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
+	test_elements_layouting(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
+
+	test_elements_layouting(1000, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
+	test_elements_layouting(1450, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
+}
+
+void test_elements_size_filling(u32 x, u32 y, Layout layout_direction, u32 alignment_flags)
+{
+	begin_ui_element("Gray rect #id");
+	set_position(x, y);
+	set_size(filled_size(), filled_size());
+	set_layout(layout_direction);
+	set_alignment(alignment_flags);
+	set_background_color(GRAY);
+
+	begin_ui_element("Teal rect");
+	//set_position(200, 300);
+	set_size(fixed_size(300), fixed_size(200));
+	set_background_color(TEAL);
+	end_ui_element();
+
+	begin_ui_element("Dark Orange");
+	//set_position(200, 300);
+	set_size(fixed_size(100), fixed_size(100));
+	set_background_color(DARK_ORANGE);
+	end_ui_element();
+
+	end_ui_element();
+}
+
 void draw_test_gui()
 {
 	static bool init_gui = true;
@@ -94,34 +154,22 @@ void draw_test_gui()
 	//test_forget_open_ui_element();
 	//test_two_elements_have_same_name();
 	//test_default_element_cliping();
+	
+	//test_center_layout();
+	//test_horizontal_and_vertical_center_layout();
+	//test_layout();
 
-	test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_CENTER);
-	test_elements_layouting(500, 10, ROW_LAYOUT, ALIGNMENT_CENTER);
-
-	//test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_HORIZONTAL_CENTER);
-	//test_elements_layouting(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_HORIZONTAL_CENTER);
-	//test_elements_layouting(1000, 10, COLUMN_LAYOUT, ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	//test_elements_layouting(1450, 10, COLUMN_LAYOUT, ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
-
-	//test_elements_layouting(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_HORIZONTAL_CENTER);
-	//test_elements_layouting(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_HORIZONTAL_CENTER);
-
-	//test_elements_layouting(1000, 400, ROW_LAYOUT, ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	//test_elements_layouting(1450, 400, ROW_LAYOUT, ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
-
-
-	//test_elements_layouting(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
-	//test_elements_layouting(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
-
-	//test_elements_layouting(1000, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
-	//test_elements_layouting(1450, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
-
-	//test_elements_layouting(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
-	//test_elements_layouting(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
-
-	//test_elements_layouting(1000, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
-	//test_elements_layouting(1450, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
-
+	test_elements_size_filling(10, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
+	test_elements_size_filling(500, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
+	
+	test_elements_size_filling(1000, 10, COLUMN_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
+	test_elements_size_filling(1450, 10, COLUMN_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
+	
+	test_elements_size_filling(10, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_LEFT);
+	test_elements_size_filling(500, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_LEFT);
+	
+	test_elements_size_filling(1000, 400, ROW_LAYOUT, ALIGNMENT_TOP | ALIGNMENT_RIGHT);
+	test_elements_size_filling(1450, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
 
 	//begin_ui_element("Empty element");
 	//end_ui_element();

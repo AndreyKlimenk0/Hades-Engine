@@ -186,18 +186,12 @@ struct UI_Context {
 	
 	Stack<UI_Element *> elements_stack;
 
-	UI_Element *get_root_ui_element();
 	UI_Element *get_top_ui_element();
 	void push_ui_element(UI_Element *ui_element);
 	void pop_ui_element();
 };
 
 static UI_Context ui_context;
-
-UI_Element *UI_Context::get_root_ui_element()
-{
-	return ui_context.root_element;
-}
 
 UI_Element *UI_Context::get_top_ui_element()
 {
@@ -253,10 +247,16 @@ void imgui::begin_frame()
 	ui_context.root_element->height.fixed = temp_height;
 }
 
-static void fill_render_primitive_list(const Point_s32 &parent_position, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
+static void reset_call_counter(UI_Element *ui_element)
 {
 	ui_element->called = 0;
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		reset_call_counter(ui_element->child_elements[i]);
+	}
+}
 
+static void fill_render_primitive_list(const Point_s32 &parent_position, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
+{
 	Point_s32 position = parent_position + ui_element->position;
 	Size_s32 size = ui_element->get_size();
 
@@ -277,7 +277,8 @@ void imgui::end_frame()
 {
 	ASSERT_MSG(ui_element_debug_counter == 0, "UI element stack imbalance, begin_ui_element() and end_ui_element() must be called in pairs.");
 
-	fill_render_primitive_list(Point_s32(0, 0), ui_context.get_root_ui_element(), ui_context.render_primitive_list);
+	reset_call_counter(ui_context.root_element);
+	fill_render_primitive_list(Point_s32(0, 0), ui_context.root_element, ui_context.render_primitive_list);
 
 	ui_context.render_2d->add_render_primitive_list(ui_context.render_primitive_list);
 }
@@ -379,21 +380,55 @@ AxisV2 layout_to_axis(Layout layout)
 
 typedef void (*Layout_Function)(UI_Element *, AxisV2);
 
+void fill_size(UI_Element *ui_element, AxisV2 axis)
+{
+	s32 width = 0;
+	s32 height = 0;
+	if (axis == X_AXISV2) {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			width += child->get_width();
+			height = math::max(height, child->get_height());
+		}
+	} else {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			height += child->get_height();
+			width = math::max(width, child->get_width());
+		}
+	}
+	ui_element->width.fixed = width;
+	ui_element->height.fixed = height;
+}
+
 void imgui::end_ui_element()
 {
 	ui_element_debug_counter--;
 	
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 
+	if ((ui_element->width.type == SIZE_TYPE_FILLED) && (ui_element->height.type == SIZE_TYPE_FILLED)) {
+		fill_size(ui_element, layout_to_axis(ui_element->layout));
+	}
+
 	if ((ui_element->alignment_flags & ALIGNMENT_TOP) && (ui_element->alignment_flags & ALIGNMENT_LEFT)) {
 		layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, layout_to_axis(ui_element->layout));
 	} 
 	if ((ui_element->alignment_flags & ALIGNMENT_BOTTOM) && (ui_element->alignment_flags & ALIGNMENT_LEFT)) {
-		layout_ui_elements_right_to_left_or_bottom_to_top(ui_element, layout_to_axis(ui_element->layout));
+		if (ui_element->layout == ROW_LAYOUT) {
+			layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, X_AXISV2);
+			layout_ui_elements_to_right_or_bottom(ui_element, Y_AXISV2);
+		} else if (ui_element->layout == COLUMN_LAYOUT) {
+			layout_ui_elements_right_to_left_or_bottom_to_top(ui_element, Y_AXISV2);
+		}
 	}
 	if ((ui_element->alignment_flags & ALIGNMENT_TOP) && (ui_element->alignment_flags & ALIGNMENT_RIGHT)) {
-		layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, layout_to_axis(ui_element->layout));
-		layout_ui_elements_to_right_or_bottom(ui_element, ui_element->layout == ROW_LAYOUT ? Y_AXISV2 : X_AXISV2);
+		if (ui_element->layout == ROW_LAYOUT) {
+			layout_ui_elements_right_to_left_or_bottom_to_top(ui_element, X_AXISV2);
+		} else if (ui_element->layout == COLUMN_LAYOUT) {
+			layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, layout_to_axis(ui_element->layout));
+			layout_ui_elements_to_right_or_bottom(ui_element, ui_element->layout == ROW_LAYOUT ? Y_AXISV2 : X_AXISV2);
+		}
 	}
 	if ((ui_element->alignment_flags & ALIGNMENT_BOTTOM) && (ui_element->alignment_flags & ALIGNMENT_RIGHT)) {
 		layout_ui_elements_right_to_left_or_bottom_to_top(ui_element, layout_to_axis(ui_element->layout));
