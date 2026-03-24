@@ -33,30 +33,30 @@ namespace imgui {
 
 	struct Size_Dimension {
 		Size_Type type;
-		union {
-			u32 fixed;
-			float percent;
-		};
+		float value = 0.0f;
+		void calculate_percent_size(s32 parent_size) { value = value * (float)parent_size; };
+		s32 get() { return (s32)value; };
+		void set(s32 _value) { value = (float)_value; }
 	};
 
 	inline Size_Dimension filled_size()
 	{
-		return { .type = SIZE_TYPE_FILLED, .fixed = 0 };
+		return { .type = SIZE_TYPE_FILLED };
 	}
 
 	inline Size_Dimension fixed_size(u32 value)
 	{
-		return { .type = SIZE_TYPE_FIXED, .fixed = value };
+		return { .type = SIZE_TYPE_FIXED, .value = (float)value };
 	}
 
 	inline Size_Dimension percent_size(float value)
 	{
-		return { .type = SIZE_TYPE_PERCENT, .percent = value };
+		return { .type = SIZE_TYPE_PERCENT, .value = value };
 	}
 
 	inline Size_Dimension grow_size()
 	{
-		return { .type = SIZE_TYPE_GROW, .fixed = 0 };
+		return { .type = SIZE_TYPE_GROW };
 	}
 
 	void init_guiv2(u32 window_width, u32 window_height, const char *font_name, u32 font_size, Render_2D *render_2d);

@@ -13,10 +13,6 @@
 
 using namespace imgui;
 
-static u32 AUTO_WIDTH = UINT_MAX - 1;
-static u32 AUTO_HEIGHT = UINT_MAX - 2;
-
-
 static u32 ui_element_debug_counter = 0;
 
 struct Element_ID {
@@ -69,6 +65,25 @@ bool operator!=(Element_ID first_id, Element_ID second_id)
 	return !(first_id == second_id);
 }
 
+enum AxisV2 {
+	X_AXISV2 = 0,
+	Y_AXISV2 = 1
+};
+
+struct Element_Size {
+	Size_Dimension width;
+	Size_Dimension height;
+
+	Size_Dimension operator[](AxisV2 axis);
+};
+
+Size_Dimension Element_Size::operator[](AxisV2 axis)
+{
+	u32 index = static_cast<u32>(axis);
+	assert(index < 2);
+	return ((Size_Dimension *)this)[index];
+}
+
 struct UI_Element {
 	UI_Element();
 	UI_Element(Element_ID element_id, UI_Element *parent_element);
@@ -79,8 +94,7 @@ struct UI_Element {
 
 	/*Rect_s32 rect;*/
 	Point_s32 position;
-	Size_Dimension width;
-	Size_Dimension height;
+	Element_Size size;
 
 	Layout layout;
 	u32 alignment_flags;
@@ -97,16 +111,12 @@ struct UI_Element {
 
 	bool root_element();
 	UI_Element *find_child(Element_ID element_id);
-	s32 get_width();
-	s32 get_height();
-	s32 get_size(u32 index);
-	Size_Type get_size_type(u32 index);
-	Size_s32 get_size();
-	void set_size(s32 size, u32 index);
 };
 
-UI_Element::UI_Element() : position(-1, -1), width(fixed_size(100)), height(fixed_size(100))
+UI_Element::UI_Element() : position(-1, -1)
 {
+	size.width = fixed_size(100);
+	size.height = fixed_size(100);
 }
 
 UI_Element::UI_Element(Element_ID element_id, UI_Element *parent_element) : id(element_id), parent_element(parent_element)
@@ -118,12 +128,15 @@ UI_Element::~UI_Element()
 {
 }
 
+
+const u32 AUTO_LAYOUT = INT_MAX;
+
 void UI_Element::begin_frame()
 {
-	position.x = 0;
-	position.y = 0;
-	width = filled_size();
-	height = filled_size();
+	position.x = AUTO_LAYOUT;
+	position.y = AUTO_LAYOUT;
+	size.width = filled_size();
+	size.height = filled_size();
 	layout = COLUMN_LAYOUT;
 	alignment_flags = ALIGNMENT_TOP | ALIGNMENT_LEFT;
 
@@ -152,49 +165,6 @@ UI_Element *UI_Element::find_child(Element_ID element_id)
 		return result.data;
 	}
 	return NULL;
-}
-
-s32 UI_Element::get_width()
-{
-	return (s32)width.fixed;
-}
-
-s32 UI_Element::get_height()
-{
-	return (s32)height.fixed;
-}
-
-s32 UI_Element::get_size(u32 index)
-{
-	if (index == 0) {
-		return width.fixed;
-	} else {
-		return height.fixed;
-	}
-	assert(false);
-	return 0;
-}
-
-Size_Type UI_Element::get_size_type(u32 index)
-{
-	assert(index < 2);
-	Size_Type temp[] = { width.type, height.type };
-	return temp[index];
-}
-
-Size_s32 UI_Element::get_size()
-{
-	return Size_s32((s32)width.fixed, (s32)height.fixed);
-}
-
-void UI_Element::set_size(s32 size, u32 index)
-{
-	assert(index < 2);
-	if (index == 0) {
-		width.fixed = size;
-	} else {
-		height.fixed = size;
-	}
 }
 
 struct UI_Context {
@@ -234,8 +204,8 @@ void imgui::init_guiv2(u32 window_width, u32 window_height, const char *font_nam
 	root_element->id = Element_ID("Root Element");
 	root_element->background_color = Color(0, 0, 0, 0);
 	root_element->position = Point_s32(0, 0);
-	root_element->width = fixed_size(window_width);
-	root_element->height = fixed_size(window_height);
+	root_element->size.width = fixed_size(window_width);
+	root_element->size.height = fixed_size(window_height);
 
 	ui_context.root_element = root_element;
 	ui_context.render_2d = render_2d;
@@ -259,11 +229,11 @@ void imgui::shutdown_guiv2()
 
 void imgui::begin_frame()
 {
-	s32 temp_width = ui_context.root_element->get_width();
-	s32 temp_height = ui_context.root_element->get_height();
+	s32 temp_width = ui_context.root_element->size.width.get();
+	s32 temp_height = ui_context.root_element->size.height.get();
 	ui_context.root_element->begin_frame();
-	ui_context.root_element->width = fixed_size(temp_width);
-	ui_context.root_element->height = fixed_size(temp_height);
+	ui_context.root_element->size.width = fixed_size(temp_width);
+	ui_context.root_element->size.height = fixed_size(temp_height);
 }
 
 static void reset_call_counters(UI_Element *ui_element)
@@ -277,10 +247,11 @@ static void reset_call_counters(UI_Element *ui_element)
 static void fill_render_primitive_list(const Point_s32 &parent_position, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
 {
 	Point_s32 position = parent_position + ui_element->position;
-	Size_s32 size = ui_element->get_size();
+	s32 width = ui_element->size.width.get();
+	s32 height = ui_element->size.height.get();
 
-	if ((size.width > 0) && (size.height > 0)) { // Should Render 2D handle zero size ?
-		Rect_s32 rect = { position.x, position.y, size.width, size.height };
+	if ((width > 0) && (height > 0)) { // Should Render 2D handle zero size ?
+		Rect_s32 rect = { position.x, position.y, width, height };
 
 		render_primitive_list->add_rect(&rect, ui_element->background_color);
 		render_primitive_list->push_clip_rect(&rect);
@@ -321,61 +292,71 @@ void imgui::begin_ui_element(const char *name)
 
 	ui_context.push_ui_element(ui_element);
 }
-enum AxisV2 {
-	X_AXISV2 = 0,
-	Y_AXISV2 = 1
-};
+
+AxisV2 flip_axis(AxisV2 axis)
+{
+	assert((axis == X_AXISV2) || (axis == Y_AXISV2));
+	return axis == X_AXISV2 ? Y_AXISV2 : X_AXISV2;
+}
 
 void layout_ui_elements_left_to_right_or_top_to_bottom(UI_Element *parent_ui_element, AxisV2 axis)
 {
+	Point_s32 point;
+	point[0] = 1;
+	point[1] = 2;
+	point[2] = 3;
 	s32 offset = 0;
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[static_cast<u32>(axis)] = offset;
-		offset += child->get_size(static_cast<u32>(axis));
+		if (child->position[static_cast<u32>(axis)] == AUTO_LAYOUT) {
+			child->position[static_cast<u32>(axis)] = offset;
+			offset += child->size[axis].get();
+		}
+		auto result = flip_axis(axis);
+		if (child->position[static_cast<u32>(flip_axis(axis))] == AUTO_LAYOUT) {
+			child->position[0] = 0;
+		}
 	}
 }
 
 void layout_ui_elements_to_right_or_bottom(UI_Element *parent_ui_element, AxisV2 axis)
 {
-	s32 offset = parent_ui_element->get_size(static_cast<u32>(axis));
+	s32 offset = parent_ui_element->size[axis].get();
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[static_cast<u32>(axis)] = parent_ui_element->get_size(static_cast<u32>(axis)) - child->get_size(static_cast<u32>(axis));
+		child->position[static_cast<u32>(axis)] = parent_ui_element->size[axis].get() - child->size[axis].get();
 	}
 }
 
 void layout_ui_elements_right_to_left_or_bottom_to_top(UI_Element *parent_ui_element, AxisV2 axis)
 {
-	s32 offset = parent_ui_element->get_size(static_cast<u32>(axis));
+	s32 offset = parent_ui_element->size[axis].get();
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		offset -= child->get_size(static_cast<u32>(axis));
+		offset -= child->size[axis].get();
 		child->position[static_cast<u32>(axis)] = offset;
 	}
 }
 
 void layout_ui_elements_in_center(UI_Element *parent_ui_element, AxisV2 axis)
 {
-	s32 offset = parent_ui_element->get_size(static_cast<u32>(axis));
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[static_cast<u32>(axis)] = (parent_ui_element->get_size(static_cast<u32>(axis)) / 2) - (child->get_size(static_cast<u32>(axis)) / 2);
+		child->position[static_cast<u32>(axis)] = (parent_ui_element->size[axis].get() / 2) - (child->size[axis].get() / 2);
 	}
 }
 
 void ground_ui_elements_and_layout_in_center(UI_Element *parent_ui_element, AxisV2 axis)
 {
 	s32 children_total_size = 0;
-	u32 index = static_cast<u32>(axis);
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
-		children_total_size += parent_ui_element->child_elements[i]->get_size(index);
+		children_total_size += parent_ui_element->child_elements[i]->size[axis].get();
 	}
-	u32 offset = (parent_ui_element->get_size(index) / 2) - (children_total_size / 2);
+	u32 offset = (parent_ui_element->size[axis].get() / 2) - (children_total_size / 2);
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[index] = offset;
-		offset += child->get_size(index);
+		child->position[static_cast<u32>(axis)] = offset;
+		offset += child->size[axis].get();
 	}
 }
 
@@ -396,18 +377,18 @@ void fill_size(UI_Element *ui_element, AxisV2 axis)
 	if (axis == X_AXISV2) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			width += child->get_width();
-			height = math::max(height, child->get_height());
+			width += child->size.width.get();
+			height = math::max(height, child->size.height.get());
 		}
 	} else {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			height += child->get_height();
-			width = math::max(width, child->get_width());
+			height += child->size.height.get();
+			width = math::max(width, child->size.width.get());
 		}
 	}
-	ui_element->width.fixed = width;
-	ui_element->height.fixed = height;
+	ui_element->size.width.set(width);
+	ui_element->size.height.set(height);
 }
 
 void imgui::end_ui_element()
@@ -418,37 +399,35 @@ void imgui::end_ui_element()
 
 void fill_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 {
-	u32 index = static_cast<u32>(axis);
-
-	assert(ui_element->get_size(index) > 0);
+	assert(ui_element->size[axis].get() > 0);
 
 	if (layout_to_axis(ui_element->layout) == axis) {
-		s32 available_space = ui_element->get_size(index);
+		s32 available_space = ui_element->size[axis].get();
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->get_size_type(index) != SIZE_TYPE_GROW) {
-				available_space -= child->get_size(index);
+			if (child->size[axis].type != SIZE_TYPE_GROW) {
+				available_space -= child->size[axis].get();
 			}
 		}
 		s32 number_filling_elements = 0;
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->get_size_type(index) == SIZE_TYPE_GROW) {
+			if (child->size[axis].type == SIZE_TYPE_GROW) {
 				number_filling_elements++;
 			}
 		}
 		s32 filling_element_size = number_filling_elements > 0 ? available_space / number_filling_elements : available_space;
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->get_size_type(index) == SIZE_TYPE_GROW) {
-				child->set_size(filling_element_size, index);
+			if (child->size[axis].type == SIZE_TYPE_GROW) {
+				child->size[axis].set(filling_element_size);
 			}
 		}
 	} else {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->get_size_type(index) == SIZE_TYPE_GROW) {
-				child->set_size(ui_element->get_size(index), index);
+			if (child->size[axis].type == SIZE_TYPE_GROW) {
+				child->size[axis].set(ui_element->size[axis].get());
 			}
 		}
 	}
@@ -541,14 +520,14 @@ s32 calculate_fit_size(UI_Element *ui_element, AxisV2 axis)
 	if (layout_to_axis(ui_element->layout) == axis) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			ASSERT_MSG(child->get_size_type(axis) != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
-			result += child->get_size(axis);
+			ASSERT_MSG(child->size[axis].type != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
+			result += child->size[axis].get();
 		}
 	} else {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			ASSERT_MSG(child->get_size_type(axis) != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
-			result = math::max(child->get_size(axis), result);
+			ASSERT_MSG(child->size[axis].type != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
+			result = math::max(child->size[axis].get(), result);
 		}
 	}
 	return result;
@@ -560,11 +539,11 @@ void fit_size_if_needed(UI_Element *ui_element)
 		UI_Element *child = ui_element->child_elements[i];
 		fit_size_if_needed(child);
 	}
-	if (ui_element->get_size_type(0) == SIZE_TYPE_FILLED) {
-		ui_element->set_size(calculate_fit_size(ui_element, X_AXISV2), 0);
+	if (ui_element->size.width.type == SIZE_TYPE_FILLED) {
+		ui_element->size.width.set(calculate_fit_size(ui_element, X_AXISV2));
 	}
-	if (ui_element->get_size_type(1) == SIZE_TYPE_FILLED) {
-		ui_element->set_size(calculate_fit_size(ui_element, Y_AXISV2), 1);
+	if (ui_element->size.height.type == SIZE_TYPE_FILLED) {
+		ui_element->size.height.set(calculate_fit_size(ui_element, Y_AXISV2));
 	}
 }
 
@@ -595,8 +574,8 @@ void imgui::set_position(s32 x, s32 y)
 void imgui::set_size(Size_Dimension horizontal, Size_Dimension vertical)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
-	ui_element->width = horizontal;
-	ui_element->height = vertical;
+	ui_element->size.width = horizontal;
+	ui_element->size.height = vertical;
 }
 
 void imgui::set_layout(Layout layout)
