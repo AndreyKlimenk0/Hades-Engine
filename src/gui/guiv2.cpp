@@ -100,6 +100,8 @@ struct UI_Element {
 	Point_s32 position;
 	Element_Size size;
 
+	Padding padding;
+
 	Layout layout;
 	u32 alignment_flags;
 	
@@ -143,6 +145,8 @@ void UI_Element::begin_frame()
 	alignment_flags = ALIGNMENT_TOP | ALIGNMENT_LEFT;
 
 	children_id_counter = 0;
+
+	padding = Padding(0);
 }
 
 void UI_Element::add_child(UI_Element *ui_element)
@@ -317,7 +321,6 @@ void layout_ui_elements_left_to_right_or_top_to_bottom(UI_Element *parent_ui_ele
 
 void layout_ui_elements_to_right_or_bottom(UI_Element *parent_ui_element, AxisV2 axis)
 {
-	s32 offset = parent_ui_element->size[axis].get();
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
 		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
@@ -348,7 +351,7 @@ void layout_ui_elements_in_center(UI_Element *parent_ui_element, AxisV2 axis)
 	}
 }
 
-void ground_ui_elements_and_layout_in_center(UI_Element *parent_ui_element, AxisV2 axis)
+void group_elements_and_layout_in_center(UI_Element *parent_ui_element, AxisV2 axis)
 {
 	s32 children_total_size = 0;
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
@@ -440,7 +443,43 @@ void fill_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 	}
 }
 
-void layout(UI_Element *ui_element)
+void add_padding_to_child_elements(UI_Element *ui_element)
+{
+	if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+				child->position.x += ui_element->padding.left;
+			}
+		}
+	}
+	if (ui_element->alignment_flags & ALIGNMENT_TOP) {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+				child->position.y += ui_element->padding.top;
+			}
+		}
+	}
+	if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+				child->position.x -= ui_element->padding.right;
+			}
+		}
+	}
+	if (ui_element->alignment_flags & ALIGNMENT_BOTTOM) {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+				child->position.y -= ui_element->padding.bottom;
+			}
+		}
+	}
+}
+
+void layout_child_elements(UI_Element *ui_element)
 {
 	if ((ui_element->alignment_flags & ALIGNMENT_TOP) && (ui_element->alignment_flags & ALIGNMENT_LEFT)) {
 		layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, layout_to_axis(ui_element->layout));
@@ -479,23 +518,23 @@ void layout(UI_Element *ui_element)
 
 		if (ui_element->alignment_flags & ALIGNMENT_VERTICAL_CENTER) {
 			if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
-				ground_ui_elements_and_layout_in_center(ui_element, Y_AXISV2);
+				group_elements_and_layout_in_center(ui_element, Y_AXISV2);
 			} if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
-				ground_ui_elements_and_layout_in_center(ui_element, Y_AXISV2);
+				group_elements_and_layout_in_center(ui_element, Y_AXISV2);
 				layout_ui_elements_to_right_or_bottom(ui_element, X_AXISV2);
 			}
 		}
 
 		if (ui_element->alignment_flags & ALIGNMENT_CENTER) {
-			ground_ui_elements_and_layout_in_center(ui_element, Y_AXISV2);
+			group_elements_and_layout_in_center(ui_element, Y_AXISV2);
 			layout_ui_elements_in_center(ui_element, X_AXISV2);
 		}
 	} else if (ui_element->layout == ROW_LAYOUT) {
 		if (ui_element->alignment_flags & ALIGNMENT_HORIZONTAL_CENTER) {
 			if (ui_element->alignment_flags & ALIGNMENT_TOP) {
-				ground_ui_elements_and_layout_in_center(ui_element, X_AXISV2);
+				group_elements_and_layout_in_center(ui_element, X_AXISV2);
 			} else if (ui_element->alignment_flags & ALIGNMENT_BOTTOM) {
-				ground_ui_elements_and_layout_in_center(ui_element, X_AXISV2);
+				group_elements_and_layout_in_center(ui_element, X_AXISV2);
 				layout_ui_elements_to_right_or_bottom(ui_element, Y_AXISV2);
 			}
 		}
@@ -511,13 +550,15 @@ void layout(UI_Element *ui_element)
 		}
 
 		if (ui_element->alignment_flags & ALIGNMENT_CENTER) {
-			ground_ui_elements_and_layout_in_center(ui_element, X_AXISV2);
+			group_elements_and_layout_in_center(ui_element, X_AXISV2);
 			layout_ui_elements_in_center(ui_element, Y_AXISV2);
 		}
 	}
 
+	add_padding_to_child_elements(ui_element);
+
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
-		layout(ui_element->child_elements[i]);
+		layout_child_elements(ui_element->child_elements[i]);
 	}
 }
 
@@ -565,7 +606,7 @@ void imgui::end_frame()
 	fill_size_if_needed(ui_context.root_element, X_AXISV2);
 	fill_size_if_needed(ui_context.root_element, Y_AXISV2);
 
-	layout(ui_context.root_element);
+	layout_child_elements(ui_context.root_element);
 
 	fill_render_primitive_list(Point_s32(0, 0), ui_context.root_element, ui_context.render_primitive_list);
 
@@ -584,6 +625,12 @@ void imgui::set_size(Size_Dimension horizontal, Size_Dimension vertical)
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	ui_element->size.width = horizontal;
 	ui_element->size.height = vertical;
+}
+
+void imgui::set_padding(Padding padding)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->padding = padding;
 }
 
 void imgui::set_layout(Layout layout)

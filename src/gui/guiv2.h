@@ -31,6 +31,18 @@ namespace imgui {
 	//	static Size_Dimension percent(u32 value);
 	//};
 
+	struct Padding {
+		Padding() {};
+		explicit Padding(s32 padding) : left(padding), top(padding), right(padding), bottom(padding) {}
+		Padding(s32 left, s32 top, s32 right, s32 bottom) : left(left), top(top), right(right), bottom(bottom) {}
+		~Padding() {};
+
+		s32 left = 0;
+		s32 top = 0;
+		s32 right = 0;
+		s32 bottom = 0;
+	};
+
 	struct Size_Dimension {
 		Size_Type type;
 		float value = 0.0f;
@@ -70,6 +82,7 @@ namespace imgui {
 
 	void set_position(s32 x, s32 y);
 	void set_size(Size_Dimension horizontal, Size_Dimension vertical);
+	void set_padding(Padding padding);
 	void set_layout(Layout layout);
 	void set_alignment(u32 alignment_flags);
 	void set_background_color(const Color &color);

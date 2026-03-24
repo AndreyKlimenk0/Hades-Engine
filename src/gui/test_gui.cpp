@@ -58,6 +58,7 @@ void test_elements_layouting(u32 x, u32 y, Layout layout_direction, u32 alignmen
 	begin_ui_element("Gray rect #id");
 	set_position(x, y);
 	set_size(fixed_size(400), fixed_size(300));
+	set_padding(Padding(15));
 	set_layout(layout_direction);
 	set_alignment(alignment_flags);
 	set_background_color(GRAY);
@@ -188,7 +189,7 @@ void draw_test_gui()
 	
 	//test_center_layout();
 	//test_horizontal_and_vertical_center_layout();
-	//test_layout();
+	test_layout();
 
 	//test_center_layout_with_filled_size()
 	//test_horizontal_and_vertical_center_layout_with_filled_size();
