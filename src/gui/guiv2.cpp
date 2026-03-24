@@ -100,7 +100,9 @@ struct UI_Element {
 	s32 get_width();
 	s32 get_height();
 	s32 get_size(u32 index);
+	Size_Type get_size_type(u32 index);
 	Size_s32 get_size();
+	void set_size(s32 size, u32 index);
 };
 
 UI_Element::UI_Element() : position(-1, -1), width(fixed_size(100)), height(fixed_size(100))
@@ -173,9 +175,26 @@ s32 UI_Element::get_size(u32 index)
 	return 0;
 }
 
+Size_Type UI_Element::get_size_type(u32 index)
+{
+	assert(index < 2);
+	Size_Type temp[] = { width.type, height.type };
+	return temp[index];
+}
+
 Size_s32 UI_Element::get_size()
 {
 	return Size_s32((s32)width.fixed, (s32)height.fixed);
+}
+
+void UI_Element::set_size(s32 size, u32 index)
+{
+	assert(index < 2);
+	if (index == 0) {
+		width.fixed = size;
+	} else {
+		height.fixed = size;
+	}
 }
 
 struct UI_Context {
@@ -243,15 +262,15 @@ void imgui::begin_frame()
 	s32 temp_width = ui_context.root_element->get_width();
 	s32 temp_height = ui_context.root_element->get_height();
 	ui_context.root_element->begin_frame();
-	ui_context.root_element->width.fixed = temp_width;
-	ui_context.root_element->height.fixed = temp_height;
+	ui_context.root_element->width = fixed_size(temp_width);
+	ui_context.root_element->height = fixed_size(temp_height);
 }
 
-static void reset_call_counter(UI_Element *ui_element)
+static void reset_call_counters(UI_Element *ui_element)
 {
 	ui_element->called = 0;
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
-		reset_call_counter(ui_element->child_elements[i]);
+		reset_call_counters(ui_element->child_elements[i]);
 	}
 }
 
@@ -271,16 +290,6 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, UI_Elem
 		}
 		render_primitive_list->pop_clip_rect();
 	}
-}
-
-void imgui::end_frame()
-{
-	ASSERT_MSG(ui_element_debug_counter == 0, "UI element stack imbalance, begin_ui_element() and end_ui_element() must be called in pairs.");
-
-	reset_call_counter(ui_context.root_element);
-	fill_render_primitive_list(Point_s32(0, 0), ui_context.root_element, ui_context.render_primitive_list);
-
-	ui_context.render_2d->add_render_primitive_list(ui_context.render_primitive_list);
 }
 
 static String process_ui_element_name(const char *name)
@@ -404,16 +413,52 @@ void fill_size(UI_Element *ui_element, AxisV2 axis)
 void imgui::end_ui_element()
 {
 	ui_element_debug_counter--;
-	
-	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_context.pop_ui_element();
+}
 
-	if ((ui_element->width.type == SIZE_TYPE_FILLED) && (ui_element->height.type == SIZE_TYPE_FILLED)) {
-		fill_size(ui_element, layout_to_axis(ui_element->layout));
+void fill_size_if_needed(UI_Element *ui_element, AxisV2 axis)
+{
+	u32 index = static_cast<u32>(axis);
+
+	assert(ui_element->get_size(index) > 0);
+
+	if (layout_to_axis(ui_element->layout) == axis) {
+		s32 available_space = ui_element->get_size(index);
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->get_size_type(index) != SIZE_TYPE_GROW) {
+				available_space -= child->get_size(index);
+			}
+		}
+		s32 number_filling_elements = 0;
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->get_size_type(index) == SIZE_TYPE_GROW) {
+				number_filling_elements++;
+			}
+		}
+		s32 filling_element_size = number_filling_elements > 0 ? available_space / number_filling_elements : available_space;
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->get_size_type(index) == SIZE_TYPE_GROW) {
+				child->set_size(filling_element_size, index);
+			}
+		}
+	} else {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			if (child->get_size_type(index) == SIZE_TYPE_GROW) {
+				child->set_size(ui_element->get_size(index), index);
+			}
+		}
 	}
+}
 
+void layout(UI_Element *ui_element)
+{
 	if ((ui_element->alignment_flags & ALIGNMENT_TOP) && (ui_element->alignment_flags & ALIGNMENT_LEFT)) {
 		layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, layout_to_axis(ui_element->layout));
-	} 
+	}
 	if ((ui_element->alignment_flags & ALIGNMENT_BOTTOM) && (ui_element->alignment_flags & ALIGNMENT_LEFT)) {
 		if (ui_element->layout == ROW_LAYOUT) {
 			layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, X_AXISV2);
@@ -484,7 +529,61 @@ void imgui::end_ui_element()
 			layout_ui_elements_in_center(ui_element, Y_AXISV2);
 		}
 	}
-	ui_context.pop_ui_element();
+
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		layout(ui_element->child_elements[i]);
+	}
+}
+
+s32 calculate_fit_size(UI_Element *ui_element, AxisV2 axis)
+{
+	s32 result = 0;
+	if (layout_to_axis(ui_element->layout) == axis) {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			ASSERT_MSG(child->get_size_type(axis) != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
+			result += child->get_size(axis);
+		}
+	} else {
+		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+			UI_Element *child = ui_element->child_elements[i];
+			ASSERT_MSG(child->get_size_type(axis) != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
+			result = math::max(child->get_size(axis), result);
+		}
+	}
+	return result;
+}
+
+void fit_size_if_needed(UI_Element *ui_element)
+{
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		UI_Element *child = ui_element->child_elements[i];
+		fit_size_if_needed(child);
+	}
+	if (ui_element->get_size_type(0) == SIZE_TYPE_FILLED) {
+		ui_element->set_size(calculate_fit_size(ui_element, X_AXISV2), 0);
+	}
+	if (ui_element->get_size_type(1) == SIZE_TYPE_FILLED) {
+		ui_element->set_size(calculate_fit_size(ui_element, Y_AXISV2), 1);
+	}
+}
+
+void imgui::end_frame()
+{
+	ASSERT_MSG(ui_element_debug_counter == 0, "UI element stack imbalance, begin_ui_element() and end_ui_element() must be called in pairs.");
+
+	reset_call_counters(ui_context.root_element);
+
+	fit_size_if_needed(ui_context.root_element);
+
+	fill_size_if_needed(ui_context.root_element, X_AXISV2);
+	fill_size_if_needed(ui_context.root_element, Y_AXISV2);
+
+	layout(ui_context.root_element);
+
+	fill_render_primitive_list(Point_s32(0, 0), ui_context.root_element, ui_context.render_primitive_list);
+
+	ui_context.render_2d->add_render_primitive_list(ui_context.render_primitive_list);
 }
 
 void imgui::set_position(s32 x, s32 y)

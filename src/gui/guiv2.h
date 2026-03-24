@@ -10,18 +10,19 @@ namespace imgui {
 		COLUMN_LAYOUT,
 	};
 
-	const u32 ALIGNMENT_TOP    = 0x1;
-	const u32 ALIGNMENT_BOTTOM = 0x2;
-	const u32 ALIGNMENT_LEFT   = 0x4;
-	const u32 ALIGNMENT_RIGHT  = 0x8;
+	const u32 ALIGNMENT_TOP    = 0x1; // Top to bottom.
+	const u32 ALIGNMENT_BOTTOM = 0x2; // Bottom to top.
+	const u32 ALIGNMENT_LEFT   = 0x4; // Left to right.
+	const u32 ALIGNMENT_RIGHT  = 0x8; // Right to left
 	const u32 ALIGNMENT_HORIZONTAL_CENTER = 0x10;
 	const u32 ALIGNMENT_VERTICAL_CENTER   = 0x20;
 	const u32 ALIGNMENT_CENTER = 0x40;
 
 	enum Size_Type {
-		SIZE_TYPE_FILLED,
 		SIZE_TYPE_FIXED,
+		SIZE_TYPE_FILLED,
 		SIZE_TYPE_PERCENT,
+		SIZE_TYPE_GROW,
 	};
 
 	//struct Size {
@@ -48,9 +49,14 @@ namespace imgui {
 		return { .type = SIZE_TYPE_FIXED, .fixed = value };
 	}
 
-	inline Size_Dimension percent_size(u32 value)
+	inline Size_Dimension percent_size(float value)
 	{
-		return { .type = SIZE_TYPE_FIXED, .fixed = value };
+		return { .type = SIZE_TYPE_PERCENT, .percent = value };
+	}
+
+	inline Size_Dimension grow_size()
+	{
+		return { .type = SIZE_TYPE_GROW, .fixed = 0 };
 	}
 
 	void init_guiv2(u32 window_width, u32 window_height, const char *font_name, u32 font_size, Render_2D *render_2d);
