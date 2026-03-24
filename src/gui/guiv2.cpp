@@ -100,6 +100,7 @@ struct UI_Element {
 	Point_s32 position;
 	Element_Size size;
 
+	s32 space;
 	Padding padding;
 
 	Layout layout;
@@ -145,7 +146,7 @@ void UI_Element::begin_frame()
 	alignment_flags = ALIGNMENT_TOP | ALIGNMENT_LEFT;
 
 	children_id_counter = 0;
-
+	space = 0;
 	padding = Padding(0);
 }
 
@@ -479,6 +480,61 @@ void add_padding_to_child_elements(UI_Element *ui_element)
 	}
 }
 
+void add_space_to_child_elements(UI_Element *ui_element)
+{
+	if ((ui_element->layout == COLUMN_LAYOUT)) {
+		if (ui_element->alignment_flags & ALIGNMENT_TOP) {
+			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+				UI_Element *child = ui_element->child_elements[i];
+				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+					child->position.y += ui_element->space;
+				}
+			}
+		} else if (ui_element->alignment_flags & ALIGNMENT_BOTTOM) {
+			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+				UI_Element *child = ui_element->child_elements[i];
+				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+					child->position.y -= ui_element->space;
+				}
+			}
+		}
+	}
+	if ((ui_element->layout == ROW_LAYOUT)) {
+		if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
+			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+				UI_Element *child = ui_element->child_elements[i];
+				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+					child->position.x += ui_element->space;
+				}
+			}
+		} else if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
+			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+				UI_Element *child = ui_element->child_elements[i];
+				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+					child->position.x -= ui_element->space;
+				}
+			}
+		}
+	}
+	//u32 index = static_cast<u32>(layout_to_axis(ui_element->layout));
+	//if ((ui_element->alignment_flags & ALIGNMENT_LEFT) || (ui_element->alignment_flags & ALIGNMENT_TOP)) {
+	//	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+	//		UI_Element *child = ui_element->child_elements[i];
+	//		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+	//			child->position[index] += ui_element->space;
+	//		}
+	//	}
+	//}
+	//if ((ui_element->alignment_flags & ALIGNMENT_RIGHT) || (ui_element->alignment_flags & ALIGNMENT_BOTTOM)) {
+	//	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+	//		UI_Element *child = ui_element->child_elements[i];
+	//		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+	//			child->position[index] -= ui_element->space + 50;
+	//		}
+	//	}
+	//}
+}
+
 void layout_child_elements(UI_Element *ui_element)
 {
 	if ((ui_element->alignment_flags & ALIGNMENT_TOP) && (ui_element->alignment_flags & ALIGNMENT_LEFT)) {
@@ -556,6 +612,7 @@ void layout_child_elements(UI_Element *ui_element)
 	}
 
 	add_padding_to_child_elements(ui_element);
+	add_space_to_child_elements(ui_element);
 
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 		layout_child_elements(ui_element->child_elements[i]);
@@ -625,6 +682,12 @@ void imgui::set_size(Size_Dimension horizontal, Size_Dimension vertical)
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	ui_element->size.width = horizontal;
 	ui_element->size.height = vertical;
+}
+
+void imgui::set_space(s32 space)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->space = space;
 }
 
 void imgui::set_padding(Padding padding)
