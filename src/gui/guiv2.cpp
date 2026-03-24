@@ -84,10 +84,14 @@ Size_Dimension Element_Size::operator[](AxisV2 axis)
 	return ((Size_Dimension *)this)[index];
 }
 
+const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
+
 struct UI_Element {
 	UI_Element();
 	UI_Element(Element_ID element_id, UI_Element *parent_element);
 	~UI_Element();
+
+	u32 flags;
 
 	u32 called = 0;
 	u32 children_id_counter;
@@ -128,13 +132,11 @@ UI_Element::~UI_Element()
 {
 }
 
-
-const u32 AUTO_LAYOUT = INT_MAX;
-
 void UI_Element::begin_frame()
 {
-	position.x = AUTO_LAYOUT;
-	position.y = AUTO_LAYOUT;
+	flags = UI_ELEMENT_AUTO_LAYOUT;
+	position.x = 0;
+	position.y = 0;
 	size.width = filled_size();
 	size.height = filled_size();
 	layout = COLUMN_LAYOUT;
@@ -232,6 +234,8 @@ void imgui::begin_frame()
 	s32 temp_width = ui_context.root_element->size.width.get();
 	s32 temp_height = ui_context.root_element->size.height.get();
 	ui_context.root_element->begin_frame();
+	ui_context.root_element->position.x = 0;
+	ui_context.root_element->position.y = 0;
 	ui_context.root_element->size.width = fixed_size(temp_width);
 	ui_context.root_element->size.height = fixed_size(temp_height);
 }
@@ -301,20 +305,12 @@ AxisV2 flip_axis(AxisV2 axis)
 
 void layout_ui_elements_left_to_right_or_top_to_bottom(UI_Element *parent_ui_element, AxisV2 axis)
 {
-	Point_s32 point;
-	point[0] = 1;
-	point[1] = 2;
-	point[2] = 3;
 	s32 offset = 0;
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->position[static_cast<u32>(axis)] == AUTO_LAYOUT) {
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
 			child->position[static_cast<u32>(axis)] = offset;
 			offset += child->size[axis].get();
-		}
-		auto result = flip_axis(axis);
-		if (child->position[static_cast<u32>(flip_axis(axis))] == AUTO_LAYOUT) {
-			child->position[0] = 0;
 		}
 	}
 }
@@ -324,7 +320,9 @@ void layout_ui_elements_to_right_or_bottom(UI_Element *parent_ui_element, AxisV2
 	s32 offset = parent_ui_element->size[axis].get();
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[static_cast<u32>(axis)] = parent_ui_element->size[axis].get() - child->size[axis].get();
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			child->position[static_cast<u32>(axis)] = parent_ui_element->size[axis].get() - child->size[axis].get();
+		}
 	}
 }
 
@@ -333,8 +331,10 @@ void layout_ui_elements_right_to_left_or_bottom_to_top(UI_Element *parent_ui_ele
 	s32 offset = parent_ui_element->size[axis].get();
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		offset -= child->size[axis].get();
-		child->position[static_cast<u32>(axis)] = offset;
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			offset -= child->size[axis].get();
+			child->position[static_cast<u32>(axis)] = offset;
+		}
 	}
 }
 
@@ -342,7 +342,9 @@ void layout_ui_elements_in_center(UI_Element *parent_ui_element, AxisV2 axis)
 {
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[static_cast<u32>(axis)] = (parent_ui_element->size[axis].get() / 2) - (child->size[axis].get() / 2);
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			child->position[static_cast<u32>(axis)] = (parent_ui_element->size[axis].get() / 2) - (child->size[axis].get() / 2);
+		}
 	}
 }
 
@@ -350,13 +352,18 @@ void ground_ui_elements_and_layout_in_center(UI_Element *parent_ui_element, Axis
 {
 	s32 children_total_size = 0;
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
-		children_total_size += parent_ui_element->child_elements[i]->size[axis].get();
+		UI_Element *child = parent_ui_element->child_elements[i];
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			children_total_size += child->size[axis].get();
+		}
 	}
 	u32 offset = (parent_ui_element->size[axis].get() / 2) - (children_total_size / 2);
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		child->position[static_cast<u32>(axis)] = offset;
-		offset += child->size[axis].get();
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			child->position[static_cast<u32>(axis)] = offset;
+			offset += child->size[axis].get();
+		}
 	}
 }
 
@@ -568,6 +575,7 @@ void imgui::end_frame()
 void imgui::set_position(s32 x, s32 y)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags &= ~UI_ELEMENT_AUTO_LAYOUT;
 	ui_element->position = Point_s32(x, y);
 }
 

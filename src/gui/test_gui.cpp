@@ -196,15 +196,15 @@ void draw_test_gui()
 
 	//set_layout(ROW_LAYOUT);
 
-	begin_ui_element("Gray rect #id");
-	set_size(fixed_size(200), fixed_size(200));
-	set_background_color(TEAL);
-	end_ui_element();
+	//begin_ui_element("Gray rect #id");
+	//set_size(fixed_size(200), fixed_size(200));
+	//set_background_color(TEAL);
+	//end_ui_element();
 
-	begin_ui_element("Gray rect #id");
-	set_size(fixed_size(200), fixed_size(200));
-	set_background_color(DARK_ORANGE);
-	end_ui_element();
+	//begin_ui_element("Gray rect #id");
+	//set_size(fixed_size(200), fixed_size(200));
+	//set_background_color(DARK_ORANGE);
+	//end_ui_element();
 
 	//begin_ui_element("Gray rect #id");
 	//set_position(10, 10);
