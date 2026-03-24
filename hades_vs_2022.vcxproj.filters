@@ -159,6 +159,12 @@
     <ClCompile Include="src\gui\guiv2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\gui\widgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\test_widgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\D3DX11.h">
@@ -840,6 +846,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\gui\guiv2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\widgets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\test_widgets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

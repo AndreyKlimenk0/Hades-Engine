@@ -211,6 +211,8 @@
     <ClCompile Include="src\gui\gui.cpp" />
     <ClCompile Include="src\gui\guiv2.cpp" />
     <ClCompile Include="src\gui\test_gui.cpp" />
+    <ClCompile Include="src\gui\test_widgets.cpp" />
+    <ClCompile Include="src\gui\widgets.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\geometry.cpp" />
     <ClCompile Include="src\libs\image\image.cpp" />
@@ -408,6 +410,8 @@
     <ClInclude Include="src\gui\gui.h" />
     <ClInclude Include="src\gui\guiv2.h" />
     <ClInclude Include="src\gui\test_gui.h" />
+    <ClInclude Include="src\gui\test_widgets.h" />
+    <ClInclude Include="src\gui\widgets.h" />
     <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\dict.h" />

@@ -13,6 +13,7 @@
 
 #include "../win32/test.h"
 #include "../gui/test_gui.h"
+#include "../gui/test_widgets.h"
 
 #include "sys.h"
 #include <windows.h>
@@ -146,7 +147,8 @@ void Engine::frame()
 	//editor.handle_events();
 	//editor.update();
 #if DRAW_TEST_GUI
-	draw_test_gui();
+	//draw_test_gui();
+	draw_test_widgets();
 #else
 	//editor.render();
 #endif
