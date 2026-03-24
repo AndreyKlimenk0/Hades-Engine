@@ -15,6 +15,8 @@ void draw_test_widgets()
 		Render_System *render_sys = &engine->render_sys;
 		Size_u32 size = render_sys->get_window_size();
 		init_guiv2(size.width, size.height, "FiraCode-Regular", 12, &render_sys->render_2d);
+
+		init_widgets();
 	}
 	begin_frame();
 	set_alignment(ALIGNMENT_CENTER);
@@ -22,6 +24,7 @@ void draw_test_widgets()
 	begin_ui_element("Main plane");
 	set_size(fixed_size(1400), fixed_size(800));
 	set_background_color(Color(128, 128, 128));
+	set_padding(Padding(15));
 	
 	button("Button 1");
 
