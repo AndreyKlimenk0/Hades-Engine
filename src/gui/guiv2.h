@@ -49,6 +49,7 @@ namespace imgui {
 		void calculate_percent_size(s32 parent_size) { value = value * (float)parent_size; };
 		s32 get() { return (s32)value; };
 		void set(s32 _value) { value = (float)_value; }
+		void add(s32 _value) { value += (float)_value; }
 	};
 
 	inline Size_Dimension filled_size()
@@ -87,5 +88,8 @@ namespace imgui {
 	void set_layout(Layout layout);
 	void set_alignment(u32 alignment_flags);
 	void set_background_color(const Color &color);
+	void set_rounding(u32 rounding, u32 rounding_flags = ROUND_RECT);
+
+	void text(const char *text);
 }
 #endif

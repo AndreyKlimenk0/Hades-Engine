@@ -74,6 +74,11 @@ void test_elements_layouting(u32 x, u32 y, Layout layout_direction, u32 alignmen
 	set_background_color(DARK_ORANGE);
 	end_ui_element();
 
+	begin_ui_element("Red Color");
+	set_size(fixed_size(25), fixed_size(25));
+	set_background_color(Color::Red);
+	end_ui_element();
+
 	end_ui_element();
 }
 
@@ -190,7 +195,7 @@ void draw_test_gui()
 	
 	//test_center_layout();
 	//test_horizontal_and_vertical_center_layout();
-	test_layout();
+	//test_layout();
 
 	//test_center_layout_with_filled_size()
 	//test_horizontal_and_vertical_center_layout_with_filled_size();
@@ -198,10 +203,35 @@ void draw_test_gui()
 
 	//set_layout(ROW_LAYOUT);
 
-	//begin_ui_element("Gray rect #id");
-	//set_size(fixed_size(200), fixed_size(200));
-	//set_background_color(TEAL);
+	begin_ui_element("Gray rect #id");
+	set_alignment(ALIGNMENT_CENTER);
+	set_position(20, 20);
+	set_size(fixed_size(500), fixed_size(500));
+	set_background_color(TEAL);
+
+	begin_ui_element("Gray rect #id");
+	set_size(filled_size(), filled_size());
+	set_background_color(Color::Black);
+	set_space(10);
+	text("Andrey Klimenko IMGUI");
+	text("Andrey Klimenko IMGUI 1");
+	text("Andrey Klimenko IMGUI 2");
+	end_ui_element();
+
+	//begin_ui_element("Red box");
+	//set_position(-10, 0);
+	//set_size(fixed_size(100), fixed_size(100));
+	//set_background_color(Color::Red);
+	//
+	//begin_ui_element("Blue box");
+	//set_position(-20, 0);
+	//set_size(fixed_size(70), fixed_size(40));
+	//set_background_color(Color::Blue);
 	//end_ui_element();
+	//
+	//end_ui_element();
+	
+	end_ui_element();
 
 	//begin_ui_element("Gray rect #id");
 	//set_size(fixed_size(200), fixed_size(200));

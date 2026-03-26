@@ -27,6 +27,7 @@ void draw_test_widgets()
 	set_padding(Padding(15));
 	
 	button("Button 1");
+	button("Button 2222222222222222");
 
 	end_ui_element(); //Main plane
 

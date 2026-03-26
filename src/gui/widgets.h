@@ -10,6 +10,8 @@ typedef void *Texture_View;
 struct Button_Theme {
 	s32 width;
 	s32 height;
+	u32 rounding;
+	u32 rounding_flags;
 	Color color;
 	Color hover_color;
 };

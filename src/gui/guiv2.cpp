@@ -85,6 +85,7 @@ Size_Dimension Element_Size::operator[](AxisV2 axis)
 }
 
 const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
+const u32 UI_ELEMENT_DRAW_TEXT = 0x2;
 
 struct UI_Element {
 	UI_Element();
@@ -100,13 +101,19 @@ struct UI_Element {
 	Point_s32 position;
 	Element_Size size;
 
+	//Theme
 	s32 space;
 	Padding padding;
 
 	Layout layout;
+	u32 rounding;
+	u32 rounding_flags;
 	u32 alignment_flags;
 	
 	Color background_color;
+
+	//Content
+	const char *text = NULL;
 
 	//Context
 	Element_ID id;
@@ -146,8 +153,12 @@ void UI_Element::begin_frame()
 	alignment_flags = ALIGNMENT_TOP | ALIGNMENT_LEFT;
 
 	children_id_counter = 0;
-	space = 0;
+	space = 5;
 	padding = Padding(0);
+	rounding = 0;
+	rounding_flags = ROUND_RECT;
+
+	text = NULL;
 }
 
 void UI_Element::add_child(UI_Element *ui_element)
@@ -175,6 +186,7 @@ UI_Element *UI_Element::find_child(Element_ID element_id)
 }
 
 struct UI_Context {
+	Font *font = NULL;
 	Render_2D *render_2d = NULL;
 	Render_Primitive_List *render_primitive_list = NULL;
 	
@@ -222,6 +234,7 @@ void imgui::init_guiv2(u32 window_width, u32 window_height, const char *font_nam
 	Render_Font *new_render_font = ui_context.render_2d->get_render_font(new_font);
 	assert(new_render_font);
 
+	ui_context.font = new_font;
 	ui_context.render_primitive_list = new Render_Primitive_List(render_2d, new_font, new_render_font);
 
 	ui_context.push_ui_element(root_element);
@@ -253,7 +266,34 @@ static void reset_call_counters(UI_Element *ui_element)
 	}
 }
 
-static void fill_render_primitive_list(const Point_s32 &parent_position, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
+static Rect_s32 _calculate_clip_rect(Rect_s32 *win_rect, Rect_s32 *item_rect)
+{
+	Rect_s32 clip_rect = *item_rect;
+
+	if ((item_rect->x >= win_rect->right()) || (item_rect->right() <= win_rect->x) || (item_rect->y >= win_rect->bottom()) || (item_rect->bottom() <= win_rect->y)) {
+		return *win_rect;
+	}
+
+	if ((item_rect->x < win_rect->x) && (item_rect->right() > win_rect->x)) {
+		clip_rect.offset_x(win_rect->x - item_rect->x);
+	}
+
+	if ((item_rect->y < win_rect->y) && (item_rect->bottom() > win_rect->y)) {
+		clip_rect.offset_y(win_rect->y - item_rect->y);
+	}
+
+	if ((item_rect->y < win_rect->bottom()) && (item_rect->bottom() > win_rect->bottom())) {
+		clip_rect.height -= item_rect->bottom() - win_rect->bottom();
+	}
+
+	if ((item_rect->x < win_rect->right()) && (item_rect->right() > win_rect->right())) {
+		clip_rect.width -= item_rect->right() - win_rect->right();
+	}
+
+	return clip_rect;
+}
+
+static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s32 *parent_clip_rect, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
 {
 	Point_s32 position = parent_position + ui_element->position;
 	s32 width = ui_element->size.width.get();
@@ -261,12 +301,17 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, UI_Elem
 
 	if ((width > 0) && (height > 0)) { // Should Render 2D handle zero size ?
 		Rect_s32 rect = { position.x, position.y, width, height };
-
-		render_primitive_list->add_rect(&rect, ui_element->background_color);
-		render_primitive_list->push_clip_rect(&rect);
+		Rect_s32 clip_rect = _calculate_clip_rect(parent_clip_rect, &rect);
+		if (ui_element->flags & UI_ELEMENT_DRAW_TEXT) {
+			render_primitive_list->push_clip_rect(&clip_rect);
+			render_primitive_list->add_text(&rect, ui_element->text);
+		} else {
+			render_primitive_list->push_clip_rect(&clip_rect);
+			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
+		}
 
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
-			fill_render_primitive_list(position, ui_element->child_elements[i], render_primitive_list);
+			fill_render_primitive_list(position, &clip_rect, ui_element->child_elements[i], render_primitive_list);
 		}
 		render_primitive_list->pop_clip_rect();
 	}
@@ -482,57 +527,29 @@ void add_padding_to_child_elements(UI_Element *ui_element)
 
 void add_space_to_child_elements(UI_Element *ui_element)
 {
-	if ((ui_element->layout == COLUMN_LAYOUT)) {
-		if (ui_element->alignment_flags & ALIGNMENT_TOP) {
-			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-				UI_Element *child = ui_element->child_elements[i];
-				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
-					child->position.y += ui_element->space;
-				}
-			}
-		} else if (ui_element->alignment_flags & ALIGNMENT_BOTTOM) {
-			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-				UI_Element *child = ui_element->child_elements[i];
-				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
-					child->position.y -= ui_element->space;
-				}
-			}
+	bool condition1 = (ui_element->layout == ROW_LAYOUT) && (ui_element->alignment_flags & ALIGNMENT_RIGHT);
+	bool condition2 = (ui_element->layout == COLUMN_LAYOUT) && (ui_element->alignment_flags & ALIGNMENT_BOTTOM);
+	s32 sign = condition1 || condition2 ? -1 : 1;
+
+	u32 index = static_cast<u32>(ui_element->layout);
+	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+		UI_Element *child = ui_element->child_elements[i];
+		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			child->position[index] += sign * ui_element->space * i;
 		}
 	}
-	if ((ui_element->layout == ROW_LAYOUT)) {
-		if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
-			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-				UI_Element *child = ui_element->child_elements[i];
-				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
-					child->position.x += ui_element->space;
-				}
-			}
-		} else if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
-			for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-				UI_Element *child = ui_element->child_elements[i];
-				if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
-					child->position.x -= ui_element->space;
-				}
-			}
+
+	if ((ui_element->layout == ROW_LAYOUT) && (ui_element->size.width.type == SIZE_TYPE_FILLED)) {
+		if (ui_element->child_elements.count > 1) {
+			ui_element->size.width.add((ui_element->child_elements.count - 1) * ui_element->space);
 		}
 	}
-	//u32 index = static_cast<u32>(layout_to_axis(ui_element->layout));
-	//if ((ui_element->alignment_flags & ALIGNMENT_LEFT) || (ui_element->alignment_flags & ALIGNMENT_TOP)) {
-	//	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-	//		UI_Element *child = ui_element->child_elements[i];
-	//		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
-	//			child->position[index] += ui_element->space;
-	//		}
-	//	}
-	//}
-	//if ((ui_element->alignment_flags & ALIGNMENT_RIGHT) || (ui_element->alignment_flags & ALIGNMENT_BOTTOM)) {
-	//	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-	//		UI_Element *child = ui_element->child_elements[i];
-	//		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
-	//			child->position[index] -= ui_element->space + 50;
-	//		}
-	//	}
-	//}
+
+	if ((ui_element->layout == COLUMN_LAYOUT) && (ui_element->size.height.type == SIZE_TYPE_FILLED)) {
+		if (ui_element->child_elements.count > 1) {
+			ui_element->size.height.add((ui_element->child_elements.count - 1) * ui_element->space);
+		}
+	}
 }
 
 void layout_child_elements(UI_Element *ui_element)
@@ -665,7 +682,8 @@ void imgui::end_frame()
 
 	layout_child_elements(ui_context.root_element);
 
-	fill_render_primitive_list(Point_s32(0, 0), ui_context.root_element, ui_context.render_primitive_list);
+	Rect_s32 clip_rect = { 0, 0, ui_context.root_element->size.width.get(), ui_context.root_element->size.height.get() };
+	fill_render_primitive_list(Point_s32(0, 0), &clip_rect, ui_context.root_element, ui_context.render_primitive_list);
 
 	ui_context.render_2d->add_render_primitive_list(ui_context.render_primitive_list);
 }
@@ -712,4 +730,27 @@ void imgui::set_background_color(const Color &color)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	ui_element->background_color = color;
+}
+
+void imgui::set_rounding(u32 rounding, u32 rounding_flags)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->rounding = rounding;
+	ui_element->rounding_flags = rounding_flags;
+}
+
+static void ui_element_draw_text(const char *text)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags |= UI_ELEMENT_DRAW_TEXT;
+	ui_element->text = text;
+}
+
+void imgui::text(const char *text)
+{
+	Size_u32 text_size = ui_context.font->get_text_size(text);
+	begin_ui_element(text);
+	set_size(fixed_size(text_size.width), fixed_size(text_size.height));
+	ui_element_draw_text(text);
+	end_ui_element();
 }
