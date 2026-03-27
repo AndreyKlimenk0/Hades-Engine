@@ -26,9 +26,15 @@ void draw_test_widgets()
 	set_background_color(Color(128, 128, 128));
 	set_padding(Padding(15));
 	
-	button("Button 1");
-	button("Button 2222222222222222");
+	if (button("Button 1")) {
+		print("Click by button 1");
+	}
+	if (button("Button 2")) {
+		print("Click by button 2");
+	}
 
+	begin_list_box("Entity Type");
+	text("Entity Type");
 	end_ui_element(); //Main plane
 
 	end_frame();

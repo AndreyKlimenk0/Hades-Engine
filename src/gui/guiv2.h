@@ -91,5 +91,8 @@ namespace imgui {
 	void set_rounding(u32 rounding, u32 rounding_flags = ROUND_RECT);
 
 	void text(const char *text);
+
+	bool ui_element_hovered();
+	bool ui_element_clicked();
 }
 #endif

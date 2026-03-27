@@ -216,20 +216,27 @@ void draw_test_gui()
 	text("Andrey Klimenko IMGUI");
 	text("Andrey Klimenko IMGUI 1");
 	text("Andrey Klimenko IMGUI 2");
+	
 	end_ui_element();
 
-	//begin_ui_element("Red box");
-	//set_position(-10, 0);
-	//set_size(fixed_size(100), fixed_size(100));
-	//set_background_color(Color::Red);
-	//
-	//begin_ui_element("Blue box");
-	//set_position(-20, 0);
-	//set_size(fixed_size(70), fixed_size(40));
-	//set_background_color(Color::Blue);
-	//end_ui_element();
-	//
-	//end_ui_element();
+
+	begin_ui_element("Red box");
+	set_position(-10, 0);
+	set_size(fixed_size(100), fixed_size(100));
+	
+	if (ui_element_hovered()) {
+		set_background_color(Color::Red);
+	} else {
+		set_background_color(Color::Black);
+	}
+	
+	begin_ui_element("Blue box");
+	set_position(-20, 0);
+	set_size(fixed_size(70), fixed_size(40));
+	set_background_color(Color::Blue);
+	end_ui_element();
+	
+	end_ui_element();
 	
 	end_ui_element();
 
