@@ -33,7 +33,13 @@ void draw_test_widgets()
 		print("Click by button 2");
 	}
 
-	begin_list_box("Entity Type");
+	Array<String> entity_types;
+	entity_types.push("Entity");
+	entity_types.push("Camera");
+	entity_types.push("Person");
+	static u32 index;
+	list_box("Entity Type", entity_types, &index);
+
 	text("Entity Type");
 	end_ui_element(); //Main plane
 

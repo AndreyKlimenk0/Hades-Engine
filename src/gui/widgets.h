@@ -2,7 +2,9 @@
 #define GUI_WIDGETS_H
 
 #include "../libs/color.h"
+#include "../libs/str.h"
 #include "../libs/number_types.h"
+#include "../libs/structures/array.h"
 //#include "../libs/math/structures.h"
 
 typedef void *Texture_View;
@@ -37,6 +39,6 @@ void pop_button_theme();
 bool button(const char *text);
 bool button(Texture_View *texture_view);
 
-void begin_list_box(const char *name);
+void list_box(const char *name, Array<String> &list, u32 *index);
 
 #endif

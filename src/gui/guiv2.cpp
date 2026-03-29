@@ -17,10 +17,9 @@ using namespace imgui;
 
 static u32 ui_element_debug_counter = 0;
 
-enum AxisV2 {
-	X_AXISV2 = 0,
-	Y_AXISV2 = 1
-};
+static const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
+static const u32 UI_ELEMENT_DRAW_TEXT = 0x2;
+
 
 static AxisV2 flip_axis(AxisV2 axis)
 {
@@ -35,18 +34,6 @@ static AxisV2 layout_to_axis(Layout layout)
 	AxisV2 temp[] = { X_AXISV2, Y_AXISV2 };
 	return temp[index];
 }
-
-struct Element_ID {
-	Element_ID();
-	explicit Element_ID(const char *str);
-	Element_ID(const Element_ID &other);
-	~Element_ID();
-
-	u32 hash = 0;
-	String string;
-	
-	Element_ID &operator=(const Element_ID &other);
-};
 
 Element_ID::Element_ID()
 {
@@ -86,64 +73,12 @@ bool operator!=(Element_ID first_id, Element_ID second_id)
 	return !(first_id == second_id);
 }
 
-struct Element_Size {
-	Size_Dimension width;
-	Size_Dimension height;
-
-	Size_Dimension operator[](AxisV2 axis);
-};
-
 Size_Dimension Element_Size::operator[](AxisV2 axis)
 {
 	u32 index = static_cast<u32>(axis);
 	assert(index < 2);
 	return ((Size_Dimension *)this)[index];
 }
-
-const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
-const u32 UI_ELEMENT_DRAW_TEXT = 0x2;
-
-struct UI_Element {
-	UI_Element();
-	UI_Element(Element_ID element_id, UI_Element *parent_element);
-	~UI_Element();
-
-	u32 flags;
-
-	u32 called = 0;
-	u32 children_id_counter;
-
-	/*Rect_s32 rect;*/
-	Point_s32 position;
-	Point_s32 prev_position;
-	Element_Size size;
-	Element_Size prev_size;
-
-	//Theme
-	s32 space;
-	Padding padding;
-
-	Layout layout;
-	u32 rounding;
-	u32 rounding_flags;
-	u32 alignment_flags;
-	
-	Color background_color;
-
-	//Content
-	const char *text = NULL;
-
-	//Context
-	Element_ID id;
-	UI_Element *parent_element = NULL;
-	Array<UI_Element *> child_elements;
-
-	void begin_frame();
-	void add_child(UI_Element *ui_element);
-
-	bool root_element();
-	UI_Element *find_child(Element_ID element_id);
-};
 
 UI_Element::UI_Element() : position(-1, -1)
 {
@@ -165,6 +100,7 @@ UI_Element::~UI_Element()
 
 void UI_Element::begin_frame()
 {
+	position_relative_element = NULL;
 	flags = UI_ELEMENT_AUTO_LAYOUT;
 	position.x = 0;
 	position.y = 0;
@@ -597,7 +533,13 @@ static void layout_child_elements(UI_Element *ui_element)
 
 static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s32 *parent_clip_rect, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
 {
-	Point_s32 position = parent_position + ui_element->position;
+	Point_s32 position;
+	if (ui_element->position_relative_element) {
+		position = ui_element->position_relative_element->position + ui_element->position;
+	} else {
+		position = parent_position + ui_element->position;
+	}
+	
 	s32 width = ui_element->size.width.get();
 	s32 height = ui_element->size.height.get();
 
@@ -713,6 +655,14 @@ void imgui::set_position(s32 x, s32 y)
 	ui_element->position = Point_s32(x, y);
 }
 
+void imgui::set_position(UI_Element *relative_ui_element, s32 x, s32 y)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags &= ~UI_ELEMENT_AUTO_LAYOUT;
+	ui_element->position_relative_element = relative_ui_element;
+	ui_element->position = Point_s32(x, y);
+}
+
 void imgui::set_size(Size_Dimension horizontal, Size_Dimension vertical)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
@@ -786,4 +736,9 @@ bool imgui::ui_element_clicked()
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	Rect_s32 rect = { ui_element->prev_position.x, ui_element->prev_position.y, ui_element->prev_size.width.get(), ui_element->prev_size.height.get() };
 	return was_key_just_pressed(KEY_LMOUSE) && _detect_intersection(&rect);;
+}
+
+UI_Element *imgui::get_ui_element()
+{
+	return ui_context.get_top_ui_element();
 }
