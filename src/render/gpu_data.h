@@ -59,4 +59,10 @@ struct GPU_Material {
 	u32 diffuse_idx;
 	u32 roughness_metalic_idx;
 };
+
+struct GPU_UI_Frame_Data {
+	Matrix4 projection_matrix;
+	u32 font_texture_idx;
+	u32 pad[3];
+};
 #endif

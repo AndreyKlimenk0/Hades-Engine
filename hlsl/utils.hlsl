@@ -42,6 +42,17 @@ float4 normalize_rgb(int r, int g, int b)
 	return float4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
 }
 
+float4 unpack_rgba(uint encoded)
+{
+    float4 decoded;
+    decoded.x = (0xFF000000u & encoded) >> 24;
+    decoded.y = (0x00FF0000u & encoded) >> 16;
+    decoded.z = (0x0000FF00u & encoded) >> 8;
+    decoded.w = (0x000000FFu & encoded);
+    decoded /= 255.0;
+    return decoded;
+}
+
 template<typename T>
 inline bool saturated(T a) 
 { 

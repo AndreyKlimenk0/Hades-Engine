@@ -1,6 +1,5 @@
 #include <assert.h>
 
-#include "font.h"
 #include "render_system.h"
 
 #include "../sys/sys.h"
@@ -100,14 +99,13 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	pipeline_resource_manager.init(render_device, &back_buffer_texture_desc);
 	command_list_allocator.init(render_device, back_buffer_count);
 
-	render_2d.init(this);
-
 	init_passes();
 }
 
 void Render_System::init_passes()
 {
 	Shader_Manager *shader_manager = &Engine::get_instance()->shader_manager;
+	UI_Storage *ui_storage = &Engine::get_instance()->ui_storage;
 	Render_World *render_world = Engine::get_render_world();
 
 	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
@@ -115,7 +113,7 @@ void Render_System::init_passes()
 	//passes.debug_shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.silhouette_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.outlining_pass.init(render_device, shader_manager, &pipeline_resource_manager);
-	passes.render2d_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.ui_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	
 	passes.depth_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.generate_hzb.init(render_device, shader_manager, &pipeline_resource_manager);
@@ -125,7 +123,7 @@ void Render_System::init_passes()
 	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.outlining_pass,  (void *)render_world, (void *)this });
-	render_pass_submissions.push({ &passes.render2d_pass, (void *)&render_2d,   (void *)this });
+	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
 	
 	render_pass_submissions.push({ &passes.depth_pass, (void *)render_world,   (void *)this });
 	render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
@@ -169,8 +167,6 @@ void Render_System::render()
 {
 	notify_start_frame();
 	
-	render_2d.prepare_for_rendering(render_device);
-
 	pipeline_resource_manager.update_common_constant_buffers();
 
 	Fence *uploading_fence = render_device->execute_uploading();
@@ -246,7 +242,7 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 
 	global_buffer = render_device->create_buffer(&global_buffer_desc);
 	global_buffer->request_write();
-	global_buffer->write(&global_info, sizeof(GPU_Global_Info), 256);
+	global_buffer->write(&global_info, sizeof(GPU_Global_Info), 0, 256);
 
 	Buffer_Desc frame_info_buffer_desc;
 	frame_info_buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
@@ -276,7 +272,7 @@ void Pipeline_Resource_Manager::update_common_constant_buffers()
 	frame_info.view_direction = camera->direction;
 	frame_info.light_count = render_world->lights.count;
 
-	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 256);
+	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 0, 256);
 }
 
 Texture *Pipeline_Resource_Manager::read_texture(const char *texture_name)

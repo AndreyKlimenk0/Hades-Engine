@@ -7,10 +7,10 @@
 #include "../gui/editor.h"
 #include "../game/world.h"
 #include "../win32/win_helpers.h"
-#include "../render/font.h"
 #include "../render/render_world.h"
 #include "../render/render_system.h"
 #include "../render/shader_manager.h"
+#include "../render/ui_storage.h"
 
 #include "../libs/str.h"
 #include "../libs/number_types.h"
@@ -30,12 +30,12 @@ struct Engine {
 	
 	Editor editor;
 	Game_World game_world;
+	//Rendering
+	UI_Storage ui_storage;
 	Render_System render_sys;
 	Render_World render_world;
-	Font_Manager font_manager;
 	Shader_Manager shader_manager;
 
-	void init_base();
 	void init(Win32_Window *window);
 	void frame();
 	void shutdown();
@@ -49,7 +49,6 @@ struct Engine {
 	static Game_World *get_game_world();
 	static Render_World *get_render_world();
 	static Render_System *get_render_system();
-	static Font_Manager *get_font_manager();
 	static Variable_Service *get_variable_service();
 	static Global_Config *get_global_config();
 };

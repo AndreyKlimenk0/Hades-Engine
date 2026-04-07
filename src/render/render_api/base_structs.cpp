@@ -89,6 +89,7 @@ Blending_Desc::~Blending_Desc()
 
 Rasterization_Desc::Rasterization_Desc()
 {
+    front_clockwise = false;
     fill_type = FILL_TYPE_SOLID;
     cull_type = CULL_TYPE_BACK;
 }

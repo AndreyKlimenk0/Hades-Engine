@@ -1,8 +1,6 @@
 #ifndef EDITOR_H
 #define EDITOR_H
 
-#include "gui.h"
-#include "enum_helper.h"
 #include "../game/world.h"
 #include "../libs/str.h"
 #include "../libs/os/input.h"
@@ -15,10 +13,6 @@
 struct Editor;
 struct Texture;
 struct Engine;
-
-typedef Enum_Helper<Entity_Type> Entity_Type_Helper;
-typedef Enum_Helper<Light_Type> Light_Type_Helper;
-typedef Enum_Helper<Geometry_Type> Geometry_Type_Helper;
 
 struct Editor_Window {
 	Editor_Window();
@@ -43,64 +37,11 @@ struct Editor_Window {
 	void set_size(s32 width, s32 height);
 };
 
-struct Top_Right_Window : Editor_Window {
-	Gui_Window_Theme window_theme;
-
-	void init(const char *_name, Engine *engine);
-};
-
-struct Entity_Window : Top_Right_Window {
-	void init(Engine *engine);
-	void display_light(Light *light);
-	void display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbit_radius, const Point_s32 &position, Light *light, Render_Primitive_List *render_list);
-	void draw();
-};
-
-struct Entity_Tree_Window : Top_Right_Window {
-	Gui_Tree_Theme tree_theme;
-
-	void init(Engine *engine);
-	void draw();
-
-	template <typename T>
-	void draw_entity_list(Array<T> &entity_list, const char *name);
-};
-
 struct Displaying_Command {
 	String command_name;
 	String str_key_binding;
 
 	bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context) = NULL;
-};
-
-struct Command_Window : Editor_Window {
-	Command_Window();
-	~Command_Window();
-
-	bool window_just_open = false;
-	bool active_edit_field = false;
-	Displaying_Command *current_displaying_command = NULL;
-
-	String command_edit_field;
-	Rect_s32 command_window_rect;
-	Rect_s32 command_window_rect_with_additional_info;
-
-	Gui_List_Theme list_theme;
-	Gui_Window_Theme command_window_theme;
-	Gui_Edit_Field_Theme command_edit_field_theme;
-	Array<Gui_List_Line_State> list_line_states;
-
-	Array<Displaying_Command> displaying_commands;
-	Array<Pair<Displaying_Command *, Key_Binding>> command_key_bindings;
-
-	void init(Engine *engine);
-	void open();
-	void close();
-
-	void displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context));
-	void displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context));
-	//void register_command_key_bindings(Key_Bindings *key_bindings);
-	void draw();
 };
 
 struct Editor_Command {
@@ -141,23 +82,17 @@ struct Editor {
 			Texture *entities = NULL;
 			Texture *rendering = NULL;
 		} textures;
-		Gui_Window_Theme window_theme;
-		Gui_Image_Button_Theme button_theme;
 	} left_bar;
 
 	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
 
 	Left_Bar left_buttons;
-	Entity_Window entity_window;
-	Entity_Tree_Window entities_window;
-	Command_Window command_window;
 
 	Array<Editor_Window *> windows;
 	Array<Editor_Window *> top_right_windows;
 
 	void init(Engine *engine);
-	void init_left_bar();
 
 	void handle_events();
 	void update();
@@ -167,7 +102,6 @@ struct Editor {
 	void render_menus();
 	void render_left_bar();
 
-	void open_or_close_right_window(Editor_Window *window);
 	void convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands);
 	void convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands);
 };

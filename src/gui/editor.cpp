@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <imgui\imgui.h>
 
 #include "editor.h"
 #include "../sys/sys.h"
@@ -243,13 +244,11 @@ void Editor_Window::init(const char *_name, Engine *engine)
 void Editor_Window::open()
 {
 	window_open = true;
-	gui::open_window(name);
 }
 
 void Editor_Window::close()
 {
 	window_open = false;
-	gui::close_window(name);
 }
 
 void Editor_Window::set_position(s32 x, s32 y)
@@ -260,533 +259,6 @@ void Editor_Window::set_position(s32 x, s32 y)
 void Editor_Window::set_size(s32 width, s32 height)
 {
 	window_rect.set_size(width, height);
-}
-
-void Top_Right_Window::init(const char *_name, Engine *engine)
-{
-	Editor_Window::init(_name, engine);
-
-	window_theme.rounded_border = 10;
-	window_theme.header_height = 25;
-	window_theme.background_color = Color(24);
-	window_theme.outlines_width = 2.0f;
-}
-
-void Entity_Window::init(Engine *engine)
-{
-	Top_Right_Window::init("Entity window", engine);
-	set_size(400, 600);
-	Rect_s32 screen_rect = get_display_screen_rect();
-	place_rect_on_top_right(&screen_rect, &window_rect);
-}
-
-void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbit_radius, const Point_s32 &position, Light *light, Render_Primitive_List *render_list)
-{
-	Vector2 mouse_position = Vector2((float)Mouse_State::x, (float)Mouse_State::y);
-	
-	render_list->add_circle(position.x, position.y, earth_radius, Color(121, 121, 121));
-	render_list->add_outline_circle(position.x, position.y, orbit_radius, 2.0f, Color(51, 77, 128));
-
-	Vector2 sun_position = normalize(Vector2(light->direction.x, light->direction.z));
-	sun_position *= (float)orbit_radius;
-	sun_position.y *= -1.0f;
-	sun_position += position.to_vector2();
-
-	render_list->add_circle((s32)sun_position.x, (s32)sun_position.y, sun_radius, Color(121, 121, 121));
-
-	static bool update_light_direction = false;
-	if (was_key_just_pressed(KEY_LMOUSE) && detect_intersection((float)sun_radius, sun_position, mouse_position)) {
-		update_light_direction = true;
-	}
-	if (update_light_direction && was_key_just_released(KEY_LMOUSE)) {
-		update_light_direction = false;
-	}
-	if (update_light_direction) {
-		Vector2 new_light_direction = normalize(mouse_position - position.to_vector2());
-		new_light_direction.y *= -1.0f;
-
-		//game_world->update_light_direction(light, Vector3(vec2.x, light->direction.y, vec2.y));
-		light->direction.x = new_light_direction.x;
-		light->direction.z = new_light_direction.y;
-
-		static u64 x = 0;
-		if ((x % 3) == 0) {
-			render_world->upload_lights();
-		}
-		x++;
-	}
-}
-
-void Entity_Window::display_light(Light *light)
-{
-	if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
-		if (gui::edit_field("Direction", &light->direction)) {
-			game_world->update_light_direction(light, light->direction);
-			render_world->upload_lights();
-		}
-		gui::edit_field("Color", &light->color);
-
-		Render_Primitive_List *render_list = gui::get_render_primitive_list();
-		u32 middle = window_rect.x + window_rect.width / 2;
-		display_sun_earth(70, 20, 100, Point_s32(middle, 220), light, render_list);
-
-		//render_list->add_circle(window_rect.x + 100, 100, 70, Color(121, 121, 121));
-		//render_list->add_outline_circle(window_rect.x + 100, 100, 100, 2.0f, Color(51, 77, 128));
-	}
-}
-
-void Entity_Window::draw()
-{
-	static Entity_Id prev_entity_id;
-	static Vector3 scaling;
-	static Vector3 rotation;
-	static Vector3 position;
-	static Vector3 direction;
-
-	Entity *entity = game_world->get_entity(editor->picked_entity);
-	String str_entity_id;
-	if (entity) {
-		str_entity_id = to_string(get_entity_id(entity));
-		if (editor->picked_entity != prev_entity_id) {
-			scaling = entity->scaling;
-			rotation = entity->rotation;
-			position = entity->position;
-			if (entity->type == ENTITY_TYPE_LIGHT) {
-				Light *light = static_cast<Light *>(entity);
-				direction = light->direction;
-			}
-		}
-	}
-	window_theme.header_text = str_entity_id.c_str();
-	gui::set_theme(&window_theme);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	if (gui::begin_window(name, WINDOW_HEADER)) {
-		if (entity) {
-			if (entity->type == ENTITY_TYPE_LIGHT) {
-				Light *light = static_cast<Light *>(entity);
-				display_light(light);
-			} else {
-				if (gui::edit_field("Scaling", &scaling)) {
-					entity->scaling = scaling;
-				}
-				gui::edit_field("Rotation", &rotation);
-				if (gui::edit_field("Position", &position)) {
-					game_world->place_entity(entity, position);
-				}
-				if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
-					static bool temp;
-					gui::radio_button("Draw bounding box", &temp);
-				}
-			}
-		}
-		gui::end_window();
-	}
-	gui::reset_window_theme();
-}
-
-void Entity_Tree_Window::init(Engine *engine)
-{
-	Top_Right_Window::init("Entity list", engine);
-	set_size(400, 600);
-	Rect_s32 screen_rect = get_display_screen_rect();
-	place_rect_on_top_right(&screen_rect, &window_rect);
-
-	window_theme.horizontal_padding = 0;
-	window_theme.vertical_padding = 0;
-
-	tree_theme.background_color = Color(24);
-	tree_theme.tree_node_color = Color(24);
-	tree_theme.window_size.width = window_rect.width - window_theme.horizontal_padding * 2;
-	tree_theme.window_size.height = window_rect.height - 35;
-}
-
-template <typename T>
-void Entity_Tree_Window::draw_entity_list(Array<T> &entity_list, const char *name)
-{
-	if (gui::begin_tree_node(name)) {
-		for (u32 i = 0; i < entity_list.count; i++) {
-			T *entity = &entity_list[i];
-			Entity_Id entity_id = get_entity_id(entity);
-			String str_entity_id = to_string(entity_id);
-			if (gui::begin_tree_node(str_entity_id, GUI_TREE_NODE_FINAL)) {
-				if (gui::element_clicked(KEY_LMOUSE) || gui::element_double_clicked(KEY_LMOUSE)) {
-					if ((entity_id.type != ENTITY_TYPE_LIGHT) && (entity_id.type != ENTITY_TYPE_CAMERA)) {
-						Silhouette_Pass *silhouette_pass = &render_system->passes.silhouette_pass;
-						silhouette_pass->reset_render_entity_indices();
-						u32 index = 0;
-						Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, entity_id, &index);
-						if (render_entity) {
-							editor->picked_entity = entity_id;
-							silhouette_pass->add_render_entity_index(index);
-						}
-					} else {
-						editor->picked_entity = entity_id;
-					}
-				}
-				if (gui::element_double_clicked(KEY_LMOUSE)) {
-					editor->open_or_close_right_window(&editor->entity_window);
-				}
-				gui::end_tree_node();
-			}
-		}
-		gui::end_tree_node();
-	}
-}
-
-void Entity_Tree_Window::draw()
-{
-	gui::set_theme(&window_theme);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	if (gui::begin_window(name, WINDOW_HEADER)) {
-		gui::set_theme(&tree_theme);
-		if (gui::begin_tree("Entities tree")) {
-			draw_entity_list(game_world->lights, "Lights");
-			draw_entity_list(game_world->cameras, "Cameras");
-			draw_entity_list(game_world->entities, "Entities");
-			gui::end_tree();
-		}
-		gui::reset_tree_theme();
-
-		gui::end_window();
-	}
-	gui::reset_window_theme();
-}
-
-static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_State> &list_line_states, Array<Pair<String, String>> &list)
-{
-	s32 line_index = -1;
-	Gui_List_Column columns[] = { {"First column", 75 }, { "Second column", 25 } };
-	if (gui::begin_list(list_name, columns, 2)) {
-		for (u32 i = 0; i < list.count; i++) {
-			if (gui::begin_line(&list_line_states[i])) {
-				if (gui::left_mouse_click(list_line_states[i]) || gui::enter_key_click(list_line_states[i])) {
-					line_index = i;
-				}
-				gui::begin_column("First column");
-				gui::add_text(list[i].first, RECT_LEFT_ALIGNMENT);
-				gui::end_column();
-
-				gui::begin_column("Second column");
-				gui::add_text(list[i].second, RECT_LEFT_ALIGNMENT);
-				gui::end_column();
-
-				gui::end_line();
-			}
-		}
-		gui::end_list();
-	}
-	return line_index;
-}
-
-inline s32 list_line_selected(Array<Gui_List_Line_State> &list_line_states)
-{
-	for (s32 i = 0; i < (s32)list_line_states.count; i++) {
-		if (gui::selected(list_line_states[i])) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-inline void select_line(u32 line_index, Array<Gui_List_Line_State> &list_line_states)
-{
-	if (list_line_states.count > line_index) {
-		memset((void *)list_line_states.items, 0, sizeof(Gui_List_Line_State) * list_line_states.count);
-		list_line_states[line_index] = 0x1;
-	}
-}
-
-static bool display_and_get_info_for_load_mesh_command(String *edit_field, Array<String> &command_args, void *context)
-{
-	assert(edit_field);
-	assert(context);
-
-	String full_path_to_data_directory;
-	build_full_path_to_data_directory("models", full_path_to_data_directory);
-
-	Array<String> not_matched_files;
-	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
-
-	Array<String> matched_files;
-	if (!edit_field->is_empty()) {
-		for (u32 i = 0; i < not_matched_files.count; i++) {
-			if (not_matched_files[i].find(edit_field->c_str(), 0, false) != -1) {
-				matched_files.push(not_matched_files[i]);
-			}
-		}
-	} else {
-		matched_files = not_matched_files;
-	}
-	Command_Window *command_window = (Command_Window *)context;
-
-	if (command_window->list_line_states.is_empty()) {
-		command_window->list_line_states.reserve(matched_files.count);
-		select_line(0, command_window->list_line_states);
-	} else if ((command_window->list_line_states.count > matched_files.count) && !matched_files.is_empty()) {
-		s32 line_index = list_line_selected(command_window->list_line_states);
-		if ((line_index > -1) && (line_index > ((s32)matched_files.count - 1))) {
-			select_line((matched_files.count - 1), command_window->list_line_states);
-		}
-	}
-
-	Array<Pair<String, String>> mesh_path_list;
-	for (u32 i = 0; i < matched_files.count; i++) {
-		mesh_path_list.push({ matched_files[i], "data/models" });
-	}
-
-	bool result = false;
-	gui::set_theme(&command_window->list_theme);
-	gui::make_next_list_active();
-	s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
-	if (line_index >= 0) {
-		command_args.push(mesh_path_list[line_index].first);
-		result = true;
-	}
-	gui::reset_list_theme();
-	return result;
-}
-
-static bool display_and_get_info_for_load_level_command(String *edit_field, Array<String> &command_args, void *context)
-{
-	assert(edit_field);
-	assert(context);
-
-	String full_path_to_data_directory;
-	build_full_path_to_data_directory("levels", full_path_to_data_directory);
-
-	Array<String> not_matched_files;
-	get_file_names_from_dir(full_path_to_data_directory, &not_matched_files);
-
-	Array<String> matched_files;
-	if (!edit_field->is_empty()) {
-		for (u32 i = 0; i < not_matched_files.count; i++) {
-			if (not_matched_files[i].find(edit_field->c_str(), 0, false) != -1) {
-				matched_files.push(not_matched_files[i]);
-			}
-		}
-	} else {
-		matched_files = not_matched_files;
-	}
-	Command_Window *command_window = (Command_Window *)context;
-
-	if (command_window->list_line_states.is_empty()) {
-		command_window->list_line_states.reserve(matched_files.count);
-		select_line(0, command_window->list_line_states);
-	} else if ((command_window->list_line_states.count > matched_files.count) && !matched_files.is_empty()) {
-		s32 line_index = list_line_selected(command_window->list_line_states);
-		if ((line_index > -1) && (line_index > ((s32)matched_files.count - 1))) {
-			select_line((matched_files.count - 1), command_window->list_line_states);
-		}
-	}
-
-	Array<Pair<String, String>> mesh_path_list;
-	for (u32 i = 0; i < matched_files.count; i++) {
-		mesh_path_list.push({ matched_files[i], "data/levels" });
-	}
-
-	bool result = false;
-	gui::set_theme(&command_window->list_theme);
-	gui::make_next_list_active();
-	s32 line_index = draw_two_columns_list("level list", command_window->list_line_states, mesh_path_list);
-	if (line_index >= 0) {
-		command_args.push(mesh_path_list[line_index].first);
-		result = true;
-	}
-	gui::reset_list_theme();
-	return result;
-}
-
-static bool display_all_commands(String *edit_field, Array<String> &command_args, void *context)
-{
-	Command_Window *command_window = (Command_Window *)context;
-
-	Array<Pair<String, String>> list;
-	if (!edit_field->is_empty()) {
-		for (u32 i = 1; i < command_window->displaying_commands.count; i++) {
-			if (command_window->displaying_commands[i].command_name.find(edit_field->c_str(), 0, false) != -1) {
-				list.push({ command_window->displaying_commands[i].command_name, command_window->displaying_commands[i].str_key_binding });
-			}
-		}
-	} else {
-		for (u32 i = 1; i < command_window->displaying_commands.count; i++) {
-			list.push({ command_window->displaying_commands[i].command_name, command_window->displaying_commands[i].str_key_binding });
-		}
-	}
-	gui::set_theme(&command_window->list_theme);
-	gui::make_next_list_active();
-	s32 line_index = draw_two_columns_list("command list", command_window->list_line_states, list);
-	if (line_index >= 0) {
-		String &command_name = list[line_index].first;
-		for (u32 i = 0; i < command_window->displaying_commands.count; i++) {
-			if (command_name == command_window->displaying_commands[i].command_name) {
-				command_window->current_displaying_command = &command_window->displaying_commands[i];
-				command_window->active_edit_field = true;
-				command_window->list_line_states.clear();
-				edit_field->free();
-				break;
-			}
-		}
-	}
-	gui::reset_list_theme();
-	return false;
-}
-
-static const char *ROOT_COMMAND_NAME = "Display all commands";
-
-Command_Window::Command_Window()
-{
-}
-
-Command_Window::~Command_Window()
-{
-}
-
-void Command_Window::init(Engine *engine)
-{
-	Editor_Window::init("Command window", engine);
-
-	displaying_command(ROOT_COMMAND_NAME, display_all_commands);
-	current_displaying_command = &displaying_commands.last();
-
-	displaying_command("Load mesh", KEY_CTRL, KEY_L, display_and_get_info_for_load_mesh_command);
-	displaying_command("Load level", display_and_get_info_for_load_level_command);
-	displaying_command("Create level", NULL);
-
-	Rect_s32 display;
-	Size_u32 window_size = render_system->get_window_size();
-	display.set_size(window_size.width, window_size.height);
-
-	command_window_rect.set_size(600, 80);
-	command_window_rect_with_additional_info.set_size(600, 500);
-
-	place_in_middle(&display, &command_window_rect);
-	command_window_rect.y = 200;
-
-	command_window_theme.background_color = Color(20);
-	command_window_theme.vertical_padding = 14;
-	command_window_theme.horizontal_padding = 10;
-
-	command_edit_field_theme.rect.set_size(command_window_rect.width - command_window_theme.horizontal_padding * 2, 30);
-	command_edit_field_theme.draw_label = false;
-	command_edit_field_theme.float_precision = 20; // The parameter restricts not only float field but also string field.
-	command_edit_field_theme.color = Color(30);
-	command_edit_field_theme.rounded_border = 0;
-
-	command_window_rect.height = command_edit_field_theme.rect.height + command_window_theme.vertical_padding * 2;
-
-	list_theme.line_height = 30;
-	list_theme.column_filter = false;
-	list_theme.line_text_offset = command_window_theme.horizontal_padding + command_edit_field_theme.text_shift;
-	list_theme.window_size.width = command_window_rect_with_additional_info.width;
-	list_theme.window_size.height = command_window_rect_with_additional_info.height - command_edit_field_theme.rect.height - command_window_theme.vertical_padding;
-	list_theme.background_color = Color(20);
-	list_theme.line_color = Color(20);
-
-	list_line_states.reserve(displaying_commands.count);
-	select_line(0, list_line_states);
-}
-
-void Command_Window::open()
-{
-	Editor_Window::open();
-	window_just_open = true;
-}
-
-void Command_Window::close()
-{
-	Editor_Window::close();
-	window_just_open = false;
-	command_edit_field.free();
-}
-
-void Command_Window::displaying_command(const char *command_name, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context))
-{
-	assert(command_name);
-
-	Displaying_Command command_displaying_info;
-	command_displaying_info.command_name = command_name;
-	command_displaying_info.str_key_binding = "";
-	command_displaying_info.display_info_and_get_command_args = display_info_and_get_command_args;
-
-	displaying_commands.push(command_displaying_info);
-}
-
-void Command_Window::displaying_command(const char *command_name, Key modified_key, Key second_key, bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context))
-{
-	assert(command_name);
-
-	Key_Binding key_binding = { modified_key, second_key };
-	char *str_key_binding = to_string(&key_binding);
-
-	Displaying_Command command_displaying_info;
-	command_displaying_info.command_name = command_name;
-	command_displaying_info.str_key_binding = str_key_binding;
-	command_displaying_info.display_info_and_get_command_args = display_info_and_get_command_args;
-
-	displaying_commands.push(command_displaying_info);
-	command_key_bindings.push({ &displaying_commands.last(), key_binding });
-
-	free_string(str_key_binding);
-}
-
-#define IF_THEN(exp, code) if (exp) { code; };
-
-void Command_Window::draw()
-{
-	assert(current_displaying_command);
-
-	IF_THEN(!window_open, return);
-
-	if (was_click(KEY_ESC)) {
-		if (current_displaying_command->command_name == ROOT_COMMAND_NAME) {
-			close();
-		} else {
-			current_displaying_command = &displaying_commands.first();
-			list_line_states.reset();
-			list_line_states.reserve(displaying_commands.count);
-			select_line(0, list_line_states);
-		}
-		command_edit_field.free();
-	}
-	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
-	Rect_s32 window_rect = display_additional_info ? command_window_rect_with_additional_info : command_window_rect;
-
-	gui::set_next_window_pos(command_window_rect.x, command_window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	gui::set_theme(&command_window_theme);
-
-	IF_THEN(window_just_open, gui::make_next_ui_element_active());
-	if (gui::begin_window(name, 0)) {
-
-		gui::set_theme(&command_edit_field_theme);
-		IF_THEN(window_just_open || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
-		gui::edit_field("Command field", &command_edit_field);
-		gui::reset_edit_field_theme();
-
-		Array<String> command_args;
-		if (display_additional_info) {
-			gui::set_window_padding(0);
-			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
-				run_command(current_displaying_command->command_name, command_args);
-				command_edit_field.free();
-			} else if (was_click(KEY_ENTER)) {
-				split(&command_edit_field, " ", &command_args);
-				run_command(current_displaying_command->command_name, command_args);
-				command_edit_field.free();
-			}
-			gui::set_window_padding(command_window_theme.horizontal_padding);
-		} else {
-			if (was_click(KEY_ENTER)) {
-				command_args.push(command_edit_field);
-				run_command(current_displaying_command->command_name, command_args);
-			}
-		}
-		gui::end_window();
-	}
-	IF_THEN(window_just_open, window_just_open = false);
-	gui::reset_window_theme();
 }
 
 Editor::Editor()
@@ -802,13 +274,6 @@ void Editor::init(Engine *engine)
 	render_sys = &engine->render_sys;
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
-
-	windows.push(&entities_window);
-	windows.push(&entity_window);
-	windows.push(&command_window);
-
-	top_right_windows.push(&entity_window);
-	top_right_windows.push(&entities_window);
 
 	for (u32 i = 0; i < windows.count; i++) {
 		windows[i]->init(engine);
@@ -838,31 +303,96 @@ void Editor::init(Engine *engine)
 
 	key_bindings.bind(KEY_CTRL, KEY_C); // Command window keys binding
 
-	init_left_bar();
-}
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO &io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
-void Editor::init_left_bar()
-{
-	left_bar.window_theme.rects_padding = 1;
-	left_bar.window_theme.horizontal_padding = 0;
-	left_bar.window_theme.vertical_padding = 0;
-	left_bar.window_theme.background_color = Color(0, 0, 0, 0);
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
 
-	left_bar.button_theme.hover_color = Color(48);
-	left_bar.button_theme.color = Color(40);
-	left_bar.button_theme.button_size = { 42, 42 };
-	left_bar.button_theme.rect_rounding = 0;
+	// Load Fonts
+	// - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+	// - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+	// - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+	// - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+	// - Read 'misc/fonts/README.txt' for more instructions and details.
+	// - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+	io.Fonts->AddFontDefault();
+	io.Fonts->Build();
 
-	left_bar.textures.adding = create_texture_from_file("icons8-add-30.png", "editor");
-	left_bar.textures.entity = create_texture_from_file("entity2.png", "editor");
-	left_bar.textures.entities = create_texture_from_file("entities.png", "editor");
-	left_bar.textures.rendering = create_texture_from_file("rendering.png", "editor");
+	ImGuiStyle &style = ImGui::GetStyle();
+
+	//style.FrameRounding = 0.0f;
+	//style.GrabRounding = 1.0f;
+	style.WindowRounding = 5.0f;
+	//style.IndentSpacing = 10.0f;
+	//style.ScrollbarSize = 12.0f;
+	//style.WindowPadding = ImVec2(2, 2);
+	//style.FramePadding = ImVec2(2, 2);
+	//style.ItemSpacing = ImVec2(6, 2);
+
+	ImVec4 *colors = ImGui::GetStyle().Colors;
+	colors[ImGuiCol_Text] = ImVec4(0.95f, 0.95f, 0.95f, 1.00f);
+	colors[ImGuiCol_TextDisabled] = ImVec4(0.36f, 0.42f, 0.47f, 1.00f);
+	colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
+	colors[ImGuiCol_ChildBg] = ImVec4(0.11f, 0.11f, 0.11f, 1.00f);
+	colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+	colors[ImGuiCol_Border] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_FrameBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+	colors[ImGuiCol_FrameBgActive] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+	colors[ImGuiCol_TitleBg] = ImVec4(0.07f, 0.07f, 0.07f, 1.00f);
+	colors[ImGuiCol_TitleBgActive] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+	colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
+	colors[ImGuiCol_MenuBarBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.39f);
+	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.33f, 0.33f, 0.33f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+	colors[ImGuiCol_CheckMark] = ImVec4(0.14f, 0.71f, 0.83f, 0.95f);
+	colors[ImGuiCol_SliderGrab] = ImVec4(0.26f, 0.67f, 0.82f, 0.83f);
+	colors[ImGuiCol_SliderGrabActive] = ImVec4(0.42f, 0.80f, 0.96f, 1.00f);
+	colors[ImGuiCol_Button] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+	colors[ImGuiCol_ButtonHovered] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+	colors[ImGuiCol_ButtonActive] = ImVec4(0.37f, 0.37f, 0.37f, 1.00f);
+	colors[ImGuiCol_Header] = ImVec4(0.17f, 0.17f, 0.17f, 1.00f);
+	colors[ImGuiCol_HeaderHovered] = ImVec4(0.35f, 0.35f, 0.35f, 0.58f);
+	colors[ImGuiCol_HeaderActive] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+	colors[ImGuiCol_Separator] = ImVec4(0.20f, 0.25f, 0.29f, 1.00f);
+	colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
+	colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
+	colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.23f);
+	colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.00f, 1.00f, 1.00f, 0.67f);
+	colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.95f);
+	colors[ImGuiCol_Tab] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_TabHovered] = ImVec4(0.37f, 0.37f, 0.37f, 0.80f);
+	colors[ImGuiCol_TabSelected] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+	colors[ImGuiCol_TabDimmed] = ImVec4(0.11f, 0.15f, 0.17f, 1.00f);
+	colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.11f, 0.15f, 0.17f, 1.00f);
+	colors[ImGuiCol_PlotLines] = ImVec4(0.73f, 0.29f, 0.29f, 1.00f);
+	colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+	colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+	colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
+	colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
+	colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+	colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
+	colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+	colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
 
 void Editor::handle_events()
 {
 	key_bindings.handle_events();
-	if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
+	if (editor_mode == EDITOR_MODE_COMMON) {
 		//@Note: In the future here better to use linear allocator.
 		Array<Editor_Command> editor_commands;
 		Array<Entity_Command *> entity_commands;
@@ -880,11 +410,6 @@ void Editor::handle_events()
 void Editor::update()
 {
 	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
-		if (command_window.window_open) {
-			command_window.close();
-		} else {
-			command_window.open();
-		}
 	}
 	picking();
 }
@@ -929,126 +454,48 @@ void Editor::picking()
 		moving_entity_info.moving_entity = false;
 	}
 
-	if (!gui::were_events_handled()) {
-		if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
-			Ray_Entity_Intersection::Result intersection_result;
-			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				if (picked_entity == intersection_result.entity_id) {
-					gui::open_menu("Actions on entity");
-					mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
-				}
-			}
-		} else if (was_click(KEY_LMOUSE)) {
-			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
-			silhouette_pass->reset_render_entity_indices();
+	//if (!gui::were_events_handled()) {
+	//	if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
+	//		Ray_Entity_Intersection::Result intersection_result;
+	//		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+	//			if (picked_entity == intersection_result.entity_id) {
+	//				gui::open_menu("Actions on entity");
+	//				mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
+	//			}
+	//		}
+	//	} else if (was_click(KEY_LMOUSE)) {
+	//		Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+	//		silhouette_pass->reset_render_entity_indices();
 
-			Ray_Entity_Intersection::Result intersection_result;
-			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				//gui::make_tab_active(game_world_tab_gui_id);
-				picked_entity = intersection_result.entity_id;
-				silhouette_pass->add_render_entity_index(intersection_result.render_entity_idx);
-			} else {
-				picked_entity.reset();
-			}
-		}
-	}
-}
-
-void Editor::render_menus()
-{
-	gui::set_next_window_pos(53, 20);
-	if (gui::begin_menu("Adding entity")) {
-		if (gui::menu_item("Direction light")) {
-			//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
-			Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-			render_world->upload_lights();
-		}
-		if (gui::menu_item("Point light")) {
-		}
-		gui::segment();
-		if (gui::menu_item("Box")) {
-		}
-		if (gui::menu_item("Sphere")) {
-		}
-		if (gui::menu_item("Plane")) {
-		}
-		gui::end_menu();
-	}
-
-	gui::set_next_window_pos(mouse_position.x, mouse_position.y);
-	if (gui::begin_menu("Actions on entity")) {
-		if (gui::menu_item("Scale")) {
-		}
-		if (gui::menu_item("Rotate")) {
-		}
-		if (gui::menu_item("Translate")) {
-			set_cursor(CURSOR_TYPE_MOVE);
-			editor_mode = EDITOR_MODE_MOVE_ENTITY;
-		}
-		gui::segment();
-		if (gui::menu_item("Copy")) {
-
-		}
-		if (gui::menu_item("Delete")) {
-			game_world->delete_entity(picked_entity);
-			u32 render_entity_index = render_world->delete_render_entity(picked_entity);
-			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
-			silhouette_pass->delete_render_entity_index(render_entity_index);
-		}
-		gui::end_menu();
-	}
-}
-
-void Editor::render_left_bar()
-{
-	gui::set_theme(&left_bar.window_theme);
-	gui::set_next_window_pos(10, 20);
-	gui::set_next_window_size(50, 270);
-	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
-		gui::set_theme(&left_bar.button_theme);
-
-		if (gui::image_button(left_bar.textures.adding)) {
-			gui::open_menu("Adding entity");
-		}
-		if (gui::image_button(left_bar.textures.entity)) {
-			open_or_close_right_window(&entity_window);
-		}
-		if (gui::image_button(left_bar.textures.entities)) {
-			open_or_close_right_window(&entities_window);
-		}
-		if (gui::image_button(left_bar.textures.rendering)) {
-		}
-
-		gui::reset_image_button_theme();
-	}
-	gui::reset_window_theme();
+	//		Ray_Entity_Intersection::Result intersection_result;
+	//		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+	//			//gui::make_tab_active(game_world_tab_gui_id);
+	//			picked_entity = intersection_result.entity_id;
+	//			silhouette_pass->add_render_entity_index(intersection_result.render_entity_idx);
+	//		} else {
+	//			picked_entity.reset();
+	//		}
+	//	}
+	//}
 }
 
 void Editor::render()
 {
-	gui::begin_frame();
-	render_menus();
-	render_left_bar();
-	for (u32 i = 0; i < windows.count; i++) {
-		windows[i]->draw();
-	}
-	gui::end_frame();
-}
+	ImGuiIO &io = ImGui::GetIO();
+	io.DisplaySize = ImVec2{ (float)render_sys->get_window_size().width, (float)render_sys->get_window_size().height };
 
-void Editor::open_or_close_right_window(Editor_Window *window)
-{
-	Editor_Window *top_right_window = NULL;
-	For(top_right_windows, top_right_window)
-	{
-		if (top_right_window != window) {
-			top_right_window->close();
-		}
-	}
-	if (!window->window_open) {
-		window->open();
-	} else {
-		window->close();
-	}
+	io.AddMousePosEvent(Mouse_State::x, Mouse_State::y);
+	io.AddMouseButtonEvent(0, was_key_just_pressed(KEY_LMOUSE));
+	io.AddMouseButtonEvent(1, was_key_just_pressed(KEY_RMOUSE));
+
+	ImGui::NewFrame();
+	//ImGui::ShowDemoWindow();
+	//ImGui::Button("My button");
+	//ImGui::Button("My button");
+	const char *entity_types[] = { "common", "camera" };
+	int index = 0;
+	ImGui::ListBox("Entity_Type", &index, entity_types, 2);
+	ImGui::Render();
 }
 
 void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands)

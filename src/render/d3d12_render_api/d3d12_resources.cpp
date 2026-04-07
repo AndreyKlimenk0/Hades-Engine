@@ -272,9 +272,14 @@ D3D12_Base_Buffer::~D3D12_Base_Buffer()
 
 D3D12_Buffer::D3D12_Buffer(D3D12_Render_Device *render_device, Buffer_Desc *_buffer_desc) : render_device(render_device), buffer_desc(*_buffer_desc)
 {
-	assert(buffer_desc.count > 0);
-	assert(buffer_desc.stride > 0);
-	
+	if ((buffer_desc.count == 0) && (buffer_desc.stride == 0)) {
+		buffer_desc.count = 1;
+		buffer_desc.stride = KB(64);
+	}
+	if ((buffer_desc.count == 0) && (buffer_desc.stride > 0)) {
+		buffer_desc.count = KB(64) / buffer_desc.stride;
+	}
+
 	if (buffer_desc.usage == RESOURCE_USAGE_DEFAULT) {
 		Resource_Desc resource_desc = Resource_Desc(&buffer_desc);
 		default_buffer = new D3D12_Base_Buffer(render_device, &resource_desc);
@@ -366,13 +371,13 @@ void D3D12_Buffer::request_write()
 	}
 }
 
-void D3D12_Buffer::write(void *data, u64 data_size, u64 alignment)
+void D3D12_Buffer::write(void *data, u64 data_size, u64 offset, u64 alignment)
 {
 	assert(data_size <= size());
 	if (data && (data_size > 0)) {
 		D3D12_Base_Buffer *upload_buffer = current_upload_buffer();
-		void *mapped_memory = upload_buffer->map();
-		memcpy(mapped_memory, data, data_size);
+		u8 *mapped_memory = (u8 *)upload_buffer->map();
+		memcpy(mapped_memory + offset, data, data_size);
 	}
 }
 

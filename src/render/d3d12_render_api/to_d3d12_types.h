@@ -222,7 +222,7 @@ inline D3D12_FILL_MODE to_d3d12_fill_mode(Fill_Type fill_type)
 inline D3D12_CULL_MODE to_d3d12_cull_mode(Cull_Type cull_type)
 {
     switch (cull_type) {
-        case CULL_TYPE_UNKNOWN:
+        case CULL_TYPE_NONE:
             return D3D12_CULL_MODE_NONE;
         case CULL_TYPE_FRONT:
             return D3D12_CULL_MODE_FRONT;
@@ -320,7 +320,7 @@ inline D3D12_RASTERIZER_DESC to_d3d12_rasterizer_desc(Rasterization_Desc rasteri
     ZeroMemory(&d3d12_rasterizer_desc, sizeof(D3D12_RASTERIZER_DESC));
     d3d12_rasterizer_desc.FillMode = to_d3d12_fill_mode(rasterization_desc.fill_type);
     d3d12_rasterizer_desc.CullMode = to_d3d12_cull_mode(rasterization_desc.cull_type);
-    d3d12_rasterizer_desc.FrontCounterClockwise = FALSE;
+    d3d12_rasterizer_desc.FrontCounterClockwise = rasterization_desc.front_clockwise;
     d3d12_rasterizer_desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
     d3d12_rasterizer_desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
     d3d12_rasterizer_desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;

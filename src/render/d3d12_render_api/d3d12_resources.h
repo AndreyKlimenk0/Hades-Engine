@@ -94,7 +94,7 @@ struct D3D12_Buffer : Buffer {
 	void finish_frame(u64 frame_number);
 	
 	void request_write();
-	void write(void *data, u64 data_size, u64 alignment = 0);
+	void write(void *data, u64 data_size, u64 offset = 0, u64 alignment = 0);
 	void *write_only_ptr();
 
 	u64 size();
