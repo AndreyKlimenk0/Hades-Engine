@@ -45,11 +45,11 @@ void UI_Storage::upload_ui()
 	for (s32 cmdListIdx = 0; cmdListIdx < draw_data->CmdListsCount; ++cmdListIdx) {
 		const ImDrawList *imCommandList = draw_data->CmdLists[cmdListIdx];
 
-		vertex_buffer->write(imCommandList->VtxBuffer.Data, sizeof(ImDrawVert) * imCommandList->VtxBuffer.Size, vertex_offset);
-		index_buffer->write(imCommandList->IdxBuffer.Data, sizeof(ImDrawIdx) * imCommandList->IdxBuffer.Size, index_offset);
+		vertex_buffer->write(imCommandList->VtxBuffer.Data, sizeof(ImDrawVert) * imCommandList->VtxBuffer.Size, sizeof(ImDrawVert) * vertex_offset);
+		index_buffer->write(imCommandList->IdxBuffer.Data, sizeof(ImDrawIdx) * imCommandList->IdxBuffer.Size, sizeof(ImDrawIdx) * index_offset);
 
-		print("vertex_offset", vertex_offset);
-		print("vertex_offset", vertex_offset);
+		//print("vertex_offset", vertex_offset);
+		//print("vertex_offset", vertex_offset);
 
 		for (s32 cmdBufferIdx = 0; cmdBufferIdx < imCommandList->CmdBuffer.Size; ++cmdBufferIdx) {
 			const ImDrawCmd *imCommand = &imCommandList->CmdBuffer[cmdBufferIdx];

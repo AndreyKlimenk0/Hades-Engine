@@ -326,7 +326,8 @@ void Editor::init(Engine *engine)
 
 	//style.FrameRounding = 0.0f;
 	//style.GrabRounding = 1.0f;
-	style.WindowRounding = 5.0f;
+	style.WindowRounding = 0.0f;
+	style.WindowBorderSize = 0.0f;
 	//style.IndentSpacing = 10.0f;
 	//style.ScrollbarSize = 12.0f;
 	//style.WindowPadding = ImVec2(2, 2);
@@ -489,12 +490,23 @@ void Editor::render()
 	io.AddMouseButtonEvent(1, was_key_just_pressed(KEY_RMOUSE));
 
 	ImGui::NewFrame();
-	//ImGui::ShowDemoWindow();
+	ImGui::ShowDemoWindow();
 	//ImGui::Button("My button");
 	//ImGui::Button("My button");
 	const char *entity_types[] = { "common", "camera" };
 	int index = 0;
-	ImGui::ListBox("Entity_Type", &index, entity_types, 2);
+	//ImGui::ListBox("Entity_Type", &index, entity_types, 2);
+//	ImGui::SetNextWindowSize({600, 600});
+////	ImGui::SetNextWindowPos({ 10, 10 });
+//	ImGui::Begin("Wndow", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+//	ImGui::End();
+//
+//	ImVec4 *colors = ImGui::GetStyle().Colors;
+//	//colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.72f, 0.52f, 1.00f);
+//	ImGui::SetNextWindowPos({ 700, 10 });
+//	ImGui::SetNextWindowSize({ 200, 200 });
+//	ImGui::Begin("AAAAAAA", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+//	ImGui::End();
 	ImGui::Render();
 }
 

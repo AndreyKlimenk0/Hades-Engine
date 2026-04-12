@@ -452,7 +452,6 @@ void UI_Pass::render(Graphics_Command_List *graphics_command_list, void *context
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, ui_storage->vertex_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, ui_storage->index_buffer->shader_resource_descriptor());
 
-
 	UI_Pass_Data pass_data;
 	for (u32 i = 0; i < ui_storage->draw_commands.count; i++) {
 		UI_Draw_Command *draw_command = &ui_storage->draw_commands[i];
