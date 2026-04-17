@@ -26,7 +26,7 @@ List_Box_Theme::List_Box_Theme()
 {
 	width = 170;
 	height = 30;
-	rounding = 5;
+	rounding = 10;
 	color = Color(50, 50, 50);
 }
 
@@ -64,30 +64,66 @@ void list_box(const char *name, Array<String> &list, u32 *index)
 		*index = 0;
 	}
 
-	begin_ui_element("List box #id");
-	UI_Element *list_box_element = get_ui_element();
+	begin_ui_element("List box header #id");
+	Rect_s32 list_box_header_rect = get_ui_element()->get_rect();
 	set_size(filled_size(), filled_size());
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	//set_background_color(Color::Blue); Delete
 
-	text(name);
-
-	begin_ui_element("List header");
+	begin_ui_element("Selection field");
 	set_size(fixed_size(list_theme.width), fixed_size(list_theme.height));
-	set_layout(ROW_LAYOUT);
-	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	set_padding(Padding(10, 0, 0, 0));
-	
 	set_rounding(list_theme.rounding, ROUND_RECT);
 	set_background_color(list_theme.color);
-	text(list[*index]);
-	end_ui_element(); // List header
+	end_ui_element(); // Selection field
 
-	begin_ui_element("List panel");
-	set_position(list_box_element, 0, list_theme.height + 10);
-	set_size(fixed_size(200), fixed_size(200));
-	set_background_color(Color::Red);
-	end_ui_element(); // List panel
+ 	text(name);
 
-	end_ui_element(); // List box
+	end_ui_element(); // List box header
+
+	begin_ui_element("List box panel #id");
+	set_position(list_box_header_rect.x, list_box_header_rect.bottom() + 2);
+	set_size(fixed_size(list_theme.width), filled_size());
+	set_rounding(list_theme.rounding, ROUND_RECT);
+	set_background_color(list_theme.color);
+	
+	
+	for (u32 i = 0; i < list.count; i++) {
+		begin_ui_element("Item #id");
+		set_size(fixed_size(list_theme.width), fixed_size(30));
+		set_padding(Padding(5));
+		set_rounding(list_theme.rounding, ROUND_RECT);
+		set_background_color(Color::Blue);
+		end_ui_element();
+	}
+	
+	end_ui_element(); //List box panel
+
+	//begin_ui_element("List box #id");
+	//UI_Element *list_box_element = get_ui_element();
+	//Rect_s32 list_box_rect = list_box_element->get_rect();
+	//set_size(filled_size(), filled_size());
+	//set_layout(ROW_LAYOUT);
+	//set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+
+	//text(name);
+
+	//begin_ui_element("List header");
+	//set_size(fixed_size(list_theme.width), fixed_size(list_theme.height));
+	//set_layout(ROW_LAYOUT);
+	//set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	//set_padding(Padding(10, 0, 0, 0));
+	//
+	//set_rounding(list_theme.rounding, ROUND_RECT);
+	//set_background_color(list_theme.color);
+	//text(list[*index]);
+	//end_ui_element(); // List header
+
+	//begin_ui_element("List panel");
+	//set_position(list_box_rect.x, list_box_rect.bottom() + 10);
+	//set_size(fixed_size(200), fixed_size(200));
+	//set_background_color(Color::Red);
+	//end_ui_element(); // List panel
+
+	//end_ui_element(); // List box
 }

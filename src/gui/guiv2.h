@@ -87,7 +87,7 @@ namespace imgui {
 		Size_Dimension width;
 		Size_Dimension height;
 
-		Size_Dimension operator[](AxisV2 axis);
+		Size_Dimension &operator[](AxisV2 axis);
 	};
 
 	struct UI_Element {
@@ -99,7 +99,6 @@ namespace imgui {
 
 		u32 called = 0;
 		u32 children_id_counter;
-		UI_Element *position_relative_element = NULL;
 
 		/*Rect_s32 rect;*/
 		Point_s32 position;
@@ -131,6 +130,11 @@ namespace imgui {
 
 		bool root_element();
 		UI_Element *find_child(Element_ID element_id);
+
+		Rect_s32 get_rect()
+		{
+			return { prev_position.x, prev_position.y, prev_size.width.get(), prev_size.height.get() };
+		}
 	};
 
 	void init_guiv2(u32 window_width, u32 window_height, const char *font_name, u32 font_size, Render_2D *render_2d);
@@ -143,7 +147,6 @@ namespace imgui {
 	void end_ui_element();
 
 	void set_position(s32 x, s32 y);
-	void set_position(UI_Element *ui_element, s32 x, s32 y);
 	void set_size(Size_Dimension horizontal, Size_Dimension vertical);
 	void set_space(s32 space);
 	void set_padding(Padding padding);

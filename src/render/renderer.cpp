@@ -3,7 +3,7 @@
 #include "helpers.h"
 #include "../libs/utils.h"
 
-#define TRUN_ON_RECT_CLIPPING 1
+#define TRUN_ON_RECT_CLIPPING 0
 
 inline void from_win32_screen_space(u32 screen_width, u32 screen_height, const Point_s32 &win32_point, Point_s32 &normal_point)
 {

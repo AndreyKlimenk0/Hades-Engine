@@ -40,7 +40,10 @@ void draw_test_widgets()
 	static u32 index;
 	list_box("Entity Type", entity_types, &index);
 
-	text("Entity Type");
+	if (button("Button 3")) {
+		print("Click by button 2");
+	}
+
 	end_ui_element(); //Main plane
 
 	end_frame();

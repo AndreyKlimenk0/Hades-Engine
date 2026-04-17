@@ -73,7 +73,7 @@ bool operator!=(Element_ID first_id, Element_ID second_id)
 	return !(first_id == second_id);
 }
 
-Size_Dimension Element_Size::operator[](AxisV2 axis)
+Size_Dimension &Element_Size::operator[](AxisV2 axis)
 {
 	u32 index = static_cast<u32>(axis);
 	assert(index < 2);
@@ -100,7 +100,6 @@ UI_Element::~UI_Element()
 
 void UI_Element::begin_frame()
 {
-	position_relative_element = NULL;
 	flags = UI_ELEMENT_AUTO_LAYOUT;
 	position.x = 0;
 	position.y = 0;
@@ -342,15 +341,22 @@ static void fit_size_if_needed(UI_Element *ui_element)
 	}
 	if (ui_element->size.width.type == SIZE_TYPE_FILLED) {
 		ui_element->size.width.set(calculate_fit_size(ui_element, X_AXISV2));
+		ui_element->size.width.set(ui_element->size.width.get() + ui_element->padding.left + ui_element->padding.right);
 	}
 	if (ui_element->size.height.type == SIZE_TYPE_FILLED) {
 		ui_element->size.height.set(calculate_fit_size(ui_element, Y_AXISV2));
+		ui_element->size.height.set(ui_element->size.height.get() + ui_element->padding.top + ui_element->padding.bottom);
 	}
 }
 
 static void fill_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 {
-	assert(ui_element->size[axis].get() > 0);
+	//assert(ui_element->size[axis].get() > 0);
+
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		UI_Element *child = ui_element->child_elements[i];
+		fill_size_if_needed(child, axis);
+	}
 
 	if (layout_to_axis(ui_element->layout) == axis) {
 		s32 available_space = ui_element->size[axis].get();
@@ -378,10 +384,13 @@ static void fill_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
 			if (child->size[axis].type == SIZE_TYPE_GROW) {
-				child->size[axis].set(ui_element->size[axis].get());
+				auto s = ui_element->size[axis].get();
+				child->size[axis].set(s);
+				int xi = 0;
 			}
 		}
 	}
+	print("{} size {},{}", ui_element->id.string, ui_element->size.width.get(), ui_element->size.height.get());
 }
 
 static void layout_ui_elements_left_to_right_or_top_to_bottom(UI_Element *parent_ui_element, AxisV2 axis)
@@ -531,20 +540,33 @@ static void layout_child_elements(UI_Element *ui_element)
 	}
 }
 
+void sort(UI_Element *ui_element)
+{
+	Array<UI_Element *> first;
+	Array<UI_Element *> second;
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		if (ui_element->child_elements[i]->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			first.push(ui_element->child_elements[i]);
+		} else {
+			second.push(ui_element->child_elements[i]);
+		}
+	}
+	merge(&first, &second);
+
+	ui_element->child_elements = first;
+}
+
 static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s32 *parent_clip_rect, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
 {
-	Point_s32 position;
-	if (ui_element->position_relative_element) {
-		position = ui_element->position_relative_element->position + ui_element->position;
-	} else {
-		position = parent_position + ui_element->position;
-	}
+	sort(ui_element);
+
+	ui_element->prev_position = ui_element->position;
+	ui_element->prev_size = ui_element->size;
+
+	Point_s32 position = parent_position + ui_element->position;
 	
 	s32 width = ui_element->size.width.get();
 	s32 height = ui_element->size.height.get();
-
-	ui_element->prev_position = position;
-	ui_element->prev_size = ui_element->size;
 
 	if ((width > 0) && (height > 0)) { // Should Render 2D handle zero size ?
 		Rect_s32 rect = { position.x, position.y, width, height };
@@ -652,14 +674,6 @@ void imgui::set_position(s32 x, s32 y)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	ui_element->flags &= ~UI_ELEMENT_AUTO_LAYOUT;
-	ui_element->position = Point_s32(x, y);
-}
-
-void imgui::set_position(UI_Element *relative_ui_element, s32 x, s32 y)
-{
-	UI_Element *ui_element = ui_context.get_top_ui_element();
-	ui_element->flags &= ~UI_ELEMENT_AUTO_LAYOUT;
-	ui_element->position_relative_element = relative_ui_element;
 	ui_element->position = Point_s32(x, y);
 }
 

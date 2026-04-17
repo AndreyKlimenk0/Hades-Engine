@@ -147,8 +147,8 @@ void Engine::frame()
 	//editor.handle_events();
 	//editor.update();
 #if DRAW_TEST_GUI
-	//draw_test_gui();
-	draw_test_widgets();
+	draw_test_gui();
+	//draw_test_widgets();
 #else
 	//editor.render();
 #endif

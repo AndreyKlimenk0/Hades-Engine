@@ -203,70 +203,76 @@ void draw_test_gui()
 
 	//set_layout(ROW_LAYOUT);
 
-	begin_ui_element("Gray rect #id");
-	set_alignment(ALIGNMENT_CENTER);
-	set_position(20, 20);
-	set_size(fixed_size(500), fixed_size(500));
-	set_background_color(TEAL);
-
-	begin_ui_element("Gray rect #id");
-	set_size(filled_size(), filled_size());
-	set_background_color(Color::Black);
-	set_space(10);
-	text("Andrey Klimenko IMGUI");
-	text("Andrey Klimenko IMGUI 1");
-	text("Andrey Klimenko IMGUI 2");
-	
-	end_ui_element();
-
-
-	begin_ui_element("Red box");
-	set_position(-10, 0);
-	set_size(fixed_size(100), fixed_size(100));
-	
-	if (ui_element_hovered()) {
-		set_background_color(Color::Red);
-	} else {
-		set_background_color(Color::Black);
-	}
-	
-	begin_ui_element("Blue box");
-	set_position(-20, 0);
-	set_size(fixed_size(70), fixed_size(40));
-	set_background_color(Color::Blue);
-	end_ui_element();
-	
-	end_ui_element();
-	
-	end_ui_element();
-
 	//begin_ui_element("Gray rect #id");
-	//set_size(fixed_size(200), fixed_size(200));
-	//set_background_color(DARK_ORANGE);
-	//end_ui_element();
-
-	//begin_ui_element("Gray rect #id");
-	//set_position(10, 10);
-	//set_size(fixed_size(400), fixed_size(300));
-	//set_layout(ROW_LAYOUT);
-	////set_alignment(alignment_flags);
-	//set_background_color(GRAY);
-
-	//begin_ui_element("Teal rect");
-	//set_size(fixed_size(200), fixed_size(100));
+	//set_alignment(ALIGNMENT_CENTER);
+	//set_position(20, 20);
+	//set_size(fixed_size(500), fixed_size(500));
 	//set_background_color(TEAL);
+
+	//begin_ui_element("Gray rect #id");
+	//set_size(filled_size(), filled_size());
+	//set_background_color(Color::Black);
+	//set_space(10);
+	//text("Andrey Klimenko IMGUI");
+	//text("Andrey Klimenko IMGUI 1");
+	//text("Andrey Klimenko IMGUI 2");
+	//
 	//end_ui_element();
 
-	//begin_ui_element("Dark Orange");
-	////set_size(fixed_size(100), fixed_size(100));
-	//set_size(grow_size(), grow_size());
-	//set_background_color(DARK_ORANGE);
+
+	//begin_ui_element("Red box");
+	//set_position(-10, 0);
+	//set_size(fixed_size(100), fixed_size(100));
+	//
+	//if (ui_element_hovered()) {
+	//	set_background_color(Color::Red);
+	//} else {
+	//	set_background_color(Color::Black);
+	//}
+	//
+	//begin_ui_element("Blue box");
+	//set_position(-20, 0);
+	//set_size(fixed_size(70), fixed_size(40));
+	//set_background_color(Color::Blue);
+	//end_ui_element();
+	//
+	//end_ui_element();
+	//
 	//end_ui_element();
 
-	//end_ui_element();
+	//set_alignment(ALIGNMENT_CENTER);
 
-	//begin_ui_element("Empty element");
-	//end_ui_element();
-	
+	//begin_ui_element("Red rect");
+	//auto red_ui_element = get_ui_element();
+	//auto red_rect = red_ui_element->get_rect();
+
+	//set_position(100, 20);
+	//set_size(fixed_size(400), fixed_size(400));
+	//set_background_color(Color::Red);
+	//end_ui_element(); // Red
+
+	//begin_ui_element("Green rect");
+	//set_position(red_rect.right() + 10, 20);
+	//set_size(fixed_size(400), fixed_size(400));
+	//set_background_color(Color::Green);
+	//end_ui_element(); // Green
+
+	begin_ui_element("Rect");
+	set_position(30, 30);
+	//set_size(filled_size(), filled_size());
+	set_size(fixed_size(100), filled_size());
+	set_padding(Padding(10));
+	set_background_color(Color::Cyan);
+
+	for (int i = 0; i < 3; i++) {
+		begin_ui_element("Red #id");
+		//set_size(fixed_size(100), fixed_size(30));
+		set_size(grow_size(), fixed_size(30));
+		set_background_color(Color::Red);
+		end_ui_element();
+	}
+
+	end_ui_element();
+
 	end_frame();
 }

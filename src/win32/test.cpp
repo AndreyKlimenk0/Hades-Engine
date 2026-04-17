@@ -34,13 +34,13 @@ inline u32 encode_color(const Vector3 &rgb_value)
 	return result;
 }
 
+struct Scanner {
 
+};
 
 void test()
 {
-	String temp = "Rect #id rect #id";
-	temp.replace("#id", "");
-	print(temp);
+	const char *exp = "red_rect.right + 10   -     20000";
 }
 
 void update_test()
