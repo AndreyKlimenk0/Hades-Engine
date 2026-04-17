@@ -250,7 +250,6 @@ void Shader_Manager::init()
 	shader_table[shader_count++] = { "draw_vertices.hlsl", &shaders.draw_vertices };
 	shader_table[shader_count++] = { "forward_light.hlsl", &shaders.forward_light };
 	shader_table[shader_count++] = { "outlining.hlsl", &shaders.outlining };
-	shader_table[shader_count++] = { "render_2d.hlsl", &shaders.render_2d };
 	shader_table[shader_count++] = { "silhouette.hlsl", &shaders.silhouette };
 	shader_table[shader_count++] = { "voxelization.hlsl", &shaders.voxelization };
 	shader_table[shader_count++] = { "draw_box.hlsl", &shaders.draw_box };
@@ -259,6 +258,7 @@ void Shader_Manager::init()
 	shader_table[shader_count++] = { "generate_mips_linear_oddx.hlsl", &shaders.generate_mips_linear_oddx };
 	shader_table[shader_count++] = { "generate_mips_linear_oddy.hlsl", &shaders.generate_mips_linear_oddy };
 	shader_table[shader_count++] = { "downsample_hzb.hlsl", &shaders.downsample_hzb };
+	shader_table[shader_count++] = { "ui_rendering.hlsl", &shaders.ui_rendering };
 
 	for (u32 i = 0; i < shader_count; i++) {
 		shader_table[i].shader->file_name = shader_table[i].name;

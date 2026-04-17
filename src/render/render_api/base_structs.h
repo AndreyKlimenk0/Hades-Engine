@@ -113,6 +113,7 @@ struct Rasterization_Desc {
 	Rasterization_Desc();
 	~Rasterization_Desc();
 
+	bool front_clockwise;
 	Fill_Type fill_type;
 	Cull_Type cull_type;
 };
@@ -167,7 +168,7 @@ struct Graphics_Pipeline_Desc {
 	Blending_Desc blending_desc;
 	Rasterization_Desc rasterization_desc;
 	Depth_Stencil_Desc depth_stencil_desc;
-	DXGI_FORMAT depth_stencil_format;
+	DXGI_FORMAT depth_stencil_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	Array<DXGI_FORMAT> render_targets_formats;
 
 	void add_render_target(DXGI_FORMAT format);

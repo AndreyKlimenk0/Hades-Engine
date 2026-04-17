@@ -3,7 +3,6 @@
 #include "engine.h"
 #include "commands.h"
 #include "profiling.h"
-#include "../gui/gui.h"
 #include "../sys/level.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
@@ -12,47 +11,15 @@
 #include "../win32/win_time.h"
 
 #include "../win32/test.h"
-#include "../gui/test_gui.h"
 
 #include "sys.h"
 #include <windows.h>
 #include "../win32/win_helpers.h"
 
-#define DRAW_TEST_GUI 0
-
 static Engine *engine = NULL;
-
-static Font *performance_font = NULL;
-static Render_Primitive_List render_list;
 
 static const String DEFAULT_LEVEL_NAME = "unnamed_level";
 static const String LEVEL_EXTENSION = ".hl";
-
-static void init_performance_displaying()
-{
-	performance_font = engine->font_manager.get_font("consola", 14);
-	if (!performance_font) {
-		assert(false);
-	}
-	Render_Font *render_font = engine->render_sys.render_2d.get_render_font(performance_font);
-	render_list = Render_Primitive_List(&engine->render_sys.render_2d, performance_font, render_font);
-}
-
-static void display_performance(s64 fps, s64 frame_time)
-{
-	char *test = format("Fps", fps);
-	char *test2 = format("Frame time {} ms", frame_time);
-	u32 text_width = performance_font->get_text_width(test2);
-
-	s32 x = Engine::get_render_system()->get_window_size().width - text_width - 10;
-	render_list.add_text(x, 5, test);
-	render_list.add_text(x, 20, test2);
-
-	free_string(test);
-	free_string(test2);
-
-	engine->render_sys.render_2d.add_render_primitive_list(&render_list);
-}
 
 inline String build_default_level_name()
 {
@@ -81,17 +48,17 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
 	////command_args.push("DamagedHelmet.gltf");
-	//command_args.push("Sponza.gltf");
+	command_args.push("Sponza.gltf");
 	//command_args.push("occlusion_culling_scene.gltf");
-	command_args.push("test_shadows.gltf");
+	//command_args.push("test_shadows.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
 
-	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 20.0f, -20.0f), Vector3(0.0f, 0.0f, -1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
+	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.0f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 	render_world->set_rendering_view(camera_id);
 
 	//Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.0f, -1.0f, -0.4f), Color::White.get_rgb());
+	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.0f, -1.0f, 0.4f), Color::White.get_rgb());
 	//Entity_Id entity_id = game_world->make_direction_light(Vector3(0.5f, -1.0f, 0.5f), Color::White.get_rgb());
 	render_world->upload_lights();
 
@@ -109,13 +76,10 @@ void Engine::init(Win32_Window *window)
 	var_service.load("all.variables");
 	global_config.init(&var_service);
 
-	font_manager.init();
-
 	shader_manager.init();
 
 	render_sys.init(window, &var_service);
-
-	gui::init_gui(this);
+	ui_storage.init(render_sys.render_device);
 
 	game_world.init();
 	render_world.init(this);
@@ -128,8 +92,6 @@ void Engine::init(Win32_Window *window)
 	editor.init(this);
 
 	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
-
-	init_performance_displaying();
 
 	engine->is_initialized = true;
 }
@@ -147,24 +109,17 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
-	gui::handle_events();
-
 	editor.handle_events();
 	editor.update();
-#if DRAW_TEST_GUI
-	draw_test_gui();
-#else
-	//editor.render();
-#endif
-	
+	editor.render();
+
 	file_tracking_sys.update();
 	
 	render_world.update();
 	render_world.prepare_for_rendering();
+	ui_storage.prepare_for_rendering();
 
 	render_sys.render();
-
-	display_performance(fps, frame_time);
 
 	clear_event_queue();
 
@@ -179,7 +134,6 @@ void Engine::shutdown()
 	render_sys.flush();
 
 	save_level(current_level_name, &game_world, &render_world);
-	gui::shutdown();
 	var_service.shutdown();
 }
 
@@ -218,11 +172,6 @@ Render_World *Engine::get_render_world()
 Render_System *Engine::get_render_system()
 {
 	return &engine->render_sys;
-}
-
-Font_Manager *Engine::get_font_manager()
-{
-	return &engine->font_manager;
 }
 
 Variable_Service *Engine::get_variable_service()

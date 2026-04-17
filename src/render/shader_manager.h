@@ -72,7 +72,6 @@ struct Shader_Manager {
 		Shader draw_vertices;
 		Shader forward_light;
 		Shader outlining;
-		Shader render_2d;
 		Shader silhouette;
 		Shader voxelization;
 		Shader draw_box;
@@ -81,6 +80,7 @@ struct Shader_Manager {
 		Shader generate_mips_linear_oddx;
 		Shader generate_mips_linear_oddy;
 		Shader downsample_hzb;
+		Shader ui_rendering;
 	} shaders;
 
 	void init();

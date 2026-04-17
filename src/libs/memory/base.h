@@ -15,6 +15,8 @@ inline T align_address(T address, T alignment)
 	return address;
 }
 
+#define KB(kilobytes) (kilobytes * 1024)
+
 template <typename T>
 inline T megabytes_to_bytes(T megabytes)
 {

@@ -47,6 +47,7 @@ shader_files = [
     Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER),
     Shader_File("downsample_hzb.hlsl", Shader_Type.COMPUTE_SHADER),
+    Shader_File("ui_rendering.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     # Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER),
     # Shader_File("draw_box.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     # Shader_File("generate_mips_linear.hlsl", Shader_Type.COMPUTE_SHADER),

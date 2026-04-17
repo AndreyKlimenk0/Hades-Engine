@@ -63,7 +63,7 @@ struct Forward_Pass : Render_Pass {
 	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
 };
 
-struct Render_2D_Pass : Render_Pass {
+struct UI_Pass : Render_Pass {
 	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
 	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
 	void setup_root_signature(Render_Device *device);

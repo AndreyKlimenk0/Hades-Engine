@@ -41,7 +41,7 @@ struct Buffer {
 	virtual u64 size() = 0;
 	virtual u64 gpu_virtual_address() = 0;
 	virtual void request_write() = 0; // Call only for default buffer
-	virtual void write(void *data, u64 data_size, u64 alignment = 0) = 0;
+	virtual void write(void *data, u64 data_size, u64 offset = 0, u64 alignment = 0) = 0;
 	virtual void *write_only_ptr() = 0;
 
 	virtual CBV_Descriptor *constant_buffer_descriptor() = 0;

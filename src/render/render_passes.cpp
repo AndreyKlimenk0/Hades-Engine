@@ -1,11 +1,11 @@
 #include <limits.h>
 
-#include "../sys/sys.h"
+#include "ui_storage.h"
 #include "render_world.h"
-#include "render_system.h"
 #include "render_passes.h"
+#include "render_system.h"
 #include "shader_manager.h"
-#include "renderer.h"
+#include "../sys/sys.h"
 #include "../libs/image/image.h" // use find_max_mip_level
 
 #include "render_api/base_structs.h"
@@ -371,116 +371,100 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->end_event();
 }
 
-void Render_2D_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+void UI_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
-	Render_Pass::init("Render 2D", device, shader_manager, resource_manager);
+	Render_Pass::init("UI", device, shader_manager, resource_manager);
 }
 
-void Render_2D_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+void UI_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
 {
 }
+
+struct UI_Pass_Data {
+	u32 vertex_offset;
+	u32 index_offset;
+	s32 texture_idx;
+	u32 SamplerIdx;
+};
 
 struct Render_2D_Info {
 	Matrix4 orthographics_matrix;
 	Vector4 primitive_color;
 };
 
-void Render_2D_Pass::setup_root_signature(Render_Device *device)
+void UI_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Render_2D_Info));
-	root_signature->add_shader_resource_parameter(0, 0);
-	
-	access = ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS;
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(UI_Pass_Data));
+	root_signature->add_constant_buffer_parameter(1, 0);
+
+	root_signature->add_shader_resource_parameter(0, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(1, 0); //Unified index buffer
+
+	access = ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS;
 	Render_Pass::setup_root_signature(device);
 }
 
-void Render_2D_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+void UI_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
 {
 	Blending_Desc blending_desc;
 	blending_desc.enable = true;
 	blending_desc.src = BLEND_SRC_ALPHA;
 	blending_desc.dest = BLEND_INV_SRC_ALPHA;
 	blending_desc.blend_op = BLEND_OP_ADD;
-	blending_desc.src = BLEND_SRC_ALPHA;
 	blending_desc.src_alpha = BLEND_ONE;
 	blending_desc.dest_alpha = BLEND_INV_SRC_ALPHA;
 	blending_desc.blend_op_alpha = BLEND_OP_ADD;
 
-	Depth_Stencil_Desc depth_stencil_desc;
-	depth_stencil_desc.enable_depth_test = true;
-	depth_stencil_desc.depth_compare_func = COMPARISON_ALWAYS;
-
-	Array<Input_Layout> input_layouts;
-	input_layouts.push({ "POSITION", DXGI_FORMAT_R32G32_FLOAT });
-	input_layouts.push({ "TEXCOORD", DXGI_FORMAT_R32G32_FLOAT });
-
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.input_layouts = input_layouts;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, render_2d)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, render_2d)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, ui_rendering)->vs_bytecode.bytecode_ref();
+	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, ui_rendering)->ps_bytecode.bytecode_ref();
 	graphics_pipeline_desc.blending_desc = blending_desc;
-	graphics_pipeline_desc.depth_stencil_desc = depth_stencil_desc;
-	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	graphics_pipeline_desc.rasterization_desc.cull_type = CULL_TYPE_NONE;
+	graphics_pipeline_desc.rasterization_desc.front_clockwise = true;
+	graphics_pipeline_desc.depth_stencil_desc.enable_depth_test = false;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
 }
 
-void Render_2D_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+void UI_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_2D *render_2d = (Render_2D *)context;
+	UI_Storage *ui_storage = (UI_Storage *)context;
 	Render_System *render_sys = (Render_System *)args;
-	Render_Device *render_device = render_sys->render_device;
-
-	if ((render_2d->total_vertex_count == 0) || !render_2d->initialized) {
-		return;
-	}
-	graphics_command_list->begin_event("Rendering 2D");
+	graphics_command_list->begin_event("UI rendering");
 
 	graphics_command_list->set_render_target(render_sys->swap_chain->get_back_buffer(), render_sys->swap_chain->get_depth_stencil_buffer());
-	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
 
 	graphics_command_list->apply(pipeline_state);
 
 	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
 
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
 
 	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
 	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
-	
-	graphics_command_list->set_vertex_buffer(render_2d->vertex_buffer);
-	graphics_command_list->set_index_buffer(render_2d->index_buffer);
 
-	Size_u32 window_size = render_sys->get_window_size();
-	Matrix4 orthographic_matrix = make_orthographic_matrix(0.0f, (float)window_size.width, (float)window_size.height, 0.0f, 1.0f, 10000.0f);
+	graphics_command_list->set_graphics_constant_buffer(1, 0, ui_storage->ui_data_buffer);
+	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, ui_storage->vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, ui_storage->index_buffer->shader_resource_descriptor());
 
-	Render_2D_Info cb_render_info;
+	UI_Pass_Data pass_data;
+	for (u32 i = 0; i < ui_storage->draw_commands.count; i++) {
+		UI_Draw_Command *draw_command = &ui_storage->draw_commands[i];
+		pass_data.vertex_offset = draw_command->vertex_buffer_offset;
+		pass_data.index_offset = draw_command->index_buffer_offset;
+		pass_data.texture_idx = draw_command->texture ? draw_command->texture->shader_resource_descriptor()->index() : -1;
 
-	Render_Primitive_List *list = NULL;
-	For(render_2d->draw_list, list) {
-		Render_Primitive_2D *render_primitive = NULL;
-		For(list->render_primitives, render_primitive) {
-
-			graphics_command_list->set_clip_rect(render_primitive->clip_rect);
-			cb_render_info.orthographics_matrix = render_primitive->transform_matrix * orthographic_matrix;
-
-			cb_render_info.primitive_color = render_primitive->color.value;
-			graphics_command_list->set_graphics_constants(0, 0, &cb_render_info);
-			graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_primitive->texture->shader_resource_descriptor());
-
-			Primitive_2D *primitive = render_primitive->primitive;
-			graphics_command_list->draw_indexed(primitive->indices.count, primitive->index_offset, primitive->vertex_offset);
-		}
+		graphics_command_list->set_clip_rect(draw_command->clip_rect);
+		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+		graphics_command_list->draw(draw_command->index_count);
 	}
+
 	graphics_command_list->end_event();
-	
-	For(render_2d->draw_list, list) {
-		list->render_primitives.reset();
-	}
-	render_2d->draw_list.reset();
 }
 
 void Silhouette_Pass::add_render_entity_index(u32 entity_index)

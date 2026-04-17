@@ -92,7 +92,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)dependencies\include;$(ProjectDir)thirdparty;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\debug</OutDir>
     <IntDir>$(SolutionDir)build\debug</IntDir>
@@ -208,8 +208,6 @@
     <ClCompile Include="src\collision\collision.cpp" />
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\gui\editor.cpp" />
-    <ClCompile Include="src\gui\gui.cpp" />
-    <ClCompile Include="src\gui\test_gui.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
     <ClCompile Include="src\libs\geometry.cpp" />
     <ClCompile Include="src\libs\image\image.cpp" />
@@ -224,10 +222,8 @@
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\structures\dict.cpp" />
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
-    <ClCompile Include="src\render\font.cpp" />
     <ClCompile Include="src\render\helpers.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
-    <ClCompile Include="src\render\renderer.cpp" />
     <ClCompile Include="src\render\render_api\base_structs.cpp" />
     <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptor_heap.cpp" />
     <ClCompile Include="src\render\d3d12_render_api\d3d12_device.cpp" />
@@ -240,6 +236,7 @@
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\render\render_world.cpp" />
     <ClCompile Include="src\render\shader_manager.cpp" />
+    <ClCompile Include="src\render\ui_storage.cpp" />
     <ClCompile Include="src\sys\commands.cpp" />
     <ClCompile Include="src\sys\debug.cpp" />
     <ClCompile Include="src\sys\engine.cpp" />
@@ -252,6 +249,11 @@
     <ClCompile Include="src\win32\win_console.cpp" />
     <ClCompile Include="src\win32\win_helpers.cpp" />
     <ClCompile Include="src\win32\win_main.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_demo.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_tables.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\assimp\aabb.h" />
@@ -403,9 +405,6 @@
     <ClInclude Include="src\collision\collision.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\gui\editor.h" />
-    <ClInclude Include="src\gui\enum_helper.h" />
-    <ClInclude Include="src\gui\gui.h" />
-    <ClInclude Include="src\gui\test_gui.h" />
     <ClInclude Include="src\libs\color.h" />
     <ClInclude Include="src\libs\ds\array.h" />
     <ClInclude Include="src\libs\ds\dict.h" />
@@ -442,12 +441,10 @@
     <ClInclude Include="src\libs\structures\stack.h" />
     <ClInclude Include="src\libs\structures\tree.h" />
     <ClInclude Include="src\libs\utils.h" />
-    <ClInclude Include="src\render\font.h" />
     <ClInclude Include="src\render\gpu_data.h" />
     <ClInclude Include="src\render\helpers.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
-    <ClInclude Include="src\render\renderer.h" />
     <ClInclude Include="src\render\render_api\base_structs.h" />
     <ClInclude Include="src\render\d3d12_render_api\d3d12_descriptors.h" />
     <ClInclude Include="src\render\d3d12_render_api\d3d12_functions.h" />
@@ -461,6 +458,7 @@
     <ClInclude Include="src\render\render_system.h" />
     <ClInclude Include="src\render\render_world.h" />
     <ClInclude Include="src\render\shader_manager.h" />
+    <ClInclude Include="src\render\ui_storage.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\render\vertices.h" />
     <ClInclude Include="src\sys\commands.h" />
@@ -480,6 +478,12 @@
     <ClInclude Include="src\win32\win_local.h" />
     <ClInclude Include="src\win32\win_time.h" />
     <ClInclude Include="src\win32\win_types.h" />
+    <ClInclude Include="thirdparty\imgui\imconfig.h" />
+    <ClInclude Include="thirdparty\imgui\imgui.h" />
+    <ClInclude Include="thirdparty\imgui\imgui_internal.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_rectpack.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_textedit.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dependencies\include\assimp\color4.inl" />

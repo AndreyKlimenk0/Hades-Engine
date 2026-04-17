@@ -10,7 +10,6 @@
 #include "../libs/math/structures.h"
 
 #include "gpu_data.h"
-#include "renderer.h"
 #include "render_passes.h"
 #include "render_api/render.h"
 
@@ -114,7 +113,7 @@ struct Render_System {
 		Debug_Shadows_Pass debug_shadows_pass;
 		Silhouette_Pass silhouette_pass;
 		Outlining_Pass outlining_pass;
-		Render_2D_Pass render2d_pass;
+		UI_Pass ui_pass;
 		Generate_HZB generate_hzb;
 		Depth_Pass depth_pass;
 	} passes;
@@ -123,8 +122,6 @@ struct Render_System {
 
 	Command_List_Allocator command_list_allocator;
 	Pipeline_Resource_Manager pipeline_resource_manager;
-
-	Render_2D render_2d;
 
 	void init(Win32_Window *win32_window, Variable_Service *variable_service);
 	void init_passes();

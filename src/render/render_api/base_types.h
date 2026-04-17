@@ -93,7 +93,7 @@ enum Fill_Type {
 };
 
 enum Cull_Type {
-	CULL_TYPE_UNKNOWN,
+	CULL_TYPE_NONE,
 	CULL_TYPE_FRONT,
 	CULL_TYPE_BACK
 };
