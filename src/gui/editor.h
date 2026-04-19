@@ -37,11 +37,9 @@ struct Editor_Window {
 	void set_size(s32 width, s32 height);
 };
 
-struct Displaying_Command {
-	String command_name;
-	String str_key_binding;
-
-	bool(*display_info_and_get_command_args)(String *edit_field, Array<String> &command_args, void *context) = NULL;
+struct World_Window : Editor_Window {
+	Entity_Id picked_entity;
+	void draw();
 };
 
 struct Editor_Command {
@@ -75,33 +73,18 @@ struct Editor {
 		float camera_rotation_speed = 0.5f;
 	} editor_settings;
 
-	struct Left_Bar {
-		struct Images {
-			Texture *adding = NULL;
-			Texture *entity = NULL;
-			Texture *entities = NULL;
-			Texture *rendering = NULL;
-		} textures;
-	} left_bar;
-
 	Key_Bindings key_bindings;
 	Key_Command_Bindings key_command_bindings;
 
-	Left_Bar left_buttons;
-
-	Array<Editor_Window *> windows;
-	Array<Editor_Window *> top_right_windows;
+	World_Window world_window;
 
 	void init(Engine *engine);
 
 	void handle_events();
 	void update();
-	void picking();
-
 	void render();
-	void render_menus();
-	void render_left_bar();
-
+	
+	void picking();
 	void convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands);
 	void convert_editor_commands_to_entity_commands(Array<Editor_Command> *editor_commands, Array<Entity_Command *> *entity_commands);
 };

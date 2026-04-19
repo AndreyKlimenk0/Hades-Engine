@@ -28,6 +28,32 @@
 
 #include "../collision/collision.h"
 
+void update_cursor()
+{
+	ImGuiIO &io = ImGui::GetIO();
+	if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) {
+		return;
+	}
+
+	ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+	if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
+		SetCursor(NULL);
+	} else {
+		LPTSTR win32_cursor = IDC_ARROW;
+		switch (imgui_cursor) {
+			case ImGuiMouseCursor_Arrow:        win32_cursor = IDC_ARROW; break;
+			case ImGuiMouseCursor_TextInput:    win32_cursor = IDC_IBEAM; break;
+			case ImGuiMouseCursor_ResizeAll:    win32_cursor = IDC_SIZEALL; break;
+			case ImGuiMouseCursor_ResizeEW:     win32_cursor = IDC_SIZEWE; break;
+			case ImGuiMouseCursor_ResizeNS:     win32_cursor = IDC_SIZENS; break;
+			case ImGuiMouseCursor_ResizeNESW:   win32_cursor = IDC_SIZENESW; break;
+			case ImGuiMouseCursor_ResizeNWSE:   win32_cursor = IDC_SIZENWSE; break;
+			case ImGuiMouseCursor_Hand:         win32_cursor = IDC_HAND; break;
+		}
+		SetCursor(LoadCursor(NULL, win32_cursor));
+	}
+}
+
 static const u32 STR_ENTITY_TYPES_COUNT = 5;
 static const String str_entity_types[STR_ENTITY_TYPES_COUNT] = {
 	"Unknown",
@@ -37,33 +63,11 @@ static const String str_entity_types[STR_ENTITY_TYPES_COUNT] = {
 	"Camera"
 };
 
-inline Rect_s32 get_display_screen_rect()
-{
-	Size_s32 window_size = static_cast<Size_s32>(Engine::get_render_system()->get_window_size());
-	return Rect_s32(window_size);
-}
-
-inline void place_rect_on_top_right(Rect_s32 *src, Rect_s32 *dest)
-{
-	assert(src);
-	assert(dest);
-	assert(src->width >= dest->width);
-
-	dest->x = src->width - dest->width;
-	dest->y = 0;
-}
-
 static String to_string(Entity_Id entity_id)
 {
 	char *entity_index = to_string(entity_id.index);
 	defer(free_string(entity_index));
 	return str_entity_types[(u32)entity_id.type] + "#" + entity_index;
-}
-
-inline void place_in_middle(Rect_s32 *in_element_place, Rect_s32 *placed_element)
-{
-	placed_element->x = ((in_element_place->width / 2) - (placed_element->width / 2)) + in_element_place->x;
-	placed_element->y = ((in_element_place->height / 2) - (placed_element->height / 2)) + in_element_place->y;
 }
 
 inline bool get_render_pass_index(const char *name, Array<Render_Pass *> &render_passes, u32 *index)
@@ -261,6 +265,82 @@ void Editor_Window::set_size(s32 width, s32 height)
 	window_rect.set_size(width, height);
 }
 
+void World_Window::draw()
+{
+	if (!window_open) {
+		return;
+	}
+	ImGui::Begin("World");
+
+	ImVec2 avail = ImGui::GetContentRegionAvail();
+	float child_height = avail.y * 0.5f;
+	// top child
+	ImGui::BeginChild("World Hierarchy", ImVec2(0.0f, child_height), ImGuiChildFlags_None);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf;
+
+	Camera *camera = NULL;
+	For(game_world->cameras, camera) {
+		Entity_Id entity_id = get_entity_id(camera);
+
+		ImGuiTreeNodeFlags local_flags = flags;
+		
+		if (entity_id == picked_entity) {
+			local_flags |= ImGuiTreeNodeFlags_Selected;
+		}
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 4));
+		if (ImGui::TreeNodeEx(to_string(get_entity_id(camera)), local_flags | ImGuiTreeNodeFlags_FramePadding)) {
+			ImGui::TreePop();
+		}
+
+		ImGui::PopStyleVar();
+
+		if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+			picked_entity = get_entity_id(camera);
+		}
+	}
+
+	Entity *entity = NULL;
+	For(game_world->entities, entity) {
+		Entity_Id entity_id = get_entity_id(entity);
+		
+		ImGuiTreeNodeFlags local_flags = flags;
+
+		if (entity_id == picked_entity) {
+			local_flags |= ImGuiTreeNodeFlags_Selected;
+		}
+		
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 4));
+		if (ImGui::TreeNodeEx(to_string(get_entity_id(entity)), local_flags | ImGuiTreeNodeFlags_FramePadding)) {
+			ImGui::TreePop();
+		}
+
+		ImGui::PopStyleVar();
+		
+		if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+			picked_entity = get_entity_id(entity);
+		}
+	}
+	ImGui::PopStyleVar();
+	ImGui::PopStyleVar();
+
+
+	ImGui::EndChild();
+
+	//// bottom child
+	ImGui::BeginChild("Entity", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
+
+	//// 0.0f height here means: take the rest of the available space
+	ImGui::Text("Bottom child");
+	ImGui::EndChild();
+
+	ImGui::End();
+}
+
 Editor::Editor()
 {
 }
@@ -275,14 +355,6 @@ void Editor::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
-	for (u32 i = 0; i < windows.count; i++) {
-		windows[i]->init(engine);
-	}
-
-	for (u32 i = 0; i < top_right_windows.count; i++) {
-		top_right_windows[i]->close();
-	}
-
 	if (game_world->cameras.is_empty()) {
 		//editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
 		Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
@@ -291,6 +363,9 @@ void Editor::init(Engine *engine)
 		editor_camera_id = get_entity_id(&game_world->cameras.first());
 		engine->render_world.set_rendering_view(editor_camera_id);
 	}
+
+	world_window.init(engine);
+	world_window.open();
 
 	key_command_bindings.init();
 	key_command_bindings.set("move_camera_forward", KEY_W);
@@ -390,10 +465,40 @@ void Editor::init(Engine *engine)
 	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
 
+static Size_u32 screen_size;
+
 void Editor::handle_events()
 {
+	ImGuiIO &io = ImGui::GetIO();
+
+	Queue<Event> *events = get_event_queue();
+	for (Queue_Node<Event> *node = events->first; node != NULL; node = node->next) {
+		Event *event = &node->item;
+
+		if (event->type == EVENT_TYPE_CHAR) {
+			io.AddInputCharacter(event->char_key);
+
+		} else if (event->type == EVENT_TYPE_MOUSE) {
+			io.AddMousePosEvent((float)event->mouse_info.x, (float)event->mouse_info.y);
+
+		} else if (event->type == EVENT_TYPE_MOUSE_WHEEL) {
+			io.AddMouseWheelEvent((float)event->mouse_wheel_delta / 100.0f, (float)event->mouse_wheel_delta / 100.0f);
+
+		} else if (event->type == EVENT_TYPE_KEY) {
+			if (event->key_info.key == KEY_LMOUSE) {
+				io.AddMouseButtonEvent(0, event->key_info.key_state == KEY_DOWN);
+			} else if (event->key_info.key == KEY_RMOUSE) {
+				io.AddMouseButtonEvent(1, event->key_info.key_state == KEY_DOWN);
+			}
+		}
+	}
+
+	io.DeltaTime = 1.0f / 120.0f;
+
+	bool interacting = ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
+
 	key_bindings.handle_events();
-	if (editor_mode == EDITOR_MODE_COMMON) {
+	if ((editor_mode == EDITOR_MODE_COMMON) && !interacting) {
 		//@Note: In the future here better to use linear allocator.
 		Array<Editor_Command> editor_commands;
 		Array<Entity_Command *> entity_commands;
@@ -410,9 +515,56 @@ void Editor::handle_events()
 
 void Editor::update()
 {
-	if (key_bindings.was_binding_triggered(KEY_CTRL, KEY_C)) {
-	}
 	picking();
+}
+
+void Editor::render()
+{
+	ImGuiIO &io = ImGui::GetIO();
+	io.DisplaySize = ImVec2{ (float)render_sys->get_window_size().width, (float)render_sys->get_window_size().height };
+	
+	screen_size = render_sys->get_window_size();
+
+	update_cursor();
+
+	ImGui::NewFrame();
+	//ImGui::ShowDemoWindow();
+
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::MenuItem("World")) {
+			if (world_window.window_open) {
+				world_window.close();
+			} else {
+				world_window.open();
+			}
+		}
+
+		if (ImGui::BeginMenu("Load")) {
+			if (ImGui::MenuItem("Mesh")) {}
+			if (ImGui::MenuItem("Level")) {}
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Add")) {
+			if (ImGui::MenuItem("Direction Light")) {}
+			if (ImGui::MenuItem("Point Light")) {}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Mesh batch")) {}
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("View")) {
+			if (ImGui::MenuItem("World")) {}
+			if (ImGui::MenuItem("Normal")) {}
+			if (ImGui::MenuItem("Diffuse")) {}
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
+	world_window.draw();
+
+	ImGui::Render();
 }
 
 struct Moving_Entity {
@@ -480,36 +632,6 @@ void Editor::picking()
 	//}
 }
 
-void Editor::render()
-{
-	ImGuiIO &io = ImGui::GetIO();
-	io.DisplaySize = ImVec2{ (float)render_sys->get_window_size().width, (float)render_sys->get_window_size().height };
-
-	io.AddMousePosEvent(Mouse_State::x, Mouse_State::y);
-	io.AddMouseButtonEvent(0, was_key_just_pressed(KEY_LMOUSE));
-	io.AddMouseButtonEvent(1, was_key_just_pressed(KEY_RMOUSE));
-
-	ImGui::NewFrame();
-	ImGui::ShowDemoWindow();
-	//ImGui::Button("My button");
-	//ImGui::Button("My button");
-	const char *entity_types[] = { "common", "camera" };
-	int index = 0;
-	//ImGui::ListBox("Entity_Type", &index, entity_types, 2);
-//	ImGui::SetNextWindowSize({600, 600});
-////	ImGui::SetNextWindowPos({ 10, 10 });
-//	ImGui::Begin("Wndow", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-//	ImGui::End();
-//
-//	ImVec4 *colors = ImGui::GetStyle().Colors;
-//	//colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.72f, 0.52f, 1.00f);
-//	ImGui::SetNextWindowPos({ 700, 10 });
-//	ImGui::SetNextWindowSize({ 200, 200 });
-//	ImGui::Begin("AAAAAAA", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-//	ImGui::End();
-	ImGui::Render();
-}
-
 void Editor::convert_user_input_events_to_edtior_commands(Array<Editor_Command> *editor_commands)
 {
 	Queue<Event> *events = get_event_queue();
@@ -568,17 +690,20 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 			entity_commands->push(move_command);
 
 		} else if (command == "start_rotate_camera") {
+			print("Start Rotate camera");
 			rotate_camera = true;
 			last_x = Mouse_State::x;
 			last_y = Mouse_State::y;
 
 		} else if (command == "end_rotate_camera") {
+			print("End Rotate camera");
 			rotate_camera = false;
 
 		} else if (command == "rotate_camera") {
 			if (!rotate_camera) {
 				continue;
 			}
+			print("Rotate camera");
 			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
 			float x_angle = degrees_to_radians((float)(mouse_info->x - last_x));
 			float y_angle = -degrees_to_radians((float)(mouse_info->y - last_y));

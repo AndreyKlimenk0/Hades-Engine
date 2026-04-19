@@ -40,43 +40,41 @@ void UI_Storage::upload_ui()
 	u32 vertex_offset = 0;
 	u32 index_offset = 0;
 
-	Vector2 clipOffset = { draw_data->DisplayPos.x, draw_data->DisplayPos.y };;
+	Vector2 clip_offset = { draw_data->DisplayPos.x, draw_data->DisplayPos.y };;
 
 	for (s32 cmdListIdx = 0; cmdListIdx < draw_data->CmdListsCount; ++cmdListIdx) {
-		const ImDrawList *imCommandList = draw_data->CmdLists[cmdListIdx];
+		const ImDrawList *imgui_command_list = draw_data->CmdLists[cmdListIdx];
 
-		vertex_buffer->write(imCommandList->VtxBuffer.Data, sizeof(ImDrawVert) * imCommandList->VtxBuffer.Size, sizeof(ImDrawVert) * vertex_offset);
-		index_buffer->write(imCommandList->IdxBuffer.Data, sizeof(ImDrawIdx) * imCommandList->IdxBuffer.Size, sizeof(ImDrawIdx) * index_offset);
+		vertex_buffer->write(imgui_command_list->VtxBuffer.Data, sizeof(ImDrawVert) * imgui_command_list->VtxBuffer.Size, sizeof(ImDrawVert) * vertex_offset);
+		index_buffer->write(imgui_command_list->IdxBuffer.Data, sizeof(ImDrawIdx) * imgui_command_list->IdxBuffer.Size, sizeof(ImDrawIdx) * index_offset);
 
-		//print("vertex_offset", vertex_offset);
-		//print("vertex_offset", vertex_offset);
-
-		for (s32 cmdBufferIdx = 0; cmdBufferIdx < imCommandList->CmdBuffer.Size; ++cmdBufferIdx) {
-			const ImDrawCmd *imCommand = &imCommandList->CmdBuffer[cmdBufferIdx];
+		for (s32 cmdBufferIdx = 0; cmdBufferIdx < imgui_command_list->CmdBuffer.Size; ++cmdBufferIdx) {
+			const ImDrawCmd *imgui_draw_command = &imgui_command_list->CmdBuffer[cmdBufferIdx];
 
 			UI_Draw_Command draw_command;
 			draw_command.vertex_buffer_offset = vertex_offset;
 			draw_command.index_buffer_offset = index_offset;
-			draw_command.index_count = imCommand->ElemCount;
+			draw_command.index_count = imgui_draw_command->ElemCount;
 
-			if (imCommand->TexRef._TexData) {
-				if ((imCommand->TexRef._TexData->Status == ImTextureStatus_WantCreate)) {
-					if (imCommand->TexRef._TexData->Format == ImTextureFormat_RGBA32) {
-
-					}
-					int x = 0;
+			if (imgui_draw_command->TexRef._TexData) {
+				if ((imgui_draw_command->TexRef._TexData->Status == ImTextureStatus_WantCreate)) {
+					assert(false);
 				}
 			}
+			draw_command.texture = imgui_draw_command->GetTexID() != ImTextureID_Invalid ? (Texture *)imgui_draw_command->GetTexID() : NULL;
 
-			draw_command.texture = imCommand->GetTexID() != ImTextureID_Invalid ? (Texture *)imCommand->GetTexID() : NULL;
-			draw_command.clip_rect = static_cast<Rect_u32>(Rect_f32{ imCommand->ClipRect.x - clipOffset.x, imCommand->ClipRect.y - clipOffset.y,
-																	 imCommand->ClipRect.z - clipOffset.x, imCommand->ClipRect.w - clipOffset.y });
+			Vector2 clip_min = { imgui_draw_command->ClipRect.x - clip_offset.x, imgui_draw_command->ClipRect.y - clip_offset.y };
+			Vector2 clip_max = { imgui_draw_command->ClipRect.z - clip_offset.x, imgui_draw_command->ClipRect.w - clip_offset.y };
+			Rect_f32 clip_rect = { clip_min.x, clip_min.y, clip_max.x - clip_min.x, clip_max.y - clip_min.y };
+			if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y) {
+				continue;
+			}
+			draw_command.clip_rect = (Rect_u32)clip_rect;
 
 			draw_commands.push(draw_command);
-			index_offset += imCommand->ElemCount;
+			index_offset += imgui_draw_command->ElemCount;
 		}
-
-		vertex_offset += imCommandList->VtxBuffer.Size;
+		vertex_offset += imgui_command_list->VtxBuffer.Size;
 	}
 }
 

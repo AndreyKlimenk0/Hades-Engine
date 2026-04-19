@@ -40,6 +40,6 @@ inline u32 find_max_mip_level(u32 width, u32 height)
 	if (power_of_two(width) && power_of_two(height)){
 		return math::log2(math::max(width, height));
 	}
-	return static_cast<u32>(math::floor(math::log2(math::max(static_cast<float>(width), static_cast<float>(height))))) + 1.0;
+	return u32(math::floor(math::log2((float)math::max(width, height))) + 1.0f);
 }
 #endif
