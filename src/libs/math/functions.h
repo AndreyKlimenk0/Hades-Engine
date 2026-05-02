@@ -112,4 +112,11 @@ inline bool exclusive_or(bool q, bool p)
 	return !(p && q) && (p || q);
 }
 
+inline u32 round_down_to_power_of_two(u32 value)
+{
+	unsigned long index;
+	_BitScanReverse(&index, (unsigned long)value);
+	return 1u << index;
+}
+
 #endif

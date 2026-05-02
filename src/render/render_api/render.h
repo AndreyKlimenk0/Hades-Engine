@@ -139,6 +139,7 @@ struct Compute_Command_List : Copy_Command_List {
 	void set_compute_constants(u32 shader_register, u32 shader_space, T *data);
 
 	virtual void set_compute_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data) = 0;
+	virtual void set_compute_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer) = 0;
 	virtual void set_compute_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor) = 0;
 
 	virtual void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z = 1) = 0;

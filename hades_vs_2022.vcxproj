@@ -106,7 +106,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)dependencies\include;$(ProjectDir)thirdparty;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\release</OutDir>
     <IntDir>$(SolutionDir)build\release</IntDir>
@@ -114,7 +114,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VTune profiling|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\programs\Intel\vtune\2022.4.1\sdk\include;$(ProjectDir)dependencies\include;$(IncludePath)</IncludePath>
+    <IncludePath>D:\programs\Intel\vtune\2022.4.1\sdk\include;$(ProjectDir)dependencies\include;$(ProjectDir)thirdparty;$(IncludePath)</IncludePath>
     <LibraryPath>D:\programs\Intel\vtune\2022.4.1\sdk\lib64;$(ProjectDir)dependencies\lib\x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\profiling</OutDir>
     <IntDir>$(SolutionDir)build\profiling</IntDir>

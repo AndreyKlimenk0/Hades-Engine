@@ -98,7 +98,7 @@ void UI_Storage::upload_font()
 	}
 
 	Texture_Desc desc = font_texture->get_texture_desc();
-	if (desc.width != width || desc.height != height) {
+	if ((s32)desc.width != width || (s32)desc.height != height) {
 		DELETE_PTR(font_texture);
 		Texture_Desc font_texture_desc;
 		font_texture_desc.dimension = TEXTURE_DIMENSION_2D;
@@ -111,7 +111,6 @@ void UI_Storage::upload_font()
 	}
 	io->Fonts->SetTexID(ImTextureRef((void *)font_texture));
 	io->Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-	int x = 0;
 }
 
 void UI_Storage::prepare_for_rendering()

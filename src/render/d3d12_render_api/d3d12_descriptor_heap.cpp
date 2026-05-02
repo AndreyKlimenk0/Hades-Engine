@@ -113,17 +113,19 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_
 		}
 		case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
 			assert(resource_desc.DepthOrArraySize == 1);
+			assert(mipmap_level <= resource_desc.MipLevels);
 			shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 			shader_resource_view_desc.Texture2D.MostDetailedMip = mipmap_level;
-			shader_resource_view_desc.Texture2D.MipLevels = resource_desc.MipLevels;
+			shader_resource_view_desc.Texture2D.MipLevels = resource_desc.MipLevels - mipmap_level;
 			shader_resource_view_desc.Texture2D.PlaneSlice = 0;
 			shader_resource_view_desc.Texture2D.ResourceMinLODClamp = 0.0f;
 			break;
 		}
 		case D3D12_RESOURCE_DIMENSION_TEXTURE3D: {
+			assert(mipmap_level <= resource_desc.MipLevels);
 			shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 			shader_resource_view_desc.Texture3D.MostDetailedMip = mipmap_level;
-			shader_resource_view_desc.Texture3D.MipLevels = resource_desc.MipLevels;
+			shader_resource_view_desc.Texture3D.MipLevels = resource_desc.MipLevels - mipmap_level;
 			shader_resource_view_desc.Texture3D.ResourceMinLODClamp = 0.0f;
 			break;
 		}

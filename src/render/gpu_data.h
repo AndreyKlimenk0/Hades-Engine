@@ -15,7 +15,7 @@ struct GPU_Global_Info {
 	u32 anisotropic_sampler_idx;
 	u32 linear_sampler_idx;
 	u32 point_sampler_idx;
-	u32 pad;
+	u32 point_clamp_sampler_idx;
 };
 
 struct GPU_Frame_Info {

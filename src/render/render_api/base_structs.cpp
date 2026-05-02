@@ -41,12 +41,6 @@ Viewport::Viewport()
 {
 }
 
-Viewport::Viewport(const Size_f32 &size)
-{
-    width = size.width;
-    height = size.height;
-}
-
 Viewport::~Viewport()
 {
 }

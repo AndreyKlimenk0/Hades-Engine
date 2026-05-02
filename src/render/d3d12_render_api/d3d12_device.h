@@ -122,6 +122,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void apply(Pipeline_State *pipeline_state);
 
 	void set_compute_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data);
+	void set_compute_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer);
 	void set_compute_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor);
 
 	void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z);
@@ -141,9 +142,8 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void set_vertex_buffer(Buffer *buffer);
 	void set_index_buffer(Buffer *buffer);
 
-	void set_graphics_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer);
-
 	void set_graphics_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data);
+	void set_graphics_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer);
 	void set_graphics_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor);
 
 	void draw(u32 vertex_count);

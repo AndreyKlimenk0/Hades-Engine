@@ -518,6 +518,12 @@ void D3D12_Command_List::set_compute_constants(u32 shader_register, u32 shader_s
 	command_list->SetComputeRoot32BitConstants(parameter_index, data_size / 4, data, 0);
 }
 
+void D3D12_Command_List::set_compute_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer)
+{
+	u32 parameter_index = last_set_root_signature->get_parameter_index(shader_register, shader_space, CONSTANT_BUFFER_REGISTER);
+	command_list->SetComputeRootConstantBufferView(parameter_index, constant_buffer->gpu_virtual_address());
+}
+
 void D3D12_Command_List::set_compute_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor)
 {
 	D3D12_GPU_Descriptor *internal_base_descriptor = static_cast<D3D12_GPU_Descriptor *>(base_descriptor);
@@ -708,7 +714,8 @@ bool D3D12_Fence::wait_for_gpu()
 
 bool D3D12_Fence::wait_for_gpu(u64 other_expected_value)
 {
-	if (other_expected_value < expected_value) {
+	u64 completed_value = get_completed_value();
+	if (completed_value < other_expected_value) {
 		d3d12_fence->SetEventOnCompletion(expected_value, handle);
 		WaitForSingleObject(handle, INFINITE);
 		return true;

@@ -365,7 +365,7 @@ void Editor::init(Engine *engine)
 	}
 
 	world_window.init(engine);
-	world_window.open();
+	//world_window.open();
 
 	key_command_bindings.init();
 	key_command_bindings.set("move_camera_forward", KEY_W);
@@ -399,10 +399,10 @@ void Editor::init(Engine *engine)
 
 	ImGuiStyle &style = ImGui::GetStyle();
 
-	//style.FrameRounding = 0.0f;
-	//style.GrabRounding = 1.0f;
-	style.WindowRounding = 0.0f;
-	style.WindowBorderSize = 0.0f;
+	style.FrameRounding = 4.0f;
+	style.GrabRounding = 4.0f;
+	style.WindowRounding = 4.0f;
+	style.WindowBorderSize = 4.0f;
 	//style.IndentSpacing = 10.0f;
 	//style.ScrollbarSize = 12.0f;
 	//style.WindowPadding = ImVec2(2, 2);
@@ -559,7 +559,7 @@ void Editor::render()
 			if (ImGui::MenuItem("Diffuse")) {}
 			ImGui::EndMenu();
 		}
-
+		ImGui::Text("Fps %lld | %lldms", Engine::get_instance()->fps, Engine::get_instance()->frame_time);
 		ImGui::EndMainMenuBar();
 	}
 	world_window.draw();
@@ -690,20 +690,17 @@ void Editor::convert_editor_commands_to_entity_commands(Array<Editor_Command> *e
 			entity_commands->push(move_command);
 
 		} else if (command == "start_rotate_camera") {
-			print("Start Rotate camera");
 			rotate_camera = true;
 			last_x = Mouse_State::x;
 			last_y = Mouse_State::y;
 
 		} else if (command == "end_rotate_camera") {
-			print("End Rotate camera");
 			rotate_camera = false;
 
 		} else if (command == "rotate_camera") {
 			if (!rotate_camera) {
 				continue;
 			}
-			print("Rotate camera");
 			Mouse_Info *mouse_info = (Mouse_Info *)additional_info;
 			float x_angle = degrees_to_radians((float)(mouse_info->x - last_x));
 			float y_angle = -degrees_to_radians((float)(mouse_info->y - last_y));

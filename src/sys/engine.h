@@ -22,6 +22,8 @@ struct Engine {
 	} swap_chain_present;
 
 	bool is_initialized = false;
+	s64 fps = 60;
+	s64 frame_time = 1000;
 	String current_level_name;
 	
 	Global_Config global_config;

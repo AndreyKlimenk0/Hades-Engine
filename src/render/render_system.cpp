@@ -5,6 +5,7 @@
 #include "../sys/sys.h"
 #include "../sys/vars.h"
 #include "../sys/engine.h"
+#include "../sys/profiling.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/memory/base.h"
@@ -126,7 +127,7 @@ void Render_System::init_passes()
 	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
 	
 	render_pass_submissions.push({ &passes.depth_pass, (void *)render_world,   (void *)this });
-	render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
+	//render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -154,17 +155,12 @@ void Render_System::notify_end_frame()
 	render_device->finish_frame(frame_fence->expected_value - 1);
 }
 
-//void wait_for_gpu(Fence *fence, u64 expected_value)
-//{
-//	u64 completed_value = fence->get()->GetCompletedValue();
-//	if (completed_value < expected_value) {
-//		fence->get()->SetEventOnCompletion(expected_value, fence->handle);
-//		WaitForSingleObject(fence->handle, INFINITE);
-//	}
-//}
+#include "../win32/win_time.h"
 
 void Render_System::render()
 {
+	begin_profile_task("Rendering");
+
 	notify_start_frame();
 	
 	pipeline_resource_manager.update_common_constant_buffers();
@@ -178,7 +174,9 @@ void Render_System::render()
 	
 	for (u32 i = 0; i < render_pass_submissions.count; i++) {
 		Render_Pass_Submission render_pass_submission = render_pass_submissions[i];
+		begin_profile_task(render_pass_submission.render_pass->name);
 		render_pass_submission.render_pass->render(graphics_command_list, render_pass_submission.context, render_pass_submission.args);
+		end_profile_task();
 	}
 
 	graphics_command_list->transition_resource_barrier(swap_chain->get_back_buffer(), RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT);
@@ -187,15 +185,28 @@ void Render_System::render()
 	graphics_queue->wait(uploading_fence);
 	graphics_queue->execute_command_list(graphics_command_list);
 	
+	begin_profile_task("Present");
 	swap_chain->present(sync_interval, present_flags);
+	end_profile_task();
 
+	begin_profile_task("Signal");
 	graphics_queue->signal(frame_fence);
+	end_profile_task();
 
-	frame_fence->wait_for_gpu(frame_fence->expected_value - 1);
+	begin_profile_task("Wait");
+	auto x = milliseconds_counter();
+	if (frame_fence->wait_for_gpu(frame_fence->expected_value - 1)) {
+		//print("wait for gpu", milliseconds_counter() - x);
+	} else {
+		//print("wait not for gpu", milliseconds_counter() - x);
+	}
+	end_profile_task();
 
 	notify_end_frame();
 
 	frame_fence->increment_expected_value();
+
+	end_profile_task();
 }
 
 Size_u32 Render_System::get_window_size()
@@ -229,11 +240,13 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 	anisotropic_sampler = render_device->create_sampler(SAMPLER_FILTER_ANISOTROPIC, ADDRESS_MODE_WRAP);
 	linear_sampler = render_device->create_sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
 	point_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
+	point_clamp_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_CLAMP);
 
 	GPU_Global_Info global_info;
 	global_info.anisotropic_sampler_idx = anisotropic_sampler->sampler_descriptor()->index();
 	global_info.linear_sampler_idx = linear_sampler->sampler_descriptor()->index();
 	global_info.point_sampler_idx = point_sampler->sampler_descriptor()->index();
+	global_info.point_clamp_sampler_idx = point_clamp_sampler->sampler_descriptor()->index();
 
 	Buffer_Desc global_buffer_desc;
 	global_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;

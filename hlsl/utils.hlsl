@@ -64,4 +64,10 @@ float max2(T vec)
 {
     return max(vec.x, vec.y);
 }
+
+template<typename T>
+float max4(T vec)
+{
+    return max(max(vec.x, vec.y), max(vec.z, vec.w));
+}
 #endif

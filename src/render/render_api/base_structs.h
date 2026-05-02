@@ -96,7 +96,6 @@ struct Resource_Footprint {
 
 struct Viewport {
 	Viewport();
-	Viewport(const Size_f32 &size);
 	~Viewport();
 
 	float x = 0.0f;

@@ -5,7 +5,7 @@ struct Global_Info {
     uint anisotropic_sampler_idx;
     uint linear_sampler_idx;
     uint point_sampler_idx;
-    uint pad;
+    uint point_clamp_sampler_idx;
 };
 
 struct Frame_Info {
@@ -39,5 +39,10 @@ SamplerState linear_sampler()
 SamplerState point_sampler() 
 { 
     return samplers[global_info.point_sampler_idx]; 
+}
+
+SamplerState point_clamp_sampler()
+{
+    return samplers[global_info.point_clamp_sampler_idx];
 }
 #endif

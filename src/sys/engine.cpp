@@ -48,8 +48,8 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
 	////command_args.push("DamagedHelmet.gltf");
-	command_args.push("Sponza.gltf");
-	//command_args.push("occlusion_culling_scene.gltf");
+	//command_args.push("Sponza.gltf");
+	command_args.push("occlusion_culling_scene.gltf");
 	//command_args.push("test_shadows.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
@@ -100,9 +100,6 @@ void Engine::frame()
 {
 	begin_profile_frame("Frame");
 
-	static s64 fps = 60;
-	static s64 frame_time = 1000;
-
 	s64 start_time = milliseconds_counter();
 	s64 ticks_counter = cpu_ticks_counter();
 
@@ -133,7 +130,7 @@ void Engine::shutdown()
 {
 	render_sys.flush();
 
-	save_level(current_level_name, &game_world, &render_world);
+	//save_level(current_level_name, &game_world, &render_world);
 	var_service.shutdown();
 }
 

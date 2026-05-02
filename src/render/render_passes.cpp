@@ -1,5 +1,3 @@
-#include <limits.h>
-
 #include "ui_storage.h"
 #include "render_world.h"
 #include "render_passes.h"
@@ -7,6 +5,7 @@
 #include "shader_manager.h"
 #include "../sys/sys.h"
 #include "../libs/image/image.h" // use find_max_mip_level
+#include "../libs/math/functions.h"
 
 #include "render_api/base_structs.h"
 
@@ -33,7 +32,10 @@ struct Pass_Data {
 inline Viewport make_viewport_from_texture(Texture *texture)
 {
 	Texture_Desc texture_desc = texture->get_texture_desc();
-	return { Size_f32(texture_desc.width, texture_desc.height) };
+	Viewport viewport;
+	viewport.width = (float)texture_desc.width;
+	viewport.height = (float)texture_desc.height;
+	return viewport;
 }
 
 Render_Pass::Render_Pass()
@@ -80,7 +82,7 @@ void Shadows_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 	depth_stencil_desc.width = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.height = SHADOW_ATLAS_SIZE;
 	depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
-	
+
 	shadow_atlas = resource_manager->create_depth_stencil("shadow_atlas", &depth_stencil_desc);
 }
 
@@ -128,7 +130,7 @@ void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
 	pipeline_resource_manager->global_buffer;
-	
+
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
 
 	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
@@ -138,17 +140,20 @@ void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
-	
+
 	Depth_Map_Pass_Data pass_data;
 
 	Cascaded_Shadows *cascaded_shadows = NULL;
-	For(render_world->cascaded_shadows_list, cascaded_shadows) {
+	For(render_world->cascaded_shadows_list, cascaded_shadows)
+	{
 		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
-		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map) {
+		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map)
+		{
 			graphics_command_list->set_viewport(cascaded_shadow_map->viewport);
 
 			Render_Entity *render_entity = NULL;
-			For(render_world->game_render_entities, render_entity) {
+			For(render_world->game_render_entities, render_entity)
+			{
 				pass_data.mesh_idx = render_entity->mesh_idx;
 				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
@@ -254,7 +259,8 @@ void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, vo
 
 	Pass_Data pass_data;
 	Render_Entity *render_entity = NULL;
-	For(render_world->game_render_entities, render_entity) {
+	For(render_world->game_render_entities, render_entity)
+	{
 		pass_data.parameter0 = render_entity->mesh_idx;
 		pass_data.parameter1 = render_entity->world_matrix_idx;
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
@@ -284,10 +290,10 @@ void Forward_Pass::setup_root_signature(Render_Device *device)
 	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
 	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
 	root_signature->add_shader_resource_parameter(4, 0); //Lights buffer
-	
+
 	root_signature->add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
 	root_signature->add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
-	
+
 	root_signature->add_shader_resource_parameter(0, 2); //shadow atlas texture
 	root_signature->add_shader_resource_parameter(1, 2); //jittering_samples
 	root_signature->add_shader_resource_parameter(2, 2); //cascaded_shadows_list
@@ -321,9 +327,9 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_render_target(render_sys->swap_chain->get_back_buffer(), render_sys->swap_chain->get_depth_stencil_buffer());
 
 	graphics_command_list->apply(pipeline_state);
-	
+
 	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
-	
+
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
 
@@ -331,14 +337,14 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
 
 	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
-	
+
 	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
-	
+
 	graphics_command_list->set_graphics_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, render_world->lights_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(0, 2, SHADER_RESOURCE_REGISTER, shadow_atlas->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 2, SHADER_RESOURCE_REGISTER, render_world->jittering_samples->shader_resource_descriptor());
@@ -353,13 +359,14 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	filter.tile_size = render_world->jittering_tile_size;
 	filter.filter_size = render_world->jittering_filter_size;
 	filter.scaling = render_world->jittering_scaling;
-	
+
 	graphics_command_list->set_graphics_constants(0, 2, &shadow_atlas_info);
 	graphics_command_list->set_graphics_constants(1, 2, &filter);
 
 	Pass_Data pass_data;
 	Render_Entity *render_entity = NULL;
-	For(render_world->game_render_entities, render_entity) {
+	For(render_world->game_render_entities, render_entity)
+	{
 		pass_data.parameter0 = render_entity->mesh_idx;
 		pass_data.parameter1 = render_entity->world_matrix_idx;
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
@@ -498,7 +505,7 @@ void Silhouette_Pass::schedule_resources(Pipeline_Resource_Manager *resource_man
 	render_target_desc.format = DXGI_FORMAT_R32_UINT;
 	render_target_desc.clear_value = Clear_Value(Color(0.0f, 0.0f, 0.0f, 0.0f));
 	silhouette = resource_manager->create_render_target("silhouette", &render_target_desc);
-	
+
 	Depth_Stencil_Texture_Desc depth_stencil_texture_desc;
 	depth_stencil_texture_desc.name = "Silhouette depth";
 	depth_stencil_texture_desc.format = DXGI_FORMAT_D32_FLOAT;
@@ -535,8 +542,6 @@ void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void 
 	Render_World *render_world = (Render_World *)context;
 	Render_System *render_sys = (Render_System *)args;
 
-	u32 back_buffer_index = render_sys->swap_chain->get_current_back_buffer_index();
-
 	graphics_command_list->begin_event("Silhouette");
 	graphics_command_list->clear_render_target(silhouette, Color(0.0f, 0.0f, 0.0f, 0.0f));
 	graphics_command_list->clear_depth_stencil(silhouette_depth);
@@ -553,7 +558,7 @@ void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void 
 	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
 
 	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
-	
+
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
@@ -561,7 +566,6 @@ void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void 
 
 	Pass_Data pass_data;
 
-	Render_Entity *render_entity = NULL;
 	for (u32 i = 0; i < render_entity_indices.count; i++) {
 		u32 index = render_entity_indices[i];
 		Render_Entity *render_entity = &render_world->game_render_entities[index];
@@ -572,7 +576,7 @@ void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void 
 
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
 		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
-	}	
+	}
 	graphics_command_list->end_event();
 }
 
@@ -624,11 +628,10 @@ void Outlining_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager
 
 void Outlining_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
 	Render_System *render_sys = (Render_System *)args;
 
 	graphics_command_list->begin_event("Outlining");
-	
+
 	graphics_command_list->apply(pipeline_state);
 
 	graphics_command_list->set_compute_constants(0, 0, &pass_data);
@@ -713,7 +716,8 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 	pass_data.view_projection_matrix = render_world->get_camera()->view_perspective_matrix;
 
 	Render_Entity *render_entity = NULL;
-	For(render_world->game_render_entities, render_entity) {
+	For(render_world->game_render_entities, render_entity)
+	{
 		pass_data.mesh_idx = render_entity->mesh_idx;
 		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
@@ -731,7 +735,9 @@ void Generate_HZB::init(Render_Device *device, Shader_Manager *shader_manager, P
 void Generate_HZB::schedule_resources(Pipeline_Resource_Manager *resource_manager)
 {
 	Texture_Desc texture_desc;
-	texture_desc.miplevels = 0; // calculate max mip map level
+	texture_desc.width = round_down_to_power_of_two(resource_manager->default_depth_stencil_desc.width);
+	texture_desc.height = round_down_to_power_of_two(resource_manager->default_depth_stencil_desc.height);
+	texture_desc.miplevels = find_max_mip_level(texture_desc.width, texture_desc.height);
 	texture_desc.format = DXGI_FORMAT_R32_FLOAT;
 	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
 	texture_desc.name = "HZB";
@@ -741,16 +747,27 @@ void Generate_HZB::schedule_resources(Pipeline_Resource_Manager *resource_manage
 }
 
 struct Downsampling {
-	u32 src_mip_level;
-	u32 pad;
+	Downsampling(u32 number_mips, u32 texture_width, u32 texture_height);
+	~Downsampling();
+
+	u32 number_mip_levels;
 	Vector2 texel_size;
+	u32 pad;
 };
+
+Downsampling::Downsampling(u32 number_mips, u32 texture_width, u32 texture_height) : number_mip_levels(number_mips), texel_size(1.0f / (float)texture_width, 1.0f / (float)texture_height), pad(0)
+{
+}
+
+Downsampling::~Downsampling()
+{
+}
 
 void Generate_HZB::setup_root_signature(Render_Device *device)
 {
 	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
 	root_signature->add_shader_resource_parameter(0, 0);
-	root_signature->add_unordered_access_parameter(0, 0);
+	root_signature->add_unordered_access_parameter(0, 0, 4);
 
 	Render_Pass::setup_root_signature(device);
 }
@@ -768,79 +785,75 @@ void Generate_HZB::render(Graphics_Command_List *graphics_command_list, void *co
 {
 	Render_System *render_sys = (Render_System *)args;
 
-	Copy_Command_List *copy_command_list = static_cast<Copy_Command_List *>(render_sys->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_COPY));
-	copy_command_list->reset();
-
-	Fence *fence1 = render_sys->render_device->create_fence(1);
-	Copy_Command_List *temp = static_cast<Copy_Command_List *>(render_sys->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_DIRECT));
-	temp->reset();
-	temp->transition_resource_barrier(depth_texture, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COMMON);
-	temp->close();
-	render_sys->graphics_queue->execute_command_list(temp);
-	render_sys->graphics_queue->signal(fence1);
-	fence1->wait_for_gpu();
-	DELETE_PTR(fence1);
-	
-	//copy_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_COMMON, RESOURCE_STATE_COPY_DEST);
-	copy_command_list->copy(hzb_texture, depth_texture);
-	//copy_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON);
-	copy_command_list->close();
-	Fence *fence3 = render_sys->render_device->create_fence(3);
-	render_sys->copy_queue->execute_command_list(copy_command_list);
-	render_sys->copy_queue->signal(fence3);
-	fence3->wait_for_gpu();
-	DELETE_PTR(fence3);
-
-	Fence *fence2 = render_sys->render_device->create_fence(2);
-	Copy_Command_List *x = static_cast<Copy_Command_List *>(render_sys->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_DIRECT));
-	x->reset();
-	x->transition_resource_barrier(depth_texture, RESOURCE_STATE_COMMON, RESOURCE_STATE_DEPTH_WRITE);
-	x->close();
-	render_sys->graphics_queue->execute_command_list(x);
-	render_sys->graphics_queue->signal(fence2);
-	fence2->wait_for_gpu();
-	DELETE_PTR(fence2);
-
-
 	graphics_command_list->begin_event("Downsample HZB");
 	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+	pipeline_resource_manager->global_buffer;
+
+	graphics_command_list->set_compute_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_compute_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_compute_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
 
 	Texture_Desc hzb_texture_desc = hzb_texture->get_texture_desc();
 	for (u32 mip_level = 0; mip_level < hzb_texture_desc.miplevels; mip_level++) {
 		hzb_texture->unordered_access_descriptor(mip_level);
 	}
 
-	for (u32 mip_level = 0; mip_level < hzb_texture_desc.miplevels - 1; mip_level++) {
+	graphics_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	bool read_from_depth_texture = true;
+	for (u32 mip_level = 0; mip_level < hzb_texture_desc.miplevels - 1; mip_level) {
 		u32 source_width = hzb_texture_desc.width >> mip_level;
 		u32 source_height = hzb_texture_desc.height >> mip_level;
 		u32 dest_width = source_width >> 1;
 		u32 dest_height = source_height >> 1;
 
-		if (dest_width == 0)
-			dest_width = 1;
-		if (dest_height == 0)
-			dest_height = 1;
+		dest_width = math::max(dest_width, 1u);
+		dest_height = math::max(dest_height, 1u);
 
-		Downsampling desc = { mip_level, 0, Vector2(1.0f / float(dest_width), 1.0f / float(dest_height)) };
-		graphics_command_list->set_compute_constants(0, 0, &desc);
-		graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor());
-		graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, hzb_texture->unordered_access_descriptor(mip_level + 1));
-		graphics_command_list->dispatch(dest_width, dest_height);
+		u32 number_mips;
+		_BitScanForward((unsigned long *)&number_mips, (dest_width == 1 ? dest_height : dest_width) | (dest_height == 1 ? dest_width : dest_height));
+		number_mips = math::min(3u, number_mips) + 1;
+		number_mips = math::min(number_mips, hzb_texture_desc.miplevels - mip_level);
+
+		if (read_from_depth_texture) {
+			read_from_depth_texture = false;
+			Downsampling desc = { number_mips, hzb_texture_desc.width, hzb_texture_desc.height };
+			graphics_command_list->set_compute_constants(0, 0, &desc);
+			graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, depth_texture->shader_resource_descriptor());
+			graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, hzb_texture->unordered_access_descriptor());
+			assert(number_mips > 0);
+			number_mips -= 1;
+			graphics_command_list->dispatch(hzb_texture_desc.width, hzb_texture_desc.height);
+		} else {
+			Downsampling desc = { number_mips, dest_width, dest_height };
+			graphics_command_list->set_compute_constants(0, 0, &desc);
+			graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor(mip_level));
+			graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, hzb_texture->unordered_access_descriptor(mip_level + 1));
+			graphics_command_list->dispatch(dest_width, dest_height);
+		}
+		mip_level += number_mips;
 	}
+	graphics_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE);
 	graphics_command_list->end_event();
 }
 
 void Back_Buffer_Output::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
-{}
+{
+}
 
 void Back_Buffer_Output::schedule_resources(Pipeline_Resource_Manager *resource_manager)
-{}
+{
+}
 
 void Back_Buffer_Output::setup_root_signature(Render_Device *device)
-{}
+{
+}
 
 void Back_Buffer_Output::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
-{}
+{
+}
 
 void Back_Buffer_Output::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
