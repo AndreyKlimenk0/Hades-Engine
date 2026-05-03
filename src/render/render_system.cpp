@@ -127,7 +127,7 @@ void Render_System::init_passes()
 	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
 	
 	render_pass_submissions.push({ &passes.depth_pass, (void *)render_world,   (void *)this });
-	//render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
+	render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)

@@ -99,9 +99,7 @@ void Engine::init(Win32_Window *window)
 void Engine::frame()
 {
 	begin_profile_frame("Frame");
-
-	s64 start_time = milliseconds_counter();
-	s64 ticks_counter = cpu_ticks_counter();
+	fps_counter.begin_count();
 
 	pump_events();
 	run_event_loop();
@@ -120,9 +118,7 @@ void Engine::frame()
 
 	clear_event_queue();
 
-	fps = cpu_ticks_per_second() / (cpu_ticks_counter() - ticks_counter);
-	frame_time = milliseconds_counter() - start_time;
-	
+	fps_counter.end_count();
 	end_profile_frame();
 }
 

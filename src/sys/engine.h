@@ -14,6 +14,7 @@
 
 #include "../libs/str.h"
 #include "../libs/number_types.h"
+#include "../libs/fps_counter.h"
 
 struct Engine {
 	struct Swap_Chain_Present {
@@ -22,7 +23,7 @@ struct Engine {
 	} swap_chain_present;
 
 	bool is_initialized = false;
-	s64 fps = 60;
+	FPS_Counter fps_counter;
 	s64 frame_time = 1000;
 	String current_level_name;
 	

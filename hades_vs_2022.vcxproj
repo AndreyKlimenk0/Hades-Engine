@@ -209,6 +209,7 @@
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\gui\editor.cpp" />
     <ClCompile Include="src\libs\color.cpp" />
+    <ClCompile Include="src\libs\fps_counter.cpp" />
     <ClCompile Include="src\libs\geometry.cpp" />
     <ClCompile Include="src\libs\image\image.cpp" />
     <ClCompile Include="src\libs\key_binding.cpp" />
@@ -413,6 +414,7 @@
     <ClInclude Include="src\libs\ds\queue.h" />
     <ClInclude Include="src\libs\ds\stack.h" />
     <ClInclude Include="src\libs\enum_helper.h" />
+    <ClInclude Include="src\libs\fps_counter.h" />
     <ClInclude Include="src\libs\geometry.h" />
     <ClInclude Include="src\libs\image\image.h" />
     <ClInclude Include="src\libs\key_binding.h" />

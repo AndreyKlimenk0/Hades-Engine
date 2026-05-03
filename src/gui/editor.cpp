@@ -559,7 +559,9 @@ void Editor::render()
 			if (ImGui::MenuItem("Diffuse")) {}
 			ImGui::EndMenu();
 		}
-		ImGui::Text("Fps %lld | %lldms", Engine::get_instance()->fps, Engine::get_instance()->frame_time);
+		FPS_Counter *fps_counter = &Engine::get_instance()->fps_counter;
+		//ImGui::Text("Fps %lld | Avg Fps %lld | Min Fps %lld | Max Fps %lld | %lldms", fps_counter->fps, fps_counter->average_fps, fps_counter->min_fps, fps_counter->max_fps, fps_counter->frame_time);
+		ImGui::Text("Avg Fps %lld | Min Fps %lld | Max Fps %lld | %lldms | Fps %lld", fps_counter->average_fps, fps_counter->min_fps, fps_counter->max_fps, fps_counter->frame_time, fps_counter->fps);
 		ImGui::EndMainMenuBar();
 	}
 	world_window.draw();
