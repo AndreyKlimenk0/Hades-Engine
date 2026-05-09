@@ -272,9 +272,20 @@ void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, vo
 	graphics_command_list->end_event();
 }
 
+struct IndirectCommand {
+	D3D12_GPU_VIRTUAL_ADDRESS cbv;
+	D3D12_DRAW_ARGUMENTS drawArguments;
+};
+
 void Forward_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
 	Render_Pass::init("Forward rendering", device, shader_manager, resource_manager);
+
+	command_signature = device->create_command_signature();
+	
+	command_signature->add_constant_buffer_view(root_signature->get_parameter_index(0, 0, CONSTANT_BUFFER_REGISTER)); // Pass Data
+	command_signature->add_draw();
+	command_signature->compile(sizeof(IndirectCommand), root_signature);
 }
 
 void Forward_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
@@ -284,7 +295,8 @@ void Forward_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 
 void Forward_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
+	root_signature->add_constant_buffer_parameter(0, 0); //Pass data
+	//root_signature->add_32bit_constants_parameter(0, 0, sizeof(Pass_Data)); //Pass data
 	root_signature->add_shader_resource_parameter(0, 0); //World matrices
 	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
 	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
@@ -363,16 +375,75 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_graphics_constants(0, 2, &shadow_atlas_info);
 	graphics_command_list->set_graphics_constants(1, 2, &filter);
 
-	Pass_Data pass_data;
+	static Buffer *command_buffer = NULL;
+	if (!command_buffer || (command_buffer->size() < render_world->game_render_entities.get_size())) {
+		DELETE_PTR(command_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.stride = sizeof(IndirectCommand);
+		buffer_desc.count = render_world->game_render_entities.count;
+		buffer_desc.name = "IndirectCommand Buffer";
+
+		command_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	static Buffer *pass_data_buffer = NULL;
+	if (!pass_data_buffer || (pass_data_buffer->size() < render_world->game_render_entities.get_size())) {
+		DELETE_PTR(pass_data_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.stride = sizeof(Pass_Data);
+		buffer_desc.count = render_world->game_render_entities.count;
+		buffer_desc.name = "Pass Data Buffer";
+
+		pass_data_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	Array<IndirectCommand> indirect_commands;
+	Array<Pass_Data> pass_data_list;
 	Render_Entity *render_entity = NULL;
-	For(render_world->game_render_entities, render_entity)
-	{
+	u64 counter = 0;
+	For(render_world->game_render_entities, render_entity) {
+		Pass_Data pass_data;
 		pass_data.parameter0 = render_entity->mesh_idx;
 		pass_data.parameter1 = render_entity->world_matrix_idx;
-		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+		pass_data_list.push(pass_data);
 
-		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		IndirectCommand indirect_command;
+		indirect_command.cbv = pass_data_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
+		indirect_command.drawArguments.VertexCountPerInstance = render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count();
+		indirect_command.drawArguments.InstanceCount = 1;
+		indirect_command.drawArguments.StartVertexLocation = 0;
+		indirect_command.drawArguments.StartInstanceLocation = 0;
+
+		indirect_commands.push(indirect_command);
 	}
+
+	render_sys->render_device->set_upload_command_list(graphics_command_list);
+	
+	command_buffer->request_write();
+	command_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
+
+	pass_data_buffer->request_write();
+	pass_data_buffer->write(pass_data_list.to_void_ptr(), pass_data_list.get_size());
+
+	render_sys->render_device->reset_upload_command_list();
+
+	//graphics_command_list->transition_resource_barrier(command_buffer, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_INDIRECT_ARGUMENT);
+
+	graphics_command_list->execute_indirect(command_signature, indirect_commands.count, command_buffer);
+
+	//graphics_command_list->transition_resource_barrier(command_buffer, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_COPY_DEST);
+
+	//Pass_Data pass_data;
+	//Render_Entity *render_entity = NULL;
+	//For(render_world->game_render_entities, render_entity) {
+	//	pass_data.parameter0 = render_entity->mesh_idx;
+	//	pass_data.parameter1 = render_entity->world_matrix_idx;
+	//	graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+
+	//	graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+	//}
 
 	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_ALL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE);
 	graphics_command_list->end_event();

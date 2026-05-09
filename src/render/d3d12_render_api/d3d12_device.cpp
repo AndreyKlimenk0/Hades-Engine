@@ -268,6 +268,57 @@ ID3D12RootSignature *D3D12_Root_Signature::get()
 	return d3d12_root_signature.Get();
 }
 
+D3D12_Command_Signature::D3D12_Command_Signature(D3D12_Render_Device *render_device) : render_device(render_device)
+{
+}
+
+D3D12_Command_Signature::~D3D12_Command_Signature()
+{
+}
+
+void D3D12_Command_Signature::compile(u32 indirect_command_stride, Root_Signature *root_signature)
+{
+	D3D12_Root_Signature *_root_signature = static_cast<D3D12_Root_Signature *>(root_signature);
+
+	D3D12_COMMAND_SIGNATURE_DESC command_signature_desc;
+	ZeroMemory(&command_signature_desc, sizeof(D3D12_COMMAND_SIGNATURE_DESC));
+	command_signature_desc.ByteStride = indirect_command_stride;
+	command_signature_desc.NumArgumentDescs = indirect_arg_desc_list.count;
+	command_signature_desc.pArgumentDescs = indirect_arg_desc_list.items;
+	
+	HR(render_device->device->CreateCommandSignature(&command_signature_desc, _root_signature->d3d12_root_signature.Get(), IID_PPV_ARGS(d3d12_command_signature.ReleaseAndGetAddressOf())));
+
+	indirect_arg_desc_list.clear();
+}
+
+void D3D12_Command_Signature::add_draw()
+{
+	D3D12_INDIRECT_ARGUMENT_DESC indirect_argument_desc;
+	ZeroMemory(&indirect_argument_desc, sizeof(D3D12_INDIRECT_ARGUMENT_DESC));
+	indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+
+	indirect_arg_desc_list.push(indirect_argument_desc);
+}
+
+void D3D12_Command_Signature::add_draw_indexed()
+{
+	D3D12_INDIRECT_ARGUMENT_DESC indirect_argument_desc;
+	ZeroMemory(&indirect_argument_desc, sizeof(D3D12_INDIRECT_ARGUMENT_DESC));
+	indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+	indirect_arg_desc_list.push(indirect_argument_desc);
+}
+
+void D3D12_Command_Signature::add_constant_buffer_view(u32 root_parameter_index)
+{
+	D3D12_INDIRECT_ARGUMENT_DESC indirect_argument_desc;
+	ZeroMemory(&indirect_argument_desc, sizeof(D3D12_INDIRECT_ARGUMENT_DESC));
+	indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
+	indirect_argument_desc.ConstantBufferView.RootParameterIndex = root_parameter_index;
+
+	indirect_arg_desc_list.push(indirect_argument_desc);
+}
+
 D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Compute_Pipeline_Desc *pipeline_desc)
 {
 	assert(type == PIPELINE_TYPE_UNKNOWN);
@@ -685,6 +736,15 @@ void D3D12_Command_List::draw_indexed(u32 index_count, u32 index_offset, u32 ver
 	command_list->DrawIndexedInstanced(index_count, 1, index_offset, vertex_offset, 0);
 }
 
+void D3D12_Command_List::execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer)
+{
+	D3D12_Buffer *_argument_buffer = static_cast<D3D12_Buffer *>(argument_buffer);
+	D3D12_Command_Signature *_command_signature = static_cast<D3D12_Command_Signature *>(command_signature);
+	ID3D12Resource *d3d12_count_buffer = count_buffer ? static_cast<D3D12_Buffer *>(count_buffer)->current_buffer()->get() : NULL;
+
+	command_list->ExecuteIndirect(_command_signature->d3d12_command_signature.Get(), command_count, _argument_buffer->current_buffer()->get(), 0, d3d12_count_buffer, 0);
+}
+
 D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value, const char *name)
 {
 	handle = create_event_handle();
@@ -901,8 +961,12 @@ Command_Queue *D3D12_Render_Device::create_command_queue(Command_List_Type comma
 
 Root_Signature *D3D12_Render_Device::create_root_signature()
 {
-	D3D12_Root_Signature *root_signature = new D3D12_Root_Signature(this);
-	return root_signature;
+	return new D3D12_Root_Signature(this);
+}
+
+Command_Signature *D3D12_Render_Device::create_command_signature()
+{
+	return new D3D12_Command_Signature(this);
 }
 
 Pipeline_State *D3D12_Render_Device::create_pipeline_state(Compute_Pipeline_Desc *pipeline_desc)
@@ -915,6 +979,19 @@ Pipeline_State *D3D12_Render_Device::create_pipeline_state(Graphics_Pipeline_Des
 {
 	D3D12_Pipeline_State *pipeline_state = new D3D12_Pipeline_State(device, pipeline_desc);
 	return pipeline_state;
+}
+
+static D3D12_Command_List *temp_command_list = NULL;
+
+void D3D12_Render_Device::set_upload_command_list(Command_List *command_list)
+{
+	temp_command_list = current_upload_command_list;
+	current_upload_command_list = static_cast<D3D12_Command_List *>(command_list);
+}
+
+void D3D12_Render_Device::reset_upload_command_list()
+{
+	current_upload_command_list = temp_command_list;
 }
 
 Fence *D3D12_Render_Device::execute_uploading()

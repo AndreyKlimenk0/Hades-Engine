@@ -59,11 +59,4 @@ void update_test()
 
 void test()
 {
-	//print("result 1", round_down_to_power_of_two(1248));
-	//print("result 2", round_down_to_power_of_two(1024));
-	//print("result 3", round_down_to_power_of_two(2048));
-	//print("result 4", round_down_to_power_of_two(0));
-
-	auto resutl = cascade_ndc_to_atlas_ndc(Vector2(1.0f, 1.0f), 0);
-	print(resutl);
 }

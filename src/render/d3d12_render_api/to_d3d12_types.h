@@ -50,6 +50,8 @@ inline D3D12_RESOURCE_STATES to_d3d12_resource_state(const Resource_State &resou
             return D3D12_RESOURCE_STATE_INDEX_BUFFER;
 		case RESOURCE_STATE_GENERIC_READ:
 			return D3D12_RESOURCE_STATE_GENERIC_READ;
+        case RESOURCE_STATE_INDIRECT_ARGUMENT:
+            return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 		case RESOURCE_STATE_COPY_DEST:
 			return D3D12_RESOURCE_STATE_COPY_DEST;
 		case RESOURCE_STATE_COPY_SOURCE:
@@ -406,4 +408,5 @@ inline D3D12_CLEAR_VALUE to_d3d12_clear_value(Clear_Value &clear_value, DXGI_FOR
     }
     return d3d12_clear_value;
 }
+
 #endif

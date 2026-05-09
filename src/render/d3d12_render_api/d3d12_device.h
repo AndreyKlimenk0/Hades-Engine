@@ -80,6 +80,23 @@ struct D3D12_Root_Signature : Root_Signature {
 	ID3D12RootSignature *get();
 };
 
+struct D3D12_Command_Signature : Command_Signature {
+	D3D12_Command_Signature(D3D12_Render_Device *render_device);
+	~D3D12_Command_Signature();
+
+	D3D12_Render_Device *render_device = NULL;
+
+	Array<D3D12_INDIRECT_ARGUMENT_DESC> indirect_arg_desc_list;
+
+	ComPtr<ID3D12CommandSignature> d3d12_command_signature;
+
+	void compile(u32 indirect_command_stride, Root_Signature *root_signature);
+
+	void add_draw();
+	void add_draw_indexed();
+	void add_constant_buffer_view(u32 root_parameter_index);
+};
+
 struct D3D12_Pipeline_State : Pipeline_State {
 	D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Compute_Pipeline_Desc *pipeline_desc);
 	D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Graphics_Pipeline_Desc *pipeline_desc);
@@ -149,6 +166,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
+	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer = NULL);
 };
 
 struct D3D12_Fence : Fence {
@@ -219,9 +237,14 @@ struct D3D12_Render_Device : Render_Device {
 	
 	Command_Queue *create_command_queue(Command_List_Type command_list_type, const char *name = NULL);
 	Root_Signature *create_root_signature();
-	
+	Command_Signature *create_command_signature();
+
 	Pipeline_State *create_pipeline_state(Compute_Pipeline_Desc *pipeline_desc);
 	Pipeline_State *create_pipeline_state(Graphics_Pipeline_Desc *pipeline_desc);
+
+	/// Temp Code ????????????????????????
+	void set_upload_command_list(Command_List *command_list);
+	void reset_upload_command_list();
 
 	Fence *execute_uploading();
 

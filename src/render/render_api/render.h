@@ -88,6 +88,8 @@ struct Root_Signature  {
 	
 	virtual void compile(u32 access_flags = 0) = 0;
 
+	virtual u32 get_parameter_index(u32 shader_register, u32 shader_space, Shader_Register register_type) = 0;
+
 	virtual void add_32bit_constants_parameter(u32 shader_register, u32 register_space, u32 struct_size) = 0;
 	virtual void add_constant_buffer_parameter(u32 shader_register, u32 register_space) = 0;
 	//virtual void add_constant_buffer_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
@@ -96,6 +98,17 @@ struct Root_Signature  {
 	virtual void add_sampler_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
 	//virtual void add_unordered_access_resource_parameter(u32 shader_register, u32 register_space, u32 descriptors_number = 1) = 0;
 	//virtual void add_sampler_parameter(u32 shader_register, u32 register_space) = 0;
+};
+
+struct Command_Signature {
+	Command_Signature() = default;
+	virtual ~Command_Signature() = default;
+	
+	virtual void add_draw() = 0;
+	virtual void add_draw_indexed() = 0;
+	virtual void add_constant_buffer_view(u32 root_parameter_index) = 0;
+
+	virtual void compile(u32 indirect_command_stride, Root_Signature *root_signature) = 0;
 };
 
 struct Pipeline_State {
@@ -190,6 +203,7 @@ struct Graphics_Command_List : Compute_Command_List {
 	virtual void draw(u32 vertex_count) = 0;
 	virtual void draw_indexed(u32 index_count) = 0;
 	virtual void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset) = 0;
+	virtual void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer = NULL) = 0;
 };
 
 template <typename T>
@@ -251,6 +265,10 @@ struct Render_Device {
 	
 	//virtual GPU_Heap *create_gpu_heap(u64 size, GPU_Heap_Type heap_type, GPU_Heap_Content conten) = 0;
 
+	// TEMP CODE ????????????????
+	virtual void set_upload_command_list(Command_List *command_list) = 0;
+	virtual void reset_upload_command_list() = 0;
+
 	virtual Command_List *create_command_list(Command_List_Type type) = 0;
 
 	virtual Copy_Command_List *create_copy_command_list() = 0;
@@ -260,6 +278,7 @@ struct Render_Device {
 	virtual Command_Queue *create_command_queue(Command_List_Type command_list_type, const char *name = NULL) = 0;
 
 	virtual Root_Signature *create_root_signature() = 0;
+	virtual Command_Signature *create_command_signature() = 0;
 
 	virtual Pipeline_State *create_pipeline_state(Compute_Pipeline_Desc *pipeline_desc) = 0;
 	virtual Pipeline_State *create_pipeline_state(Graphics_Pipeline_Desc *pipeline_desc) = 0;
