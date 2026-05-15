@@ -118,8 +118,10 @@ void Render_System::init_passes()
 	
 	passes.depth_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.generate_hzb.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.culling_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
 	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });

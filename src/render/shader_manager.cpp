@@ -259,6 +259,7 @@ void Shader_Manager::init()
 	shader_table[shader_count++] = { "generate_mips_linear_oddy.hlsl", &shaders.generate_mips_linear_oddy };
 	shader_table[shader_count++] = { "downsample_hzb.hlsl", &shaders.downsample_hzb };
 	shader_table[shader_count++] = { "ui_rendering.hlsl", &shaders.ui_rendering };
+	shader_table[shader_count++] = { "culling.hlsl", &shaders.culling };
 
 	for (u32 i = 0; i < shader_count; i++) {
 		shader_table[i].shader->file_name = shader_table[i].name;

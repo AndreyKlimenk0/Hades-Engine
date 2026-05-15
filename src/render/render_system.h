@@ -117,6 +117,7 @@ struct Render_System {
 		UI_Pass ui_pass;
 		Generate_HZB generate_hzb;
 		Depth_Pass depth_pass;
+		Culling_Pass culling_pass;
 	} passes;
 	
 	Array<Render_Pass_Submission> render_pass_submissions;

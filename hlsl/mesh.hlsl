@@ -1,6 +1,11 @@
 #ifndef __MESH__
 #define __MESH__
 
+struct AABB {
+    float3 min;
+    float3 max;
+};
+
 struct Material {
     uint normal_texture_index;
     uint albedo_texture_index;
@@ -12,6 +17,7 @@ struct Mesh_Instance {
 	uint index_count;
 	uint vertex_offset;
 	uint index_offset;
+	AABB bounding_box;
 	Material material;
 };
 #endif

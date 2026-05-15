@@ -910,6 +910,146 @@ void Generate_HZB::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->end_event();
 }
 
+void Culling_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Culling", device, shader_manager, resource_manager);
+}
+
+void Culling_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	hzb_texture = resource_manager->read_texture("HZB");
+}
+
+void Culling_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(u32)); // pass_data
+	root_signature->add_shader_resource_parameter(0, 0); // hzb_texture
+	root_signature->add_shader_resource_parameter(1, 0); // world_matrices
+	root_signature->add_shader_resource_parameter(2, 0); // mesh_instances
+	root_signature->add_shader_resource_parameter(3, 0); // render_entities
+	root_signature->add_shader_resource_parameter(4, 0); // mesh_draw_commands
+	root_signature->add_unordered_access_parameter(0, 0); // culled_mesh_draw_commandsk
+
+	Render_Pass::setup_root_signature(device);
+}
+
+void Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Compute_Pipeline_Desc compute_pipeline_desc;
+	compute_pipeline_desc.root_signature = root_signature;
+	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, culling)->cs_bytecode.bytecode_ref();
+
+	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
+}
+
+struct GPU_Render_Entity {
+	u32 mesh_idx;
+	u32 world_matrix_idx;
+};
+
+void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_World *render_world = (Render_World *)context;
+	Render_System *render_sys = (Render_System *)args;
+
+	graphics_command_list->begin_event("Culling");
+
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_compute_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_compute_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
+	graphics_command_list->set_compute_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_compute_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+ 
+	static Buffer *draw_commands_buffer = NULL;
+	if (!draw_commands_buffer || (draw_commands_buffer->size() < render_world->game_render_entities.get_size())) {
+		DELETE_PTR(draw_commands_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.stride = sizeof(IndirectCommand);
+		buffer_desc.count = render_world->game_render_entities.count;
+		buffer_desc.name = "Draw Commands Buffer";
+
+		draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	static Buffer *culled_draw_commands_buffer = NULL;
+	if (!culled_draw_commands_buffer || (culled_draw_commands_buffer->size() < render_world->game_render_entities.get_size())) {
+		DELETE_PTR(culled_draw_commands_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.stride = sizeof(IndirectCommand);
+		buffer_desc.count = render_world->game_render_entities.count;
+		buffer_desc.name = "Culled Draw Commands Buffer";
+
+		culled_draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	static Buffer *render_entities_buffer = NULL;
+	if (!render_entities_buffer || (render_entities_buffer->size() < render_world->game_render_entities.get_size())) {
+		DELETE_PTR(render_entities_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.stride = sizeof(Pass_Data);
+		buffer_desc.count = render_world->game_render_entities.count;
+		buffer_desc.name = "Render Entities";
+
+		render_entities_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	Array<IndirectCommand> indirect_commands;
+	Array<GPU_Render_Entity> render_entities;
+	Render_Entity *render_entity = NULL;
+	u64 counter = 0;
+	For(render_world->game_render_entities, render_entity) {
+		GPU_Render_Entity gpu_render_entity;
+		gpu_render_entity.mesh_idx = render_entity->mesh_idx;
+		gpu_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
+		render_entities.push(gpu_render_entity);
+
+		IndirectCommand indirect_command;
+		indirect_command.cbv = render_entities_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
+		indirect_command.drawArguments.VertexCountPerInstance = render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count();
+		indirect_command.drawArguments.InstanceCount = 1;
+		indirect_command.drawArguments.StartVertexLocation = 0;
+		indirect_command.drawArguments.StartInstanceLocation = 0;
+
+		indirect_commands.push(indirect_command);
+	}
+
+	render_sys->render_device->set_upload_command_list(graphics_command_list);
+
+	draw_commands_buffer->request_write();
+	draw_commands_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
+
+	culled_draw_commands_buffer->request_write();
+	memset(culled_draw_commands_buffer->write_only_ptr(), 0, culled_draw_commands_buffer->size());
+
+	render_entities_buffer->request_write();
+	render_entities_buffer->write(render_entities.to_void_ptr(), render_entities.get_size());
+
+	render_sys->render_device->reset_upload_command_list();
+
+	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_GENERIC_READ, RESOURCE_STATE_UNORDERED_ACCESS);
+
+	graphics_command_list->set_compute_constants(0, 0, &render_world->game_render_entities.count);
+
+	graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_entities_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, draw_commands_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, culled_draw_commands_buffer->unordered_access_descriptor());
+	
+	graphics_command_list->dispatch((u32)math::ceil((float)render_world->game_render_entities.count / 128.0f), 1);
+
+	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_GENERIC_READ);
+	
+	graphics_command_list->end_event();
+}
+
 void Back_Buffer_Output::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
 }

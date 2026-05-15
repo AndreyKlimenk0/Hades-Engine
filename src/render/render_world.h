@@ -9,6 +9,7 @@
 #include "render_api/render.h"
 
 #include "../game/world.h"
+#include "../collision/collision.h"
 
 #include "../libs/str.h"
 #include "../libs/color.h"
@@ -42,7 +43,7 @@ struct Mesh_Instance {
 	u32 index_count = 0;
 	u32 vertex_offset = 0;
 	u32 index_offset = 0;
-
+	AABB bounding_box;
 	GPU_Material material;
 };
 
@@ -52,6 +53,8 @@ struct Render_Model {
 	Texture *normal_texture;
 	Texture *albedo_texture;
 	Texture *roughness_metalic_texture;
+	Vector3 min;
+	Vector3 max;
 	Triangle_Mesh mesh;
 };
 
@@ -124,30 +127,6 @@ struct Cascaded_Shadows {
 	Array<Cascaded_Shadow_Map> cascaded_shadow_maps;
 };
 
-struct Voxel {
-	u32 packed_color;
-	u32 packed_normal;
-	u32 occlusion;
-};
-
-struct Voxel_Grid {
-	Size_u32 grid_size;
-	Size_u32 ceil_size;
-
-	u32 ceil_count();
-	Size_u32 total_size();
-};
-
-inline u32 Voxel_Grid::ceil_count()
-{
-	return grid_size.find_area();
-}
-
-inline Size_u32 Voxel_Grid::total_size()
-{
-	return grid_size * ceil_size;
-}
-
 struct Shadows_Atlas {
 	s32 x = 0;
 	s32 y = 0;
@@ -167,16 +146,9 @@ struct Render_World {
 	u32 jittering_filter_size = 0;
 	u32 jittering_scaling = 0;
 
-	Matrix4 voxel_matrix;
-	Voxel_Grid voxel_grid;
-	Vector3 voxel_grid_center;
 	Texture *jittering_samples = NULL;
 
 	Shadows_Atlas shadows_atlas;
-
-	Matrix4 left_to_right_voxel_view_matrix;
-	Matrix4 top_to_down_voxel_view_matrix;
-	Matrix4 back_to_front_voxel_view_matrix;
 
 	Entity_Id camera_id;
 
@@ -206,7 +178,6 @@ struct Render_World {
 	void update();
 	void update_shadows();
 	void update_render_entities();
-	void update_global_illumination();
 
 	void upload_lights();
 

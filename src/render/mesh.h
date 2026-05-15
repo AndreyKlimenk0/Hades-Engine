@@ -54,6 +54,9 @@ struct Loading_Model {
 		Vector3 translation = Vector3::zero;
 	};
 
+	Vector3 min;
+	Vector3 max;
+
 	String name;
 	String file_name;
 	

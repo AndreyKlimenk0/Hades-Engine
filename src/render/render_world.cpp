@@ -315,6 +315,8 @@ void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loadin
 		render_model->normal_texture = find_texture_or_get_default(loading_model->normal_texture_name, loading_model->file_name, default_textures.normal);
 		render_model->albedo_texture = find_texture_or_get_default(loading_model->albedo_texture_name, loading_model->file_name, default_textures.diffuse);
 		render_model->roughness_metalic_texture = find_texture_or_get_default(loading_model->roughness_metalic_texture_name, loading_model->file_name, default_textures.specular);
+		render_model->min = loading_model->min;
+		render_model->max = loading_model->max;
 
 		move(&render_model->mesh, &loading_model->mesh);
 
@@ -362,6 +364,7 @@ void Model_Storage::upload_models_in_gpu()
 		mesh_instance.vertex_offset = vertex_offset;
 		mesh_instance.index_count = render_models[i]->mesh.index_count();
 		mesh_instance.index_offset = index_offset;
+		mesh_instance.bounding_box = AABB(render_models[i]->min, render_models[i]->max);
 		mesh_instance.material = material;
 		
 		unified_mesh_instances_list.push(mesh_instance);
@@ -457,19 +460,6 @@ void Render_World::init(Engine *engine)
 
 	model_storage.init();
 
-	u32 x = 128;
-	voxel_grid.grid_size = { x, x, x };
-	u32 y = 20;
-	voxel_grid.ceil_size = { y, y, y };
-
-	//	voxels_sb.allocate<Voxel>(voxel_grid.grid_size.find_area());
-
-	Size_f32 grid_size = voxel_grid.total_size();
-	float grid_depth = grid_size.depth;
-	grid_size *= 0.5f;
-
-	voxel_matrix = XMMatrixOrthographicOffCenterLH(-grid_size.width, grid_size.width, -grid_size.height, grid_size.height, 1.0f, grid_depth + 1.0f);
-
 	if (camera_id.type != ENTITY_TYPE_CAMERA) {
 		//error("Render Camera was not initialized. There is no a view for rendering.");
 	}
@@ -552,27 +542,6 @@ void Render_World::update_render_entities()
 		world_matrices_buffer = render_device->create_buffer(&buffer_desc);
 	}
 	world_matrices_buffer->write(render_entity_world_matrices.to_void_ptr(), render_entity_world_matrices.get_size());
-}
-
-void Render_World::update_global_illumination()
-{
-	Vector3 voxel_ceil_size = voxel_grid.ceil_size.to_vector3();
-	Vector3 voxel_grid_size = voxel_grid.total_size().to_vector3() * 0.5f; // Holdes the half of a total voxel grid size.
-
-	Camera *camera = game_world->get_camera(camera_id);
-	auto dir = camera->direction;
-	voxel_grid_center = camera->position + (normalize(&dir) * voxel_grid_size);
-	voxel_grid_center /= voxel_ceil_size;
-	voxel_grid_center = floor(voxel_grid_center);
-	voxel_grid_center *= voxel_ceil_size;
-
-	Vector3 left_to_right_view_position = { voxel_grid_center.x - voxel_grid_size.x, voxel_grid_center.y, voxel_grid_center.z };
-	Vector3 top_to_down_view_position = { voxel_grid_center.x, voxel_grid_center.y + voxel_grid_size.y, voxel_grid_center.z };
-	Vector3 back_to_front_view_position = { voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z - voxel_grid_size.z };
-
-	left_to_right_voxel_view_matrix = make_look_to_matrix(left_to_right_view_position, Vector3::base_x);
-	top_to_down_voxel_view_matrix = make_look_to_matrix(top_to_down_view_position, negate(&Vector3::base_y), negate(&Vector3::base_z));
-	back_to_front_voxel_view_matrix = make_look_to_matrix(back_to_front_view_position, Vector3::base_z);
 }
 
 void Render_World::upload_lights()

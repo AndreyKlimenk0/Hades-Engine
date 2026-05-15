@@ -188,17 +188,29 @@ inline bool get_texture_file_name(aiMaterial *material, aiTextureType texture_ty
 	return false;
 }
 
-inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh, Loading_Models_Options *options)
+inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_Models_Options *options)
 {
 	float scale = 1.0f;
 	if (options->convert_cm_to_m) {
 		scale = 0.01f;
 	}
+
+	Vector3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
+	Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
+	Triangle_Mesh *mesh = &loading_model->mesh;
+
 	for (u32 i = 0; i < ai_mesh->mNumVertices; i++) {
 		Vertex_PNTUV vertex;
 		vertex.position.x = scale * ai_mesh->mVertices[i].x;
 		vertex.position.y = scale * ai_mesh->mVertices[i].y;
 		vertex.position.z = scale * ai_mesh->mVertices[i].z;
+
+		min.x = math::min(min.x, vertex.position.x);
+		min.y = math::min(min.y, vertex.position.y);
+		min.z = math::min(min.z, vertex.position.z);
+		max.x = math::max(max.x, vertex.position.x);
+		max.y = math::max(max.y, vertex.position.y);
+		max.z = math::max(max.z, vertex.position.z);
 
 		if (ai_mesh->HasTextureCoords(0)) {
 			vertex.uv.x = (float)ai_mesh->mTextureCoords[0][i].x;
@@ -215,7 +227,6 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh, Loading_Models_Op
 			vertex.tangent.y = ai_mesh->mTangents[i].y;
 			vertex.tangent.z = ai_mesh->mTangents[i].z;
 		}
-
 		mesh->vertices.push(vertex);
 	}
 
@@ -227,6 +238,9 @@ inline void process_mesh(aiMesh *ai_mesh, Triangle_Mesh *mesh, Loading_Models_Op
 			mesh->indices.push(face.mIndices[j]);
 		}
 	}
+
+	loading_model->min = min;
+	loading_model->max = max;
 
 	loading_info.model_count++;
 	loading_info.total_vertex_count += mesh->vertices.count;
@@ -273,7 +287,7 @@ inline void process_nodes(aiScene *scene, aiNode *node, const aiMatrix4x4 &paren
 		Loading_Model *loading_model = NULL;
 		if (!models_cache.get(mesh_name, loading_model)) {
 			loading_model = new Loading_Model(mesh_name, current_file_name);
-			process_mesh(assimp_mesh, &loading_model->mesh, options);
+			process_mesh(assimp_mesh, loading_model, options);
 			
 			if (scene->HasMaterials()) {
 				aiMaterial *material = scene->mMaterials[assimp_mesh->mMaterialIndex];

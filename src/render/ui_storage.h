@@ -7,9 +7,9 @@
 #include "../libs/structures/array.h"
 
 struct UI_Draw_Command {
-    u64 vertex_buffer_offset;
-    u64 index_buffer_offset;
-    u64 index_count;
+    u32 vertex_buffer_offset;
+    u32 index_buffer_offset;
+    u32 index_count;
     Texture *texture = NULL;
     Rect_u32 clip_rect;
 };

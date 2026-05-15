@@ -81,6 +81,7 @@ struct Shader_Manager {
 		Shader generate_mips_linear_oddy;
 		Shader downsample_hzb;
 		Shader ui_rendering;
+		Shader culling;
 	} shaders;
 
 	void init();
