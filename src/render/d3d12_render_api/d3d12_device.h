@@ -132,6 +132,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void copy_buffer_to_texture(Texture *texture, Buffer *buffer, Subresource_Footprint *subresource_footprint = NULL);
 	void copy_buffer_to_texture(D3D12_Resource *texture, D3D12_Resource *buffer, Subresource_Footprint *subresource_footprint);
 	
+	void transition_resource_barrier(D3D12_Resource *resource, Resource_State state_before, Resource_State state_after);
 	void transition_resource_barrier(Buffer *buffer, Resource_State state_before, Resource_State state_after);
 	void transition_resource_barrier(Texture *texture, Resource_State state_before, Resource_State state_after, u32 subresource = 0);
 

@@ -37,6 +37,9 @@ Resource_Desc::Resource_Desc(Buffer_Desc *_buffer_desc)
 Resource_Desc::Resource_Desc(Buffer_Desc *_buffer_desc, Resource_Usage usage) : Resource_Desc(_buffer_desc)
 {
 	buffer_desc.usage = usage;
+	if (usage == RESOURCE_USAGE_UPLOAD) {
+		buffer_desc.flags = 0;
+	}
 }
 
 Resource_Desc::Resource_Desc(Texture_Desc *_texture_desc)
@@ -90,7 +93,7 @@ D3D12_RESOURCE_DESC Resource_Desc::d3d12_resource_desc()
 		resource_desc.SampleDesc.Count = 1;
 		resource_desc.SampleDesc.Quality = 0;
 		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resource_desc.Flags = static_cast<D3D12_RESOURCE_FLAGS>(buffer_desc.flags);
 
 	} else if (type == RESOURCE_TYPE_TEXTURE) {
 		resource_desc.Dimension = to_d3d12_resource_dimension(texture_desc.dimension);
@@ -368,6 +371,7 @@ void D3D12_Buffer::request_write()
 
 		D3D12_Command_List *upload_command_list = render_device->upload_command_list();
 		upload_command_list->copy(default_buffer, upload_buffer);
+		upload_command_list->transition_resource_barrier(default_buffer, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON);
 	}
 }
 
@@ -444,7 +448,7 @@ UAV_Descriptor *D3D12_Buffer::unordered_access_descriptor(u32 mipmap_level)
 	D3D12_Base_Buffer *buffer = current_buffer();
 	if (!buffer->unordered_access_descriptor.valid()) {
 		Descriptor_Heap_Pool *descriptor_pool = render_device->descriptor_pool;
-		buffer->unordered_access_descriptor = descriptor_pool->allocate_sr_descriptor(buffer);
+		buffer->unordered_access_descriptor = descriptor_pool->allocate_ua_descriptor(buffer);
 	}
 	return &buffer->unordered_access_descriptor;
 }

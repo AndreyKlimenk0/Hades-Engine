@@ -509,6 +509,20 @@ void D3D12_Command_List::copy_buffer_to_texture(D3D12_Resource *texture, D3D12_R
 	command_list->CopyTextureRegion(&dest_texture_copy_location, 0, 0, 0, &source_texture_copy_location, NULL);
 }
 
+void D3D12_Command_List::transition_resource_barrier(D3D12_Resource *resource, Resource_State state_before, Resource_State state_after)
+{
+	D3D12_RESOURCE_BARRIER d3d12_resource_barrier;
+	ZeroMemory(&d3d12_resource_barrier, sizeof(D3D12_RESOURCE_BARRIER));
+	d3d12_resource_barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3d12_resource_barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3d12_resource_barrier.Transition.pResource = resource->get();
+	d3d12_resource_barrier.Transition.Subresource = 0;
+	d3d12_resource_barrier.Transition.StateBefore = to_d3d12_resource_state(state_before);
+	d3d12_resource_barrier.Transition.StateAfter = to_d3d12_resource_state(state_after);
+
+	command_list->ResourceBarrier(1, &d3d12_resource_barrier);
+}
+
 void D3D12_Command_List::transition_resource_barrier(Buffer *buffer, Resource_State state_before, Resource_State state_after)
 {
 	D3D12_Buffer *internal_buffer = static_cast<D3D12_Buffer *>(buffer);

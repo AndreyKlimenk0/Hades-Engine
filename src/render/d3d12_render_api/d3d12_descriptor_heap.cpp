@@ -146,6 +146,14 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_
 	unordered_access_view_desc.Format = resource_desc.Format;
 
 	switch (resource_desc.Dimension) {
+		case D3D12_RESOURCE_DIMENSION_BUFFER: {
+			unordered_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			unordered_access_view_desc.Buffer.FirstElement = 0;
+			unordered_access_view_desc.Buffer.NumElements = resource->count;
+			unordered_access_view_desc.Buffer.StructureByteStride = resource->stride;
+			//unordered_access_view_desc.Buffer.CounterOffsetInBytes;
+			break;
+		}
 		case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
 			assert(resource_desc.DepthOrArraySize == 1);
 			unordered_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;

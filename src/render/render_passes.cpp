@@ -979,10 +979,10 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	if (!culled_draw_commands_buffer || (culled_draw_commands_buffer->size() < render_world->game_render_entities.get_size())) {
 		DELETE_PTR(culled_draw_commands_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
 		buffer_desc.stride = sizeof(IndirectCommand);
 		buffer_desc.count = render_world->game_render_entities.count;
 		buffer_desc.name = "Culled Draw Commands Buffer";
+		buffer_desc.flags = ALLOW_UNORDERED_ACCESS;
 
 		culled_draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
 	}
@@ -1024,15 +1024,15 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	draw_commands_buffer->request_write();
 	draw_commands_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
 
-	culled_draw_commands_buffer->request_write();
-	memset(culled_draw_commands_buffer->write_only_ptr(), 0, culled_draw_commands_buffer->size());
+	//culled_draw_commands_buffer->request_write();
+	//memset(culled_draw_commands_buffer->write_only_ptr(), 0, culled_draw_commands_buffer->size());
 
 	render_entities_buffer->request_write();
 	render_entities_buffer->write(render_entities.to_void_ptr(), render_entities.get_size());
 
 	render_sys->render_device->reset_upload_command_list();
 
-	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_GENERIC_READ, RESOURCE_STATE_UNORDERED_ACCESS);
+	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_UNORDERED_ACCESS);
 
 	graphics_command_list->set_compute_constants(0, 0, &render_world->game_render_entities.count);
 
@@ -1045,7 +1045,7 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	
 	graphics_command_list->dispatch((u32)math::ceil((float)render_world->game_render_entities.count / 128.0f), 1);
 
-	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_GENERIC_READ);
+	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_COMMON);
 	
 	graphics_command_list->end_event();
 }
