@@ -29,20 +29,14 @@ struct Resource_Desc {
 	~Resource_Desc();
 
 	Resource_Type type;
-
-	union {
-		Buffer_Desc buffer_desc;
-		Texture_Desc texture_desc;
-	};
-
-	String &resource_name();
-	Resource_Usage resource_usage();
-	D3D12_RESOURCE_DESC d3d12_resource_desc();
-	Resource_State resource_state();
-	D3D12_RESOURCE_STATES d312_resource_state();
+	Buffer_Desc buffer_desc;
+	Texture_Desc texture_desc;
+	Resource_Usage resource_usage;
+	Resource_State resource_state;
+	String resource_name;
+	D3D12_RESOURCE_DESC d3d12_resource_desc;
 };
 
-// TODO: Make two separated variables size and total_size. Maybe get rid of count
 struct D3D12_Resource {
 	D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *resource_desc);
 	D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resource> &existing_resource);
@@ -50,9 +44,8 @@ struct D3D12_Resource {
 	virtual ~D3D12_Resource();
 
 	void *mapped_memory = NULL;
-	u32 count = 0;
-	u32 stride = 0;
-	u64 total_size = 0;
+	u64 allocated = 0;
+	u64 stride = 0;
 	ComPtr<ID3D12Resource> d3d12_resource;
 
 	void *map();
@@ -62,6 +55,7 @@ struct D3D12_Resource {
 	
 	u32 subresource_count();
 	u64 size();
+	u64 count();
 	u64 gpu_address();
 	ID3D12Resource *get();
 	D3D12_RESOURCE_DESC d3d12_resource_desc();
@@ -88,7 +82,9 @@ struct D3D12_Buffer : Buffer {
 	Buffer_Desc buffer_desc;
 	D3D12_Base_Buffer *default_buffer = NULL;
 	Queue<Pair<u64, D3D12_Base_Buffer *>> upload_buffers;
+	Queue<Pair<u64, D3D12_Base_Buffer *>> readback_buffers;
 	Queue<D3D12_Base_Buffer *> completed_upload_buffer;
+	Queue<D3D12_Base_Buffer *> completed_readback_buffer;
 	
 	void begin_frame();
 	void finish_frame(u64 frame_number);
@@ -98,14 +94,15 @@ struct D3D12_Buffer : Buffer {
 	void *write_only_ptr();
 
 	u64 size();
+	u64 count();
 	u64 gpu_virtual_address();
 	Buffer_Desc get_buffer_desc();
 	D3D12_Base_Buffer *current_buffer();
 	D3D12_Base_Buffer *current_upload_buffer();
 
 	CBV_Descriptor *constant_buffer_descriptor();
-	SRV_Descriptor *shader_resource_descriptor(u32 mipmap_level = 0);
-	UAV_Descriptor *unordered_access_descriptor(u32 mipmap_level = 0);
+	SRV_Descriptor *shader_resource_descriptor();
+	UAV_Descriptor *unordered_access_descriptor(u64 counter_offset = 0);
 };
 
 struct D3D12_Texture : Texture {

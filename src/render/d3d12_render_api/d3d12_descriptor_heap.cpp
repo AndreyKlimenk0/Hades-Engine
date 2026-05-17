@@ -3,6 +3,7 @@
 #include "to_d3d12_types.h"
 #include "d3d12_descriptor_heap.h"
 
+#include "../../libs/utils.h"
 #include "../../sys/utils.h"
 
 Descriptor_Heap::Descriptor_Heap()
@@ -92,9 +93,6 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_cb_descriptor(u32 descriptor_
 
 D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_index, D3D12_Resource *resource, u32 mipmap_level)
 {
-	assert(0 < resource->count);
-	assert(0 < resource->stride);
-
 	D3D12_RESOURCE_DESC resource_desc = resource->d3d12_resource_desc();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc;
@@ -106,8 +104,8 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_
 		case D3D12_RESOURCE_DIMENSION_BUFFER: {
 			shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 			shader_resource_view_desc.Buffer.FirstElement = 0;
-			shader_resource_view_desc.Buffer.NumElements = resource->count;
-			shader_resource_view_desc.Buffer.StructureByteStride = resource->stride;
+			shader_resource_view_desc.Buffer.NumElements = safe_cast_u64_to_u32(resource->count());
+			shader_resource_view_desc.Buffer.StructureByteStride = safe_cast_u64_to_u32(resource->stride);
 			shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 			break;
 		}
@@ -137,7 +135,7 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_sr_descriptor(u32 descriptor_
 	return D3D12_GPU_Descriptor(DESCRIPTOR_TYPE_CBV_SRV_UAV, descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
-D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, D3D12_Resource *resource, u32 mipmap_level)
+D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_index, D3D12_Resource *resource, u32 mipmap_level, u64 counter_offset)
 {
 	D3D12_RESOURCE_DESC resource_desc = resource->d3d12_resource_desc();
 
@@ -149,9 +147,9 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_
 		case D3D12_RESOURCE_DIMENSION_BUFFER: {
 			unordered_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			unordered_access_view_desc.Buffer.FirstElement = 0;
-			unordered_access_view_desc.Buffer.NumElements = resource->count;
-			unordered_access_view_desc.Buffer.StructureByteStride = resource->stride;
-			//unordered_access_view_desc.Buffer.CounterOffsetInBytes;
+			unordered_access_view_desc.Buffer.NumElements = safe_cast_u64_to_u32(resource->count());
+			unordered_access_view_desc.Buffer.StructureByteStride = safe_cast_u64_to_u32(resource->stride);
+			unordered_access_view_desc.Buffer.CounterOffsetInBytes = counter_offset;
 			break;
 		}
 		case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
@@ -164,7 +162,13 @@ D3D12_GPU_Descriptor CBSRUA_Descriptor_Heap::place_ua_descriptor(u32 descriptor_
 			assert(false);
 		}
 	}
-	d3d12_device->CreateUnorderedAccessView(resource->get(), NULL, &unordered_access_view_desc, get_cpu_handle(descriptor_index));
+	// If counter_offset is set, the resource is treated as an AppendStructuredBuffer
+	// with reserved space for the counter.
+	if (counter_offset > 0) {
+		d3d12_device->CreateUnorderedAccessView(resource->get(), resource->get(), &unordered_access_view_desc, get_cpu_handle(descriptor_index));
+	} else {
+		d3d12_device->CreateUnorderedAccessView(resource->get(), NULL, &unordered_access_view_desc, get_cpu_handle(descriptor_index));
+	}
 	return D3D12_GPU_Descriptor(DESCRIPTOR_TYPE_CBV_SRV_UAV, descriptor_index, get_cpu_handle(descriptor_index), get_gpu_handle(descriptor_index));
 }
 
@@ -279,9 +283,9 @@ D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_sr_descriptor(D3D12_Resource
 	return cbsrua_descriptor_heap.place_sr_descriptor(cbsrua_descriptor_indices.pop(), resource, mipmap_level);
 }
 
-D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_ua_descriptor(D3D12_Resource *resource, u32 mipmap_level)
+D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_ua_descriptor(D3D12_Resource *resource, u32 mipmap_level, u64 counter_offset)
 {
-	return cbsrua_descriptor_heap.place_ua_descriptor(cbsrua_descriptor_indices.pop(), resource, mipmap_level);
+	return cbsrua_descriptor_heap.place_ua_descriptor(cbsrua_descriptor_indices.pop(), resource, mipmap_level, counter_offset);
 }
 
 D3D12_CPU_Descriptor Descriptor_Heap_Pool::allocate_rt_descriptor(D3D12_Resource *resource)

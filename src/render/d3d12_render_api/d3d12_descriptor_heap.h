@@ -38,7 +38,7 @@ struct CBSRUA_Descriptor_Heap : Descriptor_Heap {
 	void create(ComPtr<ID3D12Device> &device, u32 descriptors_number);
 	D3D12_GPU_Descriptor place_cb_descriptor(u32 descriptor_index, D3D12_Resource *resource);
 	D3D12_GPU_Descriptor place_sr_descriptor(u32 descriptor_index, D3D12_Resource *resource, u32 mipmap_level = 0);
-	D3D12_GPU_Descriptor place_ua_descriptor(u32 descriptor_index, D3D12_Resource *resource, u32 mipmap_level = 0);
+	D3D12_GPU_Descriptor place_ua_descriptor(u32 descriptor_index, D3D12_Resource *resource, u32 mipmap_level = 0, u64 counter_offset = 0);
 };
 
 struct RT_Descriptor_Heap : Descriptor_Heap {
@@ -83,7 +83,7 @@ struct Descriptor_Heap_Pool {
 
 	D3D12_GPU_Descriptor allocate_cb_descriptor(D3D12_Resource *resource);
 	D3D12_GPU_Descriptor allocate_sr_descriptor(D3D12_Resource *resource, u32 mipmap_level = 0);
-	D3D12_GPU_Descriptor allocate_ua_descriptor(D3D12_Resource *resource, u32 mipmap_level = 0);
+	D3D12_GPU_Descriptor allocate_ua_descriptor(D3D12_Resource *resource, u32 mipmap_level = 0, u64 counter_offset = 0);
 	D3D12_CPU_Descriptor allocate_rt_descriptor(D3D12_Resource *resource);
 	D3D12_CPU_Descriptor allocate_ds_descriptor(D3D12_Resource *resource);
 	D3D12_GPU_Descriptor allocate_sampler_descriptor(D3D12_Sampler *sampler);

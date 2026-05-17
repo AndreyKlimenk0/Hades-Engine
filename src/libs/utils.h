@@ -1,6 +1,7 @@
 #ifndef UTILS_FUNCTION_H
 #define UTILS_FUNCTION_H
 
+#include <stdint.h>
 #include "number_types.h"
 #include "math/structures.h"
 
@@ -22,5 +23,12 @@ inline u32 convert_3d_to_1d_index(u32 x, u32 y, u32 z, u32 width, u32 depth)
 {
 	return x *(width * depth) + y * depth + z;
 }
+
+inline u32 safe_cast_u64_to_u32(u64 value)
+{
+	assert(value <= UINT32_MAX);
+	return static_cast<u32>(value);
+}
+
 #endif 
 

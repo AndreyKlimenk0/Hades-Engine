@@ -9,6 +9,16 @@
 #include "../../libs/math/structures.h"
 #include "../../libs/structures/array.h"
 
+const u32 ALLOW_RENDER_TARGET = 0x1;
+const u32 DEPTH_STENCIL_RESOURCE = 0x2;
+const u32 ALLOW_UNORDERED_ACCESS = 0x4;
+const u32 DENY_SHADER_RESOURCE = 0x8;
+const u32 ALLOW_CROSS_ADAPTER = 0x10;
+const u32 ALLOW_SIMULTANEOUS_ACCESS = 0x20;
+const u32 VIDEO_DECODE_REFERENCE_ONLY = 0x40;
+const u32 VIDEO_ENCODE_REFERENCE_ONLY = 0x80;
+const u32 RAYTRACING_ACCELERATION_STRUCTURE = 0x100;
+
 enum Clear_Value_Type {
 	CLEAR_VALUE_UNKNOWN,
 	CLEAR_VALUE_COLOR,
@@ -33,25 +43,12 @@ struct Clear_Value {
 struct Buffer_Desc {
 	Resource_Usage usage = RESOURCE_USAGE_DEFAULT;
 	Resource_State resource_state = RESOURCE_STATE_COMMON;
-	u32 stride = 0;
-	u32 count = 1;
+	u64 size = 0;
+	u64 stride = 0;
 	u32 flags = 0;
 	void *data = NULL;
 	String name = "Unknown";
-
-	u64 size();
 };
-
-const u32 ALLOW_RENDER_TARGET = 0x1;
-const u32 DEPTH_STENCIL_RESOURCE = 0x2;
-const u32 ALLOW_UNORDERED_ACCESS = 0x4;
-const u32 DENY_SHADER_RESOURCE = 0x8;
-const u32 ALLOW_CROSS_ADAPTER = 0x10;
-const u32 ALLOW_SIMULTANEOUS_ACCESS = 0x20;
-const u32 VIDEO_DECODE_REFERENCE_ONLY = 0x40;
-const u32 VIDEO_ENCODE_REFERENCE_ONLY = 0x80;
-const u32 RAYTRACING_ACCELERATION_STRUCTURE = 0x100;
-const u32 APPEND_STRUCTURED_BUFFER = 0x200;
 
 struct Texture_Desc {
 	Texture_Dimension dimension = TEXTURE_DIMENSION_UNKNOWN;

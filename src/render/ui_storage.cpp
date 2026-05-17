@@ -13,22 +13,22 @@ void UI_Storage::upload_ui()
 {
 	ImDrawData *draw_data = ImGui::GetDrawData();
 
-	if (!vertex_buffer || ((vertex_buffer->size() < (sizeof(ImDrawVert) * (u64)draw_data->TotalVtxCount)) && (draw_data->TotalVtxCount > 0))) {
+	if (!vertex_buffer || ((vertex_buffer->count() < (u64)draw_data->TotalVtxCount) && (draw_data->TotalVtxCount > 0))) {
 		DELETE_PTR(vertex_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.count = draw_data->TotalVtxCount;
+		buffer_desc.size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
 		buffer_desc.stride = sizeof(ImDrawVert);
 		buffer_desc.name = "ImGUI Vertex Buffer";
 
 		vertex_buffer = render_device->create_buffer(&buffer_desc);
 	}
 
-	if (!index_buffer || ((index_buffer->size() < (sizeof(u32) *(u64)draw_data->TotalIdxCount)) && (draw_data->TotalIdxCount > 0))) {
+	if (!index_buffer || ((index_buffer->count() < (u64)draw_data->TotalIdxCount) && (draw_data->TotalIdxCount > 0))) {
 		DELETE_PTR(index_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.count = draw_data->TotalIdxCount;
+		buffer_desc.size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
 		buffer_desc.stride = sizeof(ImDrawIdx);
 		buffer_desc.name = "ImGUI Index Buffer";
 

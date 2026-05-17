@@ -29,119 +29,81 @@ inline Texture_Dimension to_texture_dimension(D3D12_RESOURCE_DIMENSION d3d12_res
 Resource_Desc::Resource_Desc(Buffer_Desc *_buffer_desc)
 {
 	type = RESOURCE_TYPE_BUFFER; 
-	
-	ZeroMemory(&buffer_desc, sizeof(Buffer_Desc));
 	buffer_desc = *_buffer_desc;
+	resource_usage = buffer_desc.usage;
+	resource_state = buffer_desc.resource_state;
+	resource_name = buffer_desc.name;
+
+	if ((buffer_desc.size == 0) && (buffer_desc.stride == 0)) {
+		buffer_desc.size = KB(64);
+		buffer_desc.stride = KB(64);
+	} else if ((buffer_desc.size == 0) && (buffer_desc.stride > 0)) {
+		buffer_desc.size = KB(64);
+	} else if ((buffer_desc.stride == 0) && (buffer_desc.size > 0)) {
+		buffer_desc.stride = buffer_desc.size;
+	}
+
+	ZeroMemory(&d3d12_resource_desc, sizeof(D3D12_RESOURCE_DESC));
+	d3d12_resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	d3d12_resource_desc.Alignment = 0;
+	d3d12_resource_desc.Width = buffer_desc.size;
+	d3d12_resource_desc.Height = 1;
+	d3d12_resource_desc.DepthOrArraySize = 1;
+	d3d12_resource_desc.MipLevels = 1;
+	d3d12_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+	d3d12_resource_desc.SampleDesc.Count = 1;
+	d3d12_resource_desc.SampleDesc.Quality = 0;
+	d3d12_resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	d3d12_resource_desc.Flags = static_cast<D3D12_RESOURCE_FLAGS>(buffer_desc.flags);
 }
 
 Resource_Desc::Resource_Desc(Buffer_Desc *_buffer_desc, Resource_Usage usage) : Resource_Desc(_buffer_desc)
 {
 	buffer_desc.usage = usage;
+	resource_usage = usage;
 	if (usage == RESOURCE_USAGE_UPLOAD) {
 		buffer_desc.flags = 0;
+		d3d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 	}
 }
 
 Resource_Desc::Resource_Desc(Texture_Desc *_texture_desc)
 {
 	type = RESOURCE_TYPE_TEXTURE;
-	
 	ZeroMemory(&texture_desc, sizeof(Texture_Desc));
 	texture_desc = *_texture_desc;
+	resource_usage = RESOURCE_USAGE_DEFAULT;
+	resource_state = texture_desc.resource_state;
+	resource_name = texture_desc.name;
+
+	ZeroMemory(&d3d12_resource_desc, sizeof(D3D12_RESOURCE_DESC));
+	d3d12_resource_desc.Dimension = to_d3d12_resource_dimension(texture_desc.dimension);
+	d3d12_resource_desc.Alignment = 0;
+	d3d12_resource_desc.Width = static_cast<u64>(texture_desc.width);
+	d3d12_resource_desc.Height = texture_desc.height;
+	d3d12_resource_desc.DepthOrArraySize = texture_desc.depth;
+	d3d12_resource_desc.MipLevels = texture_desc.miplevels;
+	d3d12_resource_desc.Format = texture_desc.format;
+	d3d12_resource_desc.SampleDesc.Count = 1;
+	d3d12_resource_desc.SampleDesc.Quality = 0;
+	d3d12_resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	d3d12_resource_desc.Flags = static_cast<D3D12_RESOURCE_FLAGS>(texture_desc.flags);
 }
 
 Resource_Desc::~Resource_Desc()
 {
 }
 
-String &Resource_Desc::resource_name()
-{
-	static String temp;
-	if (type == RESOURCE_TYPE_BUFFER) {
-		return buffer_desc.name;
-	} else if (type == RESOURCE_TYPE_TEXTURE) {
-		return texture_desc.name;
-	}
-	return temp;
-}
-
-Resource_Usage Resource_Desc::resource_usage()
-{
-	switch (type) {
-		case RESOURCE_TYPE_BUFFER:
-			return buffer_desc.usage;
-		case RESOURCE_TYPE_TEXTURE:
-			return RESOURCE_USAGE_DEFAULT;
-		default:
-			assert(true);
-	}
-	return  (Resource_Usage)0;
-}
-
-D3D12_RESOURCE_DESC Resource_Desc::d3d12_resource_desc()
-{
-	D3D12_RESOURCE_DESC resource_desc;
-	ZeroMemory(&resource_desc, sizeof(D3D12_RESOURCE_DESC));
-	if (type == RESOURCE_TYPE_BUFFER) {
-		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resource_desc.Alignment = 0;
-		resource_desc.Width = buffer_desc.size();
-		resource_desc.Height = 1;
-		resource_desc.DepthOrArraySize = 1;
-		resource_desc.MipLevels = 1;
-		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-		resource_desc.SampleDesc.Count = 1;
-		resource_desc.SampleDesc.Quality = 0;
-		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		resource_desc.Flags = static_cast<D3D12_RESOURCE_FLAGS>(buffer_desc.flags);
-
-	} else if (type == RESOURCE_TYPE_TEXTURE) {
-		resource_desc.Dimension = to_d3d12_resource_dimension(texture_desc.dimension);
-		//resource_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-		resource_desc.Alignment = 0;
-		resource_desc.Width = static_cast<u64>(texture_desc.width);
-		resource_desc.Height = texture_desc.height;
-		resource_desc.DepthOrArraySize = texture_desc.depth;
-		resource_desc.MipLevels = texture_desc.miplevels;
-		resource_desc.Format = texture_desc.format;
-		resource_desc.SampleDesc.Count = 1;
-		resource_desc.SampleDesc.Quality = 0;
-		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		resource_desc.Flags = static_cast<D3D12_RESOURCE_FLAGS>(texture_desc.flags);
-	}
-	return resource_desc;
-}
-
-Resource_State Resource_Desc::resource_state()
-{
-	switch (type) {
-		case RESOURCE_TYPE_BUFFER:
-			return buffer_desc.resource_state;
-		case RESOURCE_TYPE_TEXTURE:
-			return texture_desc.resource_state;
-	}
-	assert(false);
-	return RESOURCE_STATE_COMMON;
-}
-
-D3D12_RESOURCE_STATES Resource_Desc::d312_resource_state()
-{
-	return to_d3d12_resource_state(resource_state());
-}
-
 D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *resource_desc)
 {
-	D3D12_RESOURCE_DESC d3d12_resource_desc = resource_desc->d3d12_resource_desc();
-
-	D3D12_RESOURCE_ALLOCATION_INFO allocation = device->GetResourceAllocationInfo(0, 1, &d3d12_resource_desc);
-	total_size = allocation.SizeInBytes;
+	D3D12_RESOURCE_DESC d3d12_resource_desc = resource_desc->d3d12_resource_desc;
 
 	if (resource_desc->type == RESOURCE_TYPE_BUFFER) {
-		count = resource_desc->buffer_desc.count;
+		allocated = resource_desc->buffer_desc.size;
 		stride = resource_desc->buffer_desc.stride;
 	} else if (resource_desc->type == RESOURCE_TYPE_TEXTURE) {
-		count = 1;
-		stride = total_size;
+		allocated = resource_desc->texture_desc.size();
+		stride = resource_desc->texture_desc.size();
 	}
 
 	D3D12_CLEAR_VALUE *d3d12_clear_value_ptr = NULL;
@@ -154,23 +116,26 @@ D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *reso
 	
 	D3D12_HEAP_PROPERTIES heap_properties;
 	ZeroMemory(&heap_properties, sizeof(D3D12_HEAP_PROPERTIES));
-	heap_properties.Type = to_d3d12_heap_type(resource_desc->resource_usage());
+	heap_properties.Type = to_d3d12_heap_type(resource_desc->resource_usage);
 
-	bool result = (resource_desc->resource_usage() == RESOURCE_USAGE_UPLOAD) && (resource_desc->resource_state() == RESOURCE_STATE_COMMON);
-	D3D12_RESOURCE_STATES d3d12_resource_state = result ? D3D12_RESOURCE_STATE_GENERIC_READ :  resource_desc->d312_resource_state();
+	bool result = (resource_desc->resource_usage == RESOURCE_USAGE_UPLOAD) && (resource_desc->resource_state == RESOURCE_STATE_COMMON);
+	Resource_State resource_state = result ? RESOURCE_STATE_GENERIC_READ :  resource_desc->resource_state;
 
-	HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &d3d12_resource_desc, d3d12_resource_state, d3d12_clear_value_ptr, IID_PPV_ARGS(d3d12_resource.ReleaseAndGetAddressOf())));
+	HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &d3d12_resource_desc, to_d3d12_resource_state(resource_state), d3d12_clear_value_ptr, IID_PPV_ARGS(d3d12_resource.ReleaseAndGetAddressOf())));
 }
 
 D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resource> &existing_resource)
 {
 	D3D12_RESOURCE_DESC d3d12_resource_desc = existing_resource->GetDesc();
-
-	u32 mask = 0;
-	D3D12_RESOURCE_ALLOCATION_INFO allocation = device->GetResourceAllocationInfo(mask, 1, &d3d12_resource_desc);
-	total_size = allocation.SizeInBytes;
-	count = 1;
-	stride = total_size;
+	if (d3d12_resource_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+		allocated = d3d12_resource_desc.Width;
+		stride = d3d12_resource_desc.Width;
+	} else if (d3d12_resource_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+		allocated = d3d12_resource_desc.Width * d3d12_resource_desc.Height * dxgi_format_size(d3d12_resource_desc.Format);
+		stride = d3d12_resource_desc.Width * d3d12_resource_desc.Height * dxgi_format_size(d3d12_resource_desc.Format);
+	} else {
+		assert(false);
+	}
 
 	d3d12_resource = existing_resource;
 }
@@ -243,7 +208,14 @@ u32 D3D12_Resource::subresource_count()
 
 u64 D3D12_Resource::size()
 {
-	return stride * count;
+	return allocated;
+}
+
+u64 D3D12_Resource::count()
+{
+	assert(stride > 0);
+
+	return allocated / stride;
 }
 
 u64 D3D12_Resource::gpu_address()
@@ -275,14 +247,6 @@ D3D12_Base_Buffer::~D3D12_Base_Buffer()
 
 D3D12_Buffer::D3D12_Buffer(D3D12_Render_Device *render_device, Buffer_Desc *_buffer_desc) : render_device(render_device), buffer_desc(*_buffer_desc)
 {
-	if ((buffer_desc.count == 0) && (buffer_desc.stride == 0)) {
-		buffer_desc.count = 1;
-		buffer_desc.stride = KB(64);
-	}
-	if ((buffer_desc.count == 0) && (buffer_desc.stride > 0)) {
-		buffer_desc.count = KB(64) / buffer_desc.stride;
-	}
-
 	if (buffer_desc.usage == RESOURCE_USAGE_DEFAULT) {
 		Resource_Desc resource_desc = Resource_Desc(&buffer_desc);
 		default_buffer = new D3D12_Base_Buffer(render_device, &resource_desc);
@@ -297,7 +261,7 @@ D3D12_Buffer::D3D12_Buffer(D3D12_Render_Device *render_device, Buffer_Desc *_buf
 			upload_buffers.push({ render_device->frame_number, upload_buffer });
 
 			void *mapped_memory = upload_buffer->map();
-			memcpy(mapped_memory, buffer_desc.data, buffer_desc.size());
+			memcpy(mapped_memory, buffer_desc.data, buffer_desc.size);
 
 			D3D12_Command_List *upload_command_list = render_device->upload_command_list();
 			upload_command_list->copy(default_buffer, upload_buffer);
@@ -397,6 +361,12 @@ u64 D3D12_Buffer::size()
 	return temp->size();
 }
 
+u64 D3D12_Buffer::count()
+{
+	D3D12_Base_Buffer *temp = current_buffer();
+	return temp->count();
+}
+
 u64 D3D12_Buffer::gpu_virtual_address()
 {
 	D3D12_Base_Buffer *temp = current_buffer();
@@ -433,7 +403,7 @@ CBV_Descriptor *D3D12_Buffer::constant_buffer_descriptor()
 	return &buffer->constant_buffer_descriptor;
 }
 
-SRV_Descriptor *D3D12_Buffer::shader_resource_descriptor(u32 mipmap_level)
+SRV_Descriptor *D3D12_Buffer::shader_resource_descriptor()
 {
 	D3D12_Base_Buffer *buffer = current_buffer();
 	if (!buffer->shader_resource_descriptor.valid()) {
@@ -443,12 +413,12 @@ SRV_Descriptor *D3D12_Buffer::shader_resource_descriptor(u32 mipmap_level)
 	return &buffer->shader_resource_descriptor;
 }
 
-UAV_Descriptor *D3D12_Buffer::unordered_access_descriptor(u32 mipmap_level)
+UAV_Descriptor *D3D12_Buffer::unordered_access_descriptor(u64 counter_offset)
 {
 	D3D12_Base_Buffer *buffer = current_buffer();
 	if (!buffer->unordered_access_descriptor.valid()) {
 		Descriptor_Heap_Pool *descriptor_pool = render_device->descriptor_pool;
-		buffer->unordered_access_descriptor = descriptor_pool->allocate_ua_descriptor(buffer);
+		buffer->unordered_access_descriptor = descriptor_pool->allocate_ua_descriptor(buffer, counter_offset);
 	}
 	return &buffer->unordered_access_descriptor;
 }
@@ -469,7 +439,7 @@ D3D12_Texture::D3D12_Texture(D3D12_Render_Device *_render_device, Texture_Desc *
 	if (texture_desc.data) {
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.stride = render_device->resource_allocation_info(&resource_desc).size;
+		buffer_desc.size = render_device->resource_allocation_info(&resource_desc).size;
 		
 		Resource_Desc upload_resource_desc = { &buffer_desc };
 		D3D12_Resource *upload_buffer = new D3D12_Resource(render_device->device, &upload_resource_desc);

@@ -39,14 +39,15 @@ struct Buffer {
 	virtual ~Buffer() = default;
 
 	virtual u64 size() = 0;
+	virtual u64 count() = 0;
 	virtual u64 gpu_virtual_address() = 0;
 	virtual void request_write() = 0; // Call only for default buffer
 	virtual void write(void *data, u64 data_size, u64 offset = 0, u64 alignment = 0) = 0;
 	virtual void *write_only_ptr() = 0;
 
 	virtual CBV_Descriptor *constant_buffer_descriptor() = 0;
-	virtual SRV_Descriptor *shader_resource_descriptor(u32 mipmap_level = 0) = 0;
-	virtual UAV_Descriptor *unordered_access_descriptor(u32 mipmap_level = 0) = 0;
+	virtual SRV_Descriptor *shader_resource_descriptor() = 0;
+	virtual UAV_Descriptor *unordered_access_descriptor(u64 counter_offset = 0) = 0;
 };
 
 struct Texture {

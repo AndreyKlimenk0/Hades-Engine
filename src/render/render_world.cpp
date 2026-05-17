@@ -373,10 +373,10 @@ void Model_Storage::upload_models_in_gpu()
 		index_offset += render_models[i]->mesh.index_count();
 	}
 
-	if (!unified_vertex_buffer || (unified_vertex_buffer->size() < (u64)unified_vertex_list.get_size())) {
+	if (!unified_vertex_buffer || (unified_vertex_buffer->count() < (u64)unified_vertex_list.count)) {
 		DELETE_PTR(unified_vertex_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = unified_vertex_list.count;
+		buffer_desc.size = unified_vertex_list.get_size();
 		buffer_desc.stride = unified_vertex_list.stride;
 		buffer_desc.data = unified_vertex_list.to_void_ptr();
 		buffer_desc.name = "Unified vertex buffer";
@@ -387,10 +387,10 @@ void Model_Storage::upload_models_in_gpu()
 		unified_vertex_buffer->write(unified_vertex_list.to_void_ptr(), unified_vertex_list.get_size());
 	}
 
-	if (!unified_index_buffer || (unified_index_buffer->size() < (u64)unified_index_list.get_size())) {
+	if (!unified_index_buffer || (unified_index_buffer->count() < (u64)unified_index_list.count)) {
 		DELETE_PTR(unified_index_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = unified_index_list.count;
+		buffer_desc.size = unified_index_list.get_size();
 		buffer_desc.stride = unified_index_list.stride;
 		buffer_desc.data = unified_index_list.to_void_ptr();
 		buffer_desc.name = "Unified index buffer";
@@ -401,10 +401,10 @@ void Model_Storage::upload_models_in_gpu()
 		unified_index_buffer->write(unified_index_list.to_void_ptr(), unified_index_list.get_size());
 	}
 
-	if (!mesh_instance_buffer || (mesh_instance_buffer->size() < (u64)unified_mesh_instances_list.get_size())) {
+	if (!mesh_instance_buffer || (mesh_instance_buffer->count() < (u64)unified_mesh_instances_list.count)) {
 		DELETE_PTR(mesh_instance_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = unified_mesh_instances_list.count;
+		buffer_desc.size = unified_mesh_instances_list.get_size();
 		buffer_desc.stride = unified_mesh_instances_list.stride;
 		buffer_desc.data = unified_mesh_instances_list.to_void_ptr();
 		buffer_desc.name = "Unified mesh instances buffer";
@@ -530,11 +530,11 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
-	if (!world_matrices_buffer || (world_matrices_buffer->size() < (u64)render_entity_world_matrices.get_size())) {
+	if (!world_matrices_buffer || (world_matrices_buffer->count() < (u64)render_entity_world_matrices.count)) {
 		DELETE_PTR(world_matrices_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.count = render_entity_world_matrices.count;
+		buffer_desc.size = render_entity_world_matrices.get_size();
 		buffer_desc.stride = render_entity_world_matrices.stride;
 		buffer_desc.data = render_entity_world_matrices.to_void_ptr();
 		buffer_desc.name = "World matrices";
@@ -593,10 +593,10 @@ void Render_World::upload_lights()
 			}
 		}
 	}
-	if (!lights_buffer || (lights_buffer->size() < (u64)lights.get_size())) {
+	if (!lights_buffer || (lights_buffer->count() < (u64)lights.count)) {
 		DELETE_PTR(lights_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = lights.count ? lights.count : 1;
+		buffer_desc.size = lights.get_size();
 		buffer_desc.stride = lights.stride;
 		buffer_desc.data = lights.to_void_ptr();
 		buffer_desc.name = "Lights";
@@ -607,10 +607,10 @@ void Render_World::upload_lights()
 		lights_buffer->write(lights.to_void_ptr(), lights.get_size());
 	}
 
-	if (!cascaded_shadows_info_buffer || (cascaded_shadows_info_buffer->size() < (u64)cascaded_shadows_info_list.get_size())) {
+	if (!cascaded_shadows_info_buffer || (cascaded_shadows_info_buffer->count() < (u64)cascaded_shadows_info_list.count)) {
 		DELETE_PTR(cascaded_shadows_info_buffer);
 		Buffer_Desc buffer_desc;
-		buffer_desc.count = cascaded_shadows_info_list.count;
+		buffer_desc.size = cascaded_shadows_info_list.get_size();
 		buffer_desc.stride = cascaded_shadows_info_list.stride;
 		buffer_desc.data = cascaded_shadows_info_list.to_void_ptr();
 		buffer_desc.name = "Cascaded shadows info";
@@ -691,11 +691,11 @@ void Render_World::update_shadows()
 		}
 	}
 
-	if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->size() < (u64)cascaded_view_projection_matrices.get_size())) {
+	if (!casded_view_projection_matrices_buffer || (casded_view_projection_matrices_buffer->count() < (u64)cascaded_view_projection_matrices.count)) {
 		DELETE_PTR(casded_view_projection_matrices_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.count = cascaded_view_projection_matrices.count;
+		buffer_desc.size = cascaded_view_projection_matrices.get_size();
 		buffer_desc.stride = cascaded_view_projection_matrices.stride;
 		buffer_desc.name = "View projection shadow matrices";
 

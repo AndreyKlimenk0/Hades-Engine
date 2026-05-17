@@ -1,5 +1,6 @@
 #include "base_structs.h"
 #include "../../sys/utils.h"
+#include "../d3d12_render_api/d3d12_functions.h"
 
 Clear_Value::Clear_Value() : type(CLEAR_VALUE_UNKNOWN)
 {
@@ -32,9 +33,13 @@ bool Clear_Value::color_set()
     return type == CLEAR_VALUE_COLOR;
 }
 
-u64 Buffer_Desc::size()
+u64 Texture_Desc::size()
 {
-    return count * stride;
+    assert(width > 0);
+    assert(height > 0);
+    assert(depth > 0);
+
+    return width * height * depth * dxgi_format_size(format);
 }
 
 Viewport::Viewport()

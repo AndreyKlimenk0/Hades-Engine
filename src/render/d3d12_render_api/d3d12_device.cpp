@@ -9,6 +9,7 @@
 #include "d3d12_functions.h"
 #include "to_d3d12_types.h"
 
+#include "../../libs/utils.h"
 #include "../../win32/win_helpers.h"
 
 static D3D12_Render_Device *internal_render_device_reference = NULL;
@@ -688,13 +689,12 @@ void  D3D12_Command_List::set_vertex_buffer(Buffer *buffer)
 	D3D12_Buffer *internal_buffer = (D3D12_Buffer *)buffer;
 	D3D12_Base_Buffer *internal_base_buffer = internal_buffer->current_buffer();
 
-	assert((internal_base_buffer->total_size % internal_base_buffer->stride) == 0);
+	assert((internal_base_buffer->size() % internal_base_buffer->stride) == 0);
 
 	D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
 	vertex_buffer_view.BufferLocation = internal_base_buffer->gpu_address();
-	vertex_buffer_view.SizeInBytes = internal_base_buffer->stride * internal_base_buffer->count;
-	//vertex_buffer_view.SizeInBytes = internal_base_buffer->total_size;
-	vertex_buffer_view.StrideInBytes = internal_base_buffer->stride;
+	vertex_buffer_view.SizeInBytes = safe_cast_u64_to_u32(internal_base_buffer->size());
+	vertex_buffer_view.StrideInBytes = safe_cast_u64_to_u32(internal_base_buffer->stride);
 
 	command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
 }
@@ -706,8 +706,7 @@ void  D3D12_Command_List::set_index_buffer(Buffer *buffer)
 
 	D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 	index_buffer_view.BufferLocation = internal_base_buffer->gpu_address();
-	//index_buffer_view.SizeInBytes = internal_base_buffer->total_size;
-	index_buffer_view.SizeInBytes = internal_base_buffer->stride * internal_base_buffer->count;
+	index_buffer_view.SizeInBytes = safe_cast_u64_to_u32(internal_base_buffer->size());
 	index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 	
 	command_list->IASetIndexBuffer(&index_buffer_view);
@@ -1049,7 +1048,7 @@ D3D12_Command_List *D3D12_Render_Device::upload_command_list()
 
 Resource_Allocation_Info D3D12_Render_Device::resource_allocation_info(Resource_Desc *resource_desc)
 {
-	D3D12_RESOURCE_DESC d3d12_resource_desc = resource_desc->d3d12_resource_desc();
+	D3D12_RESOURCE_DESC d3d12_resource_desc = resource_desc->d3d12_resource_desc;
 	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = device->GetResourceAllocationInfo(0, 1, &d3d12_resource_desc);
 	return { allocation_info.SizeInBytes, allocation_info.Alignment };
 }

@@ -376,24 +376,24 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_graphics_constants(1, 2, &filter);
 
 	static Buffer *command_buffer = NULL;
-	if (!command_buffer || (command_buffer->size() < render_world->game_render_entities.get_size())) {
+	if (!command_buffer || (command_buffer->size() < (u64)render_world->game_render_entities.count)) {
 		DELETE_PTR(command_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(IndirectCommand);
 		buffer_desc.stride = sizeof(IndirectCommand);
-		buffer_desc.count = render_world->game_render_entities.count;
 		buffer_desc.name = "IndirectCommand Buffer";
 
 		command_buffer = render_sys->render_device->create_buffer(&buffer_desc);
 	}
 
 	static Buffer *pass_data_buffer = NULL;
-	if (!pass_data_buffer || (pass_data_buffer->size() < render_world->game_render_entities.get_size())) {
+	if (!pass_data_buffer || (pass_data_buffer->size() < (u64)render_world->game_render_entities.count)) {
 		DELETE_PTR(pass_data_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
 		buffer_desc.stride = sizeof(Pass_Data);
-		buffer_desc.count = render_world->game_render_entities.count;
 		buffer_desc.name = "Pass Data Buffer";
 
 		pass_data_buffer = render_sys->render_device->create_buffer(&buffer_desc);
@@ -964,36 +964,39 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_compute_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
  
 	static Buffer *draw_commands_buffer = NULL;
-	if (!draw_commands_buffer || (draw_commands_buffer->size() < render_world->game_render_entities.get_size())) {
+	if (!draw_commands_buffer || (draw_commands_buffer->count() < (u64)render_world->game_render_entities.count)) {
 		DELETE_PTR(draw_commands_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(IndirectCommand);
 		buffer_desc.stride = sizeof(IndirectCommand);
-		buffer_desc.count = render_world->game_render_entities.count;
 		buffer_desc.name = "Draw Commands Buffer";
 
 		draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
 	}
 
 	static Buffer *culled_draw_commands_buffer = NULL;
-	if (!culled_draw_commands_buffer || (culled_draw_commands_buffer->size() < render_world->game_render_entities.get_size())) {
+	static u64 draw_commands_counter_offset = 0;
+	if (!culled_draw_commands_buffer || (culled_draw_commands_buffer->size() < (u64)render_world->game_render_entities.count)) {
 		DELETE_PTR(culled_draw_commands_buffer);
 		Buffer_Desc buffer_desc;
+		buffer_desc.size = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + sizeof(u32);
 		buffer_desc.stride = sizeof(IndirectCommand);
-		buffer_desc.count = render_world->game_render_entities.count;
 		buffer_desc.name = "Culled Draw Commands Buffer";
 		buffer_desc.flags = ALLOW_UNORDERED_ACCESS;
 
 		culled_draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+
+		draw_commands_counter_offset = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
 	}
 
 	static Buffer *render_entities_buffer = NULL;
-	if (!render_entities_buffer || (render_entities_buffer->size() < render_world->game_render_entities.get_size())) {
+	if (!render_entities_buffer || (render_entities_buffer->size() < (u64)render_world->game_render_entities.count)) {
 		DELETE_PTR(render_entities_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
 		buffer_desc.stride = sizeof(Pass_Data);
-		buffer_desc.count = render_world->game_render_entities.count;
 		buffer_desc.name = "Render Entities";
 
 		render_entities_buffer = render_sys->render_device->create_buffer(&buffer_desc);
@@ -1024,7 +1027,9 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	draw_commands_buffer->request_write();
 	draw_commands_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
 
-	//culled_draw_commands_buffer->request_write();
+	culled_draw_commands_buffer->request_write();
+	u32 reset = 0;
+	culled_draw_commands_buffer->write((void *)reset, sizeof(u32), draw_commands_counter_offset);
 	//memset(culled_draw_commands_buffer->write_only_ptr(), 0, culled_draw_commands_buffer->size());
 
 	render_entities_buffer->request_write();
@@ -1041,7 +1046,7 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_compute_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_entities_buffer->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, draw_commands_buffer->shader_resource_descriptor());
-	graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, culled_draw_commands_buffer->unordered_access_descriptor());
+	graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, culled_draw_commands_buffer->unordered_access_descriptor(draw_commands_counter_offset));
 	
 	graphics_command_list->dispatch((u32)math::ceil((float)render_world->game_render_entities.count / 128.0f), 1);
 
