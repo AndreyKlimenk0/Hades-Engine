@@ -418,7 +418,7 @@ UAV_Descriptor *D3D12_Buffer::unordered_access_descriptor(u64 counter_offset)
 	D3D12_Base_Buffer *buffer = current_buffer();
 	if (!buffer->unordered_access_descriptor.valid()) {
 		Descriptor_Heap_Pool *descriptor_pool = render_device->descriptor_pool;
-		buffer->unordered_access_descriptor = descriptor_pool->allocate_ua_descriptor(buffer, counter_offset);
+		buffer->unordered_access_descriptor = descriptor_pool->allocate_ua_descriptor(buffer, 0, counter_offset);
 	}
 	return &buffer->unordered_access_descriptor;
 }
