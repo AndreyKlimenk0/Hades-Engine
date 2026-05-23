@@ -122,7 +122,7 @@ void test_elements_size_filling(u32 x, u32 y, Layout layout_direction, u32 align
 {
 	begin_ui_element("Gray rect #id");
 	set_position(x, y);
-	set_size(filled_size(), filled_size());
+	set_size(fit_size(), fit_size());
 	set_layout(layout_direction);
 	set_alignment(alignment_flags);
 	set_background_color(GRAY);
@@ -257,10 +257,27 @@ void draw_test_gui()
 	//set_background_color(Color::Green);
 	//end_ui_element(); // Green
 
-	begin_ui_element("Rect");
+
+	//begin_ui_element("Test");
+	//set_position(30, 30);
+	//set_background_color(Color::Red);
+
+	//begin_ui_element("Rect 1");
+	//set_size(fixed_size(100), fixed_size(20));
+	//set_background_color(Color::Green);
+	//end_ui_element();
+
+	//begin_ui_element("Rect 2");
+	//set_size(fixed_size(100), fixed_size(20));
+	//set_background_color(Color::Green);
+	//end_ui_element();
+
+	//end_ui_element();
+
+	begin_ui_element("Main rect");
 	set_position(30, 30);
-	//set_size(filled_size(), filled_size());
-	set_size(fixed_size(100), filled_size());
+	//set_size(fit_size(), fit_size());
+	set_size(fixed_size(100), fit_size());
 	set_padding(Padding(10));
 	set_background_color(Color::Cyan);
 

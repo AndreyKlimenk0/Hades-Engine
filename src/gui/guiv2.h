@@ -25,9 +25,9 @@ namespace imgui {
 
 	enum Size_Type {
 		SIZE_TYPE_FIXED,
-		SIZE_TYPE_FILLED,
+		SIZE_TYPE_FIT,     // The element takes into account size of child elements, spacing, padding and adapts its own size accordingly.
 		SIZE_TYPE_PERCENT,
-		SIZE_TYPE_GROW,
+		SIZE_TYPE_GROW,    // The element takes into account the size of the parent element and other child elements and occupies the remaining available space.
 	};
 
 	struct Size_Dimension {
@@ -37,11 +37,12 @@ namespace imgui {
 		s32 get() { return (s32)value; };
 		void set(s32 _value) { value = (float)_value; }
 		void add(s32 _value) { value += (float)_value; }
+		void sub(s32 _value) { value -= (float)_value; }
 	};
 
-	inline Size_Dimension filled_size()
+	inline Size_Dimension fit_size()
 	{
-		return { .type = SIZE_TYPE_FILLED };
+		return { .type = SIZE_TYPE_FIT };
 	}
 
 	inline Size_Dimension fixed_size(u32 value)
@@ -69,7 +70,19 @@ namespace imgui {
 		s32 top = 0;
 		s32 right = 0;
 		s32 bottom = 0;
+
+		s32 operator[](AxisV2 axis);
 	};
+
+	inline Padding operator+(const Padding &first, const Padding &second)
+	{
+		return Padding(first.left + second.left, first.top + second.top, first.right + second.right, first.bottom + second.bottom);
+	}
+
+	inline Padding operator-(const Padding &first, const Padding &second)
+	{
+		return Padding(first.left - second.left, first.top - second.top, first.right - second.right, first.bottom - second.bottom);
+	}
 
 	struct Element_ID {
 		Element_ID();
@@ -81,7 +94,23 @@ namespace imgui {
 
 		Element_ID(const Element_ID &other);
 		Element_ID &operator=(const Element_ID &other);
+
+		void reset();
 	};
+
+	inline bool operator==(const Element_ID &first_id, const Element_ID &second_id)
+	{
+#ifdef _DEBUG
+		return (first_id.hash == second_id.hash) && (first_id.string == second_id.string);
+#else
+		return first_id.hash == second_id.hash;
+#endif
+	}
+
+	inline bool operator!=(const Element_ID &first_id, const Element_ID &second_id)
+	{
+		return !(first_id.hash == second_id.hash);
+	}
 
 	struct Element_Size {
 		Size_Dimension width;
@@ -99,6 +128,7 @@ namespace imgui {
 
 		u32 called = 0;
 		u32 children_id_counter;
+		u32 outlining_thikness;
 
 		/*Rect_s32 rect;*/
 		Point_s32 position;
@@ -116,6 +146,7 @@ namespace imgui {
 		u32 alignment_flags;
 
 		Color background_color;
+		Color outlining_color;
 
 		//Content
 		const char *text = NULL;
@@ -154,11 +185,13 @@ namespace imgui {
 	void set_alignment(u32 alignment_flags);
 	void set_background_color(const Color &color);
 	void set_rounding(u32 rounding, u32 rounding_flags = ROUND_RECT);
+	void set_outlining(u32 thikness, const Color &color);
 
 	void text(const char *text);
 
 	bool ui_element_hovered();
 	bool ui_element_clicked();
+	bool ui_element_double_clicked();
 
 	UI_Element *get_ui_element();
 }

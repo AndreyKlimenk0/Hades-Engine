@@ -19,6 +19,7 @@ static u32 ui_element_debug_counter = 0;
 
 static const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
 static const u32 UI_ELEMENT_DRAW_TEXT = 0x2;
+static const u32 UI_ELEMENT_DRAW = 0x4;
 
 
 static AxisV2 flip_axis(AxisV2 axis)
@@ -63,14 +64,15 @@ Element_ID &Element_ID::operator=(const Element_ID &other)
 	return *this;
 }
 
-bool operator==(Element_ID first_id, Element_ID second_id)
+void Element_ID::reset()
 {
-	return first_id.hash == second_id.hash;
+	hash = 0;
+	string.free();
 }
 
-bool operator!=(Element_ID first_id, Element_ID second_id)
+s32 Padding::operator[](AxisV2 axis)
 {
-	return !(first_id == second_id);
+	return axis == X_AXISV2 ? left + right : axis == Y_AXISV2 ? top + bottom : 0;
 }
 
 Size_Dimension &Element_Size::operator[](AxisV2 axis)
@@ -100,16 +102,17 @@ UI_Element::~UI_Element()
 
 void UI_Element::begin_frame()
 {
-	flags = UI_ELEMENT_AUTO_LAYOUT;
+	flags = UI_ELEMENT_AUTO_LAYOUT | UI_ELEMENT_DRAW;
 	position.x = 0;
 	position.y = 0;
-	size.width = filled_size();
-	size.height = filled_size();
+	size.width = fit_size();
+	size.height = fit_size();
 	layout = COLUMN_LAYOUT;
 	alignment_flags = ALIGNMENT_TOP | ALIGNMENT_LEFT;
 
 	children_id_counter = 0;
 	space = 5;
+	outlining_thikness = 0;
 	padding = Padding(0);
 	rounding = 0;
 	rounding_flags = ROUND_RECT;
@@ -293,13 +296,13 @@ void add_space_to_child_elements(UI_Element *ui_element)
 	}
 
 	// Should code be moved in 'calculate_fit_size' function ?
-	if ((ui_element->layout == ROW_LAYOUT) && (ui_element->size.width.type == SIZE_TYPE_FILLED)) {
+	if ((ui_element->layout == ROW_LAYOUT) && (ui_element->size.width.type == SIZE_TYPE_FIT)) {
 		if (ui_element->child_elements.count > 1) {
 			ui_element->size.width.add((ui_element->child_elements.count - 1) * ui_element->space);
 		}
 	}
 
-	if ((ui_element->layout == COLUMN_LAYOUT) && (ui_element->size.height.type == SIZE_TYPE_FILLED)) {
+	if ((ui_element->layout == COLUMN_LAYOUT) && (ui_element->size.height.type == SIZE_TYPE_FIT)) {
 		if (ui_element->child_elements.count > 1) {
 			ui_element->size.height.add((ui_element->child_elements.count - 1) * ui_element->space);
 		}
@@ -339,58 +342,56 @@ static void fit_size_if_needed(UI_Element *ui_element)
 		UI_Element *child = ui_element->child_elements[i];
 		fit_size_if_needed(child);
 	}
-	if (ui_element->size.width.type == SIZE_TYPE_FILLED) {
+	if (ui_element->size.width.type == SIZE_TYPE_FIT) {
 		ui_element->size.width.set(calculate_fit_size(ui_element, X_AXISV2));
 		ui_element->size.width.set(ui_element->size.width.get() + ui_element->padding.left + ui_element->padding.right);
 	}
-	if (ui_element->size.height.type == SIZE_TYPE_FILLED) {
+	if (ui_element->size.height.type == SIZE_TYPE_FIT) {
 		ui_element->size.height.set(calculate_fit_size(ui_element, Y_AXISV2));
 		ui_element->size.height.set(ui_element->size.height.get() + ui_element->padding.top + ui_element->padding.bottom);
 	}
 }
 
-static void fill_size_if_needed(UI_Element *ui_element, AxisV2 axis)
+static void grow_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 {
 	//assert(ui_element->size[axis].get() > 0);
 
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 		UI_Element *child = ui_element->child_elements[i];
-		fill_size_if_needed(child, axis);
+		grow_size_if_needed(child, axis);
 	}
 
-	if (layout_to_axis(ui_element->layout) == axis) {
-		s32 available_space = ui_element->size[axis].get();
+ 	if (layout_to_axis(ui_element->layout) == axis) {
+		s32 available_space = ui_element->size[axis].get() - ui_element->padding[axis];
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
 			if (child->size[axis].type != SIZE_TYPE_GROW) {
 				available_space -= child->size[axis].get();
 			}
 		}
-		s32 number_filling_elements = 0;
+		s32 number_growing_elements = 0;
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
 			if (child->size[axis].type == SIZE_TYPE_GROW) {
-				number_filling_elements++;
+				number_growing_elements++;
 			}
 		}
-		s32 filling_element_size = number_filling_elements > 0 ? available_space / number_filling_elements : available_space;
+		s32 growing_element_size = number_growing_elements > 0 ? available_space / number_growing_elements : available_space;
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
 			if (child->size[axis].type == SIZE_TYPE_GROW) {
-				child->size[axis].set(filling_element_size);
+				child->size[axis].set(growing_element_size);
 			}
 		}
 	} else {
+		s32 available_space = ui_element->size[axis].get() - ui_element->padding[axis];
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
 			if (child->size[axis].type == SIZE_TYPE_GROW) {
-				auto s = ui_element->size[axis].get();
-				child->size[axis].set(s);
-				int xi = 0;
+				child->size[axis].set(available_space);
 			}
 		}
 	}
-	print("{} size {},{}", ui_element->id.string, ui_element->size.width.get(), ui_element->size.height.get());
 }
 
 static void layout_ui_elements_left_to_right_or_top_to_bottom(UI_Element *parent_ui_element, AxisV2 axis)
@@ -558,12 +559,18 @@ void sort(UI_Element *ui_element)
 
 static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s32 *parent_clip_rect, UI_Element *ui_element, Render_Primitive_List *render_primitive_list)
 {
+	if (!(ui_element->flags & UI_ELEMENT_DRAW)) {
+		return;
+	}
 	sort(ui_element);
 
-	ui_element->prev_position = ui_element->position;
-	ui_element->prev_size = ui_element->size;
+	Point_s32 position = ui_element->position;
+	if (ui_element->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		position += parent_position;
+	}
 
-	Point_s32 position = parent_position + ui_element->position;
+	ui_element->prev_position = position;
+	ui_element->prev_size = ui_element->size;
 	
 	s32 width = ui_element->size.width.get();
 	s32 height = ui_element->size.height.get();
@@ -579,11 +586,17 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
 		}
 
+		if (ui_element->outlining_thikness > 0) {
+			render_primitive_list->add_outlines(rect.x, rect.y, rect.width, rect.height, ui_element->outlining_color, (float)ui_element->outlining_thikness, ui_element->rounding);
+		}
+
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			fill_render_primitive_list(position, &clip_rect, ui_element->child_elements[i], render_primitive_list);
 		}
 		render_primitive_list->pop_clip_rect();
 	}
+	// One of the reasons why the flags are reset here is to avoid drawing a ui_element if begin_ui_element is not called in the next frame.
+	ui_element->flags = 0;
 }
 
 void imgui::init_guiv2(u32 window_width, u32 window_height, const char *font_name, u32 font_size, Render_2D *render_2d)
@@ -635,8 +648,8 @@ void imgui::end_frame()
 
 	fit_size_if_needed(ui_context.root_element);
 
-	fill_size_if_needed(ui_context.root_element, X_AXISV2);
-	fill_size_if_needed(ui_context.root_element, Y_AXISV2);
+	grow_size_if_needed(ui_context.root_element, X_AXISV2);
+	grow_size_if_needed(ui_context.root_element, Y_AXISV2);
 
 	layout_child_elements(ui_context.root_element);
 
@@ -721,6 +734,13 @@ void imgui::set_rounding(u32 rounding, u32 rounding_flags)
 	ui_element->rounding_flags = rounding_flags;
 }
 
+void imgui::set_outlining(u32 thikness, const Color &color)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->outlining_thikness = thikness;
+	ui_element->outlining_color = color;
+}
+
 static void ui_element_draw_text(const char *text)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
@@ -749,7 +769,14 @@ bool imgui::ui_element_clicked()
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	Rect_s32 rect = { ui_element->prev_position.x, ui_element->prev_position.y, ui_element->prev_size.width.get(), ui_element->prev_size.height.get() };
-	return was_key_just_pressed(KEY_LMOUSE) && _detect_intersection(&rect);;
+	return was_click(KEY_LMOUSE) && _detect_intersection(&rect);;
+}
+
+bool imgui::ui_element_double_clicked()
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	Rect_s32 rect = { ui_element->prev_position.x, ui_element->prev_position.y, ui_element->prev_size.width.get(), ui_element->prev_size.height.get() };
+	return was_double_click(KEY_LMOUSE) && _detect_intersection(&rect);;
 }
 
 UI_Element *imgui::get_ui_element()

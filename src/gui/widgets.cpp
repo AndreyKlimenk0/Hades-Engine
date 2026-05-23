@@ -1,12 +1,17 @@
 #include <assert.h>
 
 #include "widgets.h"
-#include "guiv2.h"
 
 using namespace imgui;
 
 static Text_Button_Theme button_theme;
 static List_Box_Theme list_theme;
+
+struct UI_State {
+	Element_ID active_list_box;
+};
+
+static UI_State ui_state;
 
 Text_Button_Theme::Text_Button_Theme()
 {
@@ -24,10 +29,15 @@ Text_Button_Theme::~Text_Button_Theme()
 
 List_Box_Theme::List_Box_Theme()
 {
-	width = 170;
-	height = 30;
-	rounding = 10;
-	color = Color(50, 50, 50);
+	width = 200;
+	height = 26;
+	field_panel_spacing = 2;
+	rounding = 6;
+	list_item_spacing;
+	background_color = Color(30);
+	item_hover_color = Color(45);
+	list_panel_padding = Padding(6);
+	list_item_padding = Padding(6);
 }
 
 List_Box_Theme::~List_Box_Theme()
@@ -56,74 +66,74 @@ bool button(Texture_View *texture_view)
 	return false;
 }
 
-void list_box(const char *name, Array<String> &list, u32 *index)
+void list_box(const char *label, Array<String> &list, u32 *index)
 {
-	assert(list.count > 0);
+	if (list.is_empty()) {
+		return;
+	}
 
 	if (*index >= list.count) {
 		*index = 0;
 	}
 
-	begin_ui_element("List box header #id");
-	Rect_s32 list_box_header_rect = get_ui_element()->get_rect();
-	set_size(filled_size(), filled_size());
+	begin_ui_element("List Box Header #id");
+
+	set_size(fit_size(), fit_size());
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	//set_background_color(Color::Blue); Delete
 
-	begin_ui_element("Selection field");
+	begin_ui_element("Field");
+	UI_Element *list_field = get_ui_element();
 	set_size(fixed_size(list_theme.width), fixed_size(list_theme.height));
 	set_rounding(list_theme.rounding, ROUND_RECT);
-	set_background_color(list_theme.color);
-	end_ui_element(); // Selection field
+	set_background_color(list_theme.background_color);
+	set_padding(list_theme.list_panel_padding + list_theme.list_item_padding);
 
- 	text(name);
+	set_layout(COLUMN_LAYOUT);
+	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
 
-	end_ui_element(); // List box header
+	text(list[*index]);
 
-	begin_ui_element("List box panel #id");
-	set_position(list_box_header_rect.x, list_box_header_rect.bottom() + 2);
-	set_size(fixed_size(list_theme.width), filled_size());
-	set_rounding(list_theme.rounding, ROUND_RECT);
-	set_background_color(list_theme.color);
-	
-	
-	for (u32 i = 0; i < list.count; i++) {
-		begin_ui_element("Item #id");
-		set_size(fixed_size(list_theme.width), fixed_size(30));
-		set_padding(Padding(5));
-		set_rounding(list_theme.rounding, ROUND_RECT);
-		set_background_color(Color::Blue);
-		end_ui_element();
+	if (ui_element_clicked() || ui_element_double_clicked()) {
+		if (list_field->id == ui_state.active_list_box) {
+			ui_state.active_list_box.reset();
+		} else {
+			ui_state.active_list_box = list_field->id;
+		}
 	}
-	
-	end_ui_element(); //List box panel
 
-	//begin_ui_element("List box #id");
-	//UI_Element *list_box_element = get_ui_element();
-	//Rect_s32 list_box_rect = list_box_element->get_rect();
-	//set_size(filled_size(), filled_size());
-	//set_layout(ROW_LAYOUT);
-	//set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	end_ui_element(); // Field
 
-	//text(name);
+	text(label); 
 
-	//begin_ui_element("List header");
-	//set_size(fixed_size(list_theme.width), fixed_size(list_theme.height));
-	//set_layout(ROW_LAYOUT);
-	//set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	//set_padding(Padding(10, 0, 0, 0));
-	//
-	//set_rounding(list_theme.rounding, ROUND_RECT);
-	//set_background_color(list_theme.color);
-	//text(list[*index]);
-	//end_ui_element(); // List header
+	end_ui_element(); // Header
 
-	//begin_ui_element("List panel");
-	//set_position(list_box_rect.x, list_box_rect.bottom() + 10);
-	//set_size(fixed_size(200), fixed_size(200));
-	//set_background_color(Color::Red);
-	//end_ui_element(); // List panel
+	if (list_field->id == ui_state.active_list_box) {
+		begin_ui_element("List Box Drop Panel #id");
+		set_position(list_field->get_rect().x, list_field->get_rect().bottom() + list_theme.field_panel_spacing);
+		set_size(fixed_size(list_theme.width), fit_size());
+		set_rounding(list_theme.rounding, ROUND_RECT);
+		set_background_color(list_theme.background_color);
+		set_space(list_theme.list_item_spacing);
+		set_padding(list_theme.list_panel_padding);
+		//set_outlining(2, Color(55));
 
-	//end_ui_element(); // List box
+		for (u32 item_index = 0; item_index < list.count; item_index++) {
+			begin_ui_element("Item #id");
+			set_size(grow_size(), fixed_size(list_theme.height));
+			set_layout(COLUMN_LAYOUT);
+			set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+			set_padding(list_theme.list_item_padding);
+			set_rounding(list_theme.rounding, ROUND_RECT);
+			set_background_color(ui_element_hovered() ? list_theme.item_hover_color : list_theme.background_color);
+			text(list[item_index]);
+			
+			if (ui_element_clicked() || ui_element_double_clicked()) {
+				*index = item_index;
+				ui_state.active_list_box.reset();
+			}
+			end_ui_element();
+		}
+		end_ui_element(); //Drop panel
+	}
 }
