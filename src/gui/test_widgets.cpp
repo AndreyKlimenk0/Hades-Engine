@@ -52,6 +52,9 @@ void draw_test_widgets()
 		print("Click by button 2");
 	}
 
+	static bool draw_aabb = false;
+	check_box("Draw AABB", &draw_aabb);
+
 	end_ui_element(); //Main plane
 
 	end_frame();

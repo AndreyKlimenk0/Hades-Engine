@@ -30,12 +30,20 @@ struct List_Box_Theme {
 	s32 width;
 	s32 height;
 	s32 field_panel_spacing;
+	s32 list_item_spacing;
 	u32 rounding;
-	u32 list_item_spacing;
 	Color background_color;
 	Color item_hover_color;
 	imgui::Padding list_panel_padding;
 	imgui::Padding list_item_padding;
+};
+
+struct Check_Box_Theme {
+	Check_Box_Theme();
+	~Check_Box_Theme();
+
+	s32 width;
+	s32 height;
 };
 
 void init_widgets();
@@ -50,5 +58,7 @@ bool button(const char *text);
 bool button(Texture_View *texture_view);
 
 void list_box(const char *name, Array<String> &list, u32 *index);
+
+bool check_box(const char *label, bool *state);
 
 #endif
