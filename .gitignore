@@ -8,6 +8,7 @@ desktop
 /data/textures/Scene_Demo/
 /data/models/Scene_Demo*
 /data/levels/scene_demo*
+keyboard_shortcuts.txt
 
 # User-specific files
 *.suo

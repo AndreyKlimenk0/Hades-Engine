@@ -204,7 +204,8 @@ struct Graphics_Command_List : Compute_Command_List {
 	virtual void draw(u32 vertex_count) = 0;
 	virtual void draw_indexed(u32 index_count) = 0;
 	virtual void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset) = 0;
-	virtual void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer = NULL) = 0;
+	virtual void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer) = 0;
+	virtual void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer, u64 count_buffer_offset) = 0;
 };
 
 template <typename T>

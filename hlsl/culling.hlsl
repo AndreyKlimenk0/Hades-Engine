@@ -8,6 +8,8 @@
 struct Render_Entity {
     uint mesh_idx;
     uint world_matrix_idx;
+    uint pad11;
+	uint pad22;
 };
 
 struct IndirectCommand {
@@ -32,7 +34,7 @@ AppendStructuredBuffer<IndirectCommand> culled_mesh_draw_commands : register(u0,
 
 bool frustum_culled(float3 min, float3 max)
 {
-    float4x4 view_perspective_matrix = mul(frame_info.view_matrix, frame_info.perspective_matrix);
+    float4x4 view_perspective_matrix = mul(frame_info.freeze_view_matrix, frame_info.perspective_matrix);
     
     float3 box_corners[] = {
             float3(min.x, min.y, min.z),

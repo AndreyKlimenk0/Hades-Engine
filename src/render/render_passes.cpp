@@ -9,6 +9,9 @@
 
 #include "render_api/base_structs.h"
 
+static Buffer *culled_draw_commands_buffer = NULL;
+static u64 draw_commands_counter_offset = 0;
+
 struct Shadow_Atlas {
 	u32 atlas_size;
 	u32 cascade_size;
@@ -259,8 +262,7 @@ void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, vo
 
 	Pass_Data pass_data;
 	Render_Entity *render_entity = NULL;
-	For(render_world->game_render_entities, render_entity)
-	{
+	For(render_world->game_render_entities, render_entity) {
 		pass_data.parameter0 = render_entity->mesh_idx;
 		pass_data.parameter1 = render_entity->world_matrix_idx;
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
@@ -375,63 +377,63 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_graphics_constants(0, 2, &shadow_atlas_info);
 	graphics_command_list->set_graphics_constants(1, 2, &filter);
 
-	static Buffer *command_buffer = NULL;
-	if (!command_buffer || (command_buffer->size() < (u64)render_world->game_render_entities.count)) {
-		DELETE_PTR(command_buffer);
-		Buffer_Desc buffer_desc;
-		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.size = render_world->game_render_entities.count * sizeof(IndirectCommand);
-		buffer_desc.stride = sizeof(IndirectCommand);
-		buffer_desc.name = "IndirectCommand Buffer";
+	//static Buffer *command_buffer = NULL;
+	//if (!command_buffer || (command_buffer->size() < (u64)render_world->game_render_entities.count)) {
+	//	DELETE_PTR(command_buffer);
+	//	Buffer_Desc buffer_desc;
+	//	buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+	//	buffer_desc.size = render_world->game_render_entities.count * sizeof(IndirectCommand);
+	//	buffer_desc.stride = sizeof(IndirectCommand);
+	//	buffer_desc.name = "IndirectCommand Buffer";
 
-		command_buffer = render_sys->render_device->create_buffer(&buffer_desc);
-	}
+	//	command_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	//}
 
-	static Buffer *pass_data_buffer = NULL;
-	if (!pass_data_buffer || (pass_data_buffer->size() < (u64)render_world->game_render_entities.count)) {
-		DELETE_PTR(pass_data_buffer);
-		Buffer_Desc buffer_desc;
-		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
-		buffer_desc.stride = sizeof(Pass_Data);
-		buffer_desc.name = "Pass Data Buffer";
+	//static Buffer *pass_data_buffer = NULL;
+	//if (!pass_data_buffer || (pass_data_buffer->size() < (u64)render_world->game_render_entities.count)) {
+	//	DELETE_PTR(pass_data_buffer);
+	//	Buffer_Desc buffer_desc;
+	//	buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+	//	buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
+	//	buffer_desc.stride = sizeof(Pass_Data);
+	//	buffer_desc.name = "Pass Data Buffer";
 
-		pass_data_buffer = render_sys->render_device->create_buffer(&buffer_desc);
-	}
+	//	pass_data_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	//}
 
-	Array<IndirectCommand> indirect_commands;
-	Array<Pass_Data> pass_data_list;
-	Render_Entity *render_entity = NULL;
-	u64 counter = 0;
-	For(render_world->game_render_entities, render_entity) {
-		Pass_Data pass_data;
-		pass_data.parameter0 = render_entity->mesh_idx;
-		pass_data.parameter1 = render_entity->world_matrix_idx;
-		pass_data_list.push(pass_data);
+	//Array<IndirectCommand> indirect_commands;
+	//Array<Pass_Data> pass_data_list;
+	//Render_Entity *render_entity = NULL;
+	//u64 counter = 0;
+	//For(render_world->game_render_entities, render_entity) {
+	//	Pass_Data pass_data;
+	//	pass_data.parameter0 = render_entity->mesh_idx;
+	//	pass_data.parameter1 = render_entity->world_matrix_idx;
+	//	pass_data_list.push(pass_data);
 
-		IndirectCommand indirect_command;
-		indirect_command.cbv = pass_data_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
-		indirect_command.drawArguments.VertexCountPerInstance = render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count();
-		indirect_command.drawArguments.InstanceCount = 1;
-		indirect_command.drawArguments.StartVertexLocation = 0;
-		indirect_command.drawArguments.StartInstanceLocation = 0;
+	//	IndirectCommand indirect_command;
+	//	indirect_command.cbv = pass_data_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
+	//	indirect_command.drawArguments.VertexCountPerInstance = render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count();
+	//	indirect_command.drawArguments.InstanceCount = 1;
+	//	indirect_command.drawArguments.StartVertexLocation = 0;
+	//	indirect_command.drawArguments.StartInstanceLocation = 0;
 
-		indirect_commands.push(indirect_command);
-	}
+	//	indirect_commands.push(indirect_command);
+	//}
 
-	render_sys->render_device->set_upload_command_list(graphics_command_list);
-	
-	command_buffer->request_write();
-	command_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
+	//render_sys->render_device->set_upload_command_list(graphics_command_list);
+	//
+	//command_buffer->request_write();
+	//command_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
 
-	pass_data_buffer->request_write();
-	pass_data_buffer->write(pass_data_list.to_void_ptr(), pass_data_list.get_size());
+	//pass_data_buffer->request_write();
+	//pass_data_buffer->write(pass_data_list.to_void_ptr(), pass_data_list.get_size());
 
-	render_sys->render_device->reset_upload_command_list();
+	//render_sys->render_device->reset_upload_command_list();
 
 	//graphics_command_list->transition_resource_barrier(command_buffer, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_INDIRECT_ARGUMENT);
 
-	graphics_command_list->execute_indirect(command_signature, indirect_commands.count, command_buffer);
+	graphics_command_list->execute_indirect(command_signature, render_world->game_render_entities.count, culled_draw_commands_buffer, culled_draw_commands_buffer, draw_commands_counter_offset);
 
 	//graphics_command_list->transition_resource_barrier(command_buffer, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_COPY_DEST);
 
@@ -945,6 +947,7 @@ void Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 struct GPU_Render_Entity {
 	u32 mesh_idx;
 	u32 world_matrix_idx;
+	Pad2 pad;
 };
 
 void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
@@ -975,8 +978,6 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 		draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
 	}
 
-	static Buffer *culled_draw_commands_buffer = NULL;
-	static u64 draw_commands_counter_offset = 0;
 	if (!culled_draw_commands_buffer || (culled_draw_commands_buffer->size() < (u64)render_world->game_render_entities.count)) {
 		DELETE_PTR(culled_draw_commands_buffer);
 		Buffer_Desc buffer_desc;
@@ -995,8 +996,8 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 		DELETE_PTR(render_entities_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
-		buffer_desc.stride = sizeof(Pass_Data);
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(GPU_Render_Entity);
+		buffer_desc.stride = sizeof(GPU_Render_Entity);
 		buffer_desc.name = "Render Entities";
 
 		render_entities_buffer = render_sys->render_device->create_buffer(&buffer_desc);
@@ -1013,7 +1014,7 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 		render_entities.push(gpu_render_entity);
 
 		IndirectCommand indirect_command;
-		indirect_command.cbv = render_entities_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
+		indirect_command.cbv = render_entities_buffer->gpu_virtual_address() + (counter++ * sizeof(GPU_Render_Entity));
 		indirect_command.drawArguments.VertexCountPerInstance = render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count();
 		indirect_command.drawArguments.InstanceCount = 1;
 		indirect_command.drawArguments.StartVertexLocation = 0;

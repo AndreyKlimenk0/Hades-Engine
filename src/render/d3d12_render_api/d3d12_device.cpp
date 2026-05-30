@@ -749,13 +749,21 @@ void D3D12_Command_List::draw_indexed(u32 index_count, u32 index_offset, u32 ver
 	command_list->DrawIndexedInstanced(index_count, 1, index_offset, vertex_offset, 0);
 }
 
-void D3D12_Command_List::execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer)
+void D3D12_Command_List::execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer)
 {
 	D3D12_Buffer *_argument_buffer = static_cast<D3D12_Buffer *>(argument_buffer);
 	D3D12_Command_Signature *_command_signature = static_cast<D3D12_Command_Signature *>(command_signature);
-	ID3D12Resource *d3d12_count_buffer = count_buffer ? static_cast<D3D12_Buffer *>(count_buffer)->current_buffer()->get() : NULL;
 
-	command_list->ExecuteIndirect(_command_signature->d3d12_command_signature.Get(), command_count, _argument_buffer->current_buffer()->get(), 0, d3d12_count_buffer, 0);
+	command_list->ExecuteIndirect(_command_signature->d3d12_command_signature.Get(), command_count, _argument_buffer->current_buffer()->get(), 0, NULL, 0);
+}
+
+void D3D12_Command_List::execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer, u64 count_buffer_offset)
+{
+	D3D12_Buffer *internal_argument_buffer = static_cast<D3D12_Buffer *>(argument_buffer);
+	D3D12_Buffer *internal_count_buffer = static_cast<D3D12_Buffer *>(count_buffer);
+	D3D12_Command_Signature *internal_command_signature = static_cast<D3D12_Command_Signature *>(command_signature);
+
+	command_list->ExecuteIndirect(internal_command_signature->d3d12_command_signature.Get(), command_count, internal_argument_buffer->current_buffer()->get(), 0, internal_count_buffer->current_buffer()->get(), count_buffer_offset);
 }
 
 D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value, const char *name)

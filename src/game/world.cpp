@@ -74,6 +74,7 @@ Entity_Id Game_World::make_perspective_camera(const Vector3 &position, const Vec
 	camera.up = Vector3::base_y;
 	camera.target = target;
 	camera.view_matrix = XMMatrixLookAtLH((Vector3)position, (Vector3)target, Vector3(0.0f, 0.0f, 1.0f));
+	camera.freeze_view_matrix = XMMatrixLookAtLH((Vector3)position, (Vector3)target, Vector3(0.0f, 0.0f, 1.0f));
 	camera.world_matrix = inverse(camera.view_matrix);
 	camera.perspective_matrix = XMMatrixPerspectiveFovLH(camera.fov, aspect_ration, near_plane, far_plane);
 	camera.x_rotation = 0.0f;
@@ -305,6 +306,19 @@ void Camera::handle_commands(Array<Entity_Command *> *entity_commands)
 		view_matrix = inverse(world_matrix);
 	}
 	view_perspective_matrix = view_matrix * perspective_matrix;
+}
+
+void Camera::freeze_camera(bool freeze)
+{
+	freeze_movement = freeze;
+	if (freeze_movement) {
+		freeze_view_matrix = view_matrix;
+	}
+}
+
+Matrix4 Camera::get_view_matrix()
+{
+	return freeze_movement ? freeze_view_matrix : view_matrix;
 }
 
 bool operator==(const Entity_Id &first, const Entity_Id &second)

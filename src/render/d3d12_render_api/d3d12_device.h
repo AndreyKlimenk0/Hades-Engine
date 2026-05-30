@@ -167,7 +167,8 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void draw(u32 vertex_count);
 	void draw_indexed(u32 index_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
-	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer = NULL);
+	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer);
+	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer, u64 count_buffer_offset);
 };
 
 struct D3D12_Fence : Fence {

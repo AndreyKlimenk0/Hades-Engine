@@ -20,6 +20,7 @@ struct GPU_Global_Info {
 
 struct GPU_Frame_Info {
 	Matrix4 view_matrix;
+	Matrix4 freeze_view_matrix;
 	Matrix4 perspective_matrix;
 	Matrix4 orthographic_matrix;
 	Vector3 view_position;

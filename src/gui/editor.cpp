@@ -336,6 +336,26 @@ void World_Window::draw()
 
 	//// 0.0f height here means: take the rest of the available space
 	ImGui::Text("Bottom child");
+
+	Entity_Id camera_id = render_world->camera_id;
+	if (camera_id.type == ENTITY_TYPE_CAMERA) {
+		static bool freeze = false;
+		Camera *camera = (Camera *)game_world->get_camera(camera_id);
+		if (ImGui::Checkbox("freeze camera", &freeze)) {
+			camera->freeze_camera(freeze);
+		}
+		if (freeze) {
+			Matrix4 m = camera->freeze_view_matrix;
+			Vector4 r0 = m.get_row(0);
+			Vector4 r1 = m.get_row(1);
+			Vector4 r2 = m.get_row(2);
+			Vector4 r3 = m.get_row(3);
+			ImGui::Text("%f, %f, %f, %f", r0.x, r0.y, r0.z, r0.w);
+			ImGui::Text("%f, %f, %f, %f", r1.x, r1.y, r1.z, r1.w);
+			ImGui::Text("%f, %f, %f, %f", r2.x, r2.y, r2.z, r2.w);
+			ImGui::Text("%f, %f, %f, %f", r3.x, r3.y, r3.z, r3.w);
+		}
+	}
 	ImGui::EndChild();
 
 	ImGui::End();
@@ -355,14 +375,12 @@ void Editor::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_world = &engine->render_world;
 
-	if (game_world->cameras.is_empty()) {
+	if (!valid_entity_id(render_world->camera_id)) {
 		//editor_camera_id = game_world->make_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f));
 		Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 20.0f, -250.0f), Vector3(0.0f, 0.0f, -1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
-		engine->render_world.set_rendering_view(editor_camera_id);
-	} else {
-		editor_camera_id = get_entity_id(&game_world->cameras.first());
-		engine->render_world.set_rendering_view(editor_camera_id);
+		engine->render_world.set_rendering_view(camera_id);
 	}
+	editor_camera_id = render_world->camera_id;
 
 	world_window.init(engine);
 	//world_window.open();

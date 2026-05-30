@@ -10,6 +10,7 @@ struct Global_Info {
 
 struct Frame_Info {
 	float4x4 view_matrix;
+	float4x4 freeze_view_matrix;
 	float4x4 perspective_matrix;
 	float4x4 orthographics_matrix;
 	float3 view_position;

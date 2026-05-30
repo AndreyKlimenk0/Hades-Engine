@@ -658,7 +658,7 @@ u32 Render_World::delete_render_entity(Entity_Id entity_id)
 void Render_World::update_shadows()
 {
 	Camera *camera = game_world->get_camera(camera_id);
-	Matrix4 inverse_view_matrix = inverse(camera->view_matrix);
+	Matrix4 inverse_view_matrix = inverse(camera->get_view_matrix());
 
 	for (u32 i = 0; i < cascaded_shadows_list.count; i++) {
 		Vector3 light_direction = cascaded_shadows_list[i].light_direction;

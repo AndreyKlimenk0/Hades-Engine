@@ -125,6 +125,9 @@ struct Entity_Command_Rotate : Entity_Command {
 };
 
 struct Camera : Entity {
+	Camera() { type = ENTITY_TYPE_CAMERA; }
+
+	bool freeze_movement = false;
 	float fov; 
 	float aspect_ratio; 
 	float near_plane; 
@@ -141,7 +144,11 @@ struct Camera : Entity {
 	Matrix4 perspective_matrix;
 	Matrix4 view_perspective_matrix;
 
+	Matrix4 freeze_view_matrix;
+
 	void handle_commands(Array<Entity_Command *> *entity_commands);
+	void freeze_camera(bool freeze);
+	Matrix4 get_view_matrix();
 };
 
 struct Group {

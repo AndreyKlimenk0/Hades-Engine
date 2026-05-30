@@ -54,6 +54,7 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("Scene_Demo.gltf");
 	run_command("load mesh", command_args);
 
+	//Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.0f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.0f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 	render_world->set_rendering_view(camera_id);
 
@@ -170,4 +171,9 @@ Render_System *Engine::get_render_system()
 Variable_Service *Engine::get_variable_service()
 {
 	return &engine->var_service;
+}
+
+Global_Config *Engine::get_global_config()
+{
+	return nullptr;
 }
