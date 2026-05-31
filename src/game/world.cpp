@@ -321,6 +321,11 @@ Matrix4 Camera::get_view_matrix()
 	return freeze_movement ? freeze_view_matrix : view_matrix;
 }
 
+Matrix4 Camera::get_view_perspective_matrix()
+{
+	return freeze_movement ? freeze_view_matrix * perspective_matrix : view_perspective_matrix;
+}
+
 bool operator==(const Entity_Id &first, const Entity_Id &second)
 {
 	if ((first.type == second.type) && (first.index == second.index)) {

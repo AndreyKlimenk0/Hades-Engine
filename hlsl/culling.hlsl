@@ -32,10 +32,13 @@ StructuredBuffer<Render_Entity> render_entities : register(t3, space0);
 StructuredBuffer<IndirectCommand> mesh_draw_commands : register(t4, space0);
 AppendStructuredBuffer<IndirectCommand> culled_mesh_draw_commands : register(u0, space0);
 
+bool within(float3 x, float3 y, float3 z)
+{
+    return all(x <= y) && all(y <= z);
+}
+
 bool frustum_culled(float3 min, float3 max)
 {
-    float4x4 view_perspective_matrix = mul(frame_info.freeze_view_matrix, frame_info.perspective_matrix);
-    
     float3 box_corners[] = {
             float3(min.x, min.y, min.z),
             float3(max.x, min.y, min.z),
@@ -48,10 +51,17 @@ bool frustum_culled(float3 min, float3 max)
             float3(max.x, max.y, max.z),
     };
     
-    for (uint i = 0; i < 8; i++) {
-        float4 result = mul(float4(box_corners[i], 1.0f), view_perspective_matrix);
-        float3 x = clip_to_uv_coordinates(result);
-        if (saturated(x)) {
+    for (uint i = 0; i < 6; i++) {
+        uint x = 0;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[0], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[1], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[2], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[3], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[4], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[5], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[6], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        x += dot(frame_info.frustum_planes[i], float4(box_corners[7], 1.0f)) < 0.0f ? 1.0f : 0.0f;
+        if (x == 8) {
             return false;
         }
     }
@@ -72,7 +82,7 @@ void cs_main(uint3 thread_id : SV_DispatchThreadId)
         float3 max = bounding_box.max + position;
         float3 min = bounding_box.min + position;
         
-        if (!frustum_culled(min, max)) {
+        if (frustum_culled(min, max)) {
             culled_mesh_draw_commands.Append(mesh_draw_commands[index]);
         }
     }

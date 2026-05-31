@@ -57,6 +57,38 @@ void update_test()
 {
 }
 
+struct Temp_Frame_Info {
+	Vector4 planes[6];
+};
+
+struct Planes {
+	Vector4 planes[6];
+};
+
+Planes get_planes()
+{
+	Planes x;
+	x.planes[0] = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+	x.planes[1] = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+	x.planes[2] = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+	x.planes[3] = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+	x.planes[4] = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+	x.planes[5] = Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+	return x;
+}
+
+void temp_f(float temp[6])
+{
+	temp[0] = 1.0f;
+	temp[1] = 2.0f;
+	temp[2] = 3.0f;
+	temp[3] = 4.0f;
+	temp[4] = 5.0f;
+	temp[5] = 6.0f;
+}
+
 void test()
 {
+	Temp_Frame_Info frame_info;
+	frame_info.planes[0] = get_planes().planes[0];
 }

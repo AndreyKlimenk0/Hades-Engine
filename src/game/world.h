@@ -149,6 +149,7 @@ struct Camera : Entity {
 	void handle_commands(Array<Entity_Command *> *entity_commands);
 	void freeze_camera(bool freeze);
 	Matrix4 get_view_matrix();
+	Matrix4 get_view_perspective_matrix();
 };
 
 struct Group {

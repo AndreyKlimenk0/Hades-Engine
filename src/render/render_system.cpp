@@ -11,6 +11,7 @@
 #include "../libs/memory/base.h"
 #include "../libs/math/functions.h"
 #include "../libs/math/structures.h"
+#include "../libs/math/3dmath.h"
 
 #include "d3d12_render_api/d3d12_functions.h"
 
@@ -287,6 +288,8 @@ void Pipeline_Resource_Manager::update_common_constant_buffers()
 	frame_info.view_position = camera->position;
 	frame_info.view_direction = camera->direction;
 	frame_info.light_count = render_world->lights.count;
+	
+	deriving_frustum_planes(camera->get_view_perspective_matrix(), frame_info.frustum_planes);
 
 	frame_info_buffer->write((void *)&frame_info, sizeof(GPU_Frame_Info), 0, 256);
 }

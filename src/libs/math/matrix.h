@@ -62,14 +62,16 @@ struct Matrix4 : XMFLOAT4X4 {
 	{
 	}
 
-	Vector4 get_row(u32 row_index);
+	Vector4 operator[](u32 row_index) const;
 
 	void set_row_0(const Vector4 &vector);
 	void set_row_1(const Vector4 &vector);
 	void set_row_2(const Vector4 &vector);
 	void set_row_3(const Vector4 &vector);
+	
+	Vector4 get_row(u32 row_index) const;
 
-	Matrix3 to_matrix3();
+	Matrix3 to_matrix3() const;
 };
 
 inline Vector2 transform(Vector2 *vector, Matrix4 *transform_matrix);
@@ -162,14 +164,20 @@ inline Vector3 &operator*=(Vector3 &vector, const Matrix3 &matrix)
 	return vector;
 }
 
-inline Matrix3 Matrix4::to_matrix3()
+inline Matrix3 Matrix4::to_matrix3() const
 {
 	return Matrix3(_11, _12, _13,
 				   _21, _22, _23,
 				   _31, _32, _33);
 }
 
-inline Vector4 Matrix4::get_row(u32 row_index)
+inline Vector4 Matrix4::operator[](u32 row_index) const
+{
+	assert(row_index < 4);
+	return Vector4(m[row_index][0], m[row_index][1], m[row_index][2], m[row_index][3]);
+}
+
+inline Vector4 Matrix4::get_row(u32 row_index) const
 {
 	assert(row_index < 4);
 	return Vector4(m[row_index][0], m[row_index][1], m[row_index][2], m[row_index][3]);

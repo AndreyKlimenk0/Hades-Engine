@@ -35,4 +35,14 @@ inline Matrix4 make_rotation_matrix_v2(Vector3 *direction, Vector3 *up_direction
 	return rotation_matrix;
 }
 
+inline void deriving_frustum_planes(const Matrix4 &matrix, Vector4 frustum_planes[6])
+{
+	frustum_planes[0] = matrix[3] + matrix[0];
+	frustum_planes[1] = matrix[3] - matrix[0];
+	frustum_planes[2] = matrix[3] + matrix[1];
+	frustum_planes[3] = matrix[3] - matrix[1];
+	frustum_planes[4] = matrix[3] + matrix[2];
+	frustum_planes[5] = matrix[3] - matrix[2];
+}
+
 #endif

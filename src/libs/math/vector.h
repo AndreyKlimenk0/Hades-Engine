@@ -116,7 +116,7 @@ struct Vector4 : XMFLOAT4 {
 	Vector4 &operator/=(const Vector4 &other);
 
 	operator float *();
-	operator XMVECTOR();
+	operator XMVECTOR() const;
 };
 
 inline float dot(const Vector4 &first_vector, const Vector4 &second_vector);
@@ -127,6 +127,7 @@ inline float find_distance(const Vector4 &first_vector4, const Vector4 &second_v
 inline Vector3 to_vector3(const Vector4 &vector);
 inline Vector4 negate(Vector4 *vector);
 inline Vector4 normalize(Vector4 *vector);
+inline Vector4 normalize(const Vector4 &vector4);
 inline Vector4 cross(const Vector4 &first_vector, const Vector4 &second_vector, const Vector4 &third_vector);
 inline Vector4 floor(const Vector4 &vector);
 inline Vector4 round(const Vector4 &vector);
@@ -642,7 +643,7 @@ inline Vector4::operator float *()
 	return &x;
 }
 
-inline Vector4::operator XMVECTOR()
+inline Vector4::operator XMVECTOR() const
 {
 	return XMVectorSet(x, y, z, w);
 }
@@ -682,6 +683,11 @@ inline Vector4 normalize(Vector4 *vector4)
 {
 	XMVECTOR vector = XMLoadFloat4(vector4);
 	return XMVector4Normalize(vector);
+}
+
+inline Vector4 normalize(const Vector4 &vector4)
+{
+	return XMVector4Normalize(vector4);
 }
 
 inline float dot(const Vector4 &first_vector, const Vector4 &second_vector)
