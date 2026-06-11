@@ -274,20 +274,45 @@ void draw_test_gui()
 
 	//end_ui_element();
 
-	begin_ui_element("Main rect");
-	set_position(30, 30);
-	//set_size(fit_size(), fit_size());
-	set_size(fixed_size(100), fit_size());
-	set_padding(Padding(10));
-	set_background_color(Color::Cyan);
+	//begin_ui_element("Main rect");
+	//set_position(30, 30);
+	////set_size(fit_size(), fit_size());
+	//set_size(fixed_size(100), fit_size());
+	//set_padding(Padding(10));
+	//set_background_color(Color::Cyan);
 
-	for (int i = 0; i < 3; i++) {
-		begin_ui_element("Red #id");
-		//set_size(fixed_size(100), fixed_size(30));
-		set_size(grow_size(), fixed_size(30));
-		set_background_color(Color::Red);
-		end_ui_element();
-	}
+	//for (int i = 0; i < 3; i++) {
+	//	begin_ui_element("Red #id");
+	//	//set_size(fixed_size(100), fixed_size(30));
+	//	set_size(grow_size(), fixed_size(30));
+	//	set_background_color(Color::Red);
+	//	end_ui_element();
+	//}
+
+	//end_ui_element();
+
+	begin_ui_element("Main rect");
+	set_position(10, 10);
+	set_size(fixed_size(600), fixed_size(600));
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_VERTICAL_CENTER);
+	set_background_color(Color(45));
+	set_space(0);
+
+	begin_ui_element("Red");
+	set_size(fixed_size(200), fixed_size(200));
+	set_background_color(Color::Red);
+	end_ui_element();
+
+	begin_ui_element("Green");
+	set_size(fixed_size(100), fixed_size(100));
+	set_background_color(Color::Green);
+	end_ui_element();
+
+	begin_ui_element("Orange");
+	set_size(fixed_size(50), fixed_size(50));
+	set_background_color(Color::Blue);
+	end_ui_element();
 
 	end_ui_element();
 

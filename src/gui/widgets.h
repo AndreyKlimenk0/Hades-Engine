@@ -46,6 +46,14 @@ struct Check_Box_Theme {
 	s32 height;
 };
 
+struct Slider_Theme {
+	Slider_Theme();
+	~Slider_Theme();
+
+	s32 width;
+	s32 height;
+};
+
 void init_widgets();
 
 void push_button_theme(Text_Button_Theme *button_theme);
@@ -60,5 +68,7 @@ bool button(Texture_View *texture_view);
 void list_box(const char *name, Array<String> &list, u32 *index);
 
 bool check_box(const char *label, bool *state);
+
+void slider(const char *label, float min, float max, float *value);
 
 #endif

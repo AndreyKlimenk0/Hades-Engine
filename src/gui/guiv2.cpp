@@ -20,6 +20,8 @@ static u32 ui_element_debug_counter = 0;
 static const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
 static const u32 UI_ELEMENT_DRAW_TEXT = 0x2;
 static const u32 UI_ELEMENT_DRAW = 0x4;
+static const u32 UI_ELEMENT_SET_RELATIVE_X_POSITION = 0x8;
+static const u32 UI_ELEMENT_SET_RELATIVE_Y_POSITION = 0x10;
 
 
 static AxisV2 flip_axis(AxisV2 axis)
@@ -518,11 +520,12 @@ static void layout_child_elements(UI_Element *ui_element)
 		}
 
 		if (ui_element->alignment_flags & ALIGNMENT_VERTICAL_CENTER) {
+			// Sometimes I need to align only the vertical center and set the X position manually.
+			layout_ui_elements_in_center(ui_element, Y_AXISV2);
 			if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
-				layout_ui_elements_in_center(ui_element, Y_AXISV2);
 				layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, X_AXISV2);
 			} if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
-				layout_ui_elements_in_center(ui_element, Y_AXISV2);
+				//layout_ui_elements_in_center(ui_element, Y_AXISV2);
 				layout_ui_elements_right_to_left_or_bottom_to_top(ui_element, X_AXISV2);
 			}
 		}
@@ -688,6 +691,26 @@ void imgui::set_position(s32 x, s32 y)
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	ui_element->flags &= ~UI_ELEMENT_AUTO_LAYOUT;
 	ui_element->position = Point_s32(x, y);
+}
+
+void imgui::set_relative_position_x(s32 x)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags |= UI_ELEMENT_SET_RELATIVE_X_POSITION;
+	ui_element->position.x = x;
+}
+
+void imgui::set_relative_position_y(s32 y)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags |= UI_ELEMENT_SET_RELATIVE_Y_POSITION;
+	ui_element->position.y = y;
+}
+
+void imgui::set_relative_position(s32 x, s32 y)
+{
+	set_relative_position_x(x);
+	set_relative_position_y(y);
 }
 
 void imgui::set_size(Size_Dimension horizontal, Size_Dimension vertical)

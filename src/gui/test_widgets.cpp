@@ -55,6 +55,9 @@ void draw_test_widgets()
 	static bool draw_aabb = false;
 	check_box("Draw AABB", &draw_aabb);
 
+	static float value = 5.0f;
+	slider("Theta", 1.0f, 10.0f, &value);
+
 	end_ui_element(); //Main plane
 
 	end_frame();

@@ -7,6 +7,7 @@ using namespace imgui;
 static Text_Button_Theme button_theme;
 static List_Box_Theme list_theme;
 static Check_Box_Theme check_box_theme;
+static Slider_Theme slider_theme;
 
 struct UI_State {
 	Element_ID active_list_box;
@@ -52,6 +53,16 @@ Check_Box_Theme::Check_Box_Theme()
 }
 
 Check_Box_Theme::~Check_Box_Theme()
+{
+}
+
+Slider_Theme::Slider_Theme()
+{
+	width = 200;
+	height = 20;
+}
+
+Slider_Theme::~Slider_Theme()
 {
 }
 
@@ -184,4 +195,48 @@ bool check_box(const char *label, bool *state)
 	end_ui_element(); // Check box
 	
 	return check_box_clicked;
+}
+
+void slider(const char *label, float min, float max, float *value)
+{
+	begin_ui_element("Slider #id");
+	set_size(fit_size(), fit_size());
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+
+	slider_theme.height = 40;
+
+	begin_ui_element("Slider Box");
+	auto slider_box = get_ui_element();
+	set_size(fixed_size(slider_theme.width), fixed_size(slider_theme.height));
+	set_background_color(Color(25));
+	set_outlining(1, Color(65));
+	set_rounding(8);
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_VERTICAL_CENTER);
+
+	//begin_ui_element("RED");
+	//u32 h = 14;
+	//set_size(fixed_size(h), fixed_size(h));
+	//set_background_color(Color::Red);
+	//set_rounding(8);
+	//end_ui_element();
+
+	//begin_ui_element("Green");
+	//set_size(fixed_size(h), fixed_size(h));
+	//set_background_color(Color::Green);
+	//set_rounding(8);
+	//end_ui_element();
+
+	u32 x = 20;
+	begin_ui_element("UI");
+	set_size(fixed_size(slider_theme.height - x), fixed_size(slider_theme.height - x));
+	//set_position(slider_box->prev_position.x, slider_box->prev_position.y);
+	set_background_color(Color(99));
+	set_rounding((slider_theme.height - x) / 2);
+	end_ui_element(); // UI
+
+	end_ui_element(); // Slider Box
+
+	end_ui_element(); // Slider
 }

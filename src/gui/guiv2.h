@@ -178,6 +178,9 @@ namespace imgui {
 	void end_ui_element();
 
 	void set_position(s32 x, s32 y);
+	void set_relative_position_x(s32 x);
+	void set_relative_position_y(s32 y);
+	void set_relative_position(s32 x, s32 y);
 	void set_size(Size_Dimension horizontal, Size_Dimension vertical);
 	void set_space(s32 space);
 	void set_padding(Padding padding);
