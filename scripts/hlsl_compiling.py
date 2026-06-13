@@ -43,7 +43,7 @@ shader_files = [
     Shader_File("forward_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("depth_map.hlsl", Shader_Type.VERTEX_SHADER),
     Shader_File("debug_cascaded_shadows.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    # Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
+    Shader_File("draw_vertices.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("silhouette.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("outlining.hlsl", Shader_Type.COMPUTE_SHADER),
     Shader_File("downsample_hzb.hlsl", Shader_Type.COMPUTE_SHADER),

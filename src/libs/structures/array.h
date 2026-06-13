@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../number_types.h"
+#include "../../sys/utils.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
@@ -50,7 +51,10 @@ struct Array {
 };
 
 template <typename T>
-inline void merge(Array<T>* dst, Array<T>* src);
+inline void merge(Array<T> *dst, Array<T> *src);
+
+template <typename T>
+inline void move(Array<T> *dst, Array<T> *src);
 
 template <typename T>
 inline void free_memory(Array<T *> *array);
@@ -262,6 +266,15 @@ inline void merge(Array<T> *dst, Array<T> *src)
 	}
 	memcpy((void *)&dst->items[dst->count], (void *)src->items, sizeof(T) * src->count);
 	dst->count += src->count;
+}
+
+template<typename T>
+inline void move(Array<T> *dst, Array<T> *src)
+{
+	DELETE_ARRAY(dst->items);
+	dst->items = src->items;
+	dst->count = src->count;
+	dst->size = src->size;
 }
 
 template <typename T>

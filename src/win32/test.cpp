@@ -87,8 +87,55 @@ void temp_f(float temp[6])
 	temp[5] = 6.0f;
 }
 
+#include "../libs/structures/sparse_set.h"
+
+template <typename T>
+void print_sparse_set(Sparse_Set<T> *sparse_set)
+{
+	print("------------Print Sparse Array-------------");
+	for (u32 i = 0; i < sparse_set->sparse_array.count; i++) {
+		print("[{}] dense index {}", i, sparse_set->sparse_array[i]);
+	}
+
+	for (u32 i = 0; i < sparse_set->dense_array.count; i++) {
+		print("[{}] sparse index {}, data {}", i, sparse_set->dense_array[i].sparse_index, sparse_set->dense_array[i].value);
+	}
+}
+
 void test()
 {
-	Temp_Frame_Info frame_info;
-	frame_info.planes[0] = get_planes().planes[0];
+	Sparse_Set<String> temp;
+	//temp.push("C++11");
+	//temp.push("C++17");
+	//temp.push("C++20");
+	//temp.push("Python");
+	//temp.push("Jave");
+	temp.push("Rust");
+	temp.push("Jai");
+	temp.push("Lua");
+
+	print_sparse_set(&temp);
+	temp.remove(0);
+	print_sparse_set(&temp);
+	temp.remove(1);
+	print_sparse_set(&temp);
+	temp.remove(2);
+	print_sparse_set(&temp);
+
+	//temp.push("Jave");
+	u32 i0 = temp.push("Rust");
+	u32 i1 = temp.push("Jai");
+	u32 i2 = temp.push("Lua");
+
+	String s1 = temp.get_sparse(i0);
+	String s2 = temp.get_sparse(i1);
+	String s3 = temp.get_sparse(i2);
+
+	String s11 = temp.get_dense(0);
+	String s22 = temp.get_dense(1);
+	String s33 = temp.get_dense(2);
+
+	print_sparse_set(&temp);
+
+	int x = 0;
 }

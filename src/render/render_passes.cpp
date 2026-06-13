@@ -1030,7 +1030,7 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	culled_draw_commands_buffer->request_write();
 	u32 reset = 0;
-	culled_draw_commands_buffer->write((void *)reset, sizeof(u32), draw_commands_counter_offset);
+	culled_draw_commands_buffer->write((void *)&reset, sizeof(u32), draw_commands_counter_offset);
 	//memset(culled_draw_commands_buffer->write_only_ptr(), 0, culled_draw_commands_buffer->size());
 
 	render_entities_buffer->request_write();
@@ -1053,6 +1053,79 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_COMMON);
 	
+	graphics_command_list->end_event();
+}
+
+void Primitive_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Primitive", device, shader_manager, resource_manager);
+}
+
+void Primitive_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+}
+
+struct Primitive_Pass_Data {
+	Vector4 color;
+	Matrix4 world_matrix;
+};
+
+void Primitive_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Primitive_Pass_Data));
+	
+	access = ALLOW_INPUT_LAYOUT_ACCESS | ALLOW_VERTEX_SHADER_ACCESS | ALLOW_PIXEL_SHADER_ACCESS;
+	Render_Pass::setup_root_signature(device);
+}
+
+void Primitive_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = root_signature;
+	graphics_pipeline_desc.input_layouts.push(Input_Layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT));
+	graphics_pipeline_desc.primitive_type = PRIMITIVE_TYPE_LINE;
+	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, draw_vertices)->vs_bytecode.bytecode_ref();
+	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, draw_vertices)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
+}
+
+void Primitive_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_System *render_sys = (Render_System *)args;
+	Primitive_Renderer *renderer = &render_sys->primitive_renderer;
+	
+	if (renderer->draw_commands.empty()) {
+		return;
+	}
+
+	graphics_command_list->begin_event("Draw primitives");
+
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
+	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
+	graphics_command_list->set_render_target(render_sys->swap_chain->get_back_buffer(), render_sys->swap_chain->get_depth_stencil_buffer());
+
+	graphics_command_list->set_vertex_buffer(renderer->vertex_buffer);
+
+	Primitive_Pass_Data pass_data;
+	Primitive_Draw_Command *draw_command = NULL;
+	for (u32 i = 0; i < renderer->draw_commands.dense_count(); i++) {
+		Primitive_Draw_Command draw_command = renderer->draw_commands.get_dense(i);
+		pass_data.color = draw_command.color;
+		pass_data.world_matrix = draw_command.world_matrix;
+		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
+		graphics_command_list->draw(draw_command.vertex_count, draw_command.vertex_offset);
+	}
 	graphics_command_list->end_event();
 }
 

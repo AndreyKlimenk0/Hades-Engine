@@ -689,8 +689,6 @@ void  D3D12_Command_List::set_vertex_buffer(Buffer *buffer)
 	D3D12_Buffer *internal_buffer = (D3D12_Buffer *)buffer;
 	D3D12_Base_Buffer *internal_base_buffer = internal_buffer->current_buffer();
 
-	assert((internal_base_buffer->size() % internal_base_buffer->stride) == 0);
-
 	D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
 	vertex_buffer_view.BufferLocation = internal_base_buffer->gpu_address();
 	vertex_buffer_view.SizeInBytes = safe_cast_u64_to_u32(internal_base_buffer->size());
@@ -734,9 +732,9 @@ void  D3D12_Command_List::set_graphics_descriptor_table(u32 shader_register, u32
 	command_list->SetGraphicsRootDescriptorTable(parameter_index, internal_base_descriptor->gpu_handle);
 }
 
-void  D3D12_Command_List::draw(u32 vertex_count)
+void  D3D12_Command_List::draw(u32 vertex_count, u32 vertex_offset)
 {
-	command_list->DrawInstanced(vertex_count, 1, 0, 0);
+	command_list->DrawInstanced(vertex_count, 1, vertex_offset, 0);
 }
 
 void  D3D12_Command_List::draw_indexed(u32 index_count)

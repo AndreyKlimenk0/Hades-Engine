@@ -165,6 +165,9 @@
     <ClCompile Include="src\libs\fps_counter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\renderers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\D3DX11.h">
@@ -852,6 +855,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\libs\fps_counter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\renderers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\libs\structures\sparse_set.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

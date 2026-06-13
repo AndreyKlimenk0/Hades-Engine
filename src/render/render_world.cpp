@@ -198,6 +198,7 @@ void resolve_texture_file_path(const char *texture_file_name, const char *textur
 	}
 }
 
+// Uploading texture data through buffers https://learn.microsoft.com/en-us/windows/win32/direct3d12/upload-and-readback-of-texture-data.
 void Model_Storage::pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory)
 {
 	if (textures_names.is_empty()) {
@@ -254,7 +255,8 @@ void Model_Storage::pre_load_textures(Array<String> &textures_names, const char 
 					DELETE_PTR(staging_buffer);
 					Buffer_Desc buffer_desc;
 					buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-					buffer_desc.stride = new_texture->size();
+					buffer_desc.size = align_address<u32>(texture_desc.width * dxgi_format_size(texture_desc.format), get_texture_pitch_alignment()) * texture_desc.height;
+					buffer_desc.size = align_address<u32>(buffer_desc.size, get_texture_placement_alignment());
 					buffer_desc.name = "Image data";
 					staging_buffer = render_device->create_buffer(&buffer_desc);
 					staging_buffers[j] = staging_buffer;
@@ -530,6 +532,7 @@ void Render_World::update_render_entities()
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
 		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
 	}
+
 	if (!world_matrices_buffer || (world_matrices_buffer->count() < (u64)render_entity_world_matrices.count)) {
 		DELETE_PTR(world_matrices_buffer);
 		Buffer_Desc buffer_desc;

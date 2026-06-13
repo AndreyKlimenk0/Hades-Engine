@@ -164,7 +164,7 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void set_graphics_constant_buffer(u32 shader_register, u32 shader_space, Buffer *constant_buffer);
 	void set_graphics_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor);
 
-	void draw(u32 vertex_count);
+	void draw(u32 vertex_count, u32 vertex_offset = 0);
 	void draw_indexed(u32 index_count);
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer);

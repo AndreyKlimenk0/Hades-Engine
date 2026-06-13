@@ -106,6 +106,8 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 
 void Render_System::init_passes()
 {
+	primitive_renderer.init(render_device);
+
 	Shader_Manager *shader_manager = &Engine::get_instance()->shader_manager;
 	UI_Storage *ui_storage = &Engine::get_instance()->ui_storage;
 	Render_World *render_world = Engine::get_render_world();
@@ -120,6 +122,7 @@ void Render_System::init_passes()
 	passes.depth_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.generate_hzb.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.primitive_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
 	render_pass_submissions.push({ &passes.culling_pass,  (void *)render_world, (void *)this });
@@ -131,6 +134,7 @@ void Render_System::init_passes()
 	
 	render_pass_submissions.push({ &passes.depth_pass, (void *)render_world,   (void *)this });
 	render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
+	render_pass_submissions.push({ &passes.primitive_pass, (void *)render_world,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -165,6 +169,8 @@ void Render_System::render()
 	begin_profile_task("Rendering");
 
 	notify_start_frame();
+
+	primitive_renderer.prepare_for_rendering();
 	
 	pipeline_resource_manager.update_common_constant_buffers();
 

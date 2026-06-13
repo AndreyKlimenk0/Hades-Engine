@@ -7,6 +7,11 @@ u32 get_texture_pitch_alignment()
 	return D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 }
 
+u32 get_texture_placement_alignment()
+{
+	return D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+}
+
 Render_Device *create_render_device(u64 initial_expected_value)
 {
 	return create_d3d12_render_device(initial_expected_value);

@@ -577,9 +577,27 @@ void Editor::render()
 			if (ImGui::MenuItem("Diffuse")) {}
 			ImGui::EndMenu();
 		}
+		static Array<Primitive_ID> primitive_ids;
 		FPS_Counter *fps_counter = &Engine::get_instance()->fps_counter;
 		//ImGui::Text("Fps %lld | Avg Fps %lld | Min Fps %lld | Max Fps %lld | %lldms", fps_counter->fps, fps_counter->average_fps, fps_counter->min_fps, fps_counter->max_fps, fps_counter->frame_time);
 		ImGui::Text("Avg Fps %lld | Min Fps %lld | Max Fps %lld | %lldms | Fps %lld", fps_counter->average_fps, fps_counter->min_fps, fps_counter->max_fps, fps_counter->frame_time, fps_counter->fps);
+		static bool display = false;
+		if (ImGui::Checkbox("Display AABBs", &display)) {
+			Primitive_Renderer *primitive_renderer = &render_sys->primitive_renderer;
+			if (display) {
+				primitive_ids.clear();
+				Render_Entity *render_entity = NULL;
+				For(render_world->game_render_entities, render_entity) {
+					Entity *entity = game_world->get_entity(render_entity->entity_id);
+					AABB aabb = make_AABB(&render_world->model_storage.render_models[render_entity->mesh_idx]->mesh, get_world_matrix(entity));
+					primitive_ids.push(primitive_renderer->add_aabb(&aabb));
+				}
+			} else {
+				for (u32 i = 0; i < primitive_ids.count; i++) {
+					primitive_renderer->remove_primitive(primitive_ids[i]);
+				}
+			}
+		}
 		ImGui::EndMainMenuBar();
 	}
 	world_window.draw();

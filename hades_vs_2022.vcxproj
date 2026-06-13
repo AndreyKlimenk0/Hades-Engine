@@ -225,6 +225,7 @@
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
     <ClCompile Include="src\render\helpers.cpp" />
     <ClCompile Include="src\render\mesh.cpp" />
+    <ClCompile Include="src\render\renderers.cpp" />
     <ClCompile Include="src\render\render_api\base_structs.cpp" />
     <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptor_heap.cpp" />
     <ClCompile Include="src\render\d3d12_render_api\d3d12_device.cpp" />
@@ -440,6 +441,7 @@
     <ClInclude Include="src\libs\structures\hash_table.h" />
     <ClInclude Include="src\libs\structures\linked_list.h" />
     <ClInclude Include="src\libs\structures\queue.h" />
+    <ClInclude Include="src\libs\structures\sparse_set.h" />
     <ClInclude Include="src\libs\structures\stack.h" />
     <ClInclude Include="src\libs\structures\tree.h" />
     <ClInclude Include="src\libs\utils.h" />
@@ -447,6 +449,7 @@
     <ClInclude Include="src\render\helpers.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />
+    <ClInclude Include="src\render\renderers.h" />
     <ClInclude Include="src\render\render_api\base_structs.h" />
     <ClInclude Include="src\render\d3d12_render_api\d3d12_descriptors.h" />
     <ClInclude Include="src\render\d3d12_render_api\d3d12_functions.h" />

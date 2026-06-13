@@ -95,6 +95,7 @@ inline Matrix4 make_scale_matrix(Vector3 *scaling);
 inline Matrix4 make_scale_matrix(float scale_x, float scale_y, float scale_z);
 inline Matrix4 make_translation_matrix(Vector2 *vector);
 inline Matrix4 make_translation_matrix(Vector3 *vector);
+inline Matrix4 make_translation_matrix(const Vector3 &vector3);
 
 inline Matrix4 make_look_at_matrix(const Vector3 &view_position, const Vector3 &view_direction, const Vector3 &up = Vector3(0.0f, 1.0f, 0.0f));
 inline Matrix4 make_look_to_matrix(const Vector3 &view_position, const Vector3 &view_direction, const Vector3 &up = Vector3(0.0f, 1.0f, 0.0f));
@@ -289,9 +290,14 @@ inline Matrix4 make_translation_matrix(Vector2 *vector)
 	return make_translation_matrix(&temp);
 }
 
-Matrix4 make_translation_matrix(Vector3 *vector)
+inline Matrix4 make_translation_matrix(Vector3 *vector)
 {
 	return XMMatrixTranslation(vector->x, vector->y, vector->z);
+}
+
+inline Matrix4 make_translation_matrix(const Vector3 &vector3)
+{
+	return XMMatrixTranslation(vector3.x, vector3.y, vector3.z);
 }
 
 inline Matrix4 make_look_at_matrix(const Vector3 &view_position, const Vector3 &view_direction, const Vector3 &up)

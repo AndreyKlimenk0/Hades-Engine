@@ -10,6 +10,7 @@
 #include "../../libs/number_types.h"
 
 u32 get_texture_pitch_alignment();
+u32 get_texture_placement_alignment();
 
 struct CPU_Descriptor {
 	CPU_Descriptor() = default;
@@ -201,7 +202,7 @@ struct Graphics_Command_List : Compute_Command_List {
 	virtual void set_graphics_constants(u32 shader_register, u32 shader_space, u32 data_size, void *data) = 0;
 	virtual void set_graphics_descriptor_table(u32 shader_register, u32 shader_space, Shader_Register register_type, GPU_Descriptor *base_descriptor) = 0;
 	
-	virtual void draw(u32 vertex_count) = 0;
+	virtual void draw(u32 vertex_count, u32 vertex_offset = 0) = 0;
 	virtual void draw_indexed(u32 index_count) = 0;
 	virtual void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset) = 0;
 	virtual void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer) = 0;

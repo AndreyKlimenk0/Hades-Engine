@@ -10,6 +10,7 @@
 #include "../libs/math/structures.h"
 
 #include "gpu_data.h"
+#include "renderers.h"
 #include "render_passes.h"
 #include "render_api/render.h"
 
@@ -103,6 +104,8 @@ struct Render_System {
 	Render_Device *render_device = NULL;
 	Swap_Chain *swap_chain = NULL;
 
+	Primitive_Renderer primitive_renderer;
+
 	Fence *frame_fence = NULL;
 	Command_Queue *copy_queue = NULL;
 	Command_Queue *compute_queue = NULL;
@@ -118,6 +121,7 @@ struct Render_System {
 		Generate_HZB generate_hzb;
 		Depth_Pass depth_pass;
 		Culling_Pass culling_pass;
+		Primitive_Pass primitive_pass;
 	} passes;
 	
 	Array<Render_Pass_Submission> render_pass_submissions;

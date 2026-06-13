@@ -73,8 +73,8 @@ Entity_Id Game_World::make_perspective_camera(const Vector3 &position, const Vec
 	camera.far_plane = far_plane;
 	camera.up = Vector3::base_y;
 	camera.target = target;
-	camera.view_matrix = XMMatrixLookAtLH((Vector3)position, (Vector3)target, Vector3(0.0f, 0.0f, 1.0f));
-	camera.freeze_view_matrix = XMMatrixLookAtLH((Vector3)position, (Vector3)target, Vector3(0.0f, 0.0f, 1.0f));
+	camera.view_matrix = XMMatrixLookAtLH((Vector3)position, (Vector3)target, Vector3(0.0f, 1.0f, 0.0f));
+	camera.freeze_view_matrix = XMMatrixLookAtLH((Vector3)position, (Vector3)target, Vector3(0.0f, 1.0f, 0.0f));
 	camera.world_matrix = inverse(camera.view_matrix);
 	camera.perspective_matrix = XMMatrixPerspectiveFovLH(camera.fov, aspect_ration, near_plane, far_plane);
 	camera.x_rotation = 0.0f;
