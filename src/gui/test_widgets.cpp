@@ -55,8 +55,16 @@ void draw_test_widgets()
 	static bool draw_aabb = false;
 	check_box("Draw AABB", &draw_aabb);
 
-	static float value = 5.0f;
-	slider("Theta", 1.0f, 10.0f, &value);
+	static float value0 = 36.0f;
+	static float value1 = -36.0f;
+	static float value2 = -18.0f;
+	static float value3 = 18.0f;
+	static float value4 = 0.0f;
+	slider("Test 0", -36.0f, 36.0f, &value0);
+	slider("Test 1", -36.0f, 36.0f, &value1);
+	slider("Test 2", -36.0f, 36.0f, &value2);
+	slider("Test 3", -36.0f, 36.0f, &value3);
+	slider("Test 4", -36.0f, 36.0f, &value4);
 
 	end_ui_element(); //Main plane
 

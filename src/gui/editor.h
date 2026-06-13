@@ -39,7 +39,7 @@ struct Editor_Window {
 	virtual void close();
 	virtual void draw() = 0;
 
-	void set_position(s32 x, s32 y);
+	void set_absolute_position(s32 x, s32 y);
 	void set_size(s32 width, s32 height);
 };
 

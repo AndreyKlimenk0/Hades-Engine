@@ -149,7 +149,7 @@ namespace imgui {
 		Color outlining_color;
 
 		//Content
-		const char *text = NULL;
+		String text;
 
 		//Context
 		Element_ID id;
@@ -177,10 +177,13 @@ namespace imgui {
 	void begin_ui_element(const char *name);
 	void end_ui_element();
 
-	void set_position(s32 x, s32 y);
+	void set_absolute_position_x(s32 x);
+	void set_absolute_position_y(s32 y);
+	void set_absolute_position(s32 x, s32 y);
 	void set_relative_position_x(s32 x);
 	void set_relative_position_y(s32 y);
 	void set_relative_position(s32 x, s32 y);
+	
 	void set_size(Size_Dimension horizontal, Size_Dimension vertical);
 	void set_space(s32 space);
 	void set_padding(Padding padding);
@@ -191,10 +194,13 @@ namespace imgui {
 	void set_outlining(u32 thikness, const Color &color);
 
 	void text(const char *text);
+	void text(const char *ui_element_name, const char *text);
 
 	bool ui_element_hovered();
 	bool ui_element_clicked();
 	bool ui_element_double_clicked();
+
+	Rect_s32 ui_element_rect();
 
 	UI_Element *get_ui_element();
 }

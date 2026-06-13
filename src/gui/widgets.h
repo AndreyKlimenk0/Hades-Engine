@@ -49,9 +49,15 @@ struct Check_Box_Theme {
 struct Slider_Theme {
 	Slider_Theme();
 	~Slider_Theme();
-
+	
 	s32 width;
 	s32 height;
+	s32 rounding;
+	s32 thumb_padding;
+	s32 thumb_size;
+	Color background_color;
+	Color outlining_color;
+	Color thumb_color;
 };
 
 void init_widgets();

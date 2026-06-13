@@ -252,7 +252,7 @@ void Editor_Window::close()
 	gui::close_window(name);
 }
 
-void Editor_Window::set_position(s32 x, s32 y)
+void Editor_Window::set_absolute_position(s32 x, s32 y)
 {
 	window_rect.set(x, y);
 }

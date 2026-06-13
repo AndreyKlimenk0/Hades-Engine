@@ -17,12 +17,33 @@ using namespace imgui;
 
 static u32 ui_element_debug_counter = 0;
 
-static const u32 UI_ELEMENT_AUTO_LAYOUT = 0x1;
-static const u32 UI_ELEMENT_DRAW_TEXT = 0x2;
-static const u32 UI_ELEMENT_DRAW = 0x4;
-static const u32 UI_ELEMENT_SET_RELATIVE_X_POSITION = 0x8;
-static const u32 UI_ELEMENT_SET_RELATIVE_Y_POSITION = 0x10;
+static const u32 UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT = 0x1;
+static const u32 UI_ELEMENT_VERTICAL_AUTO_LAYOUT = 0x2;
+static const u32 UI_ELEMENT_DRAW_TEXT = 0x4;
+static const u32 UI_ELEMENT_DRAW = 0x8;
+static const u32 UI_ELEMENT_SET_RELATIVE_X_POSITION = 0x10;
+static const u32 UI_ELEMENT_SET_RELATIVE_Y_POSITION = 0x20;
 
+
+template <typename T>
+inline T safe_sub(T x, T y)
+{
+	return x > y ? x - y : T{0};
+}
+
+bool can_auto_layout_ui_element(UI_Element *ui_element, AxisV2 axis)
+{
+	bool state1 = (axis == X_AXISV2) && (ui_element->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT);
+	bool state2 = (axis == Y_AXISV2) && (ui_element->flags & UI_ELEMENT_VERTICAL_AUTO_LAYOUT);
+	return state1 || state2;
+}
+
+bool can_auto_layout_ui_element(UI_Element *ui_element, Layout layout)
+{
+	bool state1 = (layout == ROW_LAYOUT) && (ui_element->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT);
+	bool state2 = (layout == COLUMN_LAYOUT) && (ui_element->flags & UI_ELEMENT_VERTICAL_AUTO_LAYOUT);
+	return state1 || state2;
+}
 
 static AxisV2 flip_axis(AxisV2 axis)
 {
@@ -104,7 +125,7 @@ UI_Element::~UI_Element()
 
 void UI_Element::begin_frame()
 {
-	flags = UI_ELEMENT_AUTO_LAYOUT | UI_ELEMENT_DRAW;
+	flags = UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT | UI_ELEMENT_VERTICAL_AUTO_LAYOUT | UI_ELEMENT_DRAW;
 	position.x = 0;
 	position.y = 0;
 	size.width = fit_size();
@@ -118,8 +139,6 @@ void UI_Element::begin_frame()
 	padding = Padding(0);
 	rounding = 0;
 	rounding_flags = ROUND_RECT;
-
-	text = NULL;
 }
 
 void UI_Element::add_child(UI_Element *ui_element)
@@ -252,7 +271,7 @@ void add_padding_to_child_elements(UI_Element *ui_element)
 	if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			if (child->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT) {
 				child->position.x += ui_element->padding.left;
 			}
 		}
@@ -260,7 +279,7 @@ void add_padding_to_child_elements(UI_Element *ui_element)
 	if (ui_element->alignment_flags & ALIGNMENT_TOP) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			if (child->flags & UI_ELEMENT_VERTICAL_AUTO_LAYOUT) {
 				child->position.y += ui_element->padding.top;
 			}
 		}
@@ -268,7 +287,7 @@ void add_padding_to_child_elements(UI_Element *ui_element)
 	if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			if (child->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT) {
 				child->position.x -= ui_element->padding.right;
 			}
 		}
@@ -276,7 +295,7 @@ void add_padding_to_child_elements(UI_Element *ui_element)
 	if (ui_element->alignment_flags & ALIGNMENT_BOTTOM) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+			if (child->flags & UI_ELEMENT_VERTICAL_AUTO_LAYOUT) {
 				child->position.y -= ui_element->padding.bottom;
 			}
 		}
@@ -292,7 +311,7 @@ void add_space_to_child_elements(UI_Element *ui_element)
 	u32 index = static_cast<u32>(ui_element->layout);
 	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
 		UI_Element *child = ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, ui_element->layout)) {
 			child->position[index] += sign * ui_element->space * i;
 		}
 	}
@@ -401,7 +420,7 @@ static void layout_ui_elements_left_to_right_or_top_to_bottom(UI_Element *parent
 	s32 offset = 0;
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, axis)) {
 			child->position[static_cast<u32>(axis)] = offset;
 			offset += child->size[axis].get();
 		}
@@ -412,7 +431,7 @@ static void layout_ui_elements_to_right_or_bottom(UI_Element *parent_ui_element,
 {
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, axis)) {
 			child->position[static_cast<u32>(axis)] = parent_ui_element->size[axis].get() - child->size[axis].get();
 		}
 	}
@@ -423,7 +442,7 @@ static void layout_ui_elements_right_to_left_or_bottom_to_top(UI_Element *parent
 	s32 offset = parent_ui_element->size[axis].get();
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, axis)) {
 			offset -= child->size[axis].get();
 			child->position[static_cast<u32>(axis)] = offset;
 		}
@@ -434,7 +453,7 @@ static void layout_ui_elements_in_center(UI_Element *parent_ui_element, AxisV2 a
 {
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, axis)) {
 			child->position[static_cast<u32>(axis)] = (parent_ui_element->size[axis].get() / 2) - (child->size[axis].get() / 2);
 		}
 	}
@@ -445,14 +464,16 @@ static void group_elements_and_layout_in_center(UI_Element *parent_ui_element, A
 	s32 children_total_size = 0;
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, axis)) {
 			children_total_size += child->size[axis].get();
 		}
 	}
-	u32 offset = (parent_ui_element->size[axis].get() / 2) - (children_total_size / 2);
+	s32 spaces_total_size = parent_ui_element->space * (s32)safe_sub(parent_ui_element->child_elements.count, 1u);
+	s32 offset = (parent_ui_element->size[axis].get() / 2) - ((children_total_size + spaces_total_size) / 2);
+	
 	for (u32 i = 0; i < parent_ui_element->child_elements.count; i++) {
 		UI_Element *child = parent_ui_element->child_elements[i];
-		if (child->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if (can_auto_layout_ui_element(child, axis)) {
 			child->position[static_cast<u32>(axis)] = offset;
 			offset += child->size[axis].get();
 		}
@@ -549,7 +570,7 @@ void sort(UI_Element *ui_element)
 	Array<UI_Element *> first;
 	Array<UI_Element *> second;
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
-		if (ui_element->child_elements[i]->flags & UI_ELEMENT_AUTO_LAYOUT) {
+		if ((ui_element->child_elements[i]->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT) || (ui_element->child_elements[i]->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT)) {
 			first.push(ui_element->child_elements[i]);
 		} else {
 			second.push(ui_element->child_elements[i]);
@@ -565,11 +586,16 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 	if (!(ui_element->flags & UI_ELEMENT_DRAW)) {
 		return;
 	}
+
 	sort(ui_element);
 
 	Point_s32 position = ui_element->position;
-	if (ui_element->flags & UI_ELEMENT_AUTO_LAYOUT) {
-		position += parent_position;
+	if ((ui_element->flags & UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT) || (ui_element->flags & UI_ELEMENT_SET_RELATIVE_X_POSITION)) {
+		position.x += parent_position.x;
+	}
+
+	if ((ui_element->flags & UI_ELEMENT_VERTICAL_AUTO_LAYOUT) || (ui_element->flags & UI_ELEMENT_SET_RELATIVE_Y_POSITION)) {
+		position.y += parent_position.y;
 	}
 
 	ui_element->prev_position = position;
@@ -686,16 +712,30 @@ void imgui::end_ui_element()
 	ui_context.pop_ui_element();
 }
 
-void imgui::set_position(s32 x, s32 y)
+void imgui::set_absolute_position_x(s32 x)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
-	ui_element->flags &= ~UI_ELEMENT_AUTO_LAYOUT;
-	ui_element->position = Point_s32(x, y);
+	ui_element->flags &= ~UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT;
+	ui_element->position.x;
+}
+
+void imgui::set_absolute_position_y(s32 y)
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags &= ~UI_ELEMENT_VERTICAL_AUTO_LAYOUT;
+	ui_element->position.y = y;
+}
+
+void imgui::set_absolute_position(s32 x, s32 y)
+{
+	set_absolute_position_x(x);
+	set_absolute_position_y(y);
 }
 
 void imgui::set_relative_position_x(s32 x)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags &= ~UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT;
 	ui_element->flags |= UI_ELEMENT_SET_RELATIVE_X_POSITION;
 	ui_element->position.x = x;
 }
@@ -703,6 +743,7 @@ void imgui::set_relative_position_x(s32 x)
 void imgui::set_relative_position_y(s32 y)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags &= ~UI_ELEMENT_VERTICAL_AUTO_LAYOUT;
 	ui_element->flags |= UI_ELEMENT_SET_RELATIVE_Y_POSITION;
 	ui_element->position.y = y;
 }
@@ -781,6 +822,16 @@ void imgui::text(const char *text)
 	end_ui_element();
 }
 
+void imgui::text(const char *ui_element_name, const char *text)
+{
+	Size_u32 text_size = ui_context.font->get_text_size(text);
+	begin_ui_element(ui_element_name);
+	set_size(fixed_size(text_size.width), fixed_size(text_size.height));
+	ui_element_draw_text(text);
+	set_background_color(Color::Black);
+	end_ui_element();
+}
+
 bool imgui::ui_element_hovered()
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
@@ -800,6 +851,12 @@ bool imgui::ui_element_double_clicked()
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	Rect_s32 rect = { ui_element->prev_position.x, ui_element->prev_position.y, ui_element->prev_size.width.get(), ui_element->prev_size.height.get() };
 	return was_double_click(KEY_LMOUSE) && _detect_intersection(&rect);;
+}
+
+Rect_s32 imgui::ui_element_rect()
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	return { ui_element->prev_position.x, ui_element->prev_position.y, ui_element->prev_size.width.get(), ui_element->prev_size.height.get() };
 }
 
 UI_Element *imgui::get_ui_element()

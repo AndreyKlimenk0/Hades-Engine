@@ -279,7 +279,7 @@ struct Gui_Window {
 	Render_Primitive_List render_list;
 
 	void new_frame(Window_Style window_style);
-	void set_position(s32 x, s32 y);
+	void set_absolute_position(s32 x, s32 y);
 	void place_rect_over_window(Rect_s32 *new_rect);
 
 	Rect_s32 get_scrollbar_rect(Axis axis);
@@ -331,7 +331,7 @@ void Gui_Window::new_frame(Window_Style window_style)
 	max_content_width = 0;
 }
 
-inline void Gui_Window::set_position(s32 x, s32 y)
+inline void Gui_Window::set_absolute_position(s32 x, s32 y)
 {
 	s32 delta_x = x - rect.x;
 	s32 delta_y = y - rect.y;
@@ -2986,7 +2986,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 		Size_u32 window_size = Engine::get_render_system()->get_window_size();
 		s32 x = math::clamp(rect->x + mouse_x_delta, min_window_position, (s32)window_size.width - rect->width);
 		s32 y = math::clamp(rect->y + mouse_y_delta, min_window_position, (s32)window_size.height - rect->height);
-		window->set_position(x, y);
+		window->set_absolute_position(x, y);
 	}
 
 	if ((window_style & WINDOW_AUTO_WIDTH) && !((reset_window_params & SET_WINDOW_SIZE) && (pre_setup.window_rect.width > 0))) {
@@ -3037,7 +3037,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 		if ((rect_side == RECT_SIDE_LEFT) || (rect_side == RECT_SIDE_LEFT_BOTTOM)) {
 			if ((mouse_x >= 0) && ((rect->width - mouse_x_delta) > MIN_WINDOW_WIDTH)) {
 				s32 x = math::max(rect->x + mouse_x_delta, 0);
-				window->set_position(x, rect->y);
+				window->set_absolute_position(x, rect->y);
 				rect->width = math::max(rect->width - mouse_x_delta, MIN_WINDOW_WIDTH);
 			}
 		}
@@ -3061,7 +3061,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 		if (rect_side == RECT_SIDE_TOP) {
 			if ((mouse_y >= 0) && ((rect->height - mouse_y_delta) > MIN_WINDOW_HEIGHT)) {
 				s32 y = math::max(rect->y + mouse_y_delta, 0);
-				window->set_position(rect->x, y);
+				window->set_absolute_position(rect->x, y);
 				rect->height = math::max(rect->height - mouse_y_delta, MIN_WINDOW_HEIGHT);
 			}
 		}
@@ -3069,7 +3069,7 @@ bool Gui_Manager::begin_window(const char *name, Window_Style window_style, bool
 	}
 
 	if (reset_window_params & SET_WINDOW_POSITION) {
-		window->set_position(pre_setup.window_rect.x, pre_setup.window_rect.y);
+		window->set_absolute_position(pre_setup.window_rect.x, pre_setup.window_rect.y);
 		reset_window_params &= ~SET_WINDOW_POSITION;
 	}
 
@@ -3249,7 +3249,7 @@ bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 	parent_window->context->place_rect(&child_rect);
 	if (must_rect_be_drawn(&parent_window->view_rect, &child_rect)) {
 
-		child_window->set_position(child_rect.x, child_rect.y);
+		child_window->set_absolute_position(child_rect.x, child_rect.y);
 		child_window->new_frame(window_style);
 
 		if ((was_key_just_pressed(KEY_LMOUSE) || was_key_just_pressed(KEY_RMOUSE)) && (parent_window->gui_id == hover_window) && detect_intersection(&child_window->rect)) {
@@ -3257,7 +3257,7 @@ bool Gui_Manager::begin_child(const char *name, Window_Style window_style)
 		}
 
 		if (reset_window_params & SET_WINDOW_POSITION) {
-			child_window->set_position(pre_setup.window_rect.x, pre_setup.window_rect.y);
+			child_window->set_absolute_position(pre_setup.window_rect.x, pre_setup.window_rect.y);
 			reset_window_params &= ~SET_WINDOW_POSITION;
 		}
 

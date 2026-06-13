@@ -187,6 +187,7 @@ struct Rect {
 	void offset_y(T _y);
 	void offset_x(T _x);
 	void set_size(T _width, T _height);
+	Point3D<T> get_point();
 	Size3D<T> get_size();
 
 	T right();
@@ -802,6 +803,12 @@ inline void Rect<T>::set_size(T _width, T _height)
 {
 	width = _width;
 	height = _height;
+}
+
+template<typename T>
+inline Point3D<T> Rect<T>::get_point()
+{
+	return Point3D<T>(x, y);
 }
 
 template <typename T>

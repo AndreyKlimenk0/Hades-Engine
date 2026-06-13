@@ -1,6 +1,8 @@
 #include <assert.h>
 
 #include "widgets.h"
+#include "../libs/os/event.h"
+#include "../libs/os/input.h"
 
 using namespace imgui;
 
@@ -11,6 +13,7 @@ static Slider_Theme slider_theme;
 
 struct UI_State {
 	Element_ID active_list_box;
+	Element_ID active_slider;
 };
 
 static UI_State ui_state;
@@ -58,12 +61,23 @@ Check_Box_Theme::~Check_Box_Theme()
 
 Slider_Theme::Slider_Theme()
 {
-	width = 200;
+	width = 250;
 	height = 20;
+	rounding = 10;
+	thumb_padding = 4;
+	thumb_size = 10;
+	background_color = Color(25);
+	outlining_color = Color(65);
+	thumb_color = Color(99);
 }
 
 Slider_Theme::~Slider_Theme()
 {
+}
+
+inline Point_s32 get_async_mouse_position()
+{
+	return Point_s32(Mouse_State::x, Mouse_State::y);
 }
 
 void init_widgets()
@@ -132,7 +146,7 @@ void list_box(const char *label, Array<String> &list, u32 *index)
 
 	if (list_field->id == ui_state.active_list_box) {
 		begin_ui_element("List Box Drop Panel #id");
-		set_position(list_field->get_rect().x, list_field->get_rect().bottom() + list_theme.field_panel_spacing);
+		set_absolute_position(list_field->get_rect().x, list_field->get_rect().bottom() + list_theme.field_panel_spacing);
 		set_size(fixed_size(list_theme.width), fit_size());
 		set_rounding(list_theme.rounding, ROUND_RECT);
 		set_background_color(list_theme.background_color);
@@ -197,46 +211,88 @@ bool check_box(const char *label, bool *state)
 	return check_box_clicked;
 }
 
+static bool __detect_intersection(Rect_s32 *rect)
+{
+	if ((Mouse_State::x > rect->x) && (Mouse_State::x < (rect->x + rect->width)) && (Mouse_State::y > rect->y) && (Mouse_State::y < (rect->y + rect->height))) {
+		return true;
+	}
+	return false;
+}
+
 void slider(const char *label, float min, float max, float *value)
 {
+	assert(max > min);
+
+	static s32 thumb_relative_position;
+	static Point_s32 thumb_mouse_delta;
+	static bool thumb_campured = false;
+
+	*value = math::clamp(*value, min, max);
+
 	begin_ui_element("Slider #id");
 	set_size(fit_size(), fit_size());
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
 
-	slider_theme.height = 40;
+	Element_ID id = get_ui_element()->id;
 
-	begin_ui_element("Slider Box");
-	auto slider_box = get_ui_element();
+	begin_ui_element("Range");
 	set_size(fixed_size(slider_theme.width), fixed_size(slider_theme.height));
-	set_background_color(Color(25));
-	set_outlining(1, Color(65));
-	set_rounding(8);
+	set_background_color(slider_theme.background_color);
+	set_outlining(1, slider_theme.outlining_color);
+	set_rounding(slider_theme.rounding);
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_VERTICAL_CENTER);
+	Rect_s32 range_rect = ui_element_rect();
 
-	//begin_ui_element("RED");
-	//u32 h = 14;
-	//set_size(fixed_size(h), fixed_size(h));
-	//set_background_color(Color::Red);
-	//set_rounding(8);
-	//end_ui_element();
+	begin_ui_element("Thumb");
+	set_size(fixed_size(slider_theme.thumb_size), fixed_size(slider_theme.thumb_size));
+	set_relative_position_x(thumb_relative_position);
+	set_background_color(slider_theme.thumb_color);
+	set_rounding(slider_theme.thumb_size / 2);
+	Rect_s32 thumb_rect = ui_element_rect();
 
-	//begin_ui_element("Green");
-	//set_size(fixed_size(h), fixed_size(h));
-	//set_background_color(Color::Green);
-	//set_rounding(8);
-	//end_ui_element();
+	if (was_key_just_pressed(KEY_LMOUSE) && __detect_intersection(&thumb_rect)) {
+		thumb_campured = true;
+		thumb_mouse_delta = get_async_mouse_position() - thumb_rect.get_point();
+		ui_state.active_slider = id;
+	}
 
-	u32 x = 20;
-	begin_ui_element("UI");
-	set_size(fixed_size(slider_theme.height - x), fixed_size(slider_theme.height - x));
-	//set_position(slider_box->prev_position.x, slider_box->prev_position.y);
-	set_background_color(Color(99));
-	set_rounding((slider_theme.height - x) / 2);
-	end_ui_element(); // UI
+	if (was_key_just_released(KEY_LMOUSE) && thumb_campured) {
+		thumb_campured = false;
+		ui_state.active_slider.reset();
+	}
 
-	end_ui_element(); // Slider Box
+	if (thumb_campured && (id == ui_state.active_slider)) {
+		Point_s32 new_thumb_position = get_async_mouse_position() - thumb_mouse_delta;
+		new_thumb_position = new_thumb_position - range_rect.get_point();
+		thumb_relative_position = math::clamp(new_thumb_position.x, slider_theme.thumb_padding, range_rect.width - thumb_rect.width - slider_theme.thumb_padding);
+
+		float ratio = ((float)thumb_relative_position - (float)slider_theme.thumb_padding) / (float)(range_rect.width - thumb_rect.width - slider_theme.thumb_padding * 2);
+		float diff = max - min;
+		*value = min + diff * ratio;
+	} else {
+		float abs_value = *value - min;
+		float diff = max - min;
+		float ratio = abs_value / diff;
+		s32 _thumb_relative_position = (s32)(float(range_rect.width - thumb_rect.width - slider_theme.thumb_padding * 2) * ratio) + slider_theme.thumb_padding;
+		_thumb_relative_position = math::clamp(_thumb_relative_position, slider_theme.thumb_padding, range_rect.width - thumb_rect.width - slider_theme.thumb_padding);
+		set_relative_position_x(_thumb_relative_position);
+	}
+
+	end_ui_element(); // Thumb
+
+	end_ui_element(); // Range
+
+	begin_ui_element("Value");
+	set_size(fit_size(), fixed_size(slider_theme.height));
+	set_alignment(ALIGNMENT_CENTER);
+
+	char *string = to_string(*value, 1u);
+	text("String Value", string);
+	free_string(string);
+
+	end_ui_element(); // Value
 
 	end_ui_element(); // Slider
 }
