@@ -16,14 +16,6 @@
 
 const Color DEFAULT_MESH_COLOR = Color(242, 242, 242);
 
-Matrix4 get_world_matrix(Entity *entity)
-{
-	if (entity->type == ENTITY_TYPE_CAMERA) {
-		Camera *camera = static_cast<Camera *>(entity);
-		return inverse(camera->view_matrix);
-	}
-	return make_scale_matrix(&entity->scaling) * rotate(&entity->rotation) * make_translation_matrix(&entity->position);
-}
 
 template <typename T>
 static bool copy_array(Array<T> *dst, Array<T> *src, u32 dst_index_offset = 0)
@@ -104,333 +96,6 @@ void Shadow_Cascade_Ranges::add_range(u32 start, u32 end)
 	ranges.push({ start, end });
 }
 
-void Model_Storage::init()
-{
-	u32 width = 256;
-	u32 height = 256;
-
-	Image color_buffer;
-	color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
-
-	color_buffer.name = "default normal";
-	color_buffer.fill(Color(0.0f, 0.0f, 1.0f));
-	default_textures.normal = create_texture_from_image(&color_buffer);
-
-	color_buffer.fill(DEFAULT_MESH_COLOR);
-	color_buffer.name = "default diffuse";
-	default_textures.diffuse = create_texture_from_image(&color_buffer);
-	
-	color_buffer.fill(Color(0.2f, 0.2f, 0.01f));
-	color_buffer.name = "default specular";
-	default_textures.specular = create_texture_from_image(&color_buffer);
-	
-	color_buffer.fill(Color(0.0f, 0.0f, 0.0f));
-	default_textures.displacement = create_texture_from_image(&color_buffer);
-	
-	color_buffer.fill(Color::White);
-	default_textures.white = create_texture_from_image(&color_buffer);
-	
-	color_buffer.fill(Color::Black);
-	default_textures.black = create_texture_from_image(&color_buffer);
-	
-	color_buffer.fill(Color(0.5f, 0.5f, 1.0f));
-	default_textures.green = create_texture_from_image(&color_buffer);
-}
-
-void Model_Storage::release_all_resources()
-{
-	//textures.clear();
-
-	//vertex_struct_buffer.free();
-	//index_struct_buffer.free();
-	//mesh_struct_buffer.free();
-}
-
-bool validate_model_name_and_get_string_id(String_Id *model_string_id, Loading_Model *model)
-{
-	if (!model->name.is_empty() && !model->file_name.is_empty()) {
-		*model_string_id = fast_hash(model->file_name + "_" + model->name);
-		return true;
-	} else if (exclusive_or(model->name.is_empty(), model->file_name.is_empty())) {
-		if (model->name.is_empty()) {
-			*model_string_id = fast_hash(model->file_name);
-			print("[Mesh storage] Warning: A tringle mesh contains only a file name '{}' it's possible to get the collision.", model->file_name);
-		} else {
-			*model_string_id = fast_hash(model->name);
-			print("[Mesh storage] Warning: A tringle mesh contains only a name '{}' it's possible to get the collision.", model->name);
-		}
-		return true;
-	}
-	print("[Mesh storage] Error: Not possible to add a triangle mesh to the storage. the triangle mesh doesn't has a file name and mesh name.");
-	return false;
-}
-
-void move(Triangle_Mesh *dest, Triangle_Mesh *source)
-{
-	if (!source->empty()) {
-		if (!dest->vertices.is_empty()) { DELETE_ARRAY(dest->vertices.items); };
-		if (!dest->indices.is_empty()) { DELETE_ARRAY(dest->indices.items); };
-
-		dest->vertices.items = source->vertices.items;
-		dest->vertices.count = source->vertices.count;
-		dest->vertices.size = source->vertices.size;
-
-		dest->indices.items = source->indices.items;
-		dest->indices.count = source->indices.count;
-		dest->indices.size = source->indices.size;
-
-		source->vertices.items = NULL;
-		source->vertices.count = 0;
-		source->vertices.size = 0;
-		
-		source->indices.items = NULL;
-		source->indices.count = 0;
-		source->indices.size = 0;
-	}
-}
-
-void resolve_texture_file_path(const char *texture_file_name, const char *textures_subdirectory, String &full_path_to_texture)
-{
-	if (texture_file_name && textures_subdirectory) {
-		build_full_path_to_texture_file(texture_file_name, textures_subdirectory, full_path_to_texture);
-	} else if (texture_file_name) {
-		build_full_path_to_texture_file(texture_file_name, full_path_to_texture);
-	}
-}
-
-// Uploading texture data through buffers https://learn.microsoft.com/en-us/windows/win32/direct3d12/upload-and-readback-of-texture-data.
-void Model_Storage::pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory)
-{
-	if (textures_names.is_empty()) {
-		return;
-	}
-	Render_System *render_system = Engine::get_render_system();
-	Render_Device *render_device = Engine::get_render_system()->render_device;
-
-	Fence *copy_fence = render_device->create_fence(1, "Textures copy fence");
-	
-	Copy_Command_List *copy_command_list = (Copy_Command_List *)render_system->command_list_allocator.allocate_command_list(COMMAND_LIST_TYPE_COPY);
-
-	u32 textures_number = textures_names.count;
-	u32 textures_uploading_chunk = 100;
-	u32 uploaded_textures_number = 0;
-
-	assert(textures_uploading_chunk > 0);
-
-	Array<Buffer *> staging_buffers;
-	staging_buffers.reserve(math::min(textures_number, textures_uploading_chunk));
-	zero_memory(&staging_buffers);
-
-	while (uploaded_textures_number < textures_number) {
-		copy_command_list->reset();
-		u32 textures_uploading_number = math::min(textures_number - uploaded_textures_number, textures_uploading_chunk);
-		for (u32 j = 0; j < textures_uploading_number; j++) {
-			u32 texture_name_index = uploaded_textures_number + j;
-			String &texture_name = textures_names[texture_name_index];
-			String_Id string_id = fast_hash(texture_name);
-			if (textures_table.key_in_table(string_id)) {
-				continue;
-			}
-
-			String full_path_to_texture;
-			resolve_texture_file_path(texture_name, textures_subdirectory, full_path_to_texture);
-
-			Image image;
-			if (load_image_from_file(full_path_to_texture, DXGI_FORMAT_R8G8B8A8_UNORM, &image)) {
-				Texture_Desc texture_desc;
-				extract_file_name(full_path_to_texture, texture_desc.name);
-				texture_desc.dimension = TEXTURE_DIMENSION_2D;
-				texture_desc.width = image.width;
-				texture_desc.height = image.height;
-				texture_desc.format = image.format;
-				texture_desc.miplevels = find_max_mip_level(image.width, image.height);
-				texture_desc.resource_state = RESOURCE_STATE_COMMON;
-				texture_desc.name = texture_name;
-
-				Texture *new_texture = render_device->create_texture(&texture_desc);
-				textures_table.set(string_id, new_texture);
-
-				Buffer *staging_buffer = staging_buffers[j];
-				if (!staging_buffer || staging_buffer->size() < new_texture->size()) {
-					DELETE_PTR(staging_buffer);
-					Buffer_Desc buffer_desc;
-					buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-					buffer_desc.size = align_address<u32>(texture_desc.width * dxgi_format_size(texture_desc.format), get_texture_pitch_alignment()) * texture_desc.height;
-					buffer_desc.size = align_address<u32>(buffer_desc.size, get_texture_placement_alignment());
-					buffer_desc.name = "Image data";
-					staging_buffer = render_device->create_buffer(&buffer_desc);
-					staging_buffers[j] = staging_buffer;
-				}
-				u8 *mapped_memory = static_cast<u8 *>(staging_buffer->write_only_ptr());
-
-				u32 row_pitch = texture_desc.width * dxgi_format_size(texture_desc.format);
-				u32 aligned_row_pitch = align_address<u32>(row_pitch, get_texture_pitch_alignment());
-
-				for (u32 y = 0; y < texture_desc.height; y++) {
-					u8 *buffer_row = mapped_memory + y * aligned_row_pitch;
-					u8 *bitmap_row = image.data + y * row_pitch;
-					memcpy((void *)buffer_row, (void *)bitmap_row, row_pitch);
-				}
-				Subresource_Footprint footprint = new_texture->subresource_footprint(0);
-				copy_command_list->copy_buffer_to_texture(new_texture, staging_buffer, &footprint);
-			}
-		}
-		uploaded_textures_number += textures_uploading_chunk;
-
-		copy_command_list->close();
-		render_system->copy_queue->execute_command_list(copy_command_list);
-		render_system->copy_queue->signal(copy_fence);
-		copy_fence->wait_for_gpu();
-		copy_fence->increment_expected_value();
-	}
-	DELETE_PTR(copy_fence);
-	free_memory(&staging_buffers);
-}
-
-void Model_Storage::add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, u32>> &result)
-{
-	result.resize(models.count);
-
-	for (u32 i = 0; i < models.count; i++) {
-		Loading_Model *loading_model = models[i];
-
-		String_Id model_string_id;
-		if (!validate_model_name_and_get_string_id(&model_string_id, loading_model)) {
-			continue;
-		}
-
-		if (loading_model->mesh.empty()) {
-			print("Render_World::add_mesh: {} mesh can be added because doesn't have all necessary data.", loading_model->get_pretty_name());
-			continue;
-		}
-
-		Pair<Render_Model *, u32> temp;
-		if (render_models_table.get(model_string_id, temp)) {
-			print("[Mesh storage] Info: {} mesh has already been placed in the mesh storage.", loading_model->get_pretty_name());
-			result.push({ loading_model, temp.second });
-			continue;
-		}
-
-		Render_Model *render_model = new Render_Model();
-		render_model->name = loading_model->name;
-		render_model->file_name = loading_model->file_name;
-		render_model->normal_texture = find_texture_or_get_default(loading_model->normal_texture_name, loading_model->file_name, default_textures.normal);
-		render_model->albedo_texture = find_texture_or_get_default(loading_model->albedo_texture_name, loading_model->file_name, default_textures.diffuse);
-		render_model->roughness_metalic_texture = find_texture_or_get_default(loading_model->roughness_metalic_texture_name, loading_model->file_name, default_textures.specular);
-		render_model->min = loading_model->min;
-		render_model->max = loading_model->max;
-
-		move(&render_model->mesh, &loading_model->mesh);
-
-		u32 mesh_instance_index = render_models.push(render_model);
-		render_models_table.set(model_string_id, { render_model, mesh_instance_index });
-		
-		result.push({ loading_model, mesh_instance_index });
-	}
-	upload_models = true;
-}
-
-void Model_Storage::upload_models_in_gpu()
-{
-	Render_Device *render_device = Engine::get_render_system()->render_device;
-	Render_System *render_sys = Engine::get_render_system();
-
-	Array<Vertex_PNTUV> unified_vertex_list;
-	Array<u32> unified_index_list;
-	Array<Mesh_Instance> unified_mesh_instances_list;
-
-	u32 vertex_count = 0;
-	u32 index_count = 0;
-	for (u32 i = 0; i < render_models.count; i++) {
-		vertex_count += render_models[i]->mesh.vertex_count();
-		index_count += render_models[i]->mesh.index_count();
-	}
-
-	unified_vertex_list.resize(vertex_count);
-	unified_index_list.resize(index_count);
-	unified_mesh_instances_list.resize(render_models.count);
-
-	u32 vertex_offset = 0;
-	u32 index_offset = 0;
-	for (u32 i = 0; i < render_models.count; i++) {
-		merge(&unified_vertex_list, &render_models[i]->mesh.vertices);
-		merge(&unified_index_list, &render_models[i]->mesh.indices);
-
-		GPU_Material material;
-		material.normal_idx = render_models[i]->normal_texture->shader_resource_descriptor()->index();
-		material.diffuse_idx = render_models[i]->albedo_texture->shader_resource_descriptor()->index();
-		material.roughness_metalic_idx = render_models[i]->roughness_metalic_texture->shader_resource_descriptor()->index();
-
-		Mesh_Instance mesh_instance;
-		mesh_instance.vertex_count = render_models[i]->mesh.vertex_count();
-		mesh_instance.vertex_offset = vertex_offset;
-		mesh_instance.index_count = render_models[i]->mesh.index_count();
-		mesh_instance.index_offset = index_offset;
-		mesh_instance.bounding_box = AABB(render_models[i]->min, render_models[i]->max);
-		mesh_instance.material = material;
-		
-		unified_mesh_instances_list.push(mesh_instance);
-		
-		vertex_offset += render_models[i]->mesh.vertex_count();
-		index_offset += render_models[i]->mesh.index_count();
-	}
-
-	if (!unified_vertex_buffer || (unified_vertex_buffer->count() < (u64)unified_vertex_list.count)) {
-		DELETE_PTR(unified_vertex_buffer);
-		Buffer_Desc buffer_desc;
-		buffer_desc.size = unified_vertex_list.get_size();
-		buffer_desc.stride = unified_vertex_list.stride;
-		buffer_desc.data = unified_vertex_list.to_void_ptr();
-		buffer_desc.name = "Unified vertex buffer";
-
-		unified_vertex_buffer = render_device->create_buffer(&buffer_desc);
-	} else {
-		unified_vertex_buffer->request_write();
-		unified_vertex_buffer->write(unified_vertex_list.to_void_ptr(), unified_vertex_list.get_size());
-	}
-
-	if (!unified_index_buffer || (unified_index_buffer->count() < (u64)unified_index_list.count)) {
-		DELETE_PTR(unified_index_buffer);
-		Buffer_Desc buffer_desc;
-		buffer_desc.size = unified_index_list.get_size();
-		buffer_desc.stride = unified_index_list.stride;
-		buffer_desc.data = unified_index_list.to_void_ptr();
-		buffer_desc.name = "Unified index buffer";
-
-		unified_index_buffer = render_device->create_buffer(&buffer_desc);
-	} else {
-		unified_index_buffer->request_write();
-		unified_index_buffer->write(unified_index_list.to_void_ptr(), unified_index_list.get_size());
-	}
-
-	if (!mesh_instance_buffer || (mesh_instance_buffer->count() < (u64)unified_mesh_instances_list.count)) {
-		DELETE_PTR(mesh_instance_buffer);
-		Buffer_Desc buffer_desc;
-		buffer_desc.size = unified_mesh_instances_list.get_size();
-		buffer_desc.stride = unified_mesh_instances_list.stride;
-		buffer_desc.data = unified_mesh_instances_list.to_void_ptr();
-		buffer_desc.name = "Unified mesh instances buffer";
-
-		mesh_instance_buffer = render_device->create_buffer(&buffer_desc);
-	} else {
-		mesh_instance_buffer->request_write();
-		mesh_instance_buffer->write(unified_mesh_instances_list.to_void_ptr(), unified_mesh_instances_list.get_size());
-	}
-}
-
-Texture *Model_Storage::find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture *default_texture)
-{
-	if (!texture_file_name.is_empty()) {
-		Texture *texture = NULL;
-		String_Id texture_string_id = fast_hash(texture_file_name);
-
-		if (textures_table.get(texture_string_id, texture)) {
-			return texture;
-		}
-	}
-	return default_texture;
-}
-
 void Cascaded_Shadow_Map::init(float fov, float aspect_ratio, Shadow_Cascade_Range *shadow_cascade_range)
 {
 	float half_height = (float)shadow_cascade_range->end * math::tan(fov * 0.5f);
@@ -459,8 +124,6 @@ void Render_World::init(Engine *engine)
 	game_world = &engine->game_world;
 	render_sys = &engine->render_sys;
 	render_device = engine->render_sys.render_device;
-
-	model_storage.init();
 
 	if (camera_id.type != ENTITY_TYPE_CAMERA) {
 		//error("Render Camera was not initialized. There is no a view for rendering.");
@@ -512,8 +175,6 @@ void Render_World::release_render_entities_resources()
 
 	cascaded_shadows_list.clear();
 	cascaded_shadows_info_list.clear();
-
-	model_storage.release_all_resources();
 }
 
 void Render_World::update()
@@ -530,7 +191,8 @@ void Render_World::update_render_entities()
 	Render_Entity *render_entity = NULL;
 	For(game_render_entities, render_entity) {
 		Entity *entity = game_world->get_entity(render_entity->entity_id);
-		render_entity_world_matrices[render_entity->world_matrix_idx] = get_world_matrix(entity);
+		Mesh_Instance *mesh_instance = &mesh_instances[render_entity->mesh_instance];
+		render_entity_world_matrices[mesh_instance->transform_idx] = get_world_matrix(entity);
 	}
 
 	if (!world_matrices_buffer || (world_matrices_buffer->count() < (u64)render_entity_world_matrices.count)) {
@@ -627,18 +289,50 @@ void Render_World::upload_lights()
 
 void Render_World::prepare_for_rendering()
 {
-	if (model_storage.upload_models) {
-		model_storage.upload_models_in_gpu();
-		model_storage.upload_models = false;
+	if (!mesh_instance_buffer || (mesh_instance_buffer->count() < (u64)mesh_instances.count)) {
+		DELETE_PTR(mesh_instance_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = mesh_instances.get_size();
+		buffer_desc.stride = mesh_instances.stride;
+		buffer_desc.data = mesh_instances.to_void_ptr();
+		buffer_desc.name = "Mesh Instances";
+
+		mesh_instance_buffer = render_device->create_buffer(&buffer_desc);
 	}
+	mesh_instance_buffer->request_write();
+	mesh_instance_buffer->write(mesh_instances.to_void_ptr(), mesh_instances.get_size());
+
+	if (!bounding_box_buffer || (mesh_instance_buffer->count() < (u64)bounding_boxes.count)) {
+		DELETE_PTR(bounding_box_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = bounding_boxes.get_size();
+		buffer_desc.stride = bounding_boxes.stride;
+		buffer_desc.data = bounding_boxes.to_void_ptr();
+		buffer_desc.name = "Bounding Boxes";
+
+		bounding_box_buffer = render_device->create_buffer(&buffer_desc);
+	}
+	bounding_box_buffer->request_write();
+	bounding_box_buffer->write(bounding_boxes.to_void_ptr(), bounding_boxes.get_size());
 }
 
-void Render_World::add_render_entity(Entity_Id entity_id, u32 mesh_idx, void *args)
+void Render_World::add_render_entity(Entity_Id entity_id, AABB bounding_box, u32 material_idx, Mesh_Storage_Info *mesh_info)
 {
+	Entity *entity = game_world->get_entity(entity_id);
+
+	Mesh_Instance mesh_instance;
+	mesh_instance.vertex_offset = mesh_info->vertex_offset;
+	mesh_instance.index_offset = mesh_info->index_offset;
+	mesh_instance.material_idx = material_idx;
+	mesh_instance.bounding_box_idx = bounding_boxes.push(bounding_box);
+	mesh_instance.transform_idx = render_entity_world_matrices.push(get_world_matrix(entity));
+
 	Render_Entity render_entity;
 	render_entity.entity_id = entity_id;
-	render_entity.mesh_idx = mesh_idx;
-	render_entity.world_matrix_idx = render_entity_world_matrices.push(Matrix4());
+	render_entity.mesh_instance = mesh_instances.push(mesh_instance);
+	render_entity.mesh_info = *mesh_info;
 
 	game_render_entities.push(render_entity);
 }
@@ -714,11 +408,6 @@ void Render_World::set_rendering_view(Entity_Id new_camera_id)
 		return;
 	}
 	camera_id = new_camera_id;
-}
-
-Model_Storage *Render_World::get_model_storage()
-{
-	return &model_storage;
 }
 
 Camera *Render_World::get_camera()

@@ -11,11 +11,16 @@
 
 #include "gpu_data.h"
 #include "renderers.h"
+//#include "gpu_storages.h"
 #include "render_passes.h"
 #include "render_api/render.h"
 
 struct Win32_Window;
 struct Variable_Service;
+
+struct Mesh_Storage;
+struct Material_Storage;
+struct Render_World;
 
 struct Depth_Stencil_Texture_Desc {
 	String name;
@@ -83,6 +88,13 @@ struct Command_List_Allocator {
 	Command_List *allocate_command_list(Command_List_Type command_list_type);
 };
 
+struct Render_Pass_Context {
+	Primitive_Renderer *primitive_renderer = NULL;
+	Mesh_Storage *mesh_storage = NULL;
+	Material_Storage *material_storage = NULL;
+	Render_World *render_world = NULL;
+};
+
 struct Render_Pass_Submission {
 	Render_Pass *render_pass = NULL;
 	void *context = NULL;
@@ -123,6 +135,8 @@ struct Render_System {
 		Culling_Pass culling_pass;
 		Primitive_Pass primitive_pass;
 	} passes;
+
+	Render_Pass_Context render_pass_context;
 	
 	Array<Render_Pass_Submission> render_pass_submissions;
 

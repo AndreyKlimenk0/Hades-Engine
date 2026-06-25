@@ -11,6 +11,7 @@
 #include "../render/render_system.h"
 #include "../render/shader_manager.h"
 #include "../render/ui_storage.h"
+#include "../render/gpu_storages.h"
 
 #include "../libs/str.h"
 #include "../libs/number_types.h"
@@ -35,6 +36,10 @@ struct Engine {
 	Game_World game_world;
 	//Rendering
 	UI_Storage ui_storage;
+	Mesh_Storage mesh_storage;
+	Texture_Storage texture_storage;
+	Material_Storage material_storage;
+
 	Render_System render_sys;
 	Render_World render_world;
 	Shader_Manager shader_manager;

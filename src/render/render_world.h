@@ -3,6 +3,7 @@
 
 #include "mesh.h"
 #include "gpu_data.h"
+#include "gpu_storages.h"
 #include "render_passes.h"
 #include "render_system.h"
 
@@ -29,71 +30,21 @@ const u32 CASCADE_COUNT = 3;
 const u32 SHADOW_ATLAS_SIZE = 8192;
 const u32 CASCADE_SIZE = 1024;
 
-struct Render_Entity {
-	u32 world_matrix_idx;
-	u32 mesh_idx;
-	Entity_Id entity_id;
-};
-
-Matrix4 get_world_matrix(Entity *entity);
-Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
-
 struct Mesh_Instance {
-	u32 vertex_count = 0;
-	u32 index_count = 0;
-	u32 vertex_offset = 0;
-	u32 index_offset = 0;
-	AABB bounding_box;
-	GPU_Material material;
+	u32 vertex_offset;
+	u32 index_offset;
+	u32 material_idx;
+	u32 bounding_box_idx;
+	u32 transform_idx;
 };
 
-struct Render_Model {
-	String name;
-	String file_name;
-	Texture *normal_texture;
-	Texture *albedo_texture;
-	Texture *roughness_metalic_texture;
-	Vector3 min;
-	Vector3 max;
-	Triangle_Mesh mesh;
+struct Render_Entity {
+	Entity_Id entity_id;
+	u32 mesh_instance;
+	Mesh_Storage_Info mesh_info;
 };
 
-struct Model_Storage {
-	struct Default_Textures {
-		Texture *normal;
-		Texture *diffuse;
-		Texture *specular;
-		Texture *displacement;
-		Texture *white;
-		Texture *black;
-		Texture *green;
-	};
-	bool upload_models = false;
-	Default_Textures default_textures;
-
-	Array<Texture *> textures;
-	Array<Render_Model *> render_models;
-	Hash_Table<String_Id, Texture *> textures_table;
-	Hash_Table<String_Id, Pair<Render_Model *, u32>> render_models_table;
-
-	Buffer *unified_vertex_buffer = NULL;
-	Buffer *unified_index_buffer = NULL;
-	Buffer *mesh_instance_buffer = NULL;
-
-	void init();
-	void release_all_resources();
-
-	void pre_load_textures(Array<String> &textures_names, const char *textures_subdirectory = NULL);
-	void add_models(Array<Loading_Model *> &models, Array<Pair<Loading_Model *, u32>> &result);
-	void upload_models_in_gpu();
-
-	Texture *find_texture_or_get_default(String &texture_file_name, String &mesh_file_name, Texture *default_texture);
-};
-
-//inline Mesh_Textures *Model_Storage::get_mesh_textures(u32 index)
-//{
-//	return &meshes_textures[index];
-//}
+Render_Entity *find_render_entity(Array<Render_Entity> *render_entities, Entity_Id entity_id, u32 *index = NULL);
 
 struct Shadow_Cascade_Range {
 	u32 start = 0;
@@ -164,7 +115,11 @@ struct Render_World {
 	Array<Shadow_Cascade_Range> shadow_cascade_ranges;
 	Array<GPU_Light> lights;
 
-	Model_Storage model_storage;
+	Array<AABB> bounding_boxes;
+	Array<Mesh_Instance> mesh_instances;
+
+	Buffer *mesh_instance_buffer = NULL;
+	Buffer *bounding_box_buffer = NULL;
 
 	Buffer *world_matrices_buffer = NULL;
 	Buffer *casded_view_projection_matrices_buffer = NULL;
@@ -183,14 +138,13 @@ struct Render_World {
 
 	void prepare_for_rendering();
 
-	void add_render_entity(Entity_Id entity_id, u32 mesh_idx, void *args = NULL);
+	void add_render_entity(Entity_Id entity_id, AABB bounding_box, u32 material_idx, Mesh_Storage_Info *mesh_info);
 	u32 delete_render_entity(Entity_Id entity_id);
 
 	void set_rendering_view(Entity_Id new_camera_id);
 
 	Vector3 get_light_position(Vector3 light_direction);
 
-	Model_Storage *get_model_storage();
 	Camera *get_camera();
 };
 #endif

@@ -15,6 +15,7 @@
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
 #include "../libs/mesh_loader.h"
+#include "../render/gpu_storages.h"
 #include "../render/render_world.h"
 #include "../collision/collision.h"
 
@@ -55,31 +56,36 @@ static void load_meshes(Array<String> &command_args)
 		Array<String> textures;
 		Array<Loading_Model *> loaded_models;
 		if (load_models_from_file(full_path_to_mesh, loaded_models, textures, &info, &loading_options)) {
-			Model_Storage *model_storage = render_world->get_model_storage();
+			Mesh_Storage *mesh_storage = &engine->mesh_storage;
+			Texture_Storage *texture_storage = &engine->texture_storage;
+			Material_Storage *material_storage = &engine->material_storage;
+
+			String base_mesh_file_name;
+			extract_base_file_name(mesh_names[i], base_mesh_file_name);
+
+			texture_storage->create_textures(textures, base_mesh_file_name);
+
+			for (u32 j = 0; j < loaded_models.count; j++) {
+				Loading_Model *loading_model = loaded_models[j];
+
+				Mesh_Storage_Info mesh_info = mesh_storage->add_mesh(loading_model->name, &loading_model->mesh);
 			
-			Array<Pair<Loading_Model *, u32>> result;
-			String base_file_name;
-			extract_base_file_name(mesh_names[i], base_file_name);
-			model_storage->pre_load_textures(textures, base_file_name);
-			model_storage->add_models(loaded_models, result);
+				u32 normal_texture_idx = texture_storage->find_texture_or_get_default(loading_model->normal_texture_name, DEFAULT_NORMAL_TEXTURE)->shader_resource_descriptor()->index();
+				u32 albedo_texture_idx = texture_storage->find_texture_or_get_default(loading_model->albedo_texture_name, DEFAULT_ALBEDO_TEXTURE)->shader_resource_descriptor()->index();
+				u32 roughness_metalic_idx = texture_storage->find_texture_or_get_default(loading_model->roughness_metalic_texture_name, DEFAULT_ROUGHNESS_METALIC_TEXTURE)->shader_resource_descriptor()->index();
 
-			begin_profile_task("Make entities for models");
-			for (u32 j = 0; j < result.count; j++) {
-				Pair<Loading_Model *, u32> pair = result[j];
-				u32 mesh_idx = pair.second;
-				Loading_Model *loaded_model = pair.first;
+				u32 material_idx = material_storage->add_material(normal_texture_idx, albedo_texture_idx, roughness_metalic_idx);
 
-				AABB mesh_AABB = make_AABB(&loaded_model->mesh);
-				assert(loaded_model->instances.count > 0);
-
-				for (u32 k = 0; k < loaded_model->instances.count; k++) {
-					Loading_Model::Transformation transformation = loaded_model->instances[k];
+				for (u32 k = 0; k < loading_model->instances.count; k++) {
+					Loading_Model::Transformation transformation = loading_model->instances[k];
 					Entity_Id entity_id = game_world->make_entity(transformation.scaling, transformation.rotation, transformation.translation);
-					game_world->attach_AABB(entity_id, &mesh_AABB);
-					render_world->add_render_entity(entity_id, mesh_idx);
+					Entity *entity = game_world->get_entity(entity_id);
+
+					AABB bounding_box = make_AABB(mesh_storage->get_base_vertex(&mesh_info), mesh_info.vertex_count, get_world_matrix(entity));
+
+					render_world->add_render_entity(entity_id, bounding_box, material_idx, &mesh_info);
 				}
 			}
-			end_profile_task();
 			free_memory(&loaded_models);
 			
 			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), delta_time_in_milliseconds());
@@ -107,13 +113,6 @@ void prepare_for_level_loading(Render_World *render_world)
 	render_world->cascaded_view_projection_matrices.reset();
 	
 	render_world->game_render_entities.reset();
-
-	Model_Storage *model_storage = &render_world->model_storage;
-
-	model_storage->textures.reset();
-	model_storage->render_models.reset();
-	model_storage->textures_table.clear();
-	model_storage->render_models_table.clear();
 }
 
 static void load_level(Array<String> &command_args)

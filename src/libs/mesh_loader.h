@@ -5,7 +5,6 @@
 #include "../render/mesh.h"
 #include "structures/array.h"
 
-
 struct Loading_Models_Info {
 	u32 model_count = 0;
 	u32 total_vertex_count = 0;
@@ -18,6 +17,31 @@ struct Loading_Models_Options {
 	bool assimp_logging;
 	bool use_scaling_value;
 	float scaling_value;
+};
+
+struct Loading_Model {
+	Loading_Model();
+	Loading_Model(const String &name, const String &file_name);
+	~Loading_Model();
+
+	struct Transformation {
+		Vector3 scaling = Vector3::one;
+		Vector3 rotation = Vector3::zero; // stores angles in radians
+		Vector3 translation = Vector3::zero;
+	};
+
+	String name;
+	String file_name;
+
+	String normal_texture_name;
+	String albedo_texture_name;
+	String roughness_metalic_texture_name;
+
+	Triangle_Mesh mesh;
+	Array<Transformation> instances;
+
+	const char *get_name();
+	String get_pretty_name();
 };
 
 struct Scene_Loader {

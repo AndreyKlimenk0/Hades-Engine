@@ -223,8 +223,8 @@
     <ClCompile Include="src\libs\str.cpp" />
     <ClCompile Include="src\libs\structures\dict.cpp" />
     <ClCompile Include="src\libs\structures\hash_table.cpp" />
+    <ClCompile Include="src\render\gpu_storages.cpp" />
     <ClCompile Include="src\render\helpers.cpp" />
-    <ClCompile Include="src\render\mesh.cpp" />
     <ClCompile Include="src\render\renderers.cpp" />
     <ClCompile Include="src\render\render_api\base_structs.cpp" />
     <ClCompile Include="src\render\d3d12_render_api\d3d12_descriptor_heap.cpp" />
@@ -446,6 +446,7 @@
     <ClInclude Include="src\libs\structures\tree.h" />
     <ClInclude Include="src\libs\utils.h" />
     <ClInclude Include="src\render\gpu_data.h" />
+    <ClInclude Include="src\render\gpu_storages.h" />
     <ClInclude Include="src\render\helpers.h" />
     <ClInclude Include="src\render\mesh.h" />
     <ClInclude Include="src\render\model.h" />

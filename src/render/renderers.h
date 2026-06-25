@@ -38,6 +38,6 @@ struct Primitive_Renderer {
 
 	Primitive_ID add_aabb(AABB *aabb);
 	Primitive_ID add_frustum();
-
 };
+
 #endif

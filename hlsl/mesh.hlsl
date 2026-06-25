@@ -13,11 +13,11 @@ struct Material {
 };
 
 struct Mesh_Instance {
-	uint vertex_count;
-	uint index_count;
 	uint vertex_offset;
 	uint index_offset;
-	AABB bounding_box;
-	Material material;
+	uint material_idx;
+	uint bounding_box_idx;
+	uint transform_idx;
 };
+
 #endif

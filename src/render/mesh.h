@@ -7,10 +7,6 @@
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
 
-#define DISABLE_COPY_AND_ASSIGN(Type_Name)	\
-    Type_Name(const Type_Name &other) = delete;       \
-	Type_Name &operator=(const Type_Name &other) = delete  \
-
 template <typename T>
 struct Mesh {
 	Array<T> vertices;
@@ -43,33 +39,4 @@ typedef Mesh<Vertex_PNTUV> Triangle_Mesh;
 typedef Mesh<Vector3> Line_Mesh;
 typedef Mesh<Vector3> Vertex_Mesh;
 
-struct Loading_Model {
-	Loading_Model();
-	Loading_Model(const String &name, const String &file_name);
-	~Loading_Model();
-
-	struct Transformation {
-		Vector3 scaling = Vector3::one;
-		Vector3 rotation = Vector3::zero; // stores angles in radians
-		Vector3 translation = Vector3::zero;
-	};
-
-	Vector3 min;
-	Vector3 max;
-
-	String name;
-	String file_name;
-	
-	String normal_texture_name;
-	String albedo_texture_name;
-	String roughness_metalic_texture_name;
-
-	Triangle_Mesh mesh;
-	Array<Transformation> instances;
-
-	DISABLE_COPY_AND_ASSIGN(Loading_Model);
-
-	const char *get_name();
-	String get_pretty_name();
-};
 #endif

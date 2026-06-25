@@ -180,21 +180,21 @@ bool Ray_Entity_Intersection::detect_intersection(Ray *picking_ray, Game_World *
 						intersected_entities.push(intersection_result);
 					}
 				} else {
-					Mesh_Idx mesh_id = render_world->game_render_entities[i].mesh_idx;
-					Render_Model *render_model = render_world->model_storage.render_models[mesh_id];
+					//Mesh_Idx mesh_id = render_world->game_render_entities[i].mesh_idx;
+					//Render_Model *render_model = render_world->model_storage.render_models[mesh_id];
 
-					Vertex_PNTUV *vertices = render_model->mesh.vertices.items;
-					u32 *indices = render_model->mesh.indices.items;
+					//Vertex_PNTUV *vertices = render_model->mesh.vertices.items;
+					//u32 *indices = render_model->mesh.indices.items;
 
-					Matrix4 entity_world_matrix = get_world_matrix(entity);
+					//Matrix4 entity_world_matrix = get_world_matrix(entity);
 
-					Ray_Trinagle_Intersection_Result ray_mesh_intersection_result;
-					if (::detect_intersection(entity_world_matrix, picking_ray, vertices, render_model->mesh.vertex_count(), indices, render_model->mesh.index_count(), &ray_mesh_intersection_result)) {
-						intersection_result.entity_id = entity_id;
-						intersection_result.render_entity_idx = i;
-						intersection_result.intersection_point = ray_mesh_intersection_result.intersection_point;
-						intersected_entities.push(intersection_result);
-					}
+					//Ray_Trinagle_Intersection_Result ray_mesh_intersection_result;
+					//if (::detect_intersection(entity_world_matrix, picking_ray, vertices, render_model->mesh.vertex_count(), indices, render_model->mesh.index_count(), &ray_mesh_intersection_result)) {
+					//	intersection_result.entity_id = entity_id;
+					//	intersection_result.render_entity_idx = i;
+					//	intersection_result.intersection_point = ray_mesh_intersection_result.intersection_point;
+					//	intersected_entities.push(intersection_result);
+					//}
 				}
 			}
 		}
@@ -579,6 +579,8 @@ void Editor::render()
 		}
 		static Array<Primitive_ID> primitive_ids;
 		FPS_Counter *fps_counter = &Engine::get_instance()->fps_counter;
+
+		auto mesh_storage = &Engine::get_instance()->mesh_storage;
 		//ImGui::Text("Fps %lld | Avg Fps %lld | Min Fps %lld | Max Fps %lld | %lldms", fps_counter->fps, fps_counter->average_fps, fps_counter->min_fps, fps_counter->max_fps, fps_counter->frame_time);
 		ImGui::Text("Avg Fps %lld | Min Fps %lld | Max Fps %lld | %lldms | Fps %lld", fps_counter->average_fps, fps_counter->min_fps, fps_counter->max_fps, fps_counter->frame_time, fps_counter->fps);
 		static bool display = false;
@@ -589,7 +591,7 @@ void Editor::render()
 				Render_Entity *render_entity = NULL;
 				For(render_world->game_render_entities, render_entity) {
 					Entity *entity = game_world->get_entity(render_entity->entity_id);
-					AABB aabb = make_AABB(&render_world->model_storage.render_models[render_entity->mesh_idx]->mesh, get_world_matrix(entity));
+					AABB aabb = make_AABB(mesh_storage->get_base_vertex(&render_entity->mesh_info), render_entity->mesh_info.vertex_count, get_world_matrix(entity));
 					primitive_ids.push(primitive_renderer->add_aabb(&aabb));
 				}
 			} else {

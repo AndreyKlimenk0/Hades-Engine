@@ -159,6 +159,8 @@ struct Group {
 	Array<Entity> entities;
 };
 
+Matrix4 get_world_matrix(Entity *entity);
+
 struct Game_World {
 
 	Array<Entity> entities;

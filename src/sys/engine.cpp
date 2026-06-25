@@ -81,7 +81,11 @@ void Engine::init(Win32_Window *window)
 	shader_manager.init();
 
 	render_sys.init(window, &var_service);
+	
 	ui_storage.init(render_sys.render_device);
+	mesh_storage.init(render_sys.render_device);
+	texture_storage.init(&render_sys);
+	material_storage.init(render_sys.render_device);
 
 	game_world.init();
 	render_world.init(this);
@@ -115,6 +119,8 @@ void Engine::frame()
 	render_world.update();
 	render_world.prepare_for_rendering();
 	ui_storage.prepare_for_rendering();
+	mesh_storage.prepare_for_rendering();
+	material_storage.prepare_for_rendering();
 
 	render_sys.render();
 

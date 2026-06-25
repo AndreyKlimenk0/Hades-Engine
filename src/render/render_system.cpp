@@ -101,6 +101,11 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	pipeline_resource_manager.init(render_device, &back_buffer_texture_desc);
 	command_list_allocator.init(render_device, back_buffer_count);
 
+	render_pass_context.primitive_renderer = &primitive_renderer;
+	render_pass_context.mesh_storage = &Engine::get_instance()->mesh_storage;
+	render_pass_context.material_storage = &Engine::get_instance()->material_storage;
+	render_pass_context.render_world = &Engine::get_instance()->render_world;
+
 	init_passes();
 }
 
@@ -124,17 +129,17 @@ void Render_System::init_passes()
 	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.primitive_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
-	render_pass_submissions.push({ &passes.shadows_pass,  (void *)render_world, (void *)this });
-	render_pass_submissions.push({ &passes.culling_pass,  (void *)render_world, (void *)this });
-	render_pass_submissions.push({ &passes.forward_pass,  (void *)render_world, (void *)this });
-	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)render_world, (void *)this });
-	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)render_world, (void *)this });
-	render_pass_submissions.push({ &passes.outlining_pass,  (void *)render_world, (void *)this });
+	render_pass_submissions.push({ &passes.shadows_pass,  (void *)&render_pass_context, (void *)this });
+	render_pass_submissions.push({ &passes.culling_pass,  (void *)&render_pass_context, (void *)this });
+	render_pass_submissions.push({ &passes.forward_pass,  (void *)&render_pass_context, (void *)this });
+	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)&render_pass_context, (void *)this });
+	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)&render_pass_context, (void *)this });
+	render_pass_submissions.push({ &passes.outlining_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
-	
-	render_pass_submissions.push({ &passes.depth_pass, (void *)render_world,   (void *)this });
-	render_pass_submissions.push({ &passes.generate_hzb, (void *)render_world,   (void *)this });
-	render_pass_submissions.push({ &passes.primitive_pass, (void *)render_world,   (void *)this });
+
+	render_pass_submissions.push({ &passes.depth_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.generate_hzb, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.primitive_pass, (void *)&render_pass_context,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)

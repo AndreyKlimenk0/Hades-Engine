@@ -147,6 +147,15 @@ Entity_Id Game_World::make_spot_light(const Vector3 &position, const Vector3 &di
 	return get_entity_id(&light);
 }
 
+Matrix4 get_world_matrix(Entity *entity)
+{
+	if (entity->type == ENTITY_TYPE_CAMERA) {
+		Camera *camera = static_cast<Camera *>(entity);
+		return inverse(camera->view_matrix);
+	}
+	return make_scale_matrix(&entity->scaling) * rotate(&entity->rotation) * make_translation_matrix(&entity->position);
+}
+
 void Game_World::init()
 {
 }

@@ -18,6 +18,35 @@ static const char *FOUR_SPACES = "    ";
 static Loading_Models_Options loading_options;
 static Loading_Models_Info loading_info;
 
+Loading_Model::Loading_Model()
+{
+}
+
+Loading_Model::Loading_Model(const String &name, const String &file_name) : name(name), file_name(file_name)
+{
+}
+
+Loading_Model::~Loading_Model()
+{
+}
+
+const char *Loading_Model::get_name()
+{
+	assert(exclusive_or(!name.is_empty(), !file_name.is_empty()));
+	return name.is_empty() ? file_name.c_str() : name.c_str();
+}
+
+String Loading_Model::get_pretty_name()
+{
+	String result = "";
+	if (!name.is_empty() && !file_name.is_empty()) {
+		result.move(format("'{}' mesh from {}", name, file_name));
+	} else if (exclusive_or(name.is_empty(), file_name.is_empty())) {
+		result = get_name();
+	}
+	return result;
+}
+
 struct Assimp_Logger : Assimp::LogStream {
 	void write(const char *message)
 	{
@@ -195,8 +224,6 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 		scale = 0.01f;
 	}
 
-	Vector3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
-	Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
 	Triangle_Mesh *mesh = &loading_model->mesh;
 
 	for (u32 i = 0; i < ai_mesh->mNumVertices; i++) {
@@ -204,13 +231,6 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 		vertex.position.x = scale * ai_mesh->mVertices[i].x;
 		vertex.position.y = scale * ai_mesh->mVertices[i].y;
 		vertex.position.z = scale * ai_mesh->mVertices[i].z;
-
-		min.x = math::min(min.x, vertex.position.x);
-		min.y = math::min(min.y, vertex.position.y);
-		min.z = math::min(min.z, vertex.position.z);
-		max.x = math::max(max.x, vertex.position.x);
-		max.y = math::max(max.y, vertex.position.y);
-		max.z = math::max(max.z, vertex.position.z);
 
 		if (ai_mesh->HasTextureCoords(0)) {
 			vertex.uv.x = (float)ai_mesh->mTextureCoords[0][i].x;
@@ -238,9 +258,6 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 			mesh->indices.push(face.mIndices[j]);
 		}
 	}
-
-	loading_model->min = min;
-	loading_model->max = max;
 
 	loading_info.model_count++;
 	loading_info.total_vertex_count += mesh->vertices.count;

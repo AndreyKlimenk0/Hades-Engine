@@ -5,9 +5,8 @@
 #include "vertex.hlsl"
 
 struct Pass_Data {
-	uint mesh_idx;
-	uint world_matrix_idx;
-	uint2 pad30;
+	uint mesh_instance_idx;
+	uint3 pad;
 	float4x4 view_projection_matrix;
 };
 
@@ -20,12 +19,12 @@ StructuredBuffer<uint> unified_index_buffer : register(t3, space0);
 
 float4 vs_main(uint vertex_id : SV_VertexID) : SV_POSITION
 {
-	Mesh_Instance mesh_instance = mesh_instances[pass_data.mesh_idx];
+	Mesh_Instance mesh_instance = mesh_instances[pass_data.mesh_instance_idx];
 	
 	uint index = unified_index_buffer[mesh_instance.index_offset + vertex_id];
 	Vertex_P3N3T3UV vertex = unified_vertex_buffer[mesh_instance.vertex_offset + index];
 
-	float4x4 world_matrix = world_matrices[pass_data.world_matrix_idx];
+	float4x4 world_matrix = world_matrices[mesh_instance.transform_idx];
 	float4x4 wvp_matrix = mul(world_matrix, pass_data.view_projection_matrix);
 	return mul(float4(vertex.position, 1.0f), wvp_matrix);
 }

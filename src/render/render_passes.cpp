@@ -90,9 +90,8 @@ void Shadows_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 }
 
 struct Depth_Map_Pass_Data {
-	u32 mesh_idx;
-	u32 world_matrix_idx;
-	Pad2 pad;
+	u32 mesh_instance;
+	Pad3 pad;
 	Matrix4 view_projection_matrix;
 };
 
@@ -121,8 +120,11 @@ void Shadows_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 
 void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Shadows mapping");
 
@@ -140,29 +142,25 @@ void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;
 
 	Cascaded_Shadows *cascaded_shadows = NULL;
-	For(render_world->cascaded_shadows_list, cascaded_shadows)
-	{
+	For(render_world->cascaded_shadows_list, cascaded_shadows) {
 		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
-		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map)
-		{
+		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map) {
 			graphics_command_list->set_viewport(cascaded_shadow_map->viewport);
 
 			Render_Entity *render_entity = NULL;
-			For(render_world->game_render_entities, render_entity)
-			{
-				pass_data.mesh_idx = render_entity->mesh_idx;
-				pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+			For(render_world->game_render_entities, render_entity) {
+				pass_data.mesh_instance = render_entity->mesh_instance;
 				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
 
 				graphics_command_list->set_graphics_constants(0, 0, sizeof(Depth_Map_Pass_Data), (void *)&pass_data);
-				graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+				graphics_command_list->draw(render_entity->mesh_info.index_count);
 			}
 		}
 	}
@@ -214,8 +212,11 @@ void Debug_Shadows_Pass::setup_pipeline(Render_Device *render_device, Shader_Man
 
 void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Debug shadows");
 
@@ -238,11 +239,13 @@ void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, vo
 	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	graphics_command_list->set_graphics_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, render_world->lights_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(5, 0, SHADER_RESOURCE_REGISTER, material_storage->material_buffer->shader_resource_descriptor());
+
 	graphics_command_list->set_graphics_descriptor_table(0, 2, SHADER_RESOURCE_REGISTER, shadow_atlas->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 2, SHADER_RESOURCE_REGISTER, render_world->jittering_samples->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(2, 2, SHADER_RESOURCE_REGISTER, render_world->cascaded_shadows_info_buffer->shader_resource_descriptor());
@@ -263,11 +266,10 @@ void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, vo
 	Pass_Data pass_data;
 	Render_Entity *render_entity = NULL;
 	For(render_world->game_render_entities, render_entity) {
-		pass_data.parameter0 = render_entity->mesh_idx;
-		pass_data.parameter1 = render_entity->world_matrix_idx;
+		pass_data.parameter0 = render_entity->mesh_instance;
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
 
-		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		graphics_command_list->draw(render_entity->mesh_info.index_count);
 	}
 
 	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_ALL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE);
@@ -304,6 +306,7 @@ void Forward_Pass::setup_root_signature(Render_Device *device)
 	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
 	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
 	root_signature->add_shader_resource_parameter(4, 0); //Lights buffer
+	root_signature->add_shader_resource_parameter(5, 0); //Materials
 
 	root_signature->add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
 	root_signature->add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
@@ -331,8 +334,11 @@ void Forward_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 
 void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Forward rendering");
 
@@ -355,11 +361,13 @@ void Forward_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	graphics_command_list->set_graphics_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, render_world->lights_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(5, 0, SHADER_RESOURCE_REGISTER, material_storage->material_buffer->shader_resource_descriptor());
+	
 	graphics_command_list->set_graphics_descriptor_table(0, 2, SHADER_RESOURCE_REGISTER, shadow_atlas->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 2, SHADER_RESOURCE_REGISTER, render_world->jittering_samples->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(2, 2, SHADER_RESOURCE_REGISTER, render_world->cascaded_shadows_info_buffer->shader_resource_descriptor());
@@ -612,8 +620,11 @@ void Silhouette_Pass::setup_pipeline(Render_Device *render_device, Shader_Manage
 
 void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Silhouette");
 	graphics_command_list->clear_render_target(silhouette, Color(0.0f, 0.0f, 0.0f, 0.0f));
@@ -633,22 +644,20 @@ void Silhouette_Pass::render(Graphics_Command_List *graphics_command_list, void 
 	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()));
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Pass_Data pass_data;
 
 	for (u32 i = 0; i < render_entity_indices.count; i++) {
 		u32 index = render_entity_indices[i];
 		Render_Entity *render_entity = &render_world->game_render_entities[index];
-
-		pass_data.parameter0 = render_entity->mesh_idx;
-		pass_data.parameter1 = render_entity->world_matrix_idx;
-		pass_data.parameter2 = i + 1;
+		pass_data.parameter0 = render_entity->mesh_instance;
+		pass_data.parameter1 = i + 1;
 
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
-		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		graphics_command_list->draw(render_entity->mesh_info.index_count);
 	}
 	graphics_command_list->end_event();
 }
@@ -701,7 +710,11 @@ void Outlining_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager
 
 void Outlining_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Outlining");
 
@@ -760,8 +773,11 @@ void Depth_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *sh
 
 void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Depth buffer");
 
@@ -781,21 +797,19 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 	graphics_command_list->set_viewport(make_viewport_from_texture(render_sys->swap_chain->get_back_buffer()), true);
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_vertex_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.unified_index_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;
 	pass_data.view_projection_matrix = render_world->get_camera()->view_perspective_matrix;
 
 	Render_Entity *render_entity = NULL;
-	For(render_world->game_render_entities, render_entity)
-	{
-		pass_data.mesh_idx = render_entity->mesh_idx;
-		pass_data.world_matrix_idx = render_entity->world_matrix_idx;
+	For(render_world->game_render_entities, render_entity) {
+		pass_data.mesh_instance = render_entity->mesh_instance;
 		graphics_command_list->set_graphics_constants(0, 0, &pass_data);
 
-		graphics_command_list->draw(render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count());
+		graphics_command_list->draw(render_entity->mesh_info.index_count);
 	}
 	graphics_command_list->end_event();
 }
@@ -930,6 +944,7 @@ void Culling_Pass::setup_root_signature(Render_Device *device)
 	root_signature->add_shader_resource_parameter(2, 0); // mesh_instances
 	root_signature->add_shader_resource_parameter(3, 0); // render_entities
 	root_signature->add_shader_resource_parameter(4, 0); // mesh_draw_commands
+	root_signature->add_shader_resource_parameter(5, 0); // bounding boxes
 	root_signature->add_unordered_access_parameter(0, 0); // culled_mesh_draw_commandsk
 
 	Render_Pass::setup_root_signature(device);
@@ -944,16 +959,13 @@ void Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
 
-struct GPU_Render_Entity {
-	u32 mesh_idx;
-	u32 world_matrix_idx;
-	Pad2 pad;
-};
-
 void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
-	Render_World *render_world = (Render_World *)context;
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
 	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage; 
 
 	graphics_command_list->begin_event("Culling");
 
@@ -996,26 +1008,25 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 		DELETE_PTR(render_entities_buffer);
 		Buffer_Desc buffer_desc;
 		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
-		buffer_desc.size = render_world->game_render_entities.count * sizeof(GPU_Render_Entity);
-		buffer_desc.stride = sizeof(GPU_Render_Entity);
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
+		buffer_desc.stride = sizeof(Pass_Data);
 		buffer_desc.name = "Render Entities";
 
 		render_entities_buffer = render_sys->render_device->create_buffer(&buffer_desc);
 	}
 
 	Array<IndirectCommand> indirect_commands;
-	Array<GPU_Render_Entity> render_entities;
+	Array<Pass_Data> render_entities;
 	Render_Entity *render_entity = NULL;
 	u64 counter = 0;
 	For(render_world->game_render_entities, render_entity) {
-		GPU_Render_Entity gpu_render_entity;
-		gpu_render_entity.mesh_idx = render_entity->mesh_idx;
-		gpu_render_entity.world_matrix_idx = render_entity->world_matrix_idx;
+		Pass_Data gpu_render_entity;
+		gpu_render_entity.parameter0 = render_entity->mesh_instance;
 		render_entities.push(gpu_render_entity);
 
 		IndirectCommand indirect_command;
-		indirect_command.cbv = render_entities_buffer->gpu_virtual_address() + (counter++ * sizeof(GPU_Render_Entity));
-		indirect_command.drawArguments.VertexCountPerInstance = render_world->model_storage.render_models[render_entity->mesh_idx]->mesh.index_count();
+		indirect_command.cbv = render_entities_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
+		indirect_command.drawArguments.VertexCountPerInstance = render_entity->mesh_info.index_count;
 		indirect_command.drawArguments.InstanceCount = 1;
 		indirect_command.drawArguments.StartVertexLocation = 0;
 		indirect_command.drawArguments.StartInstanceLocation = 0;
@@ -1044,9 +1055,10 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
-	graphics_command_list->set_compute_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->model_storage.mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_entities_buffer->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, draw_commands_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(5, 0, SHADER_RESOURCE_REGISTER, render_world->bounding_box_buffer->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, culled_draw_commands_buffer->unordered_access_descriptor(draw_commands_counter_offset));
 	
 	graphics_command_list->dispatch((u32)math::ceil((float)render_world->game_render_entities.count / 128.0f), 1);
