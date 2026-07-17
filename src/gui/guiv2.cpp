@@ -1,5 +1,7 @@
 #include <math.h>
 #include <limits.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #include "guiv2.h"
 #include "../sys/sys.h"
@@ -24,6 +26,16 @@ static const u32 UI_ELEMENT_DRAW = 0x8;
 static const u32 UI_ELEMENT_SET_RELATIVE_X_POSITION = 0x10;
 static const u32 UI_ELEMENT_SET_RELATIVE_Y_POSITION = 0x20;
 
+static String format_c_string(const char *format, va_list args)
+{
+	String string;
+	if (!string_null_or_empty(format)) {
+		string.len = _vscprintf(format, args) + 1; // terminating '\0'
+		string.data = (char *)malloc(string.len * sizeof(char));
+		vsprintf_s(string.data, string.len, format, args);
+	}
+	return string;
+}
 
 template <typename T>
 inline T safe_sub(T x, T y)
@@ -688,9 +700,14 @@ void imgui::end_frame()
 	ui_context.render_2d->add_render_primitive_list(ui_context.render_primitive_list);
 }
 
-void imgui::begin_ui_element(const char *name)
+void imgui::begin_ui_element(const char *format_name, ...)
 {
 	ui_element_debug_counter++;
+
+	va_list args;
+	va_start(args, format_name);
+	String name = format_c_string(format_name, args);
+	va_end(args);
 	
 	Element_ID element_id = Element_ID(process_ui_element_name(name));
 	UI_Element *parent_ui_element = ui_context.get_top_ui_element();
@@ -716,7 +733,7 @@ void imgui::set_absolute_position_x(s32 x)
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	ui_element->flags &= ~UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT;
-	ui_element->position.x;
+	ui_element->position.x = x;
 }
 
 void imgui::set_absolute_position_y(s32 y)

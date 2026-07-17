@@ -174,7 +174,7 @@ namespace imgui {
 	void begin_frame();
 	void end_frame();
 
-	void begin_ui_element(const char *name);
+	void begin_ui_element(const char *format_name, ...);
 	void end_ui_element();
 
 	void set_absolute_position_x(s32 x);

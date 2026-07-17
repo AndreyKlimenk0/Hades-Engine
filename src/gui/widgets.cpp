@@ -112,7 +112,7 @@ void list_box(const char *label, Array<String> &list, u32 *index)
 		*index = 0;
 	}
 
-	begin_ui_element("List Box Header #id");
+	begin_ui_element("List Box Header Name[%s]", label);
 
 	set_size(fit_size(), fit_size());
 	set_layout(ROW_LAYOUT);
@@ -145,7 +145,7 @@ void list_box(const char *label, Array<String> &list, u32 *index)
 	end_ui_element(); // Header
 
 	if (list_field->id == ui_state.active_list_box) {
-		begin_ui_element("List Box Drop Panel #id");
+		begin_ui_element("List Box Drop Panel Name[%s]", label);
 		set_absolute_position(list_field->get_rect().x, list_field->get_rect().bottom() + list_theme.field_panel_spacing);
 		set_size(fixed_size(list_theme.width), fit_size());
 		set_rounding(list_theme.rounding, ROUND_RECT);
@@ -178,7 +178,7 @@ void list_box(const char *label, Array<String> &list, u32 *index)
 bool check_box(const char *label, bool *state)
 {
 	bool check_box_clicked = false;
-	begin_ui_element("Check Box #id");
+	begin_ui_element("Check Box Name[%s]", label);
 	set_size(fit_size(), fit_size());
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
@@ -229,7 +229,7 @@ void slider(const char *label, float min, float max, float *value)
 
 	*value = math::clamp(*value, min, max);
 
-	begin_ui_element("Slider #id");
+	begin_ui_element("Slider Name[%s]", label);
 	set_size(fit_size(), fit_size());
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
