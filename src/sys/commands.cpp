@@ -63,8 +63,10 @@ static void load_meshes(Array<String> &command_args)
 			String base_mesh_file_name;
 			extract_base_file_name(mesh_names[i], base_mesh_file_name);
 
+			print("load_meshes: Load image files and create textures.");
 			texture_storage->create_textures(textures, base_mesh_file_name);
 
+			print("load_meshes: Create game and render entities.");
 			for (u32 j = 0; j < loaded_models.count; j++) {
 				Loading_Model *loading_model = loaded_models[j];
 

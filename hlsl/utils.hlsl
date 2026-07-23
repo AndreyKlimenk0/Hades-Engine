@@ -66,6 +66,12 @@ float max2(T vec)
 }
 
 template<typename T>
+float min4(T vec)
+{
+    return min(min(vec.x, vec.y), min(vec.z, vec.w));
+}
+
+template<typename T>
 float max4(T vec)
 {
     return max(max(vec.x, vec.y), max(vec.z, vec.w));

@@ -16,6 +16,10 @@ struct GPU_Global_Info {
 	u32 linear_sampler_idx;
 	u32 point_sampler_idx;
 	u32 point_clamp_sampler_idx;
+	u32 hzb_width;
+	u32 hzb_height;
+	u32 hzb_mips;
+	Pad1 pad;
 };
 
 struct GPU_Frame_Info {

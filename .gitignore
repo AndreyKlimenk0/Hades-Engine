@@ -8,6 +8,7 @@ desktop
 /data/textures/Scene_Demo/
 /data/models/Scene_Demo*
 /data/levels/scene_demo*
+/scripts/generate_cubes.py
 keyboard_shortcuts.txt
 
 # User-specific files

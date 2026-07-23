@@ -129,16 +129,17 @@ void Render_System::init_passes()
 	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.primitive_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
+	render_pass_submissions.push({ &passes.depth_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.generate_hzb, (void *)&render_pass_context,   (void *)this });
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.culling_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.forward_pass,  (void *)&render_pass_context, (void *)this });
 	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)&render_pass_context, (void *)this });
+	
 	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.outlining_pass,  (void *)&render_pass_context, (void *)this });
-	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
 
-	render_pass_submissions.push({ &passes.depth_pass, (void *)&render_pass_context,   (void *)this });
-	render_pass_submissions.push({ &passes.generate_hzb, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
 	render_pass_submissions.push({ &passes.primitive_pass, (void *)&render_pass_context,   (void *)this });
 }
 
@@ -166,8 +167,6 @@ void Render_System::notify_end_frame()
 
 	render_device->finish_frame(frame_fence->expected_value - 1);
 }
-
-#include "../win32/win_time.h"
 
 void Render_System::render()
 {
@@ -208,15 +207,12 @@ void Render_System::render()
 	end_profile_task();
 
 	begin_profile_task("Wait");
-	auto x = milliseconds_counter();
-	if (frame_fence->wait_for_gpu(frame_fence->expected_value - 1)) {
-		//print("wait for gpu", milliseconds_counter() - x);
-	} else {
-		//print("wait not for gpu", milliseconds_counter() - x);
-	}
+	frame_fence->wait_for_gpu(frame_fence->expected_value - 1);
 	end_profile_task();
 
+	begin_profile_task("Finish Frame");
 	notify_end_frame();
+	end_profile_task();
 
 	frame_fence->increment_expected_value();
 
@@ -261,6 +257,9 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 	global_info.linear_sampler_idx = linear_sampler->sampler_descriptor()->index();
 	global_info.point_sampler_idx = point_sampler->sampler_descriptor()->index();
 	global_info.point_clamp_sampler_idx = point_clamp_sampler->sampler_descriptor()->index();
+	global_info.hzb_width = round_down_to_power_of_two(back_buffer_texture_desc->width);
+	global_info.hzb_height = round_down_to_power_of_two(back_buffer_texture_desc->height);
+	global_info.hzb_mips = find_max_mip_level(global_info.hzb_width, global_info.hzb_height);
 
 	Buffer_Desc global_buffer_desc;
 	global_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;

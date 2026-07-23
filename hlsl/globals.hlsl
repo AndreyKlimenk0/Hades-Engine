@@ -6,6 +6,8 @@ struct Global_Info {
     uint linear_sampler_idx;
     uint point_sampler_idx;
     uint point_clamp_sampler_idx;
+    uint3 hzb_width_height_mips;
+    uint pad;
 };
 
 struct Frame_Info {

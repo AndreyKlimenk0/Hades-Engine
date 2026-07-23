@@ -779,6 +779,10 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
 	Material_Storage *material_storage = render_pass_context->material_storage;
 
+	if (render_world->get_camera()->freeze_movement) {
+		return;
+	}
+
 	graphics_command_list->begin_event("Depth buffer");
 
 	graphics_command_list->clear_depth_stencil(depth_texture);
@@ -965,7 +969,7 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 	Render_System *render_sys = (Render_System *)args;
 	Render_World *render_world = render_pass_context->render_world;
 	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
-	Material_Storage *material_storage = render_pass_context->material_storage; 
+	Material_Storage *material_storage = render_pass_context->material_storage;
 
 	graphics_command_list->begin_event("Culling");
 

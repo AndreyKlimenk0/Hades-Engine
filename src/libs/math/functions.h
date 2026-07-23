@@ -60,25 +60,31 @@ namespace math
 		return (float)::tan((double)value);
 	}
 
-	template< typename T>
+	template <typename T>
 	inline T pow2(T value)
 	{
 		return (T)::pow((double)value, 2);
 	}
 
-	template< typename T>
+	template <typename T>
+	inline T exp2(T value)
+	{
+		return (T)::pow(2.0f, (double)value);
+	}
+
+	template <typename T>
 	inline T sqrt(T value)
 	{
 		return (T)::sqrt((double)value);
 	}
 
-	template< typename T>
+	template <typename T>
 	inline T floor(T value)
 	{
 		return (T)::floor((double)value);
 	}
 
-	template< typename T>
+	template <typename T>
 	inline T ceil(T value)
 	{
 		return (T)::ceil((double)value);
