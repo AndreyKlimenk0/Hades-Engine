@@ -224,8 +224,6 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 		scale = 0.01f;
 	}
 
-	Triangle_Mesh *mesh = &loading_model->mesh;
-
 	for (u32 i = 0; i < ai_mesh->mNumVertices; i++) {
 		Vertex_PNTUV vertex;
 		vertex.position.x = scale * ai_mesh->mVertices[i].x;
@@ -247,7 +245,8 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 			vertex.tangent.y = ai_mesh->mTangents[i].y;
 			vertex.tangent.z = ai_mesh->mTangents[i].z;
 		}
-		mesh->vertices.push(vertex);
+		loading_model->mesh.vertices.push(vertex);
+		loading_model->mesh_points.push(vertex.position);
 	}
 
 	for (u32 i = 0; i < ai_mesh->mNumFaces; i++) {
@@ -255,13 +254,13 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 
 		assert(face.mNumIndices == 3);
 		for (u32 j = 0; j < face.mNumIndices; j++) {
-			mesh->indices.push(face.mIndices[j]);
+			loading_model->mesh.indices.push(face.mIndices[j]);
 		}
 	}
 
 	loading_info.model_count++;
-	loading_info.total_vertex_count += mesh->vertices.count;
-	loading_info.total_index_count += mesh->indices.count;
+	loading_info.total_vertex_count += loading_model->mesh.vertices.count;
+	loading_info.total_index_count += loading_model->mesh.indices.count;
 }
 
 inline void process_material(aiMaterial *material, Loading_Model *loading_model, Array<String> &textures)

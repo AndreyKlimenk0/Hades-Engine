@@ -214,6 +214,20 @@ void Mesh_Storage::prepare_for_rendering()
 		unified_vertex_buffer->write(unified_vertices.to_void_ptr(), unified_vertices.get_size());
 	}
 
+	if (!unified_point_buffer || (unified_point_buffer->count() < (u64)unified_points.count)) {
+		DELETE_PTR(unified_point_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.size = unified_points.get_size();
+		buffer_desc.stride = unified_points.stride;
+		buffer_desc.data = unified_points.to_void_ptr();
+		buffer_desc.name = "Unified point buffer";
+
+		unified_point_buffer = render_device->create_buffer(&buffer_desc);
+	} else {
+		unified_point_buffer->request_write();
+		unified_point_buffer->write(unified_points.to_void_ptr(), unified_points.get_size());
+	}
+
 	if (!unified_index_buffer || (unified_index_buffer->count() < (u64)unified_indices.count)) {
 		DELETE_PTR(unified_index_buffer);
 		Buffer_Desc buffer_desc;
@@ -234,7 +248,7 @@ Vertex_PNTUV *Mesh_Storage::get_base_vertex(Mesh_Storage_Info *mesh_info)
 	return &unified_vertices[mesh_info->vertex_offset];
 }
 
-Mesh_Storage_Info Mesh_Storage::add_mesh(const char *name, Triangle_Mesh *mesh)
+Mesh_Storage_Info Mesh_Storage::add_mesh(const char *name, Triangle_Mesh *mesh, Array<Vector3> &mesh_points)
 {
 	Mesh_Storage_Info mesh_info;
 	mesh_info.vertex_count = mesh->vertex_count();
@@ -243,6 +257,7 @@ Mesh_Storage_Info Mesh_Storage::add_mesh(const char *name, Triangle_Mesh *mesh)
 	mesh_info.index_offset = unified_indices.count;
     
 	merge(&unified_vertices, &mesh->vertices);
+	merge(&unified_points, &mesh_points);
 	merge(&unified_indices, &mesh->indices);
 
 	upload_data_to_gpu = true;

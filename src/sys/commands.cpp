@@ -70,7 +70,7 @@ static void load_meshes(Array<String> &command_args)
 			for (u32 j = 0; j < loaded_models.count; j++) {
 				Loading_Model *loading_model = loaded_models[j];
 
-				Mesh_Storage_Info mesh_info = mesh_storage->add_mesh(loading_model->name, &loading_model->mesh);
+				Mesh_Storage_Info mesh_info = mesh_storage->add_mesh(loading_model->name, &loading_model->mesh, loading_model->mesh_points);
 			
 				u32 normal_texture_idx = texture_storage->find_texture_or_get_default(loading_model->normal_texture_name, DEFAULT_NORMAL_TEXTURE)->shader_resource_descriptor()->index();
 				u32 albedo_texture_idx = texture_storage->find_texture_or_get_default(loading_model->albedo_texture_name, DEFAULT_ALBEDO_TEXTURE)->shader_resource_descriptor()->index();

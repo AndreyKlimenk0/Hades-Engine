@@ -51,10 +51,12 @@ struct Mesh_Storage_Info {
 struct Mesh_Storage {
 	bool upload_data_to_gpu = false;
 	Buffer *unified_vertex_buffer = NULL;
+	Buffer *unified_point_buffer = NULL;
 	Buffer *unified_index_buffer = NULL;
 	Render_Device *render_device = NULL;
 
 	Array<Vertex_PNTUV> unified_vertices;
+	Array<Vector3> unified_points;
 	Array<u32> unified_indices;
 
 	Hash_Table<String, Mesh_Storage_Info> mesh_table;
@@ -63,7 +65,7 @@ struct Mesh_Storage {
 	void prepare_for_rendering();
 	
 	Vertex_PNTUV *get_base_vertex(Mesh_Storage_Info *mesh_info);
-	Mesh_Storage_Info add_mesh(const char *name, Triangle_Mesh *mesh);
+	Mesh_Storage_Info add_mesh(const char *name, Triangle_Mesh *mesh, Array<Vector3> &mesh_points);
 };
 
 #endif

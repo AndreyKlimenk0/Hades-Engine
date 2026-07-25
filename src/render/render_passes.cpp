@@ -100,7 +100,7 @@ void Shadows_Pass::setup_root_signature(Render_Device *device)
 	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
 	root_signature->add_shader_resource_parameter(0, 0); //World matrices
 	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
-	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(4, 0); //unified point buffer
 	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
 
 	access = ALLOW_VERTEX_SHADER_ACCESS;
@@ -143,7 +143,7 @@ void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_point_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;
@@ -753,7 +753,7 @@ void Depth_Pass::setup_root_signature(Render_Device *device)
 	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
 	root_signature->add_shader_resource_parameter(0, 0); //World matrices
 	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
-	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
+	root_signature->add_shader_resource_parameter(4, 0); //unified vertex buffer
 	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
 
 	access = ALLOW_VERTEX_SHADER_ACCESS;
@@ -802,7 +802,7 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 
 	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
-	graphics_command_list->set_graphics_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_vertex_buffer->shader_resource_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_point_buffer->shader_resource_descriptor());
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;

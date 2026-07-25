@@ -38,6 +38,7 @@ struct Loading_Model {
 	String roughness_metalic_texture_name;
 
 	Triangle_Mesh mesh;
+	Array<Vector3> mesh_points;
 	Array<Transformation> instances;
 
 	const char *get_name();
