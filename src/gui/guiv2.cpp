@@ -6,12 +6,10 @@
 #include "guiv2.h"
 #include "../sys/sys.h"
 #include "../sys/engine.h"
-#include "../libs/str.h"
 #include "../libs/color.h"
 #include "../libs/os/input.h"
 #include "../libs/os/event.h"
 #include "../libs/math/functions.h"
-#include "../libs/math/structures.h"
 #include "../libs/structures/array.h"
 #include "../libs/structures/stack.h"
 
@@ -183,6 +181,7 @@ struct UI_Context {
 	Render_Primitive_List *render_primitive_list = NULL;
 	
 	UI_Element *root_element = NULL;
+	UI_Element *last_element = NULL;
 	
 	Stack<UI_Element *> elements_stack;
 
@@ -621,7 +620,15 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 		Rect_s32 clip_rect = _calculate_clip_rect(parent_clip_rect, &rect);
 		if (ui_element->flags & UI_ELEMENT_DRAW_TEXT) {
 			render_primitive_list->push_clip_rect(parent_clip_rect);
-			render_primitive_list->add_text(&rect, ui_element->text);
+			render_primitive_list->add_rect(&rect, ui_element->background_color);
+			
+			Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT;
+			if (ui_element->flags & TEXT_ELEMENT_MAX_SYMBOL_HEIGHT) {
+				text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL;
+			} else if (ui_element->flags & TEXT_ELEMENT_MAX_ALPHABET_HEIGHT) {
+				text_alignment = ALIGN_TEXT_BY_MAX_ALPHABET;
+			}
+			render_primitive_list->add_text(&rect, ui_element->text, text_alignment);
 		} else {
 			render_primitive_list->push_clip_rect(&clip_rect);
 			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
@@ -726,6 +733,7 @@ void imgui::begin_ui_element(const char *format_name, ...)
 void imgui::end_ui_element()
 {
 	ui_element_debug_counter--;
+	ui_context.last_element = ui_context.get_top_ui_element();
 	ui_context.pop_ui_element();
 }
 
@@ -829,24 +837,29 @@ static void ui_element_draw_text(const char *text)
 	ui_element->text = text;
 }
 
-void imgui::text(const char *text)
+void imgui::ui_text_element(const char *text, u32 text_element_flags)
 {
-	Size_u32 text_size = ui_context.font->get_text_size(text);
-	begin_ui_element(text);
-	set_size(fixed_size(text_size.width), fixed_size(text_size.height));
-	ui_element_draw_text(text);
-	set_background_color(Color::Black);
-	end_ui_element();
+	ui_text_element(text, text, text_element_flags);
 }
 
-void imgui::text(const char *ui_element_name, const char *text)
+void imgui::ui_text_element(const char *ui_element_name, const char *text, u32 text_element_flags)
 {
-	Size_u32 text_size = ui_context.font->get_text_size(text);
-	begin_ui_element(ui_element_name);
-	set_size(fixed_size(text_size.width), fixed_size(text_size.height));
-	ui_element_draw_text(text);
-	set_background_color(Color::Black);
-	end_ui_element();
+	if (text) {
+		begin_ui_element(ui_element_name);
+		UI_Element *ui_element = ui_context.get_top_ui_element();
+		Size_u32 text_size = ui_context.font->get_text_size(text);
+		if (text_element_flags & TEXT_ELEMENT_MAX_SYMBOL_HEIGHT) {
+			text_size.height = ui_context.font->max_symbol_height;
+			ui_element->flags |= TEXT_ELEMENT_MAX_SYMBOL_HEIGHT;
+		} else if (text_element_flags & TEXT_ELEMENT_MAX_ALPHABET_HEIGHT) {
+			text_size.height = ui_context.font->max_alphabet_height;
+			ui_element->flags |= TEXT_ELEMENT_MAX_ALPHABET_HEIGHT;
+		}
+		set_size(fixed_size(text_size.width), fixed_size(text_size.height));
+		ui_element_draw_text(text);
+		set_background_color(Color(1.0f, 0.0f, 0.0f, 0.0f));
+		end_ui_element();
+	}
 }
 
 bool imgui::ui_element_hovered()
@@ -879,4 +892,14 @@ Rect_s32 imgui::ui_element_rect()
 UI_Element *imgui::get_ui_element()
 {
 	return ui_context.get_top_ui_element();
+}
+
+UI_Element *imgui::get_last_ui_element()
+{
+	return ui_context.last_element;
+}
+
+Font *imgui::get_font()
+{
+	return ui_context.font;
 }

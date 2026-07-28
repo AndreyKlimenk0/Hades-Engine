@@ -60,6 +60,16 @@ struct Slider_Theme {
 	Color thumb_color;
 };
 
+struct Edit_Field_Theme {
+	Edit_Field_Theme();
+	~Edit_Field_Theme();
+
+	s32 width;
+	s32 height;
+	s32 rounding;
+	Color field_color;
+};
+
 void init_widgets();
 
 void push_button_theme(Text_Button_Theme *button_theme);
@@ -76,5 +86,9 @@ void list_box(const char *name, Array<String> &list, u32 *index);
 bool check_box(const char *label, bool *state);
 
 void slider(const char *label, float min, float max, float *value);
+
+void edit_field(const char *name, int *value);
+void edit_field(const char *name, float *value);
+void edit_field(const char *name, String *string);
 
 #endif

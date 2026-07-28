@@ -114,8 +114,6 @@ void Engine::init(Win32_Window *window)
 
 	render_sys.init(window, &var_service);
 
-	//gui::init_gui(this);
-
 	game_world.init();
 	render_world.init(this);
 
@@ -146,8 +144,6 @@ void Engine::frame()
 	pump_events();
 	run_event_loop();
 
-	gui::handle_events();
-
 	//editor.handle_events();
 	//editor.update();
 #if DRAW_TEST_GUI
@@ -177,7 +173,7 @@ void Engine::shutdown()
 	render_sys.flush();
 
 	save_level(current_level_name, &game_world, &render_world);
-	gui::shutdown();
+	//gui::shutdown();
 	var_service.shutdown();
 }
 

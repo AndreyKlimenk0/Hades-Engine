@@ -69,6 +69,12 @@ void draw_test_widgets()
 	if (button("Button 4")) {
 	}
 
+	static String buffer = "Position";
+	edit_field("Position", &buffer);
+
+	static String buffer1 = "Scale";
+	//edit_field("Scale", &buffer1);
+
 	end_ui_element(); //Main plane
 
 	end_frame();

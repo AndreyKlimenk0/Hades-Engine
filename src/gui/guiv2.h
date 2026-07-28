@@ -1,8 +1,11 @@
 #ifndef IMGUIV2_H
 #define IMGUIV2_H
 
+#include "../libs/str.h"
 #include "../libs/number_types.h"
+#include "../libs/math/structures.h"
 #include "../render/renderer.h"
+#include "../render/font.h"
 
 namespace imgui {
 	enum AxisV2 {
@@ -22,6 +25,9 @@ namespace imgui {
 	const u32 ALIGNMENT_HORIZONTAL_CENTER = 0x10;
 	const u32 ALIGNMENT_VERTICAL_CENTER   = 0x20;
 	const u32 ALIGNMENT_CENTER = 0x40;
+
+	const u32 TEXT_ELEMENT_MAX_SYMBOL_HEIGHT = 0x80;
+	const u32 TEXT_ELEMENT_MAX_ALPHABET_HEIGHT = 0x100;
 
 	enum Size_Type {
 		SIZE_TYPE_FIXED,
@@ -193,8 +199,8 @@ namespace imgui {
 	void set_rounding(u32 rounding, u32 rounding_flags = ROUND_RECT);
 	void set_outlining(u32 thikness, const Color &color);
 
-	void text(const char *text);
-	void text(const char *ui_element_name, const char *text);
+	void ui_text_element(const char *text, u32 text_element_flags = 0);
+	void ui_text_element(const char *ui_element_name, const char *text, u32 text_element_flags = 0);
 
 	bool ui_element_hovered();
 	bool ui_element_clicked();
@@ -203,5 +209,7 @@ namespace imgui {
 	Rect_s32 ui_element_rect();
 
 	UI_Element *get_ui_element();
+	UI_Element *get_last_ui_element();
+	Font *get_font();
 }
 #endif

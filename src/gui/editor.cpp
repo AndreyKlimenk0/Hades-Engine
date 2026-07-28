@@ -243,13 +243,13 @@ void Editor_Window::init(const char *_name, Engine *engine)
 void Editor_Window::open()
 {
 	window_open = true;
-	gui::open_window(name);
+	//gui::open_window(name);
 }
 
 void Editor_Window::close()
 {
 	window_open = false;
-	gui::close_window(name);
+	//gui::close_window(name);
 }
 
 void Editor_Window::set_absolute_position(s32 x, s32 y)
@@ -319,20 +319,20 @@ void Entity_Window::display_sun_earth(u32 earth_radius, u32 sun_radius, u32 orbi
 
 void Entity_Window::display_light(Light *light)
 {
-	if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
-		if (gui::edit_field("Direction", &light->direction)) {
-			game_world->update_light_direction(light, light->direction);
-			render_world->upload_lights();
-		}
-		gui::edit_field("Color", &light->color);
+	//if (light->light_type == DIRECTIONAL_LIGHT_TYPE) {
+	//	if (gui::edit_field("Direction", &light->direction)) {
+	//		game_world->update_light_direction(light, light->direction);
+	//		render_world->upload_lights();
+	//	}
+	//	gui::edit_field("Color", &light->color);
 
-		Render_Primitive_List *render_list = gui::get_render_primitive_list();
-		u32 middle = window_rect.x + window_rect.width / 2;
-		display_sun_earth(70, 20, 100, Point_s32(middle, 220), light, render_list);
+	//	Render_Primitive_List *render_list = gui::get_render_primitive_list();
+	//	u32 middle = window_rect.x + window_rect.width / 2;
+	//	display_sun_earth(70, 20, 100, Point_s32(middle, 220), light, render_list);
 
-		//render_list->add_circle(window_rect.x + 100, 100, 70, Color(121, 121, 121));
-		//render_list->add_outline_circle(window_rect.x + 100, 100, 100, 2.0f, Color(51, 77, 128));
-	}
+	//	//render_list->add_circle(window_rect.x + 100, 100, 70, Color(121, 121, 121));
+	//	//render_list->add_outline_circle(window_rect.x + 100, 100, 100, 2.0f, Color(51, 77, 128));
+	//}
 }
 
 void Entity_Window::draw()
@@ -358,31 +358,31 @@ void Entity_Window::draw()
 		}
 	}
 	window_theme.header_text = str_entity_id.c_str();
-	gui::set_theme(&window_theme);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	if (gui::begin_window(name, WINDOW_HEADER)) {
-		if (entity) {
-			if (entity->type == ENTITY_TYPE_LIGHT) {
-				Light *light = static_cast<Light *>(entity);
-				display_light(light);
-			} else {
-				if (gui::edit_field("Scaling", &scaling)) {
-					entity->scaling = scaling;
-				}
-				gui::edit_field("Rotation", &rotation);
-				if (gui::edit_field("Position", &position)) {
-					game_world->place_entity(entity, position);
-				}
-				if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
-					static bool temp;
-					gui::radio_button("Draw bounding box", &temp);
-				}
-			}
-		}
-		gui::end_window();
-	}
-	gui::reset_window_theme();
+	//gui::set_theme(&window_theme);
+	//gui::set_next_window_pos(window_rect.x, window_rect.y);
+	//gui::set_next_window_size(window_rect.width, window_rect.height);
+	//if (gui::begin_window(name, WINDOW_HEADER)) {
+	//	if (entity) {
+	//		if (entity->type == ENTITY_TYPE_LIGHT) {
+	//			Light *light = static_cast<Light *>(entity);
+	//			display_light(light);
+	//		} else {
+	//			if (gui::edit_field("Scaling", &scaling)) {
+	//				entity->scaling = scaling;
+	//			}
+	//			gui::edit_field("Rotation", &rotation);
+	//			if (gui::edit_field("Position", &position)) {
+	//				game_world->place_entity(entity, position);
+	//			}
+	//			if ((entity->type != ENTITY_TYPE_CAMERA) || (entity->type == ENTITY_TYPE_LIGHT)) {
+	//				static bool temp;
+	//				gui::radio_button("Draw bounding box", &temp);
+	//			}
+	//		}
+	//	}
+	//	gui::end_window();
+	//}
+	//gui::reset_window_theme();
 }
 
 void Entity_Tree_Window::init(Engine *engine)
@@ -404,88 +404,88 @@ void Entity_Tree_Window::init(Engine *engine)
 template <typename T>
 void Entity_Tree_Window::draw_entity_list(Array<T> &entity_list, const char *name)
 {
-	if (gui::begin_tree_node(name)) {
-		for (u32 i = 0; i < entity_list.count; i++) {
-			T *entity = &entity_list[i];
-			Entity_Id entity_id = get_entity_id(entity);
-			String str_entity_id = to_string(entity_id);
-			if (gui::begin_tree_node(str_entity_id, GUI_TREE_NODE_FINAL)) {
-				if (gui::element_clicked(KEY_LMOUSE) || gui::element_double_clicked(KEY_LMOUSE)) {
-					if ((entity_id.type != ENTITY_TYPE_LIGHT) && (entity_id.type != ENTITY_TYPE_CAMERA)) {
-						Silhouette_Pass *silhouette_pass = &render_system->passes.silhouette_pass;
-						silhouette_pass->reset_render_entity_indices();
-						u32 index = 0;
-						Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, entity_id, &index);
-						if (render_entity) {
-							editor->picked_entity = entity_id;
-							silhouette_pass->add_render_entity_index(index);
-						}
-					} else {
-						editor->picked_entity = entity_id;
-					}
-				}
-				if (gui::element_double_clicked(KEY_LMOUSE)) {
-					editor->open_or_close_right_window(&editor->entity_window);
-				}
-				gui::end_tree_node();
-			}
-		}
-		gui::end_tree_node();
-	}
+	//if (gui::begin_tree_node(name)) {
+	//	for (u32 i = 0; i < entity_list.count; i++) {
+	//		T *entity = &entity_list[i];
+	//		Entity_Id entity_id = get_entity_id(entity);
+	//		String str_entity_id = to_string(entity_id);
+	//		if (gui::begin_tree_node(str_entity_id, GUI_TREE_NODE_FINAL)) {
+	//			if (gui::element_clicked(KEY_LMOUSE) || gui::element_double_clicked(KEY_LMOUSE)) {
+	//				if ((entity_id.type != ENTITY_TYPE_LIGHT) && (entity_id.type != ENTITY_TYPE_CAMERA)) {
+	//					Silhouette_Pass *silhouette_pass = &render_system->passes.silhouette_pass;
+	//					silhouette_pass->reset_render_entity_indices();
+	//					u32 index = 0;
+	//					Render_Entity *render_entity = find_render_entity(&render_world->game_render_entities, entity_id, &index);
+	//					if (render_entity) {
+	//						editor->picked_entity = entity_id;
+	//						silhouette_pass->add_render_entity_index(index);
+	//					}
+	//				} else {
+	//					editor->picked_entity = entity_id;
+	//				}
+	//			}
+	//			if (gui::element_double_clicked(KEY_LMOUSE)) {
+	//				editor->open_or_close_right_window(&editor->entity_window);
+	//			}
+	//			gui::end_tree_node();
+	//		}
+	//	}
+	//	gui::end_tree_node();
+	//}
 }
 
 void Entity_Tree_Window::draw()
 {
-	gui::set_theme(&window_theme);
-	gui::set_next_window_pos(window_rect.x, window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	if (gui::begin_window(name, WINDOW_HEADER)) {
-		gui::set_theme(&tree_theme);
-		if (gui::begin_tree("Entities tree")) {
-			draw_entity_list(game_world->lights, "Lights");
-			draw_entity_list(game_world->cameras, "Cameras");
-			draw_entity_list(game_world->entities, "Entities");
-			gui::end_tree();
-		}
-		gui::reset_tree_theme();
+	//gui::set_theme(&window_theme);
+	//gui::set_next_window_pos(window_rect.x, window_rect.y);
+	//gui::set_next_window_size(window_rect.width, window_rect.height);
+	//if (gui::begin_window(name, WINDOW_HEADER)) {
+	//	gui::set_theme(&tree_theme);
+	//	if (gui::begin_tree("Entities tree")) {
+	//		draw_entity_list(game_world->lights, "Lights");
+	//		draw_entity_list(game_world->cameras, "Cameras");
+	//		draw_entity_list(game_world->entities, "Entities");
+	//		gui::end_tree();
+	//	}
+	//	gui::reset_tree_theme();
 
-		gui::end_window();
-	}
-	gui::reset_window_theme();
+	//	gui::end_window();
+	//}
+	//gui::reset_window_theme();
 }
 
 static s32 draw_two_columns_list(const char *list_name, Array<Gui_List_Line_State> &list_line_states, Array<Pair<String, String>> &list)
 {
 	s32 line_index = -1;
 	Gui_List_Column columns[] = { {"First column", 75 }, { "Second column", 25 } };
-	if (gui::begin_list(list_name, columns, 2)) {
-		for (u32 i = 0; i < list.count; i++) {
-			if (gui::begin_line(&list_line_states[i])) {
-				if (gui::left_mouse_click(list_line_states[i]) || gui::enter_key_click(list_line_states[i])) {
-					line_index = i;
-				}
-				gui::begin_column("First column");
-				gui::add_text(list[i].first, RECT_LEFT_ALIGNMENT);
-				gui::end_column();
+	//if (gui::begin_list(list_name, columns, 2)) {
+	//	for (u32 i = 0; i < list.count; i++) {
+	//		if (gui::begin_line(&list_line_states[i])) {
+	//			if (gui::left_mouse_click(list_line_states[i]) || gui::enter_key_click(list_line_states[i])) {
+	//				line_index = i;
+	//			}
+	//			gui::begin_column("First column");
+	//			gui::add_text(list[i].first, RECT_LEFT_ALIGNMENT);
+	//			gui::end_column();
 
-				gui::begin_column("Second column");
-				gui::add_text(list[i].second, RECT_LEFT_ALIGNMENT);
-				gui::end_column();
+	//			gui::begin_column("Second column");
+	//			gui::add_text(list[i].second, RECT_LEFT_ALIGNMENT);
+	//			gui::end_column();
 
-				gui::end_line();
-			}
-		}
-		gui::end_list();
-	}
+	//			gui::end_line();
+	//		}
+	//	}
+	//	gui::end_list();
+	//}
 	return line_index;
 }
 
 inline s32 list_line_selected(Array<Gui_List_Line_State> &list_line_states)
 {
 	for (s32 i = 0; i < (s32)list_line_states.count; i++) {
-		if (gui::selected(list_line_states[i])) {
-			return i;
-		}
+		//if (gui::selected(list_line_states[i])) {
+		//	return i;
+		//}
 	}
 	return -1;
 }
@@ -537,14 +537,14 @@ static bool display_and_get_info_for_load_mesh_command(String *edit_field, Array
 	}
 
 	bool result = false;
-	gui::set_theme(&command_window->list_theme);
-	gui::make_next_list_active();
-	s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
-	if (line_index >= 0) {
-		command_args.push(mesh_path_list[line_index].first);
-		result = true;
-	}
-	gui::reset_list_theme();
+	//gui::set_theme(&command_window->list_theme);
+	//gui::make_next_list_active();
+	//s32 line_index = draw_two_columns_list("meshes list", command_window->list_line_states, mesh_path_list);
+	//if (line_index >= 0) {
+	//	command_args.push(mesh_path_list[line_index].first);
+	//	result = true;
+	//}
+	//gui::reset_list_theme();
 	return result;
 }
 
@@ -587,14 +587,14 @@ static bool display_and_get_info_for_load_level_command(String *edit_field, Arra
 	}
 
 	bool result = false;
-	gui::set_theme(&command_window->list_theme);
-	gui::make_next_list_active();
-	s32 line_index = draw_two_columns_list("level list", command_window->list_line_states, mesh_path_list);
-	if (line_index >= 0) {
-		command_args.push(mesh_path_list[line_index].first);
-		result = true;
-	}
-	gui::reset_list_theme();
+	//gui::set_theme(&command_window->list_theme);
+	//gui::make_next_list_active();
+	//s32 line_index = draw_two_columns_list("level list", command_window->list_line_states, mesh_path_list);
+	//if (line_index >= 0) {
+	//	command_args.push(mesh_path_list[line_index].first);
+	//	result = true;
+	//}
+	//gui::reset_list_theme();
 	return result;
 }
 
@@ -614,22 +614,22 @@ static bool display_all_commands(String *edit_field, Array<String> &command_args
 			list.push({ command_window->displaying_commands[i].command_name, command_window->displaying_commands[i].str_key_binding });
 		}
 	}
-	gui::set_theme(&command_window->list_theme);
-	gui::make_next_list_active();
-	s32 line_index = draw_two_columns_list("command list", command_window->list_line_states, list);
-	if (line_index >= 0) {
-		String &command_name = list[line_index].first;
-		for (u32 i = 0; i < command_window->displaying_commands.count; i++) {
-			if (command_name == command_window->displaying_commands[i].command_name) {
-				command_window->current_displaying_command = &command_window->displaying_commands[i];
-				command_window->active_edit_field = true;
-				command_window->list_line_states.clear();
-				edit_field->free();
-				break;
-			}
-		}
-	}
-	gui::reset_list_theme();
+	//gui::set_theme(&command_window->list_theme);
+	//gui::make_next_list_active();
+	//s32 line_index = draw_two_columns_list("command list", command_window->list_line_states, list);
+	//if (line_index >= 0) {
+	//	String &command_name = list[line_index].first;
+	//	for (u32 i = 0; i < command_window->displaying_commands.count; i++) {
+	//		if (command_name == command_window->displaying_commands[i].command_name) {
+	//			command_window->current_displaying_command = &command_window->displaying_commands[i];
+	//			command_window->active_edit_field = true;
+	//			command_window->list_line_states.clear();
+	//			edit_field->free();
+	//			break;
+	//		}
+	//	}
+	//}
+	//gui::reset_list_theme();
 	return false;
 }
 
@@ -752,36 +752,36 @@ void Command_Window::draw()
 	bool display_additional_info = current_displaying_command->display_info_and_get_command_args != NULL;
 	Rect_s32 window_rect = display_additional_info ? command_window_rect_with_additional_info : command_window_rect;
 
-	gui::set_next_window_pos(command_window_rect.x, command_window_rect.y);
-	gui::set_next_window_size(window_rect.width, window_rect.height);
-	gui::set_theme(&command_window_theme);
+	//gui::set_next_window_pos(command_window_rect.x, command_window_rect.y);
+	//gui::set_next_window_size(window_rect.width, window_rect.height);
+	//gui::set_theme(&command_window_theme);
 
-	IF_THEN(window_just_open, gui::make_next_ui_element_active());
-	if (gui::begin_window(name, 0)) {
+	//IF_THEN(window_just_open, gui::make_next_ui_element_active());
+	//if (gui::begin_window(name, 0)) {
 
-		gui::set_theme(&command_edit_field_theme);
-		IF_THEN(window_just_open || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
-		gui::edit_field("Command field", &command_edit_field);
-		gui::reset_edit_field_theme();
+	//	gui::set_theme(&command_edit_field_theme);
+	//	IF_THEN(window_just_open || active_edit_field, (gui::make_next_ui_element_active(), active_edit_field = false));
+	//	gui::edit_field("Command field", &command_edit_field);
+	//	gui::reset_edit_field_theme();
 
-		Array<String> command_args;
-		if (display_additional_info) {
-			gui::set_window_padding(0);
-			if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
-				run_command(current_displaying_command->command_name, command_args);
-				command_edit_field.free();
-			}
-			gui::set_window_padding(command_window_theme.horizontal_padding);
-		} else {
-			if (was_click(KEY_ENTER)) {
-				command_args.push(command_edit_field);
-				run_command(current_displaying_command->command_name, command_args);
-			}
-		}
-		gui::end_window();
-	}
-	IF_THEN(window_just_open, window_just_open = false);
-	gui::reset_window_theme();
+	//	Array<String> command_args;
+	//	if (display_additional_info) {
+	//		gui::set_window_padding(0);
+	//		if (current_displaying_command->display_info_and_get_command_args(&command_edit_field, command_args, this)) {
+	//			run_command(current_displaying_command->command_name, command_args);
+	//			command_edit_field.free();
+	//		}
+	//		gui::set_window_padding(command_window_theme.horizontal_padding);
+	//	} else {
+	//		if (was_click(KEY_ENTER)) {
+	//			command_args.push(command_edit_field);
+	//			run_command(current_displaying_command->command_name, command_args);
+	//		}
+	//	}
+	//	gui::end_window();
+	//}
+	//IF_THEN(window_just_open, window_just_open = false);
+	//gui::reset_window_theme();
 }
 
 Editor::Editor()
@@ -856,19 +856,19 @@ void Editor::init_left_bar()
 void Editor::handle_events()
 {
 	key_bindings.handle_events();
-	if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
-		//@Note: In the future here better to use linear allocator.
-		Array<Editor_Command> editor_commands;
-		Array<Entity_Command *> entity_commands;
+	//if (!gui::were_events_handled() && (editor_mode == EDITOR_MODE_COMMON)) {
+	//	//@Note: In the future here better to use linear allocator.
+	//	Array<Editor_Command> editor_commands;
+	//	Array<Entity_Command *> entity_commands;
 
-		convert_user_input_events_to_edtior_commands(&editor_commands);
-		convert_editor_commands_to_entity_commands(&editor_commands, &entity_commands);
+	//	convert_user_input_events_to_edtior_commands(&editor_commands);
+	//	convert_editor_commands_to_entity_commands(&editor_commands, &entity_commands);
 
-		Camera *camera = game_world->get_camera(editor_camera_id);
-		camera->handle_commands(&entity_commands);
+	//	Camera *camera = game_world->get_camera(editor_camera_id);
+	//	camera->handle_commands(&entity_commands);
 
-		free_memory(&entity_commands);
-	}
+	//	free_memory(&entity_commands);
+	//}
 }
 
 void Editor::update()
@@ -923,110 +923,110 @@ void Editor::picking()
 		moving_entity_info.moving_entity = false;
 	}
 
-	if (!gui::were_events_handled()) {
-		if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
-			Ray_Entity_Intersection::Result intersection_result;
-			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				if (picked_entity == intersection_result.entity_id) {
-					gui::open_menu("Actions on entity");
-					mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
-				}
-			}
-		} else if (was_click(KEY_LMOUSE)) {
-			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
-			silhouette_pass->reset_render_entity_indices();
+	//if (!gui::were_events_handled()) {
+	//	if (was_click(KEY_RMOUSE) && valid_entity_id(picked_entity)) {
+	//		Ray_Entity_Intersection::Result intersection_result;
+	//		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+	//			if (picked_entity == intersection_result.entity_id) {
+	//				gui::open_menu("Actions on entity");
+	//				mouse_position = Point_s32(Mouse_State::x, Mouse_State::y);
+	//			}
+	//		}
+	//	} else if (was_click(KEY_LMOUSE)) {
+	//		Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+	//		silhouette_pass->reset_render_entity_indices();
 
-			Ray_Entity_Intersection::Result intersection_result;
-			if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
-				//gui::make_tab_active(game_world_tab_gui_id);
-				picked_entity = intersection_result.entity_id;
-				silhouette_pass->add_render_entity_index(intersection_result.render_entity_idx);
-			} else {
-				picked_entity.reset();
-			}
-		}
-	}
+	//		Ray_Entity_Intersection::Result intersection_result;
+	//		if (Ray_Entity_Intersection::detect_intersection(&picking_ray, game_world, render_world, &intersection_result)) {
+	//			//gui::make_tab_active(game_world_tab_gui_id);
+	//			picked_entity = intersection_result.entity_id;
+	//			silhouette_pass->add_render_entity_index(intersection_result.render_entity_idx);
+	//		} else {
+	//			picked_entity.reset();
+	//		}
+	//	}
+	//}
 }
 
 void Editor::render_menus()
 {
-	gui::set_next_window_pos(53, 20);
-	if (gui::begin_menu("Adding entity")) {
-		if (gui::menu_item("Direction light")) {
-			//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
-			Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
-			render_world->upload_lights();
-		}
-		if (gui::menu_item("Point light")) {
-		}
-		gui::segment();
-		if (gui::menu_item("Box")) {
-		}
-		if (gui::menu_item("Sphere")) {
-		}
-		if (gui::menu_item("Plane")) {
-		}
-		gui::end_menu();
-	}
+	//gui::set_next_window_pos(53, 20);
+	//if (gui::begin_menu("Adding entity")) {
+	//	if (gui::menu_item("Direction light")) {
+	//		//game_world->make_direction_light(Vector3(1.0, -0.5, 1.0), Color::White.get_rgb());
+	//		Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
+	//		render_world->upload_lights();
+	//	}
+	//	if (gui::menu_item("Point light")) {
+	//	}
+	//	gui::segment();
+	//	if (gui::menu_item("Box")) {
+	//	}
+	//	if (gui::menu_item("Sphere")) {
+	//	}
+	//	if (gui::menu_item("Plane")) {
+	//	}
+	//	gui::end_menu();
+	//}
 
-	gui::set_next_window_pos(mouse_position.x, mouse_position.y);
-	if (gui::begin_menu("Actions on entity")) {
-		if (gui::menu_item("Scale")) {
-		}
-		if (gui::menu_item("Rotate")) {
-		}
-		if (gui::menu_item("Translate")) {
-			set_cursor(CURSOR_TYPE_MOVE);
-			editor_mode = EDITOR_MODE_MOVE_ENTITY;
-		}
-		gui::segment();
-		if (gui::menu_item("Copy")) {
+	//gui::set_next_window_pos(mouse_position.x, mouse_position.y);
+	//if (gui::begin_menu("Actions on entity")) {
+	//	if (gui::menu_item("Scale")) {
+	//	}
+	//	if (gui::menu_item("Rotate")) {
+	//	}
+	//	if (gui::menu_item("Translate")) {
+	//		set_cursor(CURSOR_TYPE_MOVE);
+	//		editor_mode = EDITOR_MODE_MOVE_ENTITY;
+	//	}
+	//	gui::segment();
+	//	if (gui::menu_item("Copy")) {
 
-		}
-		if (gui::menu_item("Delete")) {
-			game_world->delete_entity(picked_entity);
-			u32 render_entity_index = render_world->delete_render_entity(picked_entity);
-			Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
-			silhouette_pass->delete_render_entity_index(render_entity_index);
-		}
-		gui::end_menu();
-	}
+	//	}
+	//	if (gui::menu_item("Delete")) {
+	//		game_world->delete_entity(picked_entity);
+	//		u32 render_entity_index = render_world->delete_render_entity(picked_entity);
+	//		Silhouette_Pass *silhouette_pass = &render_sys->passes.silhouette_pass;
+	//		silhouette_pass->delete_render_entity_index(render_entity_index);
+	//	}
+	//	gui::end_menu();
+	//}
 }
 
 void Editor::render_left_bar()
 {
-	gui::set_theme(&left_bar.window_theme);
-	gui::set_next_window_pos(10, 20);
-	gui::set_next_window_size(50, 270);
-	if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
-		gui::set_theme(&left_bar.button_theme);
+	//gui::set_theme(&left_bar.window_theme);
+	//gui::set_next_window_pos(10, 20);
+	//gui::set_next_window_size(50, 270);
+	//if (gui::begin_window("Top bar", NO_WINDOW_STYLE)) {
+	//	gui::set_theme(&left_bar.button_theme);
 
-		if (gui::image_button(left_bar.textures.adding)) {
-			gui::open_menu("Adding entity");
-		}
-		if (gui::image_button(left_bar.textures.entity)) {
-			open_or_close_right_window(&entity_window);
-		}
-		if (gui::image_button(left_bar.textures.entities)) {
-			open_or_close_right_window(&entities_window);
-		}
-		if (gui::image_button(left_bar.textures.rendering)) {
-		}
+	//	if (gui::image_button(left_bar.textures.adding)) {
+	//		gui::open_menu("Adding entity");
+	//	}
+	//	if (gui::image_button(left_bar.textures.entity)) {
+	//		open_or_close_right_window(&entity_window);
+	//	}
+	//	if (gui::image_button(left_bar.textures.entities)) {
+	//		open_or_close_right_window(&entities_window);
+	//	}
+	//	if (gui::image_button(left_bar.textures.rendering)) {
+	//	}
 
-		gui::reset_image_button_theme();
-	}
-	gui::reset_window_theme();
+	//	gui::reset_image_button_theme();
+	//}
+	//gui::reset_window_theme();
 }
 
 void Editor::render()
 {
-	gui::begin_frame();
-	render_menus();
-	render_left_bar();
-	for (u32 i = 0; i < windows.count; i++) {
-		windows[i]->draw();
-	}
-	gui::end_frame();
+	//gui::begin_frame();
+	//render_menus();
+	//render_left_bar();
+	//for (u32 i = 0; i < windows.count; i++) {
+	//	windows[i]->draw();
+	//}
+	//gui::end_frame();
 }
 
 void Editor::open_or_close_right_window(Editor_Window *window)
