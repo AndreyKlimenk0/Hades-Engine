@@ -856,7 +856,7 @@ Downsampling::~Downsampling()
 
 void Generate_HZB::setup_root_signature(Render_Device *device)
 {
-	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Downsampling));
 	root_signature->add_shader_resource_parameter(0, 0);
 	root_signature->add_unordered_access_parameter(0, 0, 4);
 
@@ -928,6 +928,262 @@ void Generate_HZB::render(Graphics_Command_List *graphics_command_list, void *co
 	}
 	graphics_command_list->transition_resource_barrier(depth_texture, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE);
 	graphics_command_list->end_event();
+}
+
+void Generate_Shadows_HZB::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Generate Shadows HZB", device, shader_manager, resource_manager);
+}
+
+void Generate_Shadows_HZB::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	Depth_Stencil_Texture_Desc texture_desc;
+	texture_desc.width = 64;
+	texture_desc.height = 64;
+	texture_desc.format = DXGI_FORMAT_D32_FLOAT;
+	
+	cascade0_hzb_texture = resource_manager->create_depth_stencil("Cascade0 HZB", &texture_desc);
+	cascade1_hzb_texture = resource_manager->create_depth_stencil("Cascade1 HZB", &texture_desc);
+	cascade2_hzb_texture = resource_manager->create_depth_stencil("Cascade2 HZB", &texture_desc);
+	cascade3_hzb_texture = resource_manager->create_depth_stencil("Cascade3 HZB", &texture_desc);
+	
+	hzb_texture = resource_manager->read_texture("HZB");
+}
+
+struct Temp_HZB {
+	u32 tile_width;
+	u32 tile_height;
+	u32 hzb_mip_level;
+	u32 pad;
+	Matrix4 cascade_view_projection_matrix;
+};
+
+void Generate_Shadows_HZB::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Temp_HZB));
+	root_signature->add_shader_resource_parameter(0, 0); //HZB texture
+	access = ALLOW_VERTEX_SHADER_ACCESS;
+	Render_Pass::setup_root_signature(device);
+}
+void Generate_Shadows_HZB::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Graphics_Pipeline_Desc graphics_pipeline_desc;
+	graphics_pipeline_desc.root_signature = root_signature;
+	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, tile_frustum)->vs_bytecode.bytecode_ref();
+	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, tile_frustum)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+
+	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
+}
+
+void Generate_Shadows_HZB::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
+	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
+
+	graphics_command_list->begin_event("Cascades HZB");
+
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_graphics_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
+	graphics_command_list->set_graphics_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_graphics_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	graphics_command_list->set_graphics_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor());
+
+	u32 tile_frustum_vertices_number = 36;
+	u32 shadow_cascades_count = 4;
+
+	Temp_HZB temp;
+	temp.tile_width = 64;
+	temp.tile_height = 32;
+	temp.hzb_mip_level = 4;
+
+	Texture *cascades_hzb_textures[] = { cascade0_hzb_texture, cascade1_hzb_texture, cascade2_hzb_texture, cascade3_hzb_texture };
+
+	Array<Matrix4> matrices;
+
+	Cascaded_Shadows *cascaded_shadows = NULL;
+	For(render_world->cascaded_shadows_list, cascaded_shadows)
+	{
+		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
+		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map)
+		{
+			matrices.push(cascaded_shadow_map->view_projection_matrix);
+		}
+	}
+
+	Viewport viewport;
+	viewport.width = 64.0f;
+	viewport.height = 64.0f;
+
+	for (u32 i = 0; i < shadow_cascades_count; i++) {
+		graphics_command_list->clear_depth_stencil(cascades_hzb_textures[i]);
+		graphics_command_list->set_render_target(NULL, cascades_hzb_textures[i]);
+
+		temp.cascade_view_projection_matrix = matrices[i];
+		graphics_command_list->set_viewport(viewport);
+		graphics_command_list->set_graphics_constants(0, 0, &temp);
+		
+		//graphics_command_list->draw(36);
+		graphics_command_list->draw(temp.tile_width *temp.tile_height * tile_frustum_vertices_number);
+	}
+
+	graphics_command_list->end_event();
+}
+
+void Downsample_Shadows_HZB::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Downsample Shadows HZB", device, shader_manager, resource_manager);
+}
+
+void Downsample_Shadows_HZB::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	reprojected_depth_buffer0 = resource_manager->read_texture("Cascade0 HZB");
+	reprojected_depth_buffer1 = resource_manager->read_texture("Cascade1 HZB");
+	reprojected_depth_buffer2 = resource_manager->read_texture("Cascade2 HZB");
+	reprojected_depth_buffer3 = resource_manager->read_texture("Cascade3 HZB");
+
+	Texture_Desc texture_desc;
+	texture_desc.width = 64;
+	texture_desc.height = 64;
+	texture_desc.miplevels = find_max_mip_level(texture_desc.width, texture_desc.height);
+	texture_desc.format = DXGI_FORMAT_R32_FLOAT;
+	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
+
+	cascade0_hzb_texture = resource_manager->create_texture("Temp name0", &texture_desc);
+	cascade1_hzb_texture = resource_manager->create_texture("Temp name1", &texture_desc);
+	cascade2_hzb_texture = resource_manager->create_texture("Temp name2", &texture_desc);
+	cascade3_hzb_texture = resource_manager->create_texture("Temp name3", &texture_desc);
+}
+
+void Downsample_Shadows_HZB::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Downsampling));
+	root_signature->add_shader_resource_parameter(0, 0);
+	root_signature->add_unordered_access_parameter(0, 0, 4);
+
+	Render_Pass::setup_root_signature(device);
+}
+
+void Downsample_Shadows_HZB::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Compute_Pipeline_Desc compute_pipeline_desc;
+	compute_pipeline_desc.root_signature = root_signature;
+	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, downsample_hzb)->cs_bytecode.bytecode_ref();
+
+	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
+}
+
+void record_hzb_downsample_commands(Texture *texture, Graphics_Command_List *graphics_command_list)
+{
+	Texture_Desc texture_desc = texture->get_texture_desc();
+
+	bool read_from_depth_texture = true;
+	for (u32 mip_level = 0; mip_level < texture_desc.miplevels - 1; mip_level) {
+		u32 source_width = texture_desc.width >> mip_level;
+		u32 source_height = texture_desc.height >> mip_level;
+		u32 dest_width = source_width >> 1;
+		u32 dest_height = source_height >> 1;
+
+		dest_width = math::max(dest_width, 1u);
+		dest_height = math::max(dest_height, 1u);
+
+		u32 number_mips;
+		_BitScanForward((unsigned long *)&number_mips, (dest_width == 1 ? dest_height : dest_width) | (dest_height == 1 ? dest_width : dest_height));
+		number_mips = math::min(3u, number_mips) + 1;
+		number_mips = math::min(number_mips, texture_desc.miplevels - mip_level);
+
+		Downsampling desc = { number_mips, dest_width, dest_height };
+		graphics_command_list->set_compute_constants(0, 0, &desc);
+		graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, texture->shader_resource_descriptor(mip_level));
+		graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, texture->unordered_access_descriptor(mip_level + 1));
+		graphics_command_list->dispatch(dest_width, dest_height);
+
+		mip_level += number_mips;
+	}
+}
+
+void Downsample_Shadows_HZB::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
+	Render_System *render_sys = (Render_System *)args;
+
+	graphics_command_list->begin_event("Generate Shadows HZB");
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+	pipeline_resource_manager->global_buffer;
+
+	graphics_command_list->set_compute_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_compute_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_compute_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	Texture *temp_array0[] = { reprojected_depth_buffer0, reprojected_depth_buffer1, reprojected_depth_buffer2, reprojected_depth_buffer3 };
+	Texture *temp_array1[] = { cascade0_hzb_texture, cascade1_hzb_texture, cascade2_hzb_texture, cascade3_hzb_texture };
+
+
+	for (u32 i = 0; i < 4; i++) {
+		graphics_command_list->transition_resource_barrier(temp_array0[i], RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE);
+		graphics_command_list->copy(temp_array1[i], temp_array0[i]);
+		graphics_command_list->transition_resource_barrier(temp_array0[i], RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_WRITE);
+
+		Texture_Desc texture_desc = temp_array1[0]->get_texture_desc();
+		for (u32 mip_level = 0; mip_level < texture_desc.miplevels; mip_level++) {
+			temp_array1[i]->unordered_access_descriptor(mip_level);
+		}
+	}
+
+	for (u32 i = 0; i < 4; i++) {
+		record_hzb_downsample_commands(temp_array1[i], graphics_command_list);
+	}
+
+	graphics_command_list->end_event();
+}
+
+void Shadows_Culling_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
+{
+	Render_Pass::init("Culling", device, shader_manager, resource_manager);
+}
+
+void Shadows_Culling_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
+{
+	cascade0_hzb_texture = resource_manager->read_texture("Temp name0");
+	cascade1_hzb_texture = resource_manager->read_texture("Temp name1");
+	cascade2_hzb_texture = resource_manager->read_texture("Temp name2");
+	cascade3_hzb_texture = resource_manager->read_texture("Temp name3");
+}
+
+void Shadows_Culling_Pass::setup_root_signature(Render_Device *device)
+{
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(u32)); // pass_data
+	root_signature->add_shader_resource_parameter(0, 0); // hzb_texture
+	root_signature->add_shader_resource_parameter(1, 0); // world_matrices
+	root_signature->add_shader_resource_parameter(2, 0); // mesh_instances
+	root_signature->add_shader_resource_parameter(3, 0); // render_entities
+	root_signature->add_shader_resource_parameter(4, 0); // mesh_draw_commands
+	root_signature->add_shader_resource_parameter(5, 0); // bounding boxes
+	root_signature->add_unordered_access_parameter(0, 0); // culled_mesh_draw_commandsk
+
+	Render_Pass::setup_root_signature(device);
+}
+
+void Shadows_Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager)
+{
+	Compute_Pipeline_Desc compute_pipeline_desc;
+	compute_pipeline_desc.root_signature = root_signature;
+	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, culling)->cs_bytecode.bytecode_ref();
+
+	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
+}
+
+void Shadows_Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
+{
 }
 
 void Culling_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)

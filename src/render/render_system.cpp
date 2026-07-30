@@ -126,11 +126,19 @@ void Render_System::init_passes()
 	
 	passes.depth_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.generate_hzb.init(render_device, shader_manager, &pipeline_resource_manager);
+	
+	passes.shadows_hzb_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.downsample_shadows_hzb_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+
 	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.primitive_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	render_pass_submissions.push({ &passes.depth_pass, (void *)&render_pass_context,   (void *)this });
 	render_pass_submissions.push({ &passes.generate_hzb, (void *)&render_pass_context,   (void *)this });
+	
+	render_pass_submissions.push({ &passes.shadows_hzb_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.downsample_shadows_hzb_pass, (void *)&render_pass_context,   (void *)this });
+	
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.culling_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.forward_pass,  (void *)&render_pass_context, (void *)this });
@@ -292,6 +300,7 @@ void Pipeline_Resource_Manager::update_common_constant_buffers()
 	frame_info.freeze_view_matrix = camera->get_view_matrix(); // if camera is Editor_Camera and it is frozen, the methods return free_view_matrix.
 	frame_info.perspective_matrix = camera->perspective_matrix;
 	frame_info.orthographic_matrix = make_orthographic_matrix(0.0f, (float)window_size.width, (float)window_size.height, 0.0f, camera->near_plane, camera->far_plane);
+	frame_info.inverse_view_perspective_matrix = inverse(camera->get_view_perspective_matrix());
 	frame_info.near_plane = camera->near_plane;
 	frame_info.far_plane = camera->far_plane;
 

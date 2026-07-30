@@ -82,6 +82,7 @@ struct Shader_Manager {
 		Shader downsample_hzb;
 		Shader ui_rendering;
 		Shader culling;
+		Shader tile_frustum;
 	} shaders;
 
 	void init();

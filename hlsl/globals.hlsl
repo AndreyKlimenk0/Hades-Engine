@@ -15,6 +15,7 @@ struct Frame_Info {
 	float4x4 freeze_view_matrix;
 	float4x4 perspective_matrix;
 	float4x4 orthographics_matrix;
+	float4x4 inverse_view_perspective_matrix;
 	// Left, Right, Bottom, Top, Near, Far
 	float4 frustum_planes[6]; 
 	float3 view_position;

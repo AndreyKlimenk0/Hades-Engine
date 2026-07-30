@@ -134,6 +134,8 @@ struct Render_System {
 		Depth_Pass depth_pass;
 		Culling_Pass culling_pass;
 		Primitive_Pass primitive_pass;
+		Generate_Shadows_HZB shadows_hzb_pass;
+		Downsample_Shadows_HZB downsample_shadows_hzb_pass;
 	} passes;
 
 	Render_Pass_Context render_pass_context;

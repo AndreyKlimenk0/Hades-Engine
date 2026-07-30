@@ -27,6 +27,7 @@ struct GPU_Frame_Info {
 	Matrix4 freeze_view_matrix;
 	Matrix4 perspective_matrix;
 	Matrix4 orthographic_matrix;
+	Matrix4 inverse_view_perspective_matrix;
 	Vector4 frustum_planes[6];
 	Vector3 view_position;
 	float near_plane;

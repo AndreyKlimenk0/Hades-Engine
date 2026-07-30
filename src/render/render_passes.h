@@ -129,6 +129,51 @@ struct Generate_HZB : Render_Pass {
 	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
 };
 
+struct Generate_Shadows_HZB : Render_Pass {
+	Texture *hzb_texture = NULL;
+	Texture *cascade0_hzb_texture = NULL;
+	Texture *cascade1_hzb_texture = NULL;
+	Texture *cascade2_hzb_texture = NULL;
+	Texture *cascade3_hzb_texture = NULL;
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
+struct Downsample_Shadows_HZB : Render_Pass {
+	Texture *reprojected_depth_buffer0 = NULL;
+	Texture *reprojected_depth_buffer1 = NULL;
+	Texture *reprojected_depth_buffer2 = NULL;
+	Texture *reprojected_depth_buffer3 = NULL;
+
+	Texture *cascade0_hzb_texture = NULL;
+	Texture *cascade1_hzb_texture = NULL;
+	Texture *cascade2_hzb_texture = NULL;
+	Texture *cascade3_hzb_texture = NULL;
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
+struct Shadows_Culling_Pass : Render_Pass {
+	Texture *cascade0_hzb_texture = NULL;
+	Texture *cascade1_hzb_texture = NULL;
+	Texture *cascade2_hzb_texture = NULL;
+	Texture *cascade3_hzb_texture = NULL;
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
 struct Culling_Pass : Render_Pass {
 	Texture *hzb_texture = NULL;
 
