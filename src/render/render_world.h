@@ -85,6 +85,42 @@ struct Shadows_Atlas {
 	bool get_viewport(Viewport *viewport);
 };
 
+const u32 NUMBER_SHADOW_CASCADES = 4;
+
+struct Shadows_Rendering_Desc {
+	Shadows_Rendering_Desc() = default;
+	~Shadows_Rendering_Desc() = default;
+
+	u32 jittering_tile_size = 0;
+	u32 jittering_filter_size = 0;
+	u32 jittering_scaling = 0;
+	u32 cascade_texture_size = 0;
+
+	Range<u32> cascade_ranges[NUMBER_SHADOW_CASCADES];
+};
+
+struct Shadow_Cascade {
+	float cascade_width;
+	float cascade_height;
+	float cascade_depth;
+	u32 view_projection_matrix_index;
+	Vector3 view_position;
+	Viewport viewport;
+	Matrix4 view_projection_matrix;
+	void init(float fov, float aspect_ratio, Range<u32> range);
+};
+
+struct Shadows_Renderer {
+	Texture *cascade_textures[NUMBER_SHADOW_CASCADES];
+	Shadow_Cascade shadow_cascades[NUMBER_SHADOW_CASCADES];
+
+	void init(Render_World *Render_World, Pipeline_Resource_Manager *pipeline_resource_manager, Shadows_Rendering_Desc *desc);
+};
+
+struct Mesh_Renderer {
+
+};
+
 struct Render_World {
 	Render_World();
 	~Render_World();
@@ -125,6 +161,8 @@ struct Render_World {
 	Buffer *casded_view_projection_matrices_buffer = NULL;
 	Buffer *cascaded_shadows_info_buffer = NULL;
 	Buffer *lights_buffer = NULL;
+
+	Shadows_Renderer shadow_renderer;
 
 	void init(Engine *engine);
 	void release_all_resources();

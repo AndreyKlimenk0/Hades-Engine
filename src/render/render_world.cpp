@@ -153,6 +153,15 @@ void Render_World::init(Engine *engine)
 	jittering_samples_texture_desc.data = jittered_samples.to_void_ptr();
 
 	jittering_samples = render_device->create_texture(&jittering_samples_texture_desc);
+
+	Shadows_Rendering_Desc desc;
+	desc.cascade_texture_size = 1024;
+	desc.cascade_ranges[0] = {0, 15};
+	desc.cascade_ranges[1] = { 15, 100 };
+	desc.cascade_ranges[2] = { 100, 1000 };
+	desc.cascade_ranges[3] = { 1000, 5000 };
+
+	shadow_renderer.init(this, &desc);
 }
 
 void Render_World::release_all_resources()
@@ -445,4 +454,38 @@ bool Shadows_Atlas::get_viewport(Viewport *viewport)
 		return false;
 	}
 	return true;
+}
+
+void Shadows_Renderer::init(Render_World *render_world, Pipeline_Resource_Manager *pipeline_resource_manager, Shadows_Rendering_Desc *desc)
+{
+	Camera *camera = render_world->get_camera();
+
+	for (u32 i = 0; i < NUMBER_SHADOW_CASCADES; i++) {
+		shadow_cascades[i].init(camera->fov, camera->aspect_ratio, desc->cascade_ranges[i]);
+	}
+
+	Depth_Stencil_Texture_Desc depth_stencil_desc;
+	depth_stencil_desc.width = desc->cascade_texture_size;
+	depth_stencil_desc.height = desc->cascade_texture_size;
+	depth_stencil_desc.format = DXGI_FORMAT_D32_FLOAT;
+	
+	cascade_textures[0] = pipeline_resource_manager->create_depth_stencil("Shadow Cascade0", &depth_stencil_desc);
+	cascade_textures[1] = pipeline_resource_manager->create_depth_stencil("Shadow Cascade1", &depth_stencil_desc);
+	cascade_textures[2] = pipeline_resource_manager->create_depth_stencil("Shadow Cascade2", &depth_stencil_desc);
+	cascade_textures[3] = pipeline_resource_manager->create_depth_stencil("Shadow Cascade3", &depth_stencil_desc);
+}
+
+void Shadow_Cascade::init(float fov, float aspect_ratio, Range<u32> range)
+{
+	float cascade_length = (float)range.end - (float)range.start;
+	float half_height = (float)range.end * math::tan(fov * 0.5f);
+	float half_width = half_height * aspect_ratio;
+	float width = half_width * 2.0f;
+	float height = half_height * 2.0f;
+	float max_value = math::max(width, math::max(height, cascade_length));
+	cascade_width = max_value;
+	cascade_height = max_value;
+	cascade_depth = max_value;
+	view_position = Vector3(0.0f, 0.0f, (float)range.start + cascade_length * 0.5f);
+	view_projection_matrix = make_identity_matrix();
 }

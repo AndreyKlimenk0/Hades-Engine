@@ -18,6 +18,16 @@ struct Ray {
 };
 
 template <typename T>
+struct Range {
+	Range();
+	Range(T start, T end);
+	~Range();
+
+	T start;
+	T end;
+};
+
+template <typename T>
 struct Size3D {
 	Size3D();
 	Size3D(const T &width, const T &height);
@@ -206,6 +216,22 @@ struct Pair {
 	T first;
 	U second;
 };
+
+template <typename T>
+Range<T>::Range()
+{
+}
+
+template <typename T>
+Range<T>::Range(T start, T end) : start(start), end(end)
+{
+	assert(start < end);
+}
+
+template <typename T>
+Range<T>::~Range()
+{
+}
 
 template<typename T>
 Size3D<T>::Size3D()

@@ -24,7 +24,7 @@ StructuredBuffer<float4x4> world_matrices : register(t1, space0);
 StructuredBuffer<Mesh_Instance> mesh_instances : register(t2, space0);
 StructuredBuffer<IndirectCommand> mesh_draw_commands : register(t4, space0);
 StructuredBuffer<AABB> bounding_boxes : register(t5, space0);
-AppendStructuredBuffer<IndirectCommand> culled_mesh_draw_commands : register(u0, space0);
+AppendStructuredBuffer<IndirectCommand> visible_mesh_draw_commands : register(u0, space0);
 
 bool frustum_culled(float3 min_AABB, float3 max_AABB)
 {
@@ -119,7 +119,7 @@ void cs_main(uint3 thread_id : SV_DispatchThreadId)
         float3 min_AABB = bounding_box.min;
         
         if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
-            culled_mesh_draw_commands.Append(mesh_draw_commands[index]);
+            visible_mesh_draw_commands.Append(mesh_draw_commands[index]);
         }
     }
 }
