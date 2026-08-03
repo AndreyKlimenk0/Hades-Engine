@@ -10,7 +10,20 @@
 #include "render_api/base_structs.h"
 
 static Buffer *culled_draw_commands_buffer = NULL;
+static Buffer *shadows_culled_draw_commands_buffer0 = NULL;
+static Buffer *shadows_culled_draw_commands_buffer1 = NULL;
+static Buffer *shadows_culled_draw_commands_buffer2 = NULL;
+static Buffer *shadows_culled_draw_commands_buffer3 = NULL;
 static u64 draw_commands_counter_offset = 0;
+static u64 shadows_draw_commands_counter_offset0 = 0;
+static u64 shadows_draw_commands_counter_offset1 = 0;
+static u64 shadows_draw_commands_counter_offset2 = 0;
+static u64 shadows_draw_commands_counter_offset3 = 0;
+
+struct IndirectCommand {
+	D3D12_GPU_VIRTUAL_ADDRESS cbv;
+	D3D12_DRAW_ARGUMENTS drawArguments;
+};
 
 struct Shadow_Atlas {
 	u32 atlas_size;
@@ -77,6 +90,12 @@ void Render_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager
 void Shadows_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
 	Render_Pass::init("Shadows", device, shader_manager, resource_manager);
+
+	command_signature = device->create_command_signature();
+
+	command_signature->add_constant_buffer_view(root_signature->get_parameter_index(0, 0, CONSTANT_BUFFER_REGISTER)); // Pass Data
+	command_signature->add_draw();
+	command_signature->compile(sizeof(IndirectCommand), root_signature);
 }
 
 void Shadows_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
@@ -92,12 +111,13 @@ void Shadows_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 struct Depth_Map_Pass_Data {
 	u32 mesh_instance;
 	Pad3 pad;
-	Matrix4 view_projection_matrix;
 };
 
 void Shadows_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	//root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	root_signature->add_constant_buffer_parameter(0, 0);
+	root_signature->add_32bit_constants_parameter(1, 0, sizeof(Matrix4));
 	root_signature->add_shader_resource_parameter(0, 0); //World matrices
 	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
 	root_signature->add_shader_resource_parameter(4, 0); //unified point buffer
@@ -148,20 +168,28 @@ void Shadows_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	Depth_Map_Pass_Data pass_data;
 
+	Buffer *buffers[] = { shadows_culled_draw_commands_buffer0, shadows_culled_draw_commands_buffer1, shadows_culled_draw_commands_buffer2, shadows_culled_draw_commands_buffer3 };
+	u32 offsets[] = { shadows_draw_commands_counter_offset0, shadows_draw_commands_counter_offset1, shadows_draw_commands_counter_offset2, shadows_draw_commands_counter_offset3 };
+	int i = 0;
+
 	Cascaded_Shadows *cascaded_shadows = NULL;
 	For(render_world->cascaded_shadows_list, cascaded_shadows) {
 		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
 		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map) {
 			graphics_command_list->set_viewport(cascaded_shadow_map->viewport);
 
-			Render_Entity *render_entity = NULL;
-			For(render_world->game_render_entities, render_entity) {
-				pass_data.mesh_instance = render_entity->mesh_instance;
-				pass_data.view_projection_matrix = cascaded_shadow_map->view_projection_matrix;
+			graphics_command_list->set_graphics_constants(1, 0, sizeof(Matrix4), (void *)&cascaded_shadow_map->view_projection_matrix);
 
-				graphics_command_list->set_graphics_constants(0, 0, sizeof(Depth_Map_Pass_Data), (void *)&pass_data);
-				graphics_command_list->draw(render_entity->mesh_info.index_count);
-			}
+			graphics_command_list->execute_indirect(command_signature, render_world->game_render_entities.count, buffers[i], buffers[i], offsets[i]);
+			i++;
+
+			//Render_Entity *render_entity = NULL;
+			//For(render_world->game_render_entities, render_entity) {
+			//	pass_data.mesh_instance = render_entity->mesh_instance;
+
+			//	graphics_command_list->set_graphics_constants(0, 0, sizeof(Depth_Map_Pass_Data), (void *)&pass_data);
+			//	graphics_command_list->draw(render_entity->mesh_info.index_count);
+			//}
 		}
 	}
 	graphics_command_list->end_event();
@@ -275,11 +303,6 @@ void Debug_Shadows_Pass::render(Graphics_Command_List *graphics_command_list, vo
 	graphics_command_list->transition_resource_barrier(shadow_atlas, RESOURCE_STATE_ALL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE);
 	graphics_command_list->end_event();
 }
-
-struct IndirectCommand {
-	D3D12_GPU_VIRTUAL_ADDRESS cbv;
-	D3D12_DRAW_ARGUMENTS drawArguments;
-};
 
 void Forward_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
 {
@@ -751,6 +774,7 @@ void Depth_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manager)
 void Depth_Pass::setup_root_signature(Render_Device *device)
 {
 	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Depth_Map_Pass_Data));
+	root_signature->add_32bit_constants_parameter(1, 0, sizeof(Matrix4));
 	root_signature->add_shader_resource_parameter(0, 0); //World matrices
 	root_signature->add_shader_resource_parameter(1, 0); //Mesh instances
 	root_signature->add_shader_resource_parameter(4, 0); //unified vertex buffer
@@ -806,7 +830,8 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;
-	pass_data.view_projection_matrix = render_world->get_camera()->view_perspective_matrix;
+
+	graphics_command_list->set_graphics_constants(1, 0, &render_world->get_camera()->view_perspective_matrix);
 
 	Render_Entity *render_entity = NULL;
 	For(render_world->game_render_entities, render_entity) {
@@ -969,6 +994,7 @@ void Generate_Shadows_HZB::setup_pipeline(Render_Device *render_device, Shader_M
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
+	graphics_pipeline_desc.depth_stencil_desc.depth_compare_func = COMPARISON_GREATER;
 	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, tile_frustum)->vs_bytecode.bytecode_ref();
 	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, tile_frustum)->ps_bytecode.bytecode_ref();
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
@@ -1024,7 +1050,8 @@ void Generate_Shadows_HZB::render(Graphics_Command_List *graphics_command_list, 
 	viewport.height = 64.0f;
 
 	for (u32 i = 0; i < shadow_cascades_count; i++) {
-		graphics_command_list->clear_depth_stencil(cascades_hzb_textures[i]);
+		graphics_command_list->clear_depth_stencil(cascades_hzb_textures[i], 0.0f);
+		//graphics_command_list->clear_depth_stencil(cascades_hzb_textures[i]);
 		graphics_command_list->set_render_target(NULL, cascades_hzb_textures[i]);
 
 		temp.cascade_view_projection_matrix = matrices[i];
@@ -1159,9 +1186,17 @@ void Shadows_Culling_Pass::schedule_resources(Pipeline_Resource_Manager *resourc
 	cascade3_hzb_texture = resource_manager->read_texture("Temp name3");
 }
 
+struct Culling_Pass_Data {
+	u32 count;
+	u32 width;
+	u32 height;
+	u32 mips;
+	Matrix4 matrix;
+};
+
 void Shadows_Culling_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature->add_32bit_constants_parameter(0, 0, sizeof(u32)); // pass_data
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Culling_Pass_Data)); // pass_data
 	root_signature->add_shader_resource_parameter(0, 0); // hzb_texture
 	root_signature->add_shader_resource_parameter(1, 0); // world_matrices
 	root_signature->add_shader_resource_parameter(2, 0); // mesh_instances
@@ -1177,13 +1212,164 @@ void Shadows_Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_M
 {
 	Compute_Pipeline_Desc compute_pipeline_desc;
 	compute_pipeline_desc.root_signature = root_signature;
-	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, culling)->cs_bytecode.bytecode_ref();
+	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, shadows_culling)->cs_bytecode.bytecode_ref();
 
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
 
 void Shadows_Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *context, void *args)
 {
+	Render_Pass_Context *render_pass_context = (Render_Pass_Context *)context;
+	Render_System *render_sys = (Render_System *)args;
+	Render_World *render_world = render_pass_context->render_world;
+	Mesh_Storage *mesh_storage = render_pass_context->mesh_storage;
+	Material_Storage *material_storage = render_pass_context->material_storage;
+
+	graphics_command_list->begin_event("Shadows Culling");
+
+	graphics_command_list->apply(pipeline_state);
+
+	Pipeline_Resource_Manager *pipeline_resource_manager = &render_sys->pipeline_resource_manager;
+
+	graphics_command_list->set_compute_descriptor_table(0, 10, SAMPLER_REGISTER, render_sys->render_device->base_sampler_descriptor());
+	graphics_command_list->set_compute_descriptor_table(0, 10, SHADER_RESOURCE_REGISTER, render_sys->render_device->base_shader_resource_descriptor());
+	graphics_command_list->set_compute_constant_buffer(0, 10, pipeline_resource_manager->global_buffer);
+	graphics_command_list->set_compute_constant_buffer(1, 10, pipeline_resource_manager->frame_info_buffer);
+
+	static Buffer *draw_commands_buffer = NULL;
+	if (!draw_commands_buffer || (draw_commands_buffer->count() < (u64)render_world->game_render_entities.count)) {
+		DELETE_PTR(draw_commands_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(IndirectCommand);
+		buffer_desc.stride = sizeof(IndirectCommand);
+		buffer_desc.name = "Shadows Draw Commands Buffer";
+
+		draw_commands_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	if (!shadows_culled_draw_commands_buffer0 || (shadows_culled_draw_commands_buffer0->size() < (u64)render_world->game_render_entities.count)) {
+		DELETE_PTR(shadows_culled_draw_commands_buffer0);
+		DELETE_PTR(shadows_culled_draw_commands_buffer1);
+		DELETE_PTR(shadows_culled_draw_commands_buffer2);
+		DELETE_PTR(shadows_culled_draw_commands_buffer3);
+		Buffer_Desc buffer_desc;
+		buffer_desc.size = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + sizeof(u32);
+		buffer_desc.stride = sizeof(IndirectCommand);
+		buffer_desc.name = "Shadows Culled Draw Commands Buffer0";
+		buffer_desc.flags = ALLOW_UNORDERED_ACCESS;
+
+		shadows_culled_draw_commands_buffer0 = render_sys->render_device->create_buffer(&buffer_desc);
+		buffer_desc.name = "Shadows Culled Draw Commands Buffer1";
+		shadows_culled_draw_commands_buffer1 = render_sys->render_device->create_buffer(&buffer_desc);
+		buffer_desc.name = "Shadows Culled Draw Commands Buffer2";
+		shadows_culled_draw_commands_buffer2 = render_sys->render_device->create_buffer(&buffer_desc);
+		buffer_desc.name = "Shadows Culled Draw Commands Buffer3";
+		shadows_culled_draw_commands_buffer3 = render_sys->render_device->create_buffer(&buffer_desc);
+
+		shadows_draw_commands_counter_offset0 = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
+		shadows_draw_commands_counter_offset1 = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
+		shadows_draw_commands_counter_offset2 = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
+		shadows_draw_commands_counter_offset3 = align_address<u64>(render_world->game_render_entities.count * sizeof(IndirectCommand), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
+	}
+
+	static Buffer *render_entities_buffer = NULL;
+	if (!render_entities_buffer || (render_entities_buffer->size() < (u64)render_world->game_render_entities.count)) {
+		DELETE_PTR(render_entities_buffer);
+		Buffer_Desc buffer_desc;
+		buffer_desc.usage = RESOURCE_USAGE_UPLOAD;
+		buffer_desc.size = render_world->game_render_entities.count * sizeof(Pass_Data);
+		buffer_desc.stride = sizeof(Pass_Data);
+		buffer_desc.name = "Render Entities";
+
+		render_entities_buffer = render_sys->render_device->create_buffer(&buffer_desc);
+	}
+
+	Array<IndirectCommand> indirect_commands;
+	Array<Pass_Data> render_entities;
+	Render_Entity *render_entity = NULL;
+	u64 counter = 0;
+	For(render_world->game_render_entities, render_entity)
+	{
+		Pass_Data gpu_render_entity;
+		gpu_render_entity.parameter0 = render_entity->mesh_instance;
+		render_entities.push(gpu_render_entity);
+
+		IndirectCommand indirect_command;
+		indirect_command.cbv = render_entities_buffer->gpu_virtual_address() + (counter++ * sizeof(Pass_Data));
+		indirect_command.drawArguments.VertexCountPerInstance = render_entity->mesh_info.index_count;
+		indirect_command.drawArguments.InstanceCount = 1;
+		indirect_command.drawArguments.StartVertexLocation = 0;
+		indirect_command.drawArguments.StartInstanceLocation = 0;
+
+		indirect_commands.push(indirect_command);
+	}
+
+	render_sys->render_device->set_upload_command_list(graphics_command_list);
+
+	draw_commands_buffer->request_write();
+	draw_commands_buffer->write(indirect_commands.to_void_ptr(), indirect_commands.get_size());
+
+	shadows_culled_draw_commands_buffer0->request_write();
+	shadows_culled_draw_commands_buffer1->request_write();
+	shadows_culled_draw_commands_buffer2->request_write();
+	shadows_culled_draw_commands_buffer3->request_write();
+	u32 reset = 0;
+	shadows_culled_draw_commands_buffer0->write((void *)&reset, sizeof(u32), shadows_draw_commands_counter_offset0);
+	shadows_culled_draw_commands_buffer1->write((void *)&reset, sizeof(u32), shadows_draw_commands_counter_offset1);
+	shadows_culled_draw_commands_buffer2->write((void *)&reset, sizeof(u32), shadows_draw_commands_counter_offset2);
+	shadows_culled_draw_commands_buffer3->write((void *)&reset, sizeof(u32), shadows_draw_commands_counter_offset3);
+
+	render_entities_buffer->request_write();
+	render_entities_buffer->write(render_entities.to_void_ptr(), render_entities.get_size());
+
+	render_sys->render_device->reset_upload_command_list();
+
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer0, RESOURCE_STATE_COMMON, RESOURCE_STATE_UNORDERED_ACCESS);
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer1, RESOURCE_STATE_COMMON, RESOURCE_STATE_UNORDERED_ACCESS);
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer2, RESOURCE_STATE_COMMON, RESOURCE_STATE_UNORDERED_ACCESS);
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer3, RESOURCE_STATE_COMMON, RESOURCE_STATE_UNORDERED_ACCESS);
+
+	graphics_command_list->set_compute_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(2, 0, SHADER_RESOURCE_REGISTER, render_world->mesh_instance_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, render_entities_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(4, 0, SHADER_RESOURCE_REGISTER, draw_commands_buffer->shader_resource_descriptor());
+	graphics_command_list->set_compute_descriptor_table(5, 0, SHADER_RESOURCE_REGISTER, render_world->bounding_box_buffer->shader_resource_descriptor());
+
+
+	Texture_Desc desc = cascade0_hzb_texture->get_texture_desc();
+
+	Texture *textures[] = { cascade0_hzb_texture, cascade1_hzb_texture, cascade2_hzb_texture, cascade3_hzb_texture };
+	Buffer *buffers[] = {shadows_culled_draw_commands_buffer0, shadows_culled_draw_commands_buffer1, shadows_culled_draw_commands_buffer2, shadows_culled_draw_commands_buffer3 };
+	u32 offsets[] = { shadows_draw_commands_counter_offset0, shadows_draw_commands_counter_offset1, shadows_draw_commands_counter_offset2, shadows_draw_commands_counter_offset3 };
+	
+	Culling_Pass_Data pass_data;
+	pass_data.count = render_world->game_render_entities.count;
+	pass_data.width = desc.width;
+	pass_data.height = desc.height;
+	pass_data.mips = desc.miplevels;
+
+	Cascaded_Shadows *cascaded_shadows = NULL;
+	For(render_world->cascaded_shadows_list, cascaded_shadows)
+	{
+		int i = 0;
+		Cascaded_Shadow_Map *cascaded_shadow_map = NULL;
+		For(cascaded_shadows->cascaded_shadow_maps, cascaded_shadow_map)
+		{
+			graphics_command_list->set_compute_descriptor_table(0, 0, UNORDERED_ACCESS_REGISTER, buffers[i]->unordered_access_descriptor(offsets[i]));
+			pass_data.matrix = cascaded_shadow_map->view_projection_matrix;
+			graphics_command_list->set_compute_constants(0, 0, &pass_data);
+			graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, textures[i++]->shader_resource_descriptor());
+			graphics_command_list->dispatch((u32)math::ceil((float)render_world->game_render_entities.count / 128.0f), 1);
+		}
+	}
+
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer0, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_COMMON); 
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_COMMON); 
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer2, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_COMMON); 
+	graphics_command_list->transition_resource_barrier(shadows_culled_draw_commands_buffer3, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_COMMON); 
+
+	graphics_command_list->end_event();
 }
 
 void Culling_Pass::init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager)
@@ -1198,7 +1384,7 @@ void Culling_Pass::schedule_resources(Pipeline_Resource_Manager *resource_manage
 
 void Culling_Pass::setup_root_signature(Render_Device *device)
 {
-	root_signature->add_32bit_constants_parameter(0, 0, sizeof(u32)); // pass_data
+	root_signature->add_32bit_constants_parameter(0, 0, sizeof(Culling_Pass_Data)); // pass_data
 	root_signature->add_shader_resource_parameter(0, 0); // hzb_texture
 	root_signature->add_shader_resource_parameter(1, 0); // world_matrices
 	root_signature->add_shader_resource_parameter(2, 0); // mesh_instances
@@ -1311,7 +1497,16 @@ void Culling_Pass::render(Graphics_Command_List *graphics_command_list, void *co
 
 	graphics_command_list->transition_resource_barrier(culled_draw_commands_buffer, RESOURCE_STATE_COMMON, RESOURCE_STATE_UNORDERED_ACCESS);
 
-	graphics_command_list->set_compute_constants(0, 0, &render_world->game_render_entities.count);
+	auto desc = hzb_texture->get_texture_desc();
+
+	Culling_Pass_Data pass_data;
+	pass_data.count = render_world->game_render_entities.count;
+	pass_data.width = desc.width;
+	pass_data.height = desc.height;
+	pass_data.mips = desc.miplevels;
+	pass_data.matrix = render_world->get_camera()->get_view_perspective_matrix();
+
+	graphics_command_list->set_compute_constants(0, 0, &pass_data);
 
 	graphics_command_list->set_compute_descriptor_table(0, 0, SHADER_RESOURCE_REGISTER, hzb_texture->shader_resource_descriptor());
 	graphics_command_list->set_compute_descriptor_table(1, 0, SHADER_RESOURCE_REGISTER, render_world->world_matrices_buffer->shader_resource_descriptor());

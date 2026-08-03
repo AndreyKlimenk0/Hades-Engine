@@ -1,5 +1,5 @@
-#ifndef __CULLING__
-#define __CULLING__
+#ifndef __SHADOWS_CULLING__
+#define __SHADOWS_CULLING__
 
 #include "mesh.hlsl"
 #include "utils.hlsl"
@@ -89,16 +89,13 @@ bool occlusion_culled(float3 min_AABB, float3 max_AABB)
     
     float mip_level = ceil(log2(max2(max_HZB_pixel - min_HZB_pixel)));
     float mip_scale = rcp(exp2(mip_level));
-    float2 min_mip = min_HZB_pixel * mip_scale;
-    float2 max_mip = max_HZB_pixel * mip_scale;
+    float2 min_mip = floor(min_HZB_pixel * mip_scale);
+    float2 max_mip = ceil(max_HZB_pixel * mip_scale);
     float2 d = max_mip - min_mip;
     //if (all(floor(min_mip) == floor(max_mip))) {
-    if (all(d <= 2)) {
-        mip_level -= 1;
+     if (all(d <= 2)) {
+         mip_level -= 1;
     }
-    // if (all(floor(min_mip) == floor(max_mip))) {
-    //     mip_level -= 1;
-    // }
     
     if (mip_level < pass_data.hzb_width_height_mips.z) {
         float4 depths;
@@ -107,12 +104,14 @@ bool occlusion_culled(float3 min_AABB, float3 max_AABB)
         depths.w = hzb_texture.SampleLevel(point_clamp_sampler(), float2(uv_min_AABB.x, uv_max_AABB.y), mip_level);
         depths.z = hzb_texture.SampleLevel(point_clamp_sampler(), float2(uv_max_AABB.x, uv_min_AABB.y), mip_level);
         
-        // if (any(depths == 1.0f)) {
+        if (all(depths == 0.0f)) {
+            return true;
+        }
+        
         // depths.x = depths.x == 1.0f ? 0.0f : depths.x;
         // depths.y = depths.y == 1.0f ? 0.0f : depths.y;
         // depths.z = depths.z == 1.0f ? 0.0f : depths.z;
         // depths.w = depths.w == 1.0f ? 0.0f : depths.w;
-        // }
         
         float max_depth = max4(depths);
         return min_AABB.z > max_depth;
@@ -130,9 +129,9 @@ void cs_main(uint3 thread_id : SV_DispatchThreadId)
         float3 max_AABB = bounding_box.max;
         float3 min_AABB = bounding_box.min;
         
-        if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
+        //if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
             culled_mesh_draw_commands.Append(mesh_draw_commands[index]);
-        }
+        //}
     }
 }
 

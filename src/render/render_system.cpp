@@ -129,6 +129,7 @@ void Render_System::init_passes()
 	
 	passes.shadows_hzb_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.downsample_shadows_hzb_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.shadows_culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.primitive_pass.init(render_device, shader_manager, &pipeline_resource_manager);
@@ -138,6 +139,7 @@ void Render_System::init_passes()
 	
 	render_pass_submissions.push({ &passes.shadows_hzb_pass, (void *)&render_pass_context,   (void *)this });
 	render_pass_submissions.push({ &passes.downsample_shadows_hzb_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.shadows_culling_pass, (void *)&render_pass_context,   (void *)this });
 	
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.culling_pass,  (void *)&render_pass_context, (void *)this });

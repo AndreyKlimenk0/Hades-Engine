@@ -4,13 +4,17 @@
 #include "mesh.hlsl"
 #include "vertex.hlsl"
 
+struct Projection_Data {
+	float4x4 view_projection_matrix;
+}; 
+
 struct Pass_Data {
 	uint mesh_instance_idx;
 	uint3 pad;
-	float4x4 view_projection_matrix;
 };
 
 ConstantBuffer<Pass_Data> pass_data : register(b0, space0);
+ConstantBuffer<Projection_Data> projection_data : register(b1, space0);
 
 StructuredBuffer<float4x4> world_matrices : register(t0, space0);
 StructuredBuffer<Mesh_Instance> mesh_instances : register(t1, space0);
@@ -25,7 +29,7 @@ float4 vs_main(uint vertex_id : SV_VertexID) : SV_POSITION
 	float3 position = unified_point_buffer[mesh_instance.vertex_offset + index];
 
 	float4x4 world_matrix = world_matrices[mesh_instance.transform_idx];
-	float4x4 wvp_matrix = mul(world_matrix, pass_data.view_projection_matrix);
+	float4x4 wvp_matrix = mul(world_matrix, projection_data.view_projection_matrix);
 	return mul(float4(position, 1.0f), wvp_matrix);
 }
 
