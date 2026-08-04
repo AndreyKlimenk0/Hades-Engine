@@ -62,6 +62,7 @@ struct Mesh_Storage {
 	Hash_Table<String, Mesh_Storage_Info> mesh_table;
 
 	void init(Render_Device *_render_device);
+	void pre_allocate_memory(u32 vertex_count, u32 index_count);
 	void prepare_for_rendering();
 	
 	Vertex_PNTUV *get_base_vertex(Mesh_Storage_Info *mesh_info);

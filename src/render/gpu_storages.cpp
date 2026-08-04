@@ -193,6 +193,13 @@ void Mesh_Storage::init(Render_Device *_render_device)
 	render_device = _render_device;
 }
 
+void Mesh_Storage::pre_allocate_memory(u32 vertex_count, u32 index_count)
+{
+	unified_vertices.resize(unified_vertices.count + vertex_count);
+	unified_points.resize(unified_vertices.count + vertex_count);
+	unified_indices.resize(unified_indices.count + index_count);
+}
+
 void Mesh_Storage::prepare_for_rendering()
 {
 	if (!upload_data_to_gpu) {

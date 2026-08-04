@@ -18,6 +18,7 @@
 #include "../render/gpu_storages.h"
 #include "../render/render_world.h"
 #include "../collision/collision.h"
+#include "../win32/win_time.h"
 
 static Engine *engine = NULL;
 static Game_World *game_world = NULL;
@@ -47,7 +48,7 @@ static void load_meshes(Array<String> &command_args)
 	loading_options.convert_cm_to_m = convert_cm_to_m;
 
 	for (u32 i = 0; i < mesh_names.count; i++) {
-		begin_time_stamp();
+		s64 begin_time_stamp = milliseconds_counter();
 
 		String full_path_to_mesh;
 		build_full_path_to_model_file(mesh_names[i], full_path_to_mesh);
@@ -60,6 +61,8 @@ static void load_meshes(Array<String> &command_args)
 			Texture_Storage *texture_storage = &engine->texture_storage;
 			Material_Storage *material_storage = &engine->material_storage;
 
+			mesh_storage->pre_allocate_memory(info.total_vertex_count, info.total_index_count);
+
 			String base_mesh_file_name;
 			extract_base_file_name(mesh_names[i], base_mesh_file_name);
 
@@ -67,6 +70,7 @@ static void load_meshes(Array<String> &command_args)
 			texture_storage->create_textures(textures, base_mesh_file_name);
 
 			print("load_meshes: Create game and render entities.");
+			auto x = milliseconds_counter();
 			for (u32 j = 0; j < loaded_models.count; j++) {
 				Loading_Model *loading_model = loaded_models[j];
 
@@ -88,9 +92,10 @@ static void load_meshes(Array<String> &command_args)
 					render_world->add_render_entity(entity_id, bounding_box, material_idx, &mesh_info);
 				}
 			}
+			print("Entities creation time", milliseconds_counter() -x );
 			free_memory(&loaded_models);
 			
-			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), delta_time_in_milliseconds());
+			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), milliseconds_counter() - begin_time_stamp);
 		}
 	}
 	end_profile_task();

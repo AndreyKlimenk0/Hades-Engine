@@ -48,8 +48,4 @@ __forceinline void end_profile_task()
 {
 }
 #endif
-void begin_time_stamp();
-s64 delta_time_in_milliseconds();
-s64 delta_time_in_fps();
-
 #endif
