@@ -4,7 +4,7 @@ vsync false
 back_buffer_count 2
 fov 60.0
 near_plane 1.0
-far_plane 10000.0
+far_plane 100000.0
 
 :/system
 #window_width 1900

@@ -129,6 +129,11 @@ void Render_World::init(Engine *engine)
 		//error("Render Camera was not initialized. There is no a view for rendering.");
 	}
 
+	//shadow_cascade_ranges.push({ 0, 10 });
+	//shadow_cascade_ranges.push({ 10, 30 });
+	//shadow_cascade_ranges.push({ 30, 100 });
+	//shadow_cascade_ranges.push({ 100, 500 });
+
 	shadow_cascade_ranges.push({ 0, 5 });
 	shadow_cascade_ranges.push({ 5, 15 });
 	shadow_cascade_ranges.push({ 15, 50 });

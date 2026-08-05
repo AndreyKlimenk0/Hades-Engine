@@ -105,9 +105,6 @@
     <ClCompile Include="src\libs\structures\hash_table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\mesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\libs\image\image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -895,5 +892,6 @@
     <None Include="dependencies\include\assimp\vector3.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="data\all.variables" />
   </ItemGroup>
 </Project>

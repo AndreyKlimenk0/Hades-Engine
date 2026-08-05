@@ -108,11 +108,6 @@ bool occlusion_culled(float3 min_AABB, float3 max_AABB)
             return true;
         }
         
-        // depths.x = depths.x == 1.0f ? 0.0f : depths.x;
-        // depths.y = depths.y == 1.0f ? 0.0f : depths.y;
-        // depths.z = depths.z == 1.0f ? 0.0f : depths.z;
-        // depths.w = depths.w == 1.0f ? 0.0f : depths.w;
-        
         float max_depth = max4(depths);
         return min_AABB.z > max_depth;
     }
@@ -129,9 +124,9 @@ void cs_main(uint3 thread_id : SV_DispatchThreadId)
         float3 max_AABB = bounding_box.max;
         float3 min_AABB = bounding_box.min;
         
-        //if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
+        if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
             culled_mesh_draw_commands.Append(mesh_draw_commands[index]);
-        //}
+        }
     }
 }
 

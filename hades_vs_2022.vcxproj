@@ -492,6 +492,7 @@
     <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\all.variables" />
     <None Include="dependencies\include\assimp\color4.inl" />
     <None Include="dependencies\include\assimp\material.inl" />
     <None Include="dependencies\include\assimp\matrix3x3.inl" />

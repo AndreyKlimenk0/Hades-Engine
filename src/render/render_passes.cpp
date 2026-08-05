@@ -213,6 +213,7 @@ void Debug_Shadows_Pass::setup_root_signature(Render_Device *device)
 	root_signature->add_shader_resource_parameter(2, 0); //unified vertex buffer
 	root_signature->add_shader_resource_parameter(3, 0); //Unified index buffer
 	root_signature->add_shader_resource_parameter(4, 0); //Lights buffer
+	root_signature->add_shader_resource_parameter(5, 0); //Materials buffer
 
 	root_signature->add_32bit_constants_parameter(0, 2, sizeof(Shadow_Atlas)); //shadow atals info
 	root_signature->add_32bit_constants_parameter(1, 2, sizeof(Jittering_Filter)); //jittering filter info
@@ -966,6 +967,7 @@ void Generate_Shadows_HZB::schedule_resources(Pipeline_Resource_Manager *resourc
 	texture_desc.width = 64;
 	texture_desc.height = 64;
 	texture_desc.format = DXGI_FORMAT_D32_FLOAT;
+	texture_desc.clear_value = Clear_Value(0.0f, 0);
 	
 	cascade0_hzb_texture = resource_manager->create_depth_stencil("Cascade0 HZB", &texture_desc);
 	cascade1_hzb_texture = resource_manager->create_depth_stencil("Cascade1 HZB", &texture_desc);

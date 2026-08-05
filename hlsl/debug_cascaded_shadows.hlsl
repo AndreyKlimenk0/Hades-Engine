@@ -16,7 +16,7 @@ static const float4 cascades_colors[CASCADES_COLOR_COUNT] = {
     normalize_rgb(240, 240, 7), // yellow
     normalize_rgb(27, 245, 7),  // green
     normalize_rgb(0, 0, 255),   // blue
-    normalize_rgb(240, 162, 7), // orange
+    normalize_rgb(147, 50, 168), // orange
 };
 
 struct Pass_Data {

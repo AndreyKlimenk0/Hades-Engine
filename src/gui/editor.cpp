@@ -371,7 +371,7 @@ Editor::~Editor()
 
 void Editor::init(Engine *engine)
 {
-	editor_settings.camera_speed = 100.5f;
+	editor_settings.camera_speed = 1.5f;
 	editor_settings.camera_rotation_speed = 0.5f;
 
 	render_sys = &engine->render_sys;
