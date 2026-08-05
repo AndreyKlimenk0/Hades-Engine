@@ -16,6 +16,7 @@
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 #include "../libs/fps_counter.h"
+#include "../render/shader_system.h"
 
 struct Engine {
 	struct Swap_Chain_Present {
@@ -31,6 +32,7 @@ struct Engine {
 	Global_Config global_config;
 	Variable_Service var_service;
 	File_Tracking_System file_tracking_sys;
+	Shader_System shader_system;
 	
 	Editor editor;
 	Game_World game_world;

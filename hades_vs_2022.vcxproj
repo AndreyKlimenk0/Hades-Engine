@@ -238,6 +238,7 @@
     <ClCompile Include="src\render\render_system.cpp" />
     <ClCompile Include="src\render\render_world.cpp" />
     <ClCompile Include="src\render\shader_manager.cpp" />
+    <ClCompile Include="src\render\shader_system.cpp" />
     <ClCompile Include="src\render\ui_storage.cpp" />
     <ClCompile Include="src\sys\commands.cpp" />
     <ClCompile Include="src\sys\debug.cpp" />
@@ -464,6 +465,7 @@
     <ClInclude Include="src\render\render_system.h" />
     <ClInclude Include="src\render\render_world.h" />
     <ClInclude Include="src\render\shader_manager.h" />
+    <ClInclude Include="src\render\shader_system.h" />
     <ClInclude Include="src\render\ui_storage.h" />
     <ClInclude Include="src\render\vertex.h" />
     <ClInclude Include="src\render\vertices.h" />
