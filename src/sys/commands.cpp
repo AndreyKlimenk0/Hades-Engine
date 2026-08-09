@@ -92,7 +92,7 @@ static void load_meshes(Array<String> &command_args)
 					render_world->add_render_entity(entity_id, bounding_box, material_idx, &mesh_info);
 				}
 			}
-			print("Entities creation time", milliseconds_counter() -x );
+			print("Entities creation time {}ms", milliseconds_counter() -x );
 			free_memory(&loaded_models);
 			
 			print("load_meshes: {} was loaded in game and render world for {}ms", mesh_names[i].c_str(), milliseconds_counter() - begin_time_stamp);

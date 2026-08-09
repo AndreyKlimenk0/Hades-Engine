@@ -129,24 +129,28 @@ char *read_string(FILE *file, int len)
 	return buffer;
 }
 
-char *read_entire_file(const char *name, const char *mode, int *file_size)
+String read_entire_file(const char *name, const char *mode)
 {
-	FILE *f;
-	if (fopen_s(&f, name, mode)) {
+	FILE *file = NULL;
+	String result;
+	if (fopen_s(&file, name, mode)) {
 		print("Falied of reading file {}", name);
-		return NULL;
+		return result;
 	}
 
-	fseek(f, 0, SEEK_END);
-	long size = ftell(f);
-	if (file_size) *file_size = size;
-	rewind(f);
+	fseek(file, 0, SEEK_END);
+	long size = ftell(file);
+	rewind(file);
 
 	char *buffer = new char[size + 1];
-	fread(buffer, sizeof(char), (size_t)size, f);
+	fread(buffer, sizeof(char), (size_t)size, file);
 	buffer[size] = '\0';
-	fclose(f);
-	return buffer;
+	fclose(file);
+
+	result.data = buffer;
+	result.len = (u32)size;
+
+	return result;
 }
 
 bool extract_file_extension(const char *file_name, String &file_extension)
@@ -251,16 +255,15 @@ bool File::open(const char *path_to_file, File_Mode mode, File_Creation file_cre
 	file_handle = CreateFile(path_to_file, file_mode_to_win32(mode), 0, NULL, file_creation_to_win32(file_creation), FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (file_handle == INVALID_HANDLE_VALUE) {
-		//DWORD error_id = GetLastError();
-		//char *error_message = get_error_message_from_error_code(error_id);
-		//u32 len = (u32)strlen(error_message);
-		//if (len > 0) {
-		//	error_message[len - 1] = '\0';
-		//	print("File::open: {}.", error_message);
-		//	is_file_open = false;
-		//	free_string(error_message);
-		//}
-		print("File::Open: Could not open file '{}'.", path_to_file);
+		DWORD error_id = GetLastError();
+		char *error_message = get_error_message_from_error_code(error_id);
+		u32 len = (u32)strlen(error_message);
+		if (len > 0) {
+			error_message[len - 1] = '\0';
+			print("File::open: Could not open file '{}'. {}.", path_to_file, error_message);
+			is_file_open = false;
+			free_string(error_message);
+		}
 		return false;
 	}
 	LARGE_INTEGER size;
@@ -288,7 +291,7 @@ void File::read(void *data, u32 data_size)
 	}
 
 	if (bytes_to_read != bytes_read) {
-		print("[Warning] File::read: wrote data in file {} less than must be", file_name);
+		print("File::read: wrote data in file {} less than must be", file_name);
 		return;
 	}
 }
@@ -309,10 +312,19 @@ void File::write(void *data, u32 data_size)
 	}
 
 	if (bytes_to_write != bytes_written) {
-		print("[Warning] File::write: wrote data in file {} less than must be", file_name);
+		print("File::write: wrote data in file {} less than must be", file_name);
 		return;
 	}
 	return;
+}
+
+u64 File::get_last_write_time()
+{
+	FILETIME create, access, write;
+	if (GetFileTime(file_handle, &create, &access, &write)) {
+		return u64(write.dwHighDateTime) << 32 | u64(write.dwLowDateTime);
+	}
+	return 0;
 }
 
 void File::write(const char *string, bool new_line)
@@ -331,7 +343,7 @@ void File::write(const char *string, bool new_line)
 	}
 
 	if (bytes_to_write != bytes_written) {
-		print("[Warning] File::write: wrote data in file {} less than must be", file_name);
+		print("File::write: wrote data in file {} less than must be", file_name);
 		return;
 	}
 }

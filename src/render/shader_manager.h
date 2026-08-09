@@ -1,15 +1,18 @@
 #ifndef SHADER_MANAGER
 #define SHADER_MANAGER
 
-#include <stdio.h>
-#include <d3d12.h>
+#include <windows.h>
+#include <dxcapi.h>
+#include <wrl/client.h>
 
+#include "shader_manager.h"
+#include "render_api\render.h"
 #include "../libs/str.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
-#include "render_api/base_structs.h"
+#include "../libs/structures/hash_table.h"
 
-#define GET_SHADER(shader_manager, shader_name) ((Shader *)&shader_manager->shaders.shader_name)
+using Microsoft::WRL::ComPtr;
 
 enum Shader_Type {
 	VERTEX_SHADER,
@@ -20,25 +23,35 @@ enum Shader_Type {
 	PIXEL_SHADER,
 };
 
-struct Shader_Bytecode {
-	Shader_Bytecode();
-	~Shader_Bytecode();
-
-	u8 *data = NULL;
-	u32 size = 0; // Should it be s64 ?
-
-	Shader_Bytecode(const Shader_Bytecode &other) = delete;
-	Shader_Bytecode &operator=(const Shader_Bytecode &other) = delete;
-
-	void free();
-	void move(u8 *bytecode, u32 bytecode_size);
-
-	Bytecode_Ref bytecode_ref();
+struct Shader_Entry {
+	const char *shader_file_name = NULL;
+	const char *shader_alias = NULL;
+	const char *arguments = NULL;
 };
 
-struct Shader {
-	Shader();
-	~Shader();
+struct Shader_Compilation_Result {
+	bool compiled = false;
+	u64 last_write_time = 0;
+	Shader_Bytecode bytecode;
+};
+
+struct Shader_Compiler {
+	Shader_Compiler();
+	~Shader_Compiler();
+
+	String cso_directory;
+	String shader_pdb_directory;
+	String shader_source_directory;
+
+	ComPtr<IDxcUtils> utils;
+	ComPtr<IDxcCompiler3> compiler;
+	ComPtr<IDxcIncludeHandler> include_handler;
+
+	Shader_Compilation_Result compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, Shader_Type shader_type);
+};
+
+struct Shader_Data {
+	String source_file;
 
 	Shader_Bytecode vs_bytecode;
 	Shader_Bytecode gs_bytecode;
@@ -47,48 +60,31 @@ struct Shader {
 	Shader_Bytecode ds_bytecode;
 	Shader_Bytecode ps_bytecode;
 
-	String file_name;
-	Array<Shader_Type> types;
-
-	void free();
+	void set_bytecode(Shader_Type shader_type, Shader_Bytecode bytecode);
+	Shader_Bytecode get_bytecode(Shader_Type shader_type);
 };
 
-const u32 VALIDATE_VERTEX_SHADER = 0x1;
-const u32 VALIDATE_GEOMETRY_SHADER = 0x2;
-const u32 VALIDATE_COMPUTE_SHADER = 0x4;
-const u32 VALIDATE_HULL_SHADER = 0x8;
-const u32 VALIDATE_DOMAIN_SHADER = 0x10;
-const u32 VALIDATE_PIXEL_SHADER = 0x20;
-const u32 VALIDATE_RENDERING_SHADER = VALIDATE_VERTEX_SHADER | VALIDATE_PIXEL_SHADER;
-
+struct Shader_Compilation_Info {
+	String shader_file_name;
+	String shader_alias;
+	String cso_file_name;
+	u64 cso_file_last_write_time;
+	String shader_compilation_args;
+};
 
 struct Shader_Manager {
-	Shader_Manager();
-	~Shader_Manager();
+	Shader_Compiler shader_compiler;
 
-	struct Shader_List {
-		Shader debug_cascaded_shadows;
-		Shader depth_map;
-		Shader draw_vertices;
-		Shader forward_light;
-		Shader outlining;
-		Shader silhouette;
-		Shader voxelization;
-		Shader draw_box;
-		Shader generate_mips_linear;
-		Shader generate_mips_linear_odd;
-		Shader generate_mips_linear_oddx;
-		Shader generate_mips_linear_oddy;
-		Shader downsample_hzb;
-		Shader ui_rendering;
-		Shader culling;
-		Shader shadows_culling;
-		Shader tile_frustum;
-	} shaders;
+	Array<Shader_Compilation_Info> shader_info_list;
+	Hash_Table<String, Shader_Data *> shader_table;
 
 	void init();
-	void reload(void *arg);
-	void recompile_and_reload_shaders(Array<Shader *> &shaders);
 	void shutdown();
+
+	void load_shader_compilation_info();
+	void update_shader_compilation_info(u64 cso_file_last_write_time, Shader_Entry *shader_entry, Shader_Type shader_type);
+
+	Shader_Bytecode get_shader_bytecode(const char *shader_alias, Shader_Type shader_type);
 };
+
 #endif

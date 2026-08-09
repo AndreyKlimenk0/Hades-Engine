@@ -360,7 +360,7 @@ inline D3D12_DEPTH_STENCIL_DESC to_d3d12_depth_stencil_desc(Depth_Stencil_Desc d
     return d3d12_depth_stencil_desc;
 }
 
-inline D3D12_SHADER_BYTECODE tO_d3d12_shader_bytecode(Bytecode_Ref bytecode)
+inline D3D12_SHADER_BYTECODE tO_d3d12_shader_bytecode(Shader_Bytecode bytecode)
 {
     return { bytecode.data, bytecode.size };
 }

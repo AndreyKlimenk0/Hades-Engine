@@ -500,6 +500,12 @@ String &String::operator=(const String &other)
 	return *this;
 }
 
+void String::reset()
+{
+	data = NULL;
+	len = 0;
+}
+
 void String::free()
 {
 	DELETE_ARRAY(data);

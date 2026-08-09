@@ -366,10 +366,9 @@ void Variable_Service::load(const char *file_name)
         return;
     }
 
-    char *data = read_entire_file(full_path_to_variable_file, "rb");
-    if (data) {
+    String data = read_entire_file(full_path_to_variable_file, "rb");
+    if (!data.is_empty()) {
         parse(data);
-        free_string(data);
     }
 }
 

@@ -99,9 +99,7 @@ void Engine::init(Win32_Window *window)
 	}
 	editor.init(this);
 
-	file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
-
-	shader_system.init();
+	//file_tracking_sys.add_directory("hlsl", make_member_callback<Shader_Manager>(&shader_manager, &Shader_Manager::reload));
 
 	engine->is_initialized = true;
 }
@@ -140,6 +138,7 @@ void Engine::shutdown()
 
 	//save_level(current_level_name, &game_world, &render_world);
 	var_service.shutdown();
+	shader_manager.shutdown();
 }
 
 void Engine::set_current_level_name(const String &level_name)

@@ -32,7 +32,7 @@ float read_real32(FILE *file);
 double read_real64(FILE *file);
 
 char *read_string(FILE *file, int len);
-char *read_entire_file(const char *name, const char *mode = "r", int *file_size = NULL);
+String read_entire_file(const char *name, const char *mode = "r");
 
 enum File_Mode {
 	FILE_MODE_READ,
@@ -40,9 +40,9 @@ enum File_Mode {
 };
 
 enum File_Creation {
-	FILE_CREATE_ALWAYS,
-	FILE_CREATE_NEW,
-	FILE_OPEN_ALWAYS,
+	FILE_CREATE_ALWAYS, // Creates a new file, always.
+	FILE_CREATE_NEW,    // Creates a new file, only if it does not already exist.
+	FILE_OPEN_ALWAYS,   // Opens a file, always. If the specified file does not exist and is a valid path to a writable location, the function creates a file.
 	FILE_OPEN_EXISTING
 };
 
@@ -58,6 +58,8 @@ struct File {
 	bool open(const char *path_to_file, File_Mode mode, File_Creation file_creation);
 	void read(void *data, u32 data_size);
 	void write(void *data, u32 data_size);
+	
+	u64 get_last_write_time();
 	//@Node: Get rid of the method ?
 	void write(const char *string, bool new_line = true);
 	

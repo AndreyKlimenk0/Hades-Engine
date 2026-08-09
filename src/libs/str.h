@@ -30,6 +30,7 @@ struct String {
 	String &operator=(const char *string);
 	String &operator=(const String &other);
 
+	void reset();
 	void free();
 	void print();
 	void to_lower();

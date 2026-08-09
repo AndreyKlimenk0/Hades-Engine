@@ -20,6 +20,8 @@ static u64 shadows_draw_commands_counter_offset1 = 0;
 static u64 shadows_draw_commands_counter_offset2 = 0;
 static u64 shadows_draw_commands_counter_offset3 = 0;
 
+#include <d3d12.h>
+
 struct IndirectCommand {
 	D3D12_GPU_VIRTUAL_ADDRESS cbv;
 	D3D12_DRAW_ARGUMENTS drawArguments;
@@ -131,8 +133,7 @@ void Shadows_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, depth_map)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, depth_map)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("depth_map", VERTEX_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 
 	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
@@ -231,8 +232,8 @@ void Debug_Shadows_Pass::setup_pipeline(Render_Device *render_device, Shader_Man
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, debug_cascaded_shadows)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, debug_cascaded_shadows)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("debug_cascaded_shadows", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("debug_cascaded_shadows", PIXEL_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 
@@ -348,8 +349,8 @@ void Forward_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, forward_light)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, forward_light)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("forward_light", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("forward_light", PIXEL_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 
@@ -529,8 +530,8 @@ void UI_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *shade
 
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, ui_rendering)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, ui_rendering)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("ui_rendering", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("ui_rendering", PIXEL_SHADER);
 	graphics_pipeline_desc.blending_desc = blending_desc;
 	graphics_pipeline_desc.rasterization_desc.cull_type = CULL_TYPE_NONE;
 	graphics_pipeline_desc.rasterization_desc.front_clockwise = true;
@@ -634,8 +635,8 @@ void Silhouette_Pass::setup_pipeline(Render_Device *render_device, Shader_Manage
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, silhouette)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, silhouette)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("silhouette", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("silhouette", PIXEL_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R32_UINT);
 
@@ -727,7 +728,7 @@ void Outlining_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager
 {
 	Compute_Pipeline_Desc compute_pipeline_desc;
 	compute_pipeline_desc.root_signature = root_signature;
-	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, outlining)->cs_bytecode.bytecode_ref();
+	compute_pipeline_desc.cs_bytecode = shader_manager->get_shader_bytecode("outlining", COMPUTE_SHADER);
 
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
@@ -789,8 +790,7 @@ void Depth_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *sh
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, depth_map)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, depth_map)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("depth_map", VERTEX_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 
 	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
@@ -893,7 +893,7 @@ void Generate_HZB::setup_pipeline(Render_Device *render_device, Shader_Manager *
 {
 	Compute_Pipeline_Desc compute_pipeline_desc;
 	compute_pipeline_desc.root_signature = root_signature;
-	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, downsample_hzb)->cs_bytecode.bytecode_ref();
+	compute_pipeline_desc.cs_bytecode = shader_manager->get_shader_bytecode("downsample_hzb", COMPUTE_SHADER);
 
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
@@ -997,8 +997,8 @@ void Generate_Shadows_HZB::setup_pipeline(Render_Device *render_device, Shader_M
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
 	graphics_pipeline_desc.depth_stencil_desc.depth_compare_func = COMPARISON_GREATER;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, tile_frustum)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, tile_frustum)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("tile_frustum", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("tile_frustum", PIXEL_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 
 	pipeline_state = render_device->create_pipeline_state(&graphics_pipeline_desc);
@@ -1105,7 +1105,7 @@ void Downsample_Shadows_HZB::setup_pipeline(Render_Device *render_device, Shader
 {
 	Compute_Pipeline_Desc compute_pipeline_desc;
 	compute_pipeline_desc.root_signature = root_signature;
-	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, downsample_hzb)->cs_bytecode.bytecode_ref();
+	compute_pipeline_desc.cs_bytecode = shader_manager->get_shader_bytecode("downsample_hzb", COMPUTE_SHADER);
 
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
@@ -1214,7 +1214,7 @@ void Shadows_Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_M
 {
 	Compute_Pipeline_Desc compute_pipeline_desc;
 	compute_pipeline_desc.root_signature = root_signature;
-	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, shadows_culling)->cs_bytecode.bytecode_ref();
+	compute_pipeline_desc.cs_bytecode = shader_manager->get_shader_bytecode("shadows_culling", COMPUTE_SHADER);
 
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
@@ -1402,7 +1402,7 @@ void Culling_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 {
 	Compute_Pipeline_Desc compute_pipeline_desc;
 	compute_pipeline_desc.root_signature = root_signature;
-	compute_pipeline_desc.cs_bytecode = GET_SHADER(shader_manager, culling)->cs_bytecode.bytecode_ref();
+	compute_pipeline_desc.cs_bytecode = shader_manager->get_shader_bytecode("culling", COMPUTE_SHADER);
 
 	pipeline_state = render_device->create_pipeline_state(&compute_pipeline_desc);
 }
@@ -1553,8 +1553,8 @@ void Primitive_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager
 	graphics_pipeline_desc.root_signature = root_signature;
 	graphics_pipeline_desc.input_layouts.push(Input_Layout("POSITION", DXGI_FORMAT_R32G32B32_FLOAT));
 	graphics_pipeline_desc.primitive_type = PRIMITIVE_TYPE_LINE;
-	graphics_pipeline_desc.vs_bytecode = GET_SHADER(shader_manager, draw_vertices)->vs_bytecode.bytecode_ref();
-	graphics_pipeline_desc.ps_bytecode = GET_SHADER(shader_manager, draw_vertices)->ps_bytecode.bytecode_ref();
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("draw_vertices", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("draw_vertices", PIXEL_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 

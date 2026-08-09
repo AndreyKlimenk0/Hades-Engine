@@ -147,7 +147,7 @@ struct Depth_Stencil_Desc {
 
 struct Root_Signature;
 
-struct Bytecode_Ref {
+struct Shader_Bytecode {
 	void *data = NULL;
 	u32 size = 0;
 };
@@ -160,8 +160,8 @@ struct Input_Layout {
 struct Graphics_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
 	Array<Input_Layout> input_layouts;
-	Bytecode_Ref vs_bytecode;
-	Bytecode_Ref ps_bytecode;
+	Shader_Bytecode vs_bytecode;
+	Shader_Bytecode ps_bytecode;
 	Primitive_Type primitive_type = PRIMITIVE_TYPE_TRIANGLE;
 	Blending_Desc blending_desc;
 	Rasterization_Desc rasterization_desc;
@@ -174,6 +174,6 @@ struct Graphics_Pipeline_Desc {
 
 struct Compute_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
-	Bytecode_Ref cs_bytecode;
+	Shader_Bytecode cs_bytecode;
 };
 #endif

@@ -1,438 +1,501 @@
-#include <assert.h>
+#include <stdlib.h>
 #include <string.h>
-#include <windows.h>
-#include <d3dcompiler.h>
-#include <wrl/client.h>
 
 #include "shader_manager.h"
 #include "../sys/sys.h"
-#include "../sys/utils.h"
 #include "../libs/os/path.h"
 #include "../libs/os/file.h"
-//#include "../render/render_api.h"
 
-using Microsoft::WRL::ComPtr;
+#pragma comment(lib, "dxcompiler.lib")
 
-const u32 COMPILE_AS_VERTEX_SHADER = 0x1;
-const u32 COMPILE_AS_GEOMETRY_SHADER = 0x2;
-const u32 COMPILE_AS_COMPUTE_SHADER = 0x4;
-const u32 COMPILE_AS_HULL_SHADER = 0x8;
-const u32 COMPILE_AS_DOMAIN_SHADER = 0x10;
-const u32 COMPILE_AS_PIXEL_SHADER = 0x20;
-
-struct Shader_Table_Entiry {
-	const char *name = NULL;
-	Shader *shader = NULL;
+static const Shader_Entry SHADER_LIST[] = {
+	{ "render_2d.hlsl",              "render_2d",               "-DDEBUG_SHADOWS" },
+	{ "forward_light.hlsl",          "forward_light",           "-DDEBUG_SHADOWS" },
+	{ "depth_map.hlsl",              "depth_map",               "-DDEBUG_SHADOWS" },
+	{ "debug_cascaded_shadows.hlsl", "debug_cascaded_shadows",  "-DDEBUG_SHADOWS" },
+	{ "draw_vertices.hlsl",          "draw_vertices",           "-DDEBUG_SHADOWS" },
+	{ "silhouette.hlsl",             "silhouette",              "-DDEBUG_SHADOWS" },
+	{ "outlining.hlsl",              "outlining",               "-DDEBUG_SHADOWS" },
+	{ "downsample_hzb.hlsl",         "downsample_hzb",          "-DDEBUG_SHADOWS" },
+	{ "ui_rendering.hlsl",           "ui_rendering",            "-DDEBUG_SHADOWS" },
+	{ "culling.hlsl",                "culling",                 "-DDEBUG_SHADOWS" },
+	{ "shadows_culling.hlsl",        "shadows_culling",         "-DDEBUG_SHADOWS" },
+	{ "tile_frustum.hlsl",           "tile_frustum",            "-DDEBUG_SHADOWS" },
 };
 
-static const String HLSL_FILE_EXTENSION = "cso";
-static const u32 SHADERS_COUNT = sizeof(Shader_Manager::Shader_List) / sizeof(Shader);
-static Shader_Table_Entiry shader_table[SHADERS_COUNT];
+static const Shader_Type SHADER_TYPE_LIST[] = {
+	VERTEX_SHADER,
+	GEOMETRY_SHADER,
+	COMPUTE_SHADER,
+	HULL_SHADER,
+	DOMAIN_SHADER,
+	PIXEL_SHADER,
+};
 
-inline Shader *find_shader_in_shader_table(const char *shader_name)
+String to_string(Shader_Type shader_type)
 {
-	for (u32 i = 0; i < SHADERS_COUNT; i++) {
-		if ((shader_table[i].name == NULL) || (shader_table[i].shader == NULL)) {
-			continue;
-		}
-		if (!strcmp(shader_table[i].name, shader_name)) {
-			return shader_table[i].shader;
-		}
-	}
-	return NULL;
-}
-
-inline bool include_shader(const char *shader_file_name)
-{
-	assert(shader_file_name);
-
-	const u32 COUNT = 5;
-	String include_shaders[COUNT] = { "light.hlsl", "utils.hlsl", "vertex.hlsl", "globals.hlsl", "cascaded_shadow.hlsl" };
-
-	for (u32 i = 0; i < COUNT; i++) {
-		if (include_shaders[i] == shader_file_name) {
-			return true;
-		}
-	}
-	return false;
-}
-
-inline void get_shader_name_from_file(const char *file_name, String &name)
-{
-	assert(name.is_empty());
-
-	String f_name = file_name;
-
-	Array<String> buffer;
-	if (split(&f_name, "_", &buffer)) {
-		for (u32 i = 0; i < (buffer.count - 1); i++) {
-			if (i != 0) {
-				name.append("_");
-			}
-			name.append(buffer[i]);
-		}
-	}
-	name.append(".hlsl");
-}
-
-inline bool get_shader_type_from_file_name(const char *file_name, Shader_Type *shader_type)
-{
-	String name;
-	String file_extension;
-
-	extract_file_extension(file_name, file_extension);
-	if (file_extension != HLSL_FILE_EXTENSION) {
-		print("get_shader_type_from_file: {} has wrong file extension.", file_name);
-		return false;
-	}
-
-	extract_base_file_name(file_name, name);
-
-	Array<String> strings;
-	bool result = split(&name, "_", &strings);
-	if (!result) {
-		print("get_shader_type_from_file: can not extract shader type from {}.", file_name);
-		return false;
-	}
-
-	String type = strings.last();
-
-	if (type == "vs") {
-		*shader_type = VERTEX_SHADER;
-	} else if (type == "gs") {
-		*shader_type = GEOMETRY_SHADER;
-	} else if (type == "cs") {
-		*shader_type = COMPUTE_SHADER;
-	} else if (type == "hs") {
-		*shader_type = HULL_SHADER;
-	} else if (type == "ds") {
-		*shader_type = DOMAIN_SHADER;
-	} else if (type == "ps") {
-		*shader_type = PIXEL_SHADER;
-	} else {
-		print("get_shader_type_from_file: can not extract shader type from {}.", file_name);
-		return false;
-	}
-	return true;
-}
-
-inline void make_output_shader_file_name(const char *shader_base_file_name, Shader_Type shader_type, String &output_shader_file_name)
-{
-	String compiled_shader_file_prefix;
+	String result;
 	switch (shader_type) {
 		case VERTEX_SHADER: {
-			compiled_shader_file_prefix = "_vs";
+			result = "Vertex Shader";
 			break;
 		}
 		case GEOMETRY_SHADER: {
-			compiled_shader_file_prefix = "_gs";
+			result = "Geometry Shader";
 			break;
 		}
 		case COMPUTE_SHADER: {
-			compiled_shader_file_prefix = "_cs";
+			result = "Compute Shader";
 			break;
 		}
 		case HULL_SHADER: {
-			compiled_shader_file_prefix = "_hs";
+			result = "Hull Shader";
 			break;
 		}
 		case DOMAIN_SHADER: {
-			compiled_shader_file_prefix = "_ds";
+			result = "Domain Shader";
 			break;
 		}
 		case PIXEL_SHADER: {
-			compiled_shader_file_prefix = "_ps";
+			result = "Pixel Shader";
 			break;
 		}
 		default: {
 			assert(false);
 		}
 	}
-	output_shader_file_name = String(shader_base_file_name) + compiled_shader_file_prefix + ".cso";
-}
-
-inline bool compile_shader(const char *path_to_shader, Shader_Type shader_type, ID3DBlob **shader_bytecode)
-{
-	String profile;
-	String entry_point;
-	u32 complation_flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR | D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
-	switch (shader_type) {
-		case VERTEX_SHADER: {
-			entry_point = "vs_main";
-			profile = "vs_5_1";
-			break;
-		}
-		case GEOMETRY_SHADER: {
-			entry_point = "gs_main";
-			profile = "gs_5_1";
-			break;
-		}
-		case COMPUTE_SHADER: {
-			entry_point = "cs_main";
-			profile = "cs_5_1";
-			break;
-		}
-		case HULL_SHADER: {
-			entry_point = "hs_main";
-			profile = "hs_5_1";
-			break;
-		}
-		case DOMAIN_SHADER: {
-			entry_point = "ds_main";
-			profile = "ds_5_1";
-			break;
-		}
-		case PIXEL_SHADER: {
-			entry_point = "ps_main";
-			profile = "ps_5_1";
-			break;
-		}
-		default: {
-			assert(false);
-		}
-	}
-	ComPtr<ID3DBlob> error_message;
-	wchar_t *temp_path_to_shader = to_wstring(path_to_shader);
-	defer(free_string(temp_path_to_shader));
-
-	bool result = SUCCEEDED(D3DCompileFromFile(temp_path_to_shader, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, entry_point, profile, complation_flags, 0, shader_bytecode, error_message.ReleaseAndGetAddressOf()));
-
-	if (!result && (error_message->GetBufferSize() > 0)) {
-		const char *str_error_message = (const char *)error_message->GetBufferPointer();
-		// Get rid of the new line character.
-		String temp = String(str_error_message, 0, (u32)strlen(str_error_message) - 1);
-		print("compile_shader:", temp);
-	}
-
 	return result;
 }
 
-Shader_Bytecode::Shader_Bytecode()
+String get_shader_prefix(Shader_Type shader_type)
+{
+	String result;
+	switch (shader_type) {
+		case VERTEX_SHADER: {
+			result = "vs";
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			result = "gs";
+			break;
+		}
+		case COMPUTE_SHADER: {
+			result = "cs";
+			break;
+		}
+		case HULL_SHADER: {
+			result = "hs";
+			break;
+		}
+		case DOMAIN_SHADER: {
+			result = "ds";
+			break;
+		}
+		case PIXEL_SHADER: {
+			result = "ps";
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+	return result;
+}
+
+String get_shader_entry_point(Shader_Type shader_type)
+{
+	String result;
+	switch (shader_type) {
+		case VERTEX_SHADER: {
+			result = "vs_main";
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			result = "gs_main";
+			break;
+		}
+		case COMPUTE_SHADER: {
+			result = "cs_main";
+			break;
+		}
+		case HULL_SHADER: {
+			result = "hs_main";
+			break;
+		}
+		case DOMAIN_SHADER: {
+			result = "ds_main";
+			break;
+		}
+		case PIXEL_SHADER: {
+			result = "ps_main";
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+	return result;
+}
+
+String get_shader_profile(Shader_Type shader_type)
+{
+	String result;
+	String profile = "6_6";
+
+	switch (shader_type) {
+		case VERTEX_SHADER:
+		{
+			result = "vs_" + profile;
+			break;
+		}
+		case GEOMETRY_SHADER:
+		{
+			result = "gs_" + profile;
+			break;
+		}
+		case COMPUTE_SHADER:
+		{
+			result = "cs_" + profile;
+			break;
+		}
+		case HULL_SHADER:
+		{
+			result = "hs_" + profile;
+			break;
+		}
+		case DOMAIN_SHADER:
+		{
+			result = "ds_" + profile;
+			break;
+		}
+		case PIXEL_SHADER:
+		{
+			result = "ps_" + profile;
+			break;
+		}
+		default:
+		{
+			assert(false);
+		}
+	}
+	return result;
+}
+
+Shader_Compiler::Shader_Compiler()
+{
+	HR(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(utils.ReleaseAndGetAddressOf())));
+	HR(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(compiler.ReleaseAndGetAddressOf())));
+	HR(utils->CreateDefaultIncludeHandler(&include_handler));
+}
+
+Shader_Compiler::~Shader_Compiler()
 {
 }
 
-Shader_Bytecode::~Shader_Bytecode()
+String build_pdb_shader_file_name(const char *shader_file_name, Shader_Type shader_type)
 {
-	free();
+	String base_file_name;
+	extract_base_file_name(shader_file_name, base_file_name);
+	return base_file_name + "_" + get_shader_prefix(shader_type) + "." + "pdb";
 }
 
-void Shader_Bytecode::free()
+String build_cso_shader_file_name(const char *shader_file_name, Shader_Type shader_type)
 {
-	DELETE_PTR(data);
-	size = 0;
+	String base_file_name;
+	extract_base_file_name(shader_file_name, base_file_name);
+	return base_file_name + "_" + get_shader_prefix(shader_type) + "." + "cso";
 }
 
-void Shader_Bytecode::move(u8 *bytecode, u32 bytecode_size)
+Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, Shader_Type shader_type)
 {
-	data = bytecode;
-	size = bytecode_size;
+	shader_source_directory = join_paths(get_base_path(), "hlsl");
+	shader_pdb_directory = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), "pdb");
+	cso_directory = join_paths(get_full_path_to_data_directory(), "shaders");
+
+	print("Shader_Compiler::compile: Compiling {} as {}.", file_name, to_string(shader_type));
+
+	ComPtr<IDxcBlobEncoding> shader_blob;
+	HR(utils->CreateBlob(shader_code, code_size, 0, shader_blob.ReleaseAndGetAddressOf()));
+
+	DxcBuffer buffer = { shader_blob->GetBufferPointer(), shader_blob->GetBufferSize(), DXC_CP_ACP };
+
+	Array<String> arguments;
+	arguments.push(path_to_shader_file);
+	arguments.push("-Zi");  // Enable debug information
+	arguments.push("-Od");  // Disable optimization;
+	arguments.push("-Zpr"); // Row major matrix order
+	arguments.push("-E");   // Entry point
+	arguments.push(get_shader_entry_point(shader_type));
+	arguments.push("-T");   // Profile
+	arguments.push(get_shader_profile(shader_type));
+	arguments.push("-HV");  // HLSL verison (2016, 2017, 2018, 2021). Default is 2018
+	arguments.push("2021");
+	arguments.push("-I");
+	arguments.push(shader_source_directory);
+
+	Array<LPCWSTR> wstrings;
+	for (u32 i = 0; i < arguments.count; i++) {
+		wstrings.push(static_cast<LPCWSTR>(to_wstring(arguments[i])));
+	}
+
+	ComPtr<IDxcResult> dxc_result;
+	HR(compiler->Compile(&buffer, wstrings.items, wstrings.count, include_handler.Get(), IID_PPV_ARGS(dxc_result.ReleaseAndGetAddressOf())));
+
+	HRESULT compilation_status = E_FAIL;
+	HR(dxc_result->GetStatus(&compilation_status));
+
+	Shader_Compilation_Result compilation_result;
+	if (FAILED(compilation_status)) {
+		ComPtr<IDxcBlobEncoding> error_buffer;
+		HR(dxc_result->GetErrorBuffer(error_buffer.ReleaseAndGetAddressOf()));
+
+		ComPtr<IDxcBlobUtf8> error_message;
+		HR(utils->GetBlobAsUtf8(error_buffer.Get(), error_message.ReleaseAndGetAddressOf()));
+
+		print("Shader_Compiler::compile: {} {} compilation failed.", file_name, to_string(shader_type));
+		print((const char *)error_message->GetBufferPointer());
+	} else {
+		ComPtr<IDxcBlob> pdb;
+		ComPtr<IDxcBlob> intermediate_code;
+
+		HR(dxc_result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(pdb.ReleaseAndGetAddressOf()), NULL));
+		HR(dxc_result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(intermediate_code.ReleaseAndGetAddressOf()), NULL));
+
+		File pdb_file;
+		if (pdb_file.open(join_paths(shader_pdb_directory, build_pdb_shader_file_name(file_name, shader_type)), FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
+			pdb_file.write(pdb->GetBufferPointer(), pdb->GetBufferSize());
+		}
+
+		File cso_file;
+		if (cso_file.open(join_paths(cso_directory, build_cso_shader_file_name(file_name, shader_type)), FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
+			cso_file.write(intermediate_code->GetBufferPointer(), intermediate_code->GetBufferSize());
+		}
+
+		compilation_result.compiled = true;
+		compilation_result.last_write_time = cso_file.get_last_write_time();
+		compilation_result.bytecode.size = intermediate_code->GetBufferSize();
+		compilation_result.bytecode.data = new u8[intermediate_code->GetBufferSize()];
+		memcpy(compilation_result.bytecode.data, intermediate_code->GetBufferPointer(), intermediate_code->GetBufferSize());
+
+		print("Shader_Compiler::compile: {} as {} was successfully compiled.", file_name, to_string(shader_type));
+	}
+
+	return compilation_result;
 }
 
-Bytecode_Ref Shader_Bytecode::bytecode_ref()
+inline bool compare(const Shader_Compilation_Info &x, const String &y)
 {
-	return { data, size };
-}
-
-Shader_Manager::Shader_Manager()
-{
-}
-
-Shader_Manager::~Shader_Manager()
-{
-	shutdown();
+	return x.cso_file_name == y;
 }
 
 void Shader_Manager::init()
 {
-	u32 shader_count = 0;
-	shader_table[shader_count++] = { "debug_cascaded_shadows.hlsl", &shaders.debug_cascaded_shadows };
-	shader_table[shader_count++] = { "depth_map.hlsl", &shaders.depth_map };
-	shader_table[shader_count++] = { "draw_vertices.hlsl", &shaders.draw_vertices };
-	shader_table[shader_count++] = { "forward_light.hlsl", &shaders.forward_light };
-	shader_table[shader_count++] = { "outlining.hlsl", &shaders.outlining };
-	shader_table[shader_count++] = { "silhouette.hlsl", &shaders.silhouette };
-	shader_table[shader_count++] = { "voxelization.hlsl", &shaders.voxelization };
-	shader_table[shader_count++] = { "draw_box.hlsl", &shaders.draw_box };
-	shader_table[shader_count++] = { "generate_mips_linear.hlsl", &shaders.generate_mips_linear };
-	shader_table[shader_count++] = { "generate_mips_linear_odd.hlsl", &shaders.generate_mips_linear_odd };
-	shader_table[shader_count++] = { "generate_mips_linear_oddx.hlsl", &shaders.generate_mips_linear_oddx };
-	shader_table[shader_count++] = { "generate_mips_linear_oddy.hlsl", &shaders.generate_mips_linear_oddy };
-	shader_table[shader_count++] = { "downsample_hzb.hlsl", &shaders.downsample_hzb };
-	shader_table[shader_count++] = { "ui_rendering.hlsl", &shaders.ui_rendering };
-	shader_table[shader_count++] = { "culling.hlsl", &shaders.culling };
-	shader_table[shader_count++] = { "shadows_culling.hlsl", &shaders.shadows_culling };
-	shader_table[shader_count++] = { "tile_frustum.hlsl", &shaders.tile_frustum };
+	load_shader_compilation_info();
 
-	for (u32 i = 0; i < shader_count; i++) {
-		shader_table[i].shader->file_name = shader_table[i].name;
-	}
+	for (u32 i = 0; i < ARRAY_SIZE(SHADER_LIST); i++) {
+		Shader_Entry shader_entry = SHADER_LIST[i];
 
-	if ((SHADERS_COUNT - 1) > shader_count) {
-		print("Shader_Manager::init: Number of shaders in Shader_List struct is more than number of shader entries in the shader table. Maybe some shader was not added to the shader table.");
-	}
+		String full_path_to_shader_file = join_paths(join_paths(get_base_path(), "hlsl"), shader_entry.shader_file_name);
 
-	String path_to_shader_dir;
-	build_full_path_to_data_directory("shaders", path_to_shader_dir);
-
-	Array<String> file_names;
-	get_file_names_from_dir(path_to_shader_dir, &file_names);
-	if (file_names.is_empty()) {
-		print("Shader_Manager::init: Shader Manager has not found compiled shader files.");
-	} else {
-		print("Shader_Manager::init: Load and create shaders.");
-	}
-
-	for (u32 i = 0; i < file_names.count; i++) {
-		String path_to_shader_file;
-		build_full_path_to_shader_file(file_names[i], path_to_shader_file);
-
-		String shader_name;
-		get_shader_name_from_file(file_names[i].c_str(), shader_name);
-
-		Shader *shader = find_shader_in_shader_table(shader_name);
-		if (shader) {
-			u8 *bytecode = NULL;
-			s32 bytecode_size = 0;
-			bytecode = (u8 *)read_entire_file(path_to_shader_file, "rb", &bytecode_size);
-			if (!bytecode || (bytecode_size == 0)) {
-				print("Shader_Manager::init: Failed to read shader byte code from {}.", &path_to_shader_file);
-				continue;
-			}
-			Shader_Type shader_type;
-			if (!get_shader_type_from_file_name(file_names[i].c_str(), &shader_type)) {
-				print("Shader_Manager::init: The shader manager can get a shader type from {}.", file_names[i].c_str());
-				continue;
-			}
-			switch (shader_type) {
-				case VERTEX_SHADER: {
-					shader->vs_bytecode.move(bytecode, (u32)bytecode_size);
-					shader->types.push(VERTEX_SHADER);
-					break;
-				}
-				case GEOMETRY_SHADER: {
-					shader->gs_bytecode.move(bytecode, (u32)bytecode_size);
-					shader->types.push(GEOMETRY_SHADER);
-					break;
-				}
-				case COMPUTE_SHADER: {
-					shader->cs_bytecode.move(bytecode, (u32)bytecode_size);
-					shader->types.push(COMPUTE_SHADER);
-					break;
-				}
-				case HULL_SHADER: {
-					shader->hs_bytecode.move(bytecode, (u32)bytecode_size);
-					shader->types.push(HULL_SHADER);
-					break;
-				}
-				case DOMAIN_SHADER: {
-					shader->ds_bytecode.move(bytecode, (u32)bytecode_size);
-					shader->types.push(DOMAIN_SHADER);
-					break;
-				}
-				case PIXEL_SHADER: {
-					shader->ps_bytecode.move(bytecode, (u32)bytecode_size);
-					shader->types.push(PIXEL_SHADER);
-					break;
-				}
-				default: {
-					assert(false);
-				}
-			}
-			loop_print("  {} was loaded.", shader_name);
-		} else {
-			print("Shader_Manager::init: The shader table doesn't have a shader entiry with name {}.", &shader_name);
+		if (!file_exists(full_path_to_shader_file)) {
+			print("Shader_System::init: Shader compilcation failed, {} was found.", shader_entry.shader_file_name);
+			continue;
 		}
+
+		String shader_code = read_entire_file(full_path_to_shader_file, "rb");
+		if (shader_code.is_empty()) {
+			print("Shader_System::init: Faield to read {}", shader_entry.shader_file_name);
+			continue;
+		}
+
+		for (u32 j = 0; j < ARRAY_SIZE(SHADER_TYPE_LIST); j++) {
+			Shader_Type shader_type = SHADER_TYPE_LIST[j];
+
+			if (shader_code.find(get_shader_entry_point(shader_type)) > -1) {
+
+				Find_Result<Shader_Compilation_Info> result = find_in_array(shader_info_list, build_cso_shader_file_name(shader_entry.shader_file_name, shader_type), compare);
+				if (result.found) {
+					String path_to_cso_file = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), result.data.cso_file_name);
+					String path_to_shader_file = join_paths(join_paths(get_base_path(), "hlsl"), result.data.shader_file_name);
+					File cso_file;
+					File shader_file;
+					if (cso_file.open(path_to_cso_file, FILE_MODE_READ, FILE_OPEN_EXISTING) && shader_file.open(path_to_shader_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
+						u64 cso_file_last_write_time = cso_file.get_last_write_time();
+						u64 shader_file_last_write_time = shader_file.get_last_write_time();
+						if (cso_file_last_write_time >= shader_file_last_write_time) {
+							print("Shader_Compiler::init: {} as {} has already beed compiled. Loading the shader.", result.data.shader_file_name, to_string(shader_type));
+
+							Shader_Data *shader_data = NULL;
+							if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
+								shader_data = new Shader_Data();
+								shader_data->source_file = shader_entry.shader_file_name;
+								shader_table.set(shader_entry.shader_alias, shader_data);
+							}
+							u8 *buffer = new u8[GetFileSize(cso_file.file_handle, NULL)];
+							cso_file.read((void *)buffer, GetFileSize(cso_file.file_handle, NULL));
+							shader_data->set_bytecode(shader_type, { buffer, GetFileSize(cso_file.file_handle, NULL) });
+							continue;
+						}
+					}
+				}
+
+				Shader_Compilation_Result compilation_result = shader_compiler.compile((void *)shader_code.data, shader_code.len, full_path_to_shader_file, shader_entry.shader_file_name, shader_type);
+
+				if (compilation_result.compiled) {
+					Shader_Data *shader_data = NULL;
+					if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
+						shader_data = new Shader_Data();
+						shader_data->source_file = shader_entry.shader_file_name;
+						shader_table.set(shader_entry.shader_alias, shader_data);
+					}
+					shader_data->set_bytecode(shader_type, compilation_result.bytecode);
+
+
+					Shader_Compilation_Info shader_info = { shader_entry.shader_file_name, shader_entry.shader_alias,
+						build_cso_shader_file_name(shader_entry.shader_file_name, shader_type),  compilation_result.last_write_time, shader_entry.arguments };
+					shader_info_list.push(shader_info);
+
+					//update_shader_compilation_info(compilation_result.last_write_time, &shader_entry, shader_type);
+				}
+			}
+		}
+	}
+
+	String buffer;
+	for (u32 i = 0; i < shader_info_list.count; i++) {
+		Shader_Compilation_Info *shader_info = &shader_info_list[i];
+		char *str = format("{} {} {} {} {}\n", shader_info->shader_file_name, shader_info->shader_alias, shader_info->cso_file_name, shader_info->cso_file_last_write_time, shader_info->shader_compilation_args);
+		buffer.append(str);
+		free_string(str);
+	}
+
+	String path = join_paths(get_full_path_to_data_directory(), "shader_compilation_info.txt");
+	File shader_compilation_info_file;
+	if (shader_compilation_info_file.open(path, FILE_MODE_WRITE, FILE_OPEN_ALWAYS)) {
+		shader_compilation_info_file.write((void *)buffer.data, buffer.len);
 	}
 }
 
-void Shader_Manager::reload(void *arg)
+void free_bytecode(Shader_Bytecode *shader_bytecode)
 {
-	const char *shader_file_name = (const char *)arg;
-
-	Array<Shader *> shaders;
-	if (include_shader(shader_file_name)) {
-		for (u32 i = 0; i < SHADERS_COUNT; i++) {
-			shaders.push(shader_table[i].shader);
-		}
-	} else {
-		Shader *shader = find_shader_in_shader_table(shader_file_name);
-		if (shader) {
-			shaders.push(shader);
-		} else {
-			print("Shader_Manager::reload: {} was not found in the shader table. The shader can't be compiled and reloaded.", shader_file_name);
-		}
-	}
-	recompile_and_reload_shaders(shaders);
-}
-
-void Shader_Manager::recompile_and_reload_shaders(Array<Shader *> &shaders)
-{
-	for (u32 shader_index = 0; shader_index < shaders.count; shader_index++) {
-		Shader *shader = shaders[shader_index];
-
-		String full_path_to_source_shader;
-		build_full_path_to_source_shader_file(shader->file_name, full_path_to_source_shader);
-
-		Array<ComPtr<ID3DBlob>> compiled_shaders;
-		for (u32 i = 0; i < shader->types.count; i++) {
-			ComPtr<ID3DBlob> shader_bytecode;
-			if (!compile_shader(full_path_to_source_shader.c_str(), shader->types[i], shader_bytecode.ReleaseAndGetAddressOf())) {
-				break;
-			}
-			compiled_shaders.push(shader_bytecode);
-		}
-
-		if ((!shader->types.is_empty() && !compiled_shaders.is_empty()) && (shader->types.count == compiled_shaders.count)) {
-			Array<Shader_Type> shader_types = shader->types;
-			String shader_file_name = shader->file_name;
-			shader->free();
-			shader->file_name = shader_file_name;
-
-			String base_file_name;
-			extract_base_file_name(shader->file_name, base_file_name);
-
-			for (u32 i = 0; i < shader_types.count; i++) {
-				String output_shader_file_name;
-				make_output_shader_file_name(base_file_name.c_str(), shader_types[i], output_shader_file_name);
-
-				String full_path_to_shader_file;
-				build_full_path_to_shader_file(output_shader_file_name, full_path_to_shader_file);
-
-				File shader_file;
-				shader_file.open(full_path_to_shader_file, FILE_MODE_WRITE, FILE_CREATE_ALWAYS);
-				shader_file.write(compiled_shaders[i]->GetBufferPointer(), (u32)compiled_shaders[i]->GetBufferSize());
-			}
-			print("Shader_Manager::recompile_and_reload_shaders: {} was successfully recompiled and reloaded.", shader->file_name);
-		}
-	}
+	shader_bytecode->size = 0;
+	DELETE_ARRAY(shader_bytecode->data);
 }
 
 void Shader_Manager::shutdown()
 {
-	Shader *shader = (Shader *)&shaders;
-	for (u32 i = 0; i < SHADERS_COUNT; i++) {
-		shader->free();
-		shader++;
+	for (u32 i = 0; i < shader_table.count; i++) {
+		Shader_Data *shader = shader_table.get_value(i);
+		free_bytecode(&shader->vs_bytecode);
+		free_bytecode(&shader->gs_bytecode);
+		free_bytecode(&shader->cs_bytecode);
+		free_bytecode(&shader->hs_bytecode);
+		free_bytecode(&shader->ds_bytecode);
+		free_bytecode(&shader->ps_bytecode);
+		DELETE_PTR(shader);
 	}
 }
 
-Shader::Shader()
+void Shader_Manager::load_shader_compilation_info()
 {
+	String path = join_paths(get_full_path_to_data_directory(), "shader_compilation_info.txt");
+
+	String buffer = read_entire_file(path, "rb");
+	char *text = buffer.data;
+	//buffer.reset();
+	while (true) {
+		char *line = get_next_line(&text);
+		if (!line) {
+			break;
+		}
+		Array<String> result;
+		String temp = line;
+		split(&temp, " ", &result);
+		int x = 0;
+		Shader_Compilation_Info shader_info = { result[0], result[1], result[2], static_cast<u64>(atoll(result[3])), result[4] };
+		shader_info_list.push(shader_info);
+	}
+	//free_string(text);
+	int xi = 0;
+	//File shader_compilation_info_file;
+	//if (shader_compilation_info_file.open(path, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
+	//	u8 *buffer = NULL;
+	//	u32 data_size = 0;
+	//	shader_compilation_info_file.read((void *)buffer, data_size);
+	//}
 }
 
-Shader::~Shader()
+void Shader_Manager::update_shader_compilation_info(u64 cso_file_last_write_time, Shader_Entry *shader_entry, Shader_Type shader_type)
 {
-	free();
+	String path = join_paths(get_full_path_to_data_directory(), "shader_compilation_info.txt");
+
+	File shader_compilation_info_file;
+	if (shader_compilation_info_file.open(path, FILE_MODE_WRITE, FILE_OPEN_ALWAYS)) {
+		char *str = format("{} {}\n", build_cso_shader_file_name(shader_entry->shader_file_name, shader_type), cso_file_last_write_time);
+
+		shader_compilation_info_file.write((void *)str, strlen(str));
+		shader_compilation_info_file.write((void *)str, strlen(str));
+
+		free_string(str);
+	}
 }
 
-void Shader::free()
+Shader_Bytecode Shader_Manager::get_shader_bytecode(const char *shader_alias, Shader_Type shader_type)
 {
-	file_name.free();
-	types.clear();
-	vs_bytecode.free();
-	gs_bytecode.free();
-	cs_bytecode.free();
-	hs_bytecode.free();
-	ds_bytecode.free();
-	ps_bytecode.free();
+
+	return shader_table[shader_alias]->get_bytecode(shader_type);
+}
+
+void Shader_Data::set_bytecode(Shader_Type shader_type, Shader_Bytecode bytecode)
+{
+	switch (shader_type) {
+		case VERTEX_SHADER: {
+			vs_bytecode = bytecode;
+			break;
+		}
+		case GEOMETRY_SHADER: {
+			gs_bytecode = bytecode;
+			break;
+		}
+		case COMPUTE_SHADER: {
+			cs_bytecode = bytecode;
+			break;
+		}
+		case HULL_SHADER: {
+			hs_bytecode = bytecode;
+			break;
+		}
+		case DOMAIN_SHADER: {
+			ds_bytecode = bytecode;
+			break;
+		}
+		case PIXEL_SHADER: {
+			ps_bytecode = bytecode;
+			break;
+		}
+		default: {
+			assert(false);
+		}
+	}
+}
+
+Shader_Bytecode Shader_Data::get_bytecode(Shader_Type shader_type)
+{
+	switch (shader_type) {
+		case VERTEX_SHADER:
+			return vs_bytecode;
+		case GEOMETRY_SHADER:
+			return gs_bytecode;
+		case COMPUTE_SHADER:
+			return cs_bytecode;
+		case HULL_SHADER:
+			return hs_bytecode;
+		case DOMAIN_SHADER:
+			return ds_bytecode;
+		case PIXEL_SHADER:
+			return ps_bytecode;
+		default:
+			assert(false);
+	}
+	return Shader_Bytecode{};
 }
