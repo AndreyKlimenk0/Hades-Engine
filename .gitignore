@@ -8,9 +8,11 @@ desktop
 /data/textures/Scene_Demo/
 /data/models/Scene_Demo*
 /data/levels/scene_demo*
+/data/shaders/
+/data/shader_compilation_info.txt
+
 /scripts/generate_cubes.py
 /captures/
-keyboard_shortcuts.txt
 
 # User-specific files
 *.suo
