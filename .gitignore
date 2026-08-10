@@ -7,8 +7,8 @@ desktop.ini
 desktop
 /data/textures/Scene_Demo/
 /data/models/Scene_Demo*
-/data/models/shadows_occlusion_culling.gltf
-/data/models/shadows_occlusion_culling.bin
+/data/models/
+/data/textures/
 /data/levels/scene_demo*
 /scripts/generate_cubes.py
 /captures/
