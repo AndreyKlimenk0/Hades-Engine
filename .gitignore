@@ -5,13 +5,17 @@
 build/
 desktop.ini
 desktop
-/data/textures/Scene_Demo/
-/data/models/Scene_Demo*
-/data/models/
-/data/textures/
-/data/levels/scene_demo*
-/scripts/generate_cubes.py
-/captures/
+data/models/*
+!data/models/Sponza.gltf
+!data/models/Sponza.bin
+
+data/textures/*
+!data/textures/Sponza/
+!data/textures/Sponza/**
+
+data/levels/scene_demo*
+scripts/generate_cubes.py
+captures/
 keyboard_shortcuts.txt
 
 # User-specific files
