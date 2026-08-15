@@ -160,8 +160,10 @@ char *__do_formatting(Array<char *> *strings)
 			formatting_string.push(' ');
 		} else {
 			// Append string in buffer without needs for formatting
-			COPY_STRING_TO_CHAR_ARRAY(string, ((Array<char> *) & formatting_string));
-			formatting_string.push(' ');
+			if (string) {
+				COPY_STRING_TO_CHAR_ARRAY(string, ((Array<char> *) & formatting_string));
+				formatting_string.push(' ');
+			}
 		}
 	}
 	// Rewrite last not needed space
@@ -335,17 +337,21 @@ wchar_t *to_wstring(const char *string)
 
 char *to_string(String &string)
 {
-	char *str = new char[string.len + 1];
-	memcpy(str, string.data, string.len + 1);
+	char *str = NULL;
+	if (!string.is_empty()) {
+		str = new char[string.len + 1];
+		memcpy(str, string.data, string.len + 1);
+	}
 	return str;
 }
 
 char *to_string(String *string)
 {
-	assert(string->len != 0);
-
-	char *str = new char[string->len + 1];
-	memcpy(str, string->data, string->len + 1);
+	char *str = NULL;
+	if (!string->is_empty()) {
+		str = new char[string->len + 1];
+		memcpy(str, string->data, string->len + 1);
+	}
 	return str;
 }
 
@@ -397,12 +403,10 @@ char *to_string(Point_s32 *point)
 // if not return 0 and it means that this string is not format string 
 int is_format_string(const char *string)
 {
-	assert(string);
-
 	int count = 0;
 	const char *str = string;
 
-	while (*str) {
+	while (str && *str) {
 		if (*str == '{' && *(str + 1) == '}') {
 			count++;
 		}
@@ -473,13 +477,12 @@ String::String(const String &other)
 
 String &String::operator=(const char *string)
 {
-	assert(string != NULL);
-
 	if (string == data) {
 		return *this;
 	}
 
 	DELETE_ARRAY(data);
+	len = 0;
 	allocate_and_copy_string(string);
 	return *this;
 }
@@ -660,13 +663,14 @@ void String::allocate(u32 char_count)
 
 void String::allocate_and_copy_string(const char *string)
 {
-	assert(string);
 	assert(data == NULL);
 
-	int string_len = (u32)strlen(string);
-	len = string_len;
-	data = new char[string_len + 1];
-	memcpy(data, string, sizeof(char) * (string_len + 1));
+	if (string) {
+		int string_len = (u32)strlen(string);
+		len = string_len;
+		data = new char[string_len + 1];
+		memcpy(data, string, sizeof(char) * (string_len + 1));
+	}
 }
 
 void String::place_end_char()

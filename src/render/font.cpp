@@ -54,7 +54,9 @@ u32 Font::get_text_width(const char *text)
 
 Size_u32 Font::get_text_size(const char *text, Text_Alignment text_alignment)
 {
-	assert(text);
+	if (!text) {
+		return Size_u32(0, 0);
+	}
 
 	u32 len = (u32)strlen(text);
 	u32 mines_one_len = len - 1;

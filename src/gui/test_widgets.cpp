@@ -22,7 +22,7 @@ void draw_test_widgets()
 	set_alignment(ALIGNMENT_CENTER);
 	
 	begin_ui_element("Main plane");
-	set_size(fixed_size(1400), fixed_size(800));
+	set_size(fixed_size(700), fixed_size(400));
 	//set_background_color(Color(128, 128, 128));
 	set_background_color(Color(45));
 	set_padding(Padding(15));
@@ -69,11 +69,26 @@ void draw_test_widgets()
 	if (button("Button 4")) {
 	}
 
-	static String buffer = "Position";
-	edit_field("Position", &buffer);
+	static String buffer;
+	if (edit_field("Position", &buffer)) {
+		print("Update position value:", buffer);
+	}
 
 	static String buffer1 = "Scale";
-	//edit_field("Scale", &buffer1);
+	if (edit_field("Scale", &buffer1)) {
+		print("Update scale buffer:", buffer1);
+	}
+
+	static float angle = 352.1f;
+
+	if (edit_field("Angle", &angle)) {
+		print("Update Angle", angle);
+	}
+
+	static int health = 88;
+	if (edit_field("health", &health)) {
+		print("update health", health);
+	}
 
 	end_ui_element(); //Main plane
 

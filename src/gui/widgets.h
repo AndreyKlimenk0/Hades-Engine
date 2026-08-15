@@ -64,10 +64,17 @@ struct Edit_Field_Theme {
 	Edit_Field_Theme();
 	~Edit_Field_Theme();
 
+	bool display_label;
+	bool display_outlining;
 	s32 width;
 	s32 height;
 	s32 rounding;
+	s32 text_padding;
+	u32 label_alignment; // ALIGNMENT_LEFT, ALIGNMENT_RIGHT
+	u32 outlining_thikness;
+	Size_s32 caret_size;
 	Color field_color;
+	Color outlining_color;
 };
 
 void init_widgets();
@@ -87,8 +94,8 @@ bool check_box(const char *label, bool *state);
 
 void slider(const char *label, float min, float max, float *value);
 
-void edit_field(const char *name, int *value);
-void edit_field(const char *name, float *value);
-void edit_field(const char *name, String *string);
+bool edit_field(const char *name, int *value);
+bool edit_field(const char *name, float *value);
+bool edit_field(const char *name, String *string);
 
 #endif
