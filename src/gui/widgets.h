@@ -3,9 +3,9 @@
 
 #include "../libs/color.h"
 #include "../libs/str.h"
+#include "../libs/math/vector.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
-//#include "../libs/math/structures.h"
 
 #include "guiv2.h"
 
@@ -66,6 +66,7 @@ struct Edit_Field_Theme {
 
 	bool display_label;
 	bool display_outlining;
+	bool display_outlining_on_active;
 	s32 width;
 	s32 height;
 	s32 rounding;
@@ -80,10 +81,14 @@ struct Edit_Field_Theme {
 void init_widgets();
 
 void push_button_theme(Text_Button_Theme *button_theme);
-void pop_button_theme();
-
 void push_list_box_theme(List_Box_Theme *list_box_theme);
+void push_edit_field_theme(Edit_Field_Theme *edit_field_theme);
+
+void pop_button_theme();
 void pop_list_box_theme();
+void pop_edit_field_theme();
+
+Edit_Field_Theme *get_edit_field_theme();
 
 bool button(const char *text);
 bool button(Texture_View *texture_view);
@@ -94,8 +99,9 @@ bool check_box(const char *label, bool *state);
 
 void slider(const char *label, float min, float max, float *value);
 
-bool edit_field(const char *name, int *value);
-bool edit_field(const char *name, float *value);
-bool edit_field(const char *name, String *string);
+bool edit_field(const char *label, int *value);
+bool edit_field(const char *label, float *value);
+bool edit_field(const char *label, String *string);
+bool edit_field(const char *label, Vector3 *vector);
 
 #endif

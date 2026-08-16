@@ -29,6 +29,7 @@ struct Array {
 
 	void clear();
 	void reset();
+	void reverse();
 	void resize(u32 _size);
 	void remove(u32 index);
 	void reserve(u32 _count, bool clear_array = false);
@@ -125,6 +126,22 @@ template<typename T>
 inline void Array<T>::reset()
 {
 	count = 0;
+}
+
+template<typename T>
+inline void Array<T>::reverse()
+{
+	if (count > 0) {
+		u32 swap_count = count / 2;
+		u32 head = 0;
+		u32 tail = count - 1;
+
+		for (u32 i = 0; i < swap_count; i++, head++, tail--) {
+			T temp = items[head];
+			items[head] = items[tail];
+			items[tail] = temp;
+		}
+	}
 }
 
 template <typename T>

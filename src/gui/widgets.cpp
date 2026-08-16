@@ -10,7 +10,6 @@ static Text_Button_Theme button_theme;
 static List_Box_Theme list_theme;
 static Check_Box_Theme check_box_theme;
 static Slider_Theme slider_theme;
-static Edit_Field_Theme edit_field_theme;
 
 Text_Button_Theme::Text_Button_Theme()
 {
@@ -73,6 +72,7 @@ Edit_Field_Theme::Edit_Field_Theme()
 {
 	display_label = true;
 	display_outlining = false;
+	display_outlining_on_active = false;
 	width = 250;
 	height = 24;
 	rounding = 5;
@@ -105,14 +105,46 @@ enum Edit_Field_Event {
 };
 
 struct UI_State {
+	UI_State();
+	~UI_State();
+
 	Element_ID active_list_box;
 	Element_ID active_slider;
 	Element_ID active_edit_field;
 
 	Edit_Field_State edit_field_state;
+
+	Array<Edit_Field_Theme> edit_field_theme_stack;
 };
 
 static UI_State ui_state;
+
+UI_State::UI_State()
+{
+	edit_field_theme_stack.push(Edit_Field_Theme());
+}
+
+UI_State::~UI_State()
+{
+
+}
+
+Edit_Field_Theme *get_edit_field_theme()
+{
+	return &ui_state.edit_field_theme_stack.last();
+}
+
+void push_edit_field_theme(Edit_Field_Theme *edit_field_theme)
+{
+	ui_state.edit_field_theme_stack.push(*edit_field_theme);
+}
+
+void pop_edit_field_theme()
+{
+	assert(ui_state.edit_field_theme_stack.count > 1);
+
+	ui_state.edit_field_theme_stack.pop();
+}
 
 static Point_s32 get_async_mouse_position()
 {
@@ -141,15 +173,17 @@ static Edit_Field_State make_edit_field_state(Rect_s32 *caret, const char *str_v
 
 static void set_caret_position_on_mouse_click(Rect_s32 *edit_field_rect, Edit_Field_State *edit_field_state, Font *font)
 {
+	Edit_Field_Theme *edit_field_theme = get_edit_field_theme();
+
 	u32 text_width = font->get_text_width(edit_field_state->data);
-	u32 mouse_x_relative_text = (u32)math::abs(Mouse_State::x - edit_field_rect->x - edit_field_theme.text_padding);
+	u32 mouse_x_relative_text = (u32)math::abs(Mouse_State::x - edit_field_rect->x - edit_field_theme->text_padding);
 
 	if (mouse_x_relative_text > text_width) {
-		edit_field_state->caret.x = edit_field_rect->x + text_width + edit_field_theme.text_padding;
+		edit_field_state->caret.x = edit_field_rect->x + text_width + edit_field_theme->text_padding;
 		edit_field_state->caret_index_for_inserting = edit_field_state->data.len;
 		edit_field_state->caret_index_in_text = edit_field_state->data.len - 1;
-	} else if ((Mouse_State::x >= edit_field_rect->x) && (Mouse_State::x <= (edit_field_rect->x + edit_field_theme.text_padding))) {
-		edit_field_state->caret.x = edit_field_rect->x + edit_field_theme.text_padding;
+	} else if ((Mouse_State::x >= edit_field_rect->x) && (Mouse_State::x <= (edit_field_rect->x + edit_field_theme->text_padding))) {
+		edit_field_state->caret.x = edit_field_rect->x + edit_field_theme->text_padding;
 		edit_field_state->caret_index_for_inserting = 0;
 		edit_field_state->caret_index_in_text = -1;
 	} else {
@@ -162,7 +196,7 @@ static void set_caret_position_on_mouse_click(Rect_s32 *edit_field_rect, Edit_Fi
 			chars_width += font->get_char_advance(c);
 
 			if ((mouse_x_relative_text >= prev_chars_advance_width) && (mouse_x_relative_text <= chars_width)) {
-				edit_field_state->caret.x = edit_field_rect->x + edit_field_theme.text_padding + chars_width;
+				edit_field_state->caret.x = edit_field_rect->x + edit_field_theme->text_padding + chars_width;
 				edit_field_state->caret_index_for_inserting = i + 1;
 				edit_field_state->caret_index_in_text = i;
 				break;
@@ -220,7 +254,7 @@ static void handle_events(bool *text_edited, Rect_s32 *text_rect, Edit_Field_Sta
 			if ((edit_field_state->max_symbol_number > edit_field_state->data.len) && edit_field_state->symbol_validation(event->char_key, edit_field_state->caret_index_for_inserting)) {
 
 				//int point_index = edit_field_state->data.find(".");
-				//if ((point_index != -1) && ((edit_field_state->data.len - (point_index + 1)) == edit_field_theme.float_precision) && (edit_field_state->caret_index_in_text == (edit_field_state->data.len - 1))) {
+				//if ((point_index != -1) && ((edit_field_state->data.len - (point_index + 1)) == edit_field_theme->float_precision) && (edit_field_state->caret_index_in_text == (edit_field_state->data.len - 1))) {
 				//	return;
 				//}
 
@@ -469,24 +503,26 @@ static bool is_symbol_string_valid(char symbol, u32 index)
 	return !iscntrl(symbol);
 }
 
-Edit_Field_Event edit_field(const char *label, const char *text, u32 max_symbols, bool(*symbol_validator)(char symbol, u32 index))
+Edit_Field_Event edit_field(const char *label, const char *text, u32 max_symbols, Text_Alignment text_alignment, bool(*symbol_validator)(char symbol, u32 index))
 {
-	assert((edit_field_theme.label_alignment & ALIGNMENT_LEFT) || (edit_field_theme.label_alignment & ALIGNMENT_RIGHT));
+	Edit_Field_Theme *edit_field_theme = get_edit_field_theme();
+
+	assert((edit_field_theme->label_alignment & ALIGNMENT_LEFT) || (edit_field_theme->label_alignment & ALIGNMENT_RIGHT));
 	
 	begin_ui_element("Edit Field Widget[%s]", label);
 	set_layout(ROW_LAYOUT);
-	set_alignment(edit_field_theme.label_alignment | ALIGNMENT_VERTICAL_CENTER);
+	set_alignment(edit_field_theme->label_alignment | ALIGNMENT_VERTICAL_CENTER);
 	
-	if (edit_field_theme.display_label) {
+	if (edit_field_theme->display_label) {
 		ui_text_element(label);
 	}
 	
 	begin_ui_element("Edit Field[%s]", label);
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	set_size(fixed_size(edit_field_theme.width), fixed_size(edit_field_theme.height));
-	set_rounding(edit_field_theme.rounding);
-	set_background_color(edit_field_theme.field_color);
+	set_size(fixed_size(edit_field_theme->width), fixed_size(edit_field_theme->height));
+	set_rounding(edit_field_theme->rounding);
+	set_background_color(edit_field_theme->field_color);
 
 	UI_Element *edit_field = get_ui_element();
 	Edit_Field_Event edit_field_event = EDIT_FIELD_EVENT_NONE;
@@ -495,7 +531,7 @@ Edit_Field_Event edit_field(const char *label, const char *text, u32 max_symbols
 	if (was_key_just_pressed(KEY_LMOUSE)) {
 		if (detect_intersection(&edit_field_rect)) {
 			ui_state.active_edit_field = edit_field->id;
-			Rect_s32 caret_rect = { edit_field_theme.caret_size };
+			Rect_s32 caret_rect = { edit_field_theme->caret_size };
 			ui_state.edit_field_state = make_edit_field_state(&caret_rect, text, 30, symbol_validator);
 		} else {
 			if (edit_field->id == ui_state.active_edit_field) {
@@ -505,18 +541,18 @@ Edit_Field_Event edit_field(const char *label, const char *text, u32 max_symbols
 		}
 	}
 
-	if (edit_field_theme.display_outlining && (edit_field->id == ui_state.active_edit_field)) {
-		set_outlining(edit_field_theme.outlining_thikness, edit_field_theme.outlining_color);
+	if (edit_field_theme->display_outlining || (edit_field_theme->display_outlining_on_active && (edit_field->id == ui_state.active_edit_field))) {
+		set_outlining(edit_field_theme->outlining_thikness, edit_field_theme->outlining_color);
 	}
 
 	begin_ui_element("Editing Text Layout");
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
-	set_padding(Padding(edit_field_theme.text_padding, 0, 0, 0));
+	set_padding(Padding(edit_field_theme->text_padding, 0, 0, 0));
 	if (edit_field->id == ui_state.active_edit_field) {
-		ui_text_element("Editing Text", ui_state.edit_field_state.data, TEXT_ELEMENT_MAX_SYMBOL_HEIGHT);
+		ui_text_element("Editing Text", ui_state.edit_field_state.data, text_alignment);
 	} else {
-		ui_text_element("Editing Text", text, TEXT_ELEMENT_MAX_SYMBOL_HEIGHT);
+		ui_text_element("Editing Text", text, text_alignment);
 	}
 	Rect_s32 text_rect = get_last_ui_element()->get_rect();
 	end_ui_element(); // Editing Text Layout
@@ -550,7 +586,7 @@ bool edit_field(const char *name, int *value)
 	bool event_happed = false;
 
 	char *str_value = to_string(*value);
-	Edit_Field_Event event = edit_field(name, str_value, 15, &is_symbol_int_valid);
+	Edit_Field_Event event = edit_field(name, str_value, 15, ALIGN_TEXT_BY_MAX_NUMBER, is_symbol_int_valid);
 	if ((event == EDIT_FIELD_EVENT_ENTER) || (event == EDIT_FIELD_EVENT_INACTIVE)) {
 		if (!ui_state.edit_field_state.data.is_empty()) {
 			*value = atoi(ui_state.edit_field_state.data);
@@ -567,10 +603,10 @@ bool edit_field(const char *name, float *value)
 	bool event_happed = false;
 
 	char *str_value = to_string(*value, 2u);
-	Edit_Field_Event event = edit_field(name, str_value, 15, &is_symbol_float_valid);
+	Edit_Field_Event event = edit_field(name, str_value, 15, ALIGN_TEXT_BY_MAX_NUMBER, is_symbol_float_valid);
 	if ((event == EDIT_FIELD_EVENT_ENTER) || (event == EDIT_FIELD_EVENT_INACTIVE)) {
 		if (!ui_state.edit_field_state.data.is_empty()) {
-			*value = atof(ui_state.edit_field_state.data);
+			*value = (float)atof(ui_state.edit_field_state.data);
 			event_happed = true;
 		}
 	}
@@ -583,10 +619,41 @@ bool edit_field(const char *name, String *string)
 {
 	bool event_happed = false;
 
-	Edit_Field_Event event = edit_field(name, string->c_str(), 15, &is_symbol_string_valid);
+	Edit_Field_Event event = edit_field(name, string->c_str(), 15, ALIGN_TEXT_BY_MAX_SYMBOL, is_symbol_string_valid);
 	if ((event == EDIT_FIELD_EVENT_ENTER) || (event == EDIT_FIELD_EVENT_INACTIVE) || (event == EDIT_FIELD_EVENT_EDITING)) {
 		*string = ui_state.edit_field_state.data;
 		event_happed = true;
 	}
 	return event_happed;
+}
+
+bool edit_field(const char *label, Vector3 *vector)
+{
+
+	begin_ui_element("Vector Edit Field[%s]", label);
+	set_layout(ROW_LAYOUT);
+	set_size(fixed_size(100), fixed_size(30));
+	set_space(10);
+
+	Edit_Field_Theme edit_field_theme;
+	edit_field_theme.width = 80;
+	edit_field_theme.display_label = false;
+	edit_field_theme.display_outlining = true;
+	edit_field_theme.label_alignment = ALIGNMENT_LEFT;
+	
+	push_edit_field_theme(&edit_field_theme);
+
+	get_edit_field_theme()->outlining_color = Color(214, 21, 11);
+	edit_field("X", &vector->x);
+	
+	get_edit_field_theme()->outlining_color = Color(27, 204, 38);
+	edit_field("Y", &vector->y);
+	
+	get_edit_field_theme()->outlining_color = Color(27, 68, 204);
+	edit_field("Z", &vector->z);
+
+	pop_edit_field_theme();
+	
+	end_ui_element();
+	return false;
 }

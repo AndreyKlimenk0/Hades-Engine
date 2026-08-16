@@ -155,6 +155,7 @@ namespace imgui {
 		Color outlining_color;
 
 		//Content
+		Text_Alignment text_alignment;
 		String text;
 
 		//Context
@@ -199,8 +200,8 @@ namespace imgui {
 	void set_rounding(u32 rounding, u32 rounding_flags = ROUND_RECT);
 	void set_outlining(u32 thikness, const Color &color);
 
-	void ui_text_element(const char *text, u32 text_element_flags = 0);
-	void ui_text_element(const char *ui_element_name, const char *text, u32 text_element_flags = 0);
+	void ui_text_element(const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
+	void ui_text_element(const char *ui_element_name, const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
 
 	bool ui_element_hovered();
 	bool ui_element_clicked();

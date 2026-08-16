@@ -317,13 +317,18 @@ void add_space_to_child_elements(UI_Element *ui_element)
 {
 	bool condition1 = (ui_element->layout == ROW_LAYOUT) && (ui_element->alignment_flags & ALIGNMENT_RIGHT);
 	bool condition2 = (ui_element->layout == COLUMN_LAYOUT) && (ui_element->alignment_flags & ALIGNMENT_BOTTOM);
-	s32 sign = condition1 || condition2 ? -1 : 1;
+	Array<UI_Element * > ordered_child_elements = ui_element->child_elements;
+	// If right or bottom alignment is set, child elements are laid out in reverse order.
+	// That's why they should be reversed before adding spaces.
+	if (condition1 || condition2) {
+		ordered_child_elements.reverse();
+	}
 
 	u32 index = static_cast<u32>(ui_element->layout);
-	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
-		UI_Element *child = ui_element->child_elements[i];
+	for (u32 i = 1; i < ordered_child_elements.count; i++) {
+		UI_Element *child = ordered_child_elements[i];
 		if (can_auto_layout_ui_element(child, ui_element->layout)) {
-			child->position[index] += sign * ui_element->space * i;
+			child->position[index] += ui_element->space * i;
 		}
 	}
 
@@ -557,7 +562,6 @@ static void layout_child_elements(UI_Element *ui_element)
 			if (ui_element->alignment_flags & ALIGNMENT_LEFT) {
 				layout_ui_elements_left_to_right_or_top_to_bottom(ui_element, X_AXISV2);
 			} if (ui_element->alignment_flags & ALIGNMENT_RIGHT) {
-				//layout_ui_elements_in_center(ui_element, Y_AXISV2);
 				layout_ui_elements_right_to_left_or_bottom_to_top(ui_element, X_AXISV2);
 			}
 		}
@@ -622,13 +626,7 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 			render_primitive_list->push_clip_rect(parent_clip_rect);
 			render_primitive_list->add_rect(&rect, ui_element->background_color);
 			
-			Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT;
-			if (ui_element->flags & TEXT_ELEMENT_MAX_SYMBOL_HEIGHT) {
-				text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL;
-			} else if (ui_element->flags & TEXT_ELEMENT_MAX_ALPHABET_HEIGHT) {
-				text_alignment = ALIGN_TEXT_BY_MAX_ALPHABET;
-			}
-			render_primitive_list->add_text(&rect, ui_element->text, text_alignment);
+			render_primitive_list->add_text(&rect, ui_element->text, ui_element->text_alignment);
 		} else {
 			render_primitive_list->push_clip_rect(&clip_rect);
 			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
@@ -825,9 +823,11 @@ void imgui::set_rounding(u32 rounding, u32 rounding_flags)
 
 void imgui::set_outlining(u32 thikness, const Color &color)
 {
-	UI_Element *ui_element = ui_context.get_top_ui_element();
-	ui_element->outlining_thikness = thikness;
-	ui_element->outlining_color = color;
+	if (thikness > 0) {
+		UI_Element *ui_element = ui_context.get_top_ui_element();
+		ui_element->outlining_thikness = thikness;
+		ui_element->outlining_color = color;
+	}
 }
 
 static void ui_element_draw_text(const char *text)
@@ -837,24 +837,18 @@ static void ui_element_draw_text(const char *text)
 	ui_element->text = text;
 }
 
-void imgui::ui_text_element(const char *text, u32 text_element_flags)
+void imgui::ui_text_element(const char *text, Text_Alignment text_alignment)
 {
-	ui_text_element(text, text, text_element_flags);
+	ui_text_element(text, text, text_alignment);
 }
 
-void imgui::ui_text_element(const char *ui_element_name, const char *text, u32 text_element_flags)
+void imgui::ui_text_element(const char *ui_element_name, const char *text, Text_Alignment text_alignment)
 {
 	if (text) {
 		begin_ui_element(ui_element_name);
 		UI_Element *ui_element = ui_context.get_top_ui_element();
-		Size_u32 text_size = ui_context.font->get_text_size(text);
-		if (text_element_flags & TEXT_ELEMENT_MAX_SYMBOL_HEIGHT) {
-			text_size.height = ui_context.font->max_symbol_height;
-			ui_element->flags |= TEXT_ELEMENT_MAX_SYMBOL_HEIGHT;
-		} else if (text_element_flags & TEXT_ELEMENT_MAX_ALPHABET_HEIGHT) {
-			text_size.height = ui_context.font->max_alphabet_height;
-			ui_element->flags |= TEXT_ELEMENT_MAX_ALPHABET_HEIGHT;
-		}
+		ui_element->text_alignment = text_alignment;
+		Size_u32 text_size = ui_context.font->get_text_size(text, text_alignment);
 		set_size(fixed_size(text_size.width), fixed_size(text_size.height));
 		ui_element_draw_text(text);
 		set_background_color(Color(1.0f, 0.0f, 0.0f, 0.0f));

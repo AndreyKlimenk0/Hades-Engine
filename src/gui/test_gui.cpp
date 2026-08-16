@@ -126,6 +126,7 @@ void test_elements_size_filling(u32 x, u32 y, Layout layout_direction, u32 align
 	set_layout(layout_direction);
 	set_alignment(alignment_flags);
 	set_background_color(GRAY);
+	set_space(10);
 
 	begin_ui_element("Teal rect");
 	set_size(fixed_size(300), fixed_size(200));
@@ -199,7 +200,7 @@ void draw_test_gui()
 
 	//test_center_layout_with_filled_size()
 	//test_horizontal_and_vertical_center_layout_with_filled_size();
-	//test_layout_with_filled_size();
+	test_layout_with_filled_size();
 
 
 	//begin_ui_element("Orange #hash%s #id", "Button");

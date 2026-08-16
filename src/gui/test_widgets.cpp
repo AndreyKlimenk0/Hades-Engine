@@ -22,7 +22,7 @@ void draw_test_widgets()
 	set_alignment(ALIGNMENT_CENTER);
 	
 	begin_ui_element("Main plane");
-	set_size(fixed_size(700), fixed_size(400));
+	set_size(fixed_size(900), fixed_size(600));
 	//set_background_color(Color(128, 128, 128));
 	set_background_color(Color(45));
 	set_padding(Padding(15));
@@ -88,6 +88,11 @@ void draw_test_widgets()
 	static int health = 88;
 	if (edit_field("health", &health)) {
 		print("update health", health);
+	}
+
+	static Vector3 entity_position = { 100.0f, 200.0f, 300.0f };
+	if (edit_field("Entity Position", &entity_position)) {
+		print("Update entity position", &entity_position);
 	}
 
 	end_ui_element(); //Main plane
