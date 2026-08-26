@@ -19,7 +19,9 @@ struct GPU_Global_Info {
 	u32 hzb_width;
 	u32 hzb_height;
 	u32 hzb_mips;
-	Pad1 pad;
+	float min_depth;
+	float max_depth;
+	Pad2 pad;
 };
 
 struct GPU_Frame_Info {

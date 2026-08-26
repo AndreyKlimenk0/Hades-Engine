@@ -15,6 +15,8 @@
 template <typename T>
 struct Array {
 	Array(u32 _size = 8);
+	template<typename... Args>
+	Array(Args... args);
 	~Array();
 
 	T *items = NULL;
@@ -37,6 +39,10 @@ struct Array {
 	void set_pointer_to_item(T** ptr, u32 index);
 
 	void *to_void_ptr();
+
+	void push_all();
+	template<typename First, typename... Args>
+	void push_all(First first, Args... args);
 	
 	bool is_empty();
 	bool find(const T &item);
@@ -69,6 +75,13 @@ Array<T>::Array(u32 _size)
 	count = 0;
 	size = _size;
 	resize(_size);
+}
+
+template <typename T>
+template<typename... Args>
+Array<T>::Array(Args... args) : Array()
+{
+	push_all(args...);
 }
 
 template <typename T>
@@ -194,6 +207,19 @@ template<typename T>
 inline void *Array<T>::to_void_ptr()
 {
 	return (void *)items;
+}
+
+template <typename T>
+inline void Array<T>::push_all()
+{
+}
+
+template<typename T>
+template<typename First, typename ...Args>
+inline void Array<T>::push_all(First first, Args ...args)
+{
+	push(first);
+	push_all(args...);
 }
 
 template <typename T>

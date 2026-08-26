@@ -193,7 +193,38 @@ struct Primitive_Pass : Render_Pass {
 	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
 };
 
+struct GBuffer_Pass : Render_Pass {
+	Texture *albedo_metalness_texture = NULL;
+	Texture *normal_texture = NULL;
+	Texture *roughness_texture = NULL;
+	Texture *depth_texture = NULL;
+	Command_Signature *command_signature = NULL;
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
+struct Deferred_Shading : Render_Pass {
+	Texture *albedo_metalness_texture = NULL;
+	Texture *normal_texture = NULL;
+	Texture *roughness_texture = NULL;
+	Texture *depth_texture = NULL;
+	Texture *shading_result = NULL;
+	Texture *shadow_atlas = NULL;
+
+	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
+	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
+	void setup_root_signature(Render_Device *device);
+	void setup_pipeline(Render_Device *render_device, Shader_Manager *shader_manager);
+	void render(Graphics_Command_List *graphics_command_list, void *context, void *args = NULL);
+};
+
 struct Back_Buffer_Output : Render_Pass {
+	Texture *final_texture = NULL;
+
 	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
 	void schedule_resources(Pipeline_Resource_Manager *resource_manager);
 	void setup_root_signature(Render_Device *device);

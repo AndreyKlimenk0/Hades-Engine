@@ -7,7 +7,9 @@ struct Global_Info {
     uint point_sampler_idx;
     uint point_clamp_sampler_idx;
     uint3 hzb_width_height_mips;
-    uint pad;
+    float min_depth;
+    float max_depth;
+    float2 pad;
 };
 
 struct Frame_Info {

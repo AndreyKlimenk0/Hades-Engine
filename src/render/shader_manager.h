@@ -84,6 +84,9 @@ struct Shader_Manager {
 		Shader culling;
 		Shader shadows_culling;
 		Shader tile_frustum;
+		Shader gbuffer;
+		Shader deferred_shading;
+		Shader back_buffer_output;
 	} shaders;
 
 	void init();

@@ -210,8 +210,9 @@ void D3D12_Root_Signature::compile(u32 access_flags)
 	if (!(access_flags & ALLOW_MESH_SHADER_ACCESS)) {
 		root_signature_desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
 	}
-	// Full bindless
-	//root_signature_desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+	// To use ResourceDescriptorHeap in shaders, the following flags must be set.
+	// More about ResourceDescriptorHeap https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_DynamicResources.html
+	root_signature_desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 
 	ComPtr<ID3DBlob> signature_blob;
 	ComPtr<ID3DBlob> errors;
@@ -561,6 +562,11 @@ void D3D12_Command_List::apply(Pipeline_State *pipeline_state)
 	D3D12_Pipeline_State *internal_pipeline_state = (D3D12_Pipeline_State *)pipeline_state;
 	D3D12_Root_Signature *internal_root_signature = (D3D12_Root_Signature *)pipeline_state->root_signature;
 
+	Descriptor_Heap_Pool *descriptor_pool = render_device->descriptor_pool;
+
+	ID3D12DescriptorHeap *descriptor_heaps[] = { descriptor_pool->cbsrua_descriptor_heap.get(), descriptor_pool->sampler_descriptor_heap.get() };
+	command_list->SetDescriptorHeaps(2, descriptor_heaps);
+
 	command_list->SetPipelineState(internal_pipeline_state->get());
 	if (pipeline_state->type == PIPELINE_TYPE_COMPUTE) {
 		command_list->SetComputeRootSignature(internal_root_signature->d3d12_root_signature.Get());
@@ -568,10 +574,6 @@ void D3D12_Command_List::apply(Pipeline_State *pipeline_state)
 		command_list->SetGraphicsRootSignature(internal_root_signature->d3d12_root_signature.Get());
 		command_list->IASetPrimitiveTopology(to_d3d12_primitive_topology(pipeline_state->primitive_type));
 	}
-	Descriptor_Heap_Pool *descriptor_pool = render_device->descriptor_pool;
-
-	ID3D12DescriptorHeap *descriptor_heaps[] = { descriptor_pool->cbsrua_descriptor_heap.get(), descriptor_pool->sampler_descriptor_heap.get() };
-	command_list->SetDescriptorHeaps(2, descriptor_heaps);
 
 	last_set_root_signature = static_cast<D3D12_Root_Signature *>(pipeline_state->root_signature);
 }
@@ -650,17 +652,17 @@ void  D3D12_Command_List::set_clip_rect(Rect_u32 clip_rect)
 	command_list->RSSetScissorRects(1, &d3d12_clip_rect);
 }
 
-void  D3D12_Command_List::clear_render_target_view(RTV_Descriptor *descriptor, const Color &color)
+void D3D12_Command_List::clear_render_target(Texture *texture, const Color &color)
 {
-	D3D12_CPU_Descriptor *internal_descriptor = static_cast<D3D12_CPU_Descriptor *>(descriptor);
+	D3D12_CPU_Descriptor *internal_descriptor = static_cast<D3D12_CPU_Descriptor *>(texture->render_target_descriptor());
 
 	float rgba[4] = { color.value.x, color.value.y, color.value.z, color.value.w };
 	command_list->ClearRenderTargetView(internal_descriptor->cpu_handle, rgba, 0, NULL);
 }
 
-void  D3D12_Command_List::clear_depth_stencil_view(DSV_Descriptor *descriptor, float depth, u8 stencil)
+void D3D12_Command_List::clear_depth_stencil(Texture *texture, float depth, u8 stencil)
 {
-	D3D12_CPU_Descriptor *internal_descriptor = static_cast<D3D12_CPU_Descriptor *>(descriptor);
+	D3D12_CPU_Descriptor *internal_descriptor = static_cast<D3D12_CPU_Descriptor *>(texture->depth_stencil_descriptor());
 
 	command_list->ClearDepthStencilView(internal_descriptor->cpu_handle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, depth, stencil, 0, NULL);
 }
@@ -675,13 +677,40 @@ void D3D12_Command_List::clear_unordered_access(Texture *texture, const Color &c
 	//command_list->ClearUnorderedAccessViewFloat(internal_descriptor->gpu_handle, internal_descriptor->cpu_handle, internal_texture->get(), rgba, 0, NULL);
 }
 
-void  D3D12_Command_List::set_render_target(RTV_Descriptor *render_target_descriptor, DSV_Descriptor *depth_stencil_descriptor)
+void D3D12_Command_List::set_render_target(Texture *render_target_texture, Texture *depth_stencil_texture)
 {
-	D3D12_CPU_Descriptor *internal_render_target_descriptor = render_target_descriptor ? static_cast<D3D12_CPU_Descriptor *>(render_target_descriptor) : NULL;
-	D3D12_CPU_Descriptor *internal_depth_stencil_descriptor = static_cast<D3D12_CPU_Descriptor *>(depth_stencil_descriptor);
+	u32 render_target_number = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE *render_target_descriptor = NULL;
+	D3D12_CPU_DESCRIPTOR_HANDLE *depth_stencil_descriptor = NULL;
 
-	u32 render_targets_number = render_target_descriptor ? 1 : 0;
-	command_list->OMSetRenderTargets(render_targets_number, &internal_render_target_descriptor->cpu_handle, FALSE, &internal_depth_stencil_descriptor->cpu_handle);
+	if (render_target_texture) {
+		render_target_number = 1;
+		D3D12_CPU_Descriptor *internal_render_target_descriptor = static_cast<D3D12_CPU_Descriptor *>(render_target_texture->render_target_descriptor());
+		render_target_descriptor = &internal_render_target_descriptor->cpu_handle;
+	}
+
+	if (depth_stencil_texture) {
+		D3D12_CPU_Descriptor *internal_depth_stencil_descriptor = static_cast<D3D12_CPU_Descriptor *>(depth_stencil_texture->depth_stencil_descriptor());
+		depth_stencil_descriptor = &internal_depth_stencil_descriptor->cpu_handle;
+	}
+	
+	command_list->OMSetRenderTargets(render_target_number, render_target_descriptor, FALSE, depth_stencil_descriptor);
+}
+
+void D3D12_Command_List::set_render_targets(Array<Texture *> &render_targets, Texture *depth_stencil)
+{
+	u32 render_target_number = math::min(render_targets.count, 8u);
+	D3D12_CPU_DESCRIPTOR_HANDLE render_target_descriptors[8];
+
+	for (u32 i = 0; i < render_target_number; i++) {
+		D3D12_CPU_Descriptor *internal_render_target_descriptor = static_cast<D3D12_CPU_Descriptor *>(render_targets[i]->render_target_descriptor());
+		render_target_descriptors[i] = internal_render_target_descriptor->cpu_handle;
+	}
+
+	D3D12_CPU_Descriptor *internal_depth_stencil_descriptor = static_cast<D3D12_CPU_Descriptor *>(depth_stencil->depth_stencil_descriptor());
+
+	command_list->OMSetRenderTargets(render_target_number, render_target_descriptors, FALSE, &internal_depth_stencil_descriptor->cpu_handle);
+
 }
 
 void  D3D12_Command_List::set_vertex_buffer(Buffer *buffer)

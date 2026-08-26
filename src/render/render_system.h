@@ -23,6 +23,10 @@ struct Material_Storage;
 struct Render_World;
 
 struct Depth_Stencil_Texture_Desc {
+	Depth_Stencil_Texture_Desc();
+	Depth_Stencil_Texture_Desc(DXGI_FORMAT format);
+	~Depth_Stencil_Texture_Desc();
+
 	String name;
 	u32 width = 0;
 	u32 height = 0;
@@ -31,6 +35,10 @@ struct Depth_Stencil_Texture_Desc {
 };
 
 struct Render_Target_Texture_Desc {
+	Render_Target_Texture_Desc();
+	Render_Target_Texture_Desc(DXGI_FORMAT format);
+	~Render_Target_Texture_Desc();
+
 	String name;
 	u32 width = 0;
 	u32 height = 0;
@@ -137,6 +145,9 @@ struct Render_System {
 		Generate_Shadows_HZB shadows_hzb_pass;
 		Downsample_Shadows_HZB downsample_shadows_hzb_pass;
 		Shadows_Culling_Pass shadows_culling_pass;
+		GBuffer_Pass gbuffer_pass;
+		Deferred_Shading deferred_pass;
+		Back_Buffer_Output back_buffer_pass;
 	} passes;
 
 	Render_Pass_Context render_pass_context;

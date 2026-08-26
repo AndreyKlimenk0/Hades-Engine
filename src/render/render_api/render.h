@@ -179,16 +179,11 @@ struct Graphics_Command_List : Compute_Command_List {
 	virtual void set_viewport(Viewport viewport, bool setup_clip_rect = true) = 0;
 	virtual void set_clip_rect(Rect_u32 clip_rect) = 0;
 	
-	virtual void clear_render_target_view(RTV_Descriptor *descriptor, const Color &color) = 0;
-	virtual void clear_depth_stencil_view(DSV_Descriptor *descriptor, float depth = 1.0f, u8 stencil = 0) = 0;
+	virtual void set_render_target(Texture *render_target_texture, Texture *depth_stencil_texture) = 0;
+	virtual void set_render_targets(Array<Texture *> &render_targets, Texture *depth_stencil) = 0;
 	
-	virtual void set_render_target(RTV_Descriptor *render_target_descriptor, DSV_Descriptor *depth_stencil_descriptor) = 0;
-
-	// ?
-	void set_render_target(Texture *render_target_texture, Texture *depth_stencil_texture);
-	
-	void clear_render_target(Texture *texture, const Color &color);
-	void clear_depth_stencil(Texture *texture, float depth = 1.0f, u8 stencil = 0);
+	virtual void clear_render_target(Texture *texture, const Color &color) = 0;
+	virtual void clear_depth_stencil(Texture *texture, float depth = 1.0f, u8 stencil = 0) = 0;
 	virtual void clear_unordered_access(Texture *texture, const Color &color) = 0;
 	
 	virtual void set_vertex_buffer(Buffer *buffer) = 0;
@@ -213,20 +208,6 @@ template <typename T>
 inline void Graphics_Command_List::set_graphics_constants(u32 shader_register, u32 shader_space, T *data)
 {
 	set_graphics_constants(shader_register, shader_space, sizeof(T), (void *)data);
-}
-
-inline void Graphics_Command_List::set_render_target(Texture *render_target_texture, Texture *depth_stencil_texture)
-{
-	set_render_target(render_target_texture ? render_target_texture->render_target_descriptor() : NULL, depth_stencil_texture->depth_stencil_descriptor());
-}
-
-inline void Graphics_Command_List::clear_render_target(Texture *texture, const Color &color)
-{
-	clear_render_target_view(texture->render_target_descriptor(), color);
-}
-inline void Graphics_Command_List::clear_depth_stencil(Texture *texture, float depth, u8 stencil)
-{
-	clear_depth_stencil_view(texture->depth_stencil_descriptor(), depth, stencil);
 }
 
 struct Fence {

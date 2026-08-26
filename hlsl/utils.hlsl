@@ -31,10 +31,10 @@ float3 normal_mapping(float3 normal_sample, float3 vertex_normal, float3 tangent
 {
     float3 uncompress_normal = (normal_sample * 2.0f) - 1.0f;
     float3x3 TBN = identity_matrix3x3;
-    TBN[0] = tangent;
-    TBN[1] = cross(vertex_normal, tangent);
-    TBN[2] = vertex_normal;
-    return mul(uncompress_normal, TBN);
+    TBN[0] = normalize(tangent);
+    TBN[1] = normalize(cross(vertex_normal, tangent));
+    TBN[2] = normalize(vertex_normal);
+    return normalize(mul(uncompress_normal, TBN));
 }
 
 float4 normalize_rgb(int r, int g, int b)
@@ -51,6 +51,16 @@ float4 unpack_rgba(uint encoded)
     decoded.w = (0x000000FFu & encoded);
     decoded /= 255.0;
     return decoded;
+}
+
+float2 ndc_to_uv(float3 ndc_position)
+{
+    return ndc_position.xy * float2(0.5f, -0.5f) + 0.5f;
+}
+
+float2 uv_to_ndc(float2 uv_position)
+{
+    return float2(uv_position.x * 2.0f - 1.0f, 1.0f - uv_position.y * 2.0f);
 }
 
 template<typename T>

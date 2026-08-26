@@ -262,6 +262,9 @@ void Shader_Manager::init()
 	shader_table[shader_count++] = { "culling.hlsl", &shaders.culling };
 	shader_table[shader_count++] = { "shadows_culling.hlsl", &shaders.shadows_culling };
 	shader_table[shader_count++] = { "tile_frustum.hlsl", &shaders.tile_frustum };
+	shader_table[shader_count++] = { "gbuffer.hlsl", &shaders.gbuffer };
+	shader_table[shader_count++] = { "deferred_light.hlsl", &shaders.deferred_shading };
+	shader_table[shader_count++] = { "back_buffer_output.hlsl", &shaders.back_buffer_output };
 
 	for (u32 i = 0; i < shader_count; i++) {
 		shader_table[i].shader->file_name = shader_table[i].name;

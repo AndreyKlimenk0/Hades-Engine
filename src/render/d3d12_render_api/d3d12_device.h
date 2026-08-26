@@ -151,11 +151,12 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void set_viewport(Viewport viewport, bool setup_clip_rect = true);
 	void set_clip_rect(Rect_u32 clip_rect);
 
-	void clear_render_target_view(RTV_Descriptor *descriptor, const Color &color);
-	void clear_depth_stencil_view(DSV_Descriptor *descriptor, float depth = 1.0f, u8 stencil = 0);
+	void clear_render_target(Texture *texture, const Color &color);
+	void clear_depth_stencil(Texture *texture, float depth = 1.0f, u8 stencil = 0);
 	void clear_unordered_access(Texture *texture, const Color &color);
 
-	void set_render_target(RTV_Descriptor *render_target_descriptor, DSV_Descriptor *depth_stencil_descriptor);
+	void set_render_target(Texture *render_target_texture, Texture *depth_stencil_texture);
+	void set_render_targets(Array<Texture *> &render_targets, Texture *depth_stencil);
 
 	void set_vertex_buffer(Buffer *buffer);
 	void set_index_buffer(Buffer *buffer);

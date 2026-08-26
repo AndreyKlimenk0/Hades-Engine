@@ -118,7 +118,7 @@ void Render_System::init_passes()
 	Render_World *render_world = Engine::get_render_world();
 
 	passes.shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
-	passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	//passes.forward_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	//passes.debug_shadows_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.silhouette_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.outlining_pass.init(render_device, shader_manager, &pipeline_resource_manager);
@@ -133,6 +133,9 @@ void Render_System::init_passes()
 
 	passes.culling_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 	passes.primitive_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.gbuffer_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.deferred_pass.init(render_device, shader_manager, &pipeline_resource_manager);
+	passes.back_buffer_pass.init(render_device, shader_manager, &pipeline_resource_manager);
 
 	render_pass_submissions.push({ &passes.depth_pass, (void *)&render_pass_context,   (void *)this });
 	render_pass_submissions.push({ &passes.generate_hzb, (void *)&render_pass_context,   (void *)this });
@@ -143,7 +146,7 @@ void Render_System::init_passes()
 	
 	render_pass_submissions.push({ &passes.shadows_pass,  (void *)&render_pass_context, (void *)this });
 	render_pass_submissions.push({ &passes.culling_pass,  (void *)&render_pass_context, (void *)this });
-	render_pass_submissions.push({ &passes.forward_pass,  (void *)&render_pass_context, (void *)this });
+	//render_pass_submissions.push({ &passes.forward_pass,  (void *)&render_pass_context, (void *)this });
 	//render_pass_submissions.push({ &passes.debug_shadows_pass,  (void *)&render_pass_context, (void *)this });
 	
 	render_pass_submissions.push({ &passes.silhouette_pass,  (void *)&render_pass_context, (void *)this });
@@ -151,6 +154,9 @@ void Render_System::init_passes()
 
 	render_pass_submissions.push({ &passes.ui_pass,  (void *)ui_storage, (void *)this });
 	render_pass_submissions.push({ &passes.primitive_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.gbuffer_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.deferred_pass, (void *)&render_pass_context,   (void *)this });
+	render_pass_submissions.push({ &passes.back_buffer_pass, (void *)&render_pass_context,   (void *)this });
 }
 
 void Render_System::resize(u32 window_width, u32 window_height)
@@ -234,6 +240,30 @@ Size_u32 Render_System::get_window_size()
 	return { window.width, window.height };
 }
 
+Depth_Stencil_Texture_Desc::Depth_Stencil_Texture_Desc()
+{
+}
+
+Depth_Stencil_Texture_Desc::Depth_Stencil_Texture_Desc(DXGI_FORMAT format) : format(format)
+{
+}
+
+Depth_Stencil_Texture_Desc::~Depth_Stencil_Texture_Desc()
+{
+}
+
+Render_Target_Texture_Desc::Render_Target_Texture_Desc()
+{
+}
+
+Render_Target_Texture_Desc::Render_Target_Texture_Desc(DXGI_FORMAT format) : format(format)
+{
+}
+
+Render_Target_Texture_Desc::~Render_Target_Texture_Desc()
+{
+}
+
 void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc *back_buffer_texture_desc)
 {
 	render_device = _render_device;
@@ -270,6 +300,8 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 	global_info.hzb_width = round_down_to_power_of_two(back_buffer_texture_desc->width);
 	global_info.hzb_height = round_down_to_power_of_two(back_buffer_texture_desc->height);
 	global_info.hzb_mips = find_max_mip_level(global_info.hzb_width, global_info.hzb_height);
+	global_info.min_depth = 0.0f;
+	global_info.max_depth = 1.0f;
 
 	Buffer_Desc global_buffer_desc;
 	global_buffer_desc.usage = RESOURCE_USAGE_DEFAULT;
@@ -356,7 +388,6 @@ Texture *Pipeline_Resource_Manager::create_render_target(const char *texture_nam
 {
 	Render_Target_Texture_Desc filled_render_target_desc;
 	if (render_target_desc) {
-		filled_render_target_desc.name = !render_target_desc->name.is_empty() ? render_target_desc->name : default_render_target_desc.name;
 		filled_render_target_desc.width = render_target_desc->width > 0 ? render_target_desc->width : default_render_target_desc.width;
 		filled_render_target_desc.height = render_target_desc->height > 0 ? render_target_desc->height : default_render_target_desc.height;
 		filled_render_target_desc.format = render_target_desc->format != DXGI_FORMAT_UNKNOWN ? render_target_desc->format : default_render_target_desc.format;
@@ -372,7 +403,7 @@ Texture *Pipeline_Resource_Manager::create_render_target(const char *texture_nam
 	render_target_texture_desc.flags = ALLOW_RENDER_TARGET;
 	render_target_texture_desc.clear_value = filled_render_target_desc.clear_value;
 	render_target_texture_desc.resource_state = RESOURCE_STATE_RENDER_TARGET;
-	render_target_texture_desc.name = filled_render_target_desc.name;
+	render_target_texture_desc.name = texture_name;
 
 	Texture *texture = NULL;
 	if (!texture_table.get(texture_name, &texture)) {

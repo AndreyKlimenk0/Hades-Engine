@@ -73,11 +73,6 @@ void world_aabb_to_ndc(inout float3 min_AABB, inout float3 max_AABB)
     max_AABB = ndc_max_AABB;
 }
 
-float2 ndc_to_uv(float3 ndc_position)
-{
-    return ndc_position.xy * float2(0.5f, -0.5f) + 0.5f;
-}
-
 bool occlusion_culled(float3 min_AABB, float3 max_AABB)
 {
     world_aabb_to_ndc(min_AABB, max_AABB);
@@ -124,9 +119,9 @@ void cs_main(uint3 thread_id : SV_DispatchThreadId)
         float3 max_AABB = bounding_box.max;
         float3 min_AABB = bounding_box.min;
         
-        if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
+//        if (!frustum_culled(min_AABB, max_AABB) && !occlusion_culled(min_AABB, max_AABB)) {
             culled_mesh_draw_commands.Append(mesh_draw_commands[index]);
-        }
+//        }
     }
 }
 
