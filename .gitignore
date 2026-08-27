@@ -15,6 +15,8 @@ data/textures/*
 
 data/levels/scene_demo*
 scripts/generate_cubes.py
+scripts/make_test_light_model.py
+scripts/point_light_200_test_model.py
 captures/
 keyboard_shortcuts.txt
 

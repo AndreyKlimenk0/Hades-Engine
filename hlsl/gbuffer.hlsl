@@ -39,7 +39,10 @@ Vertex_Out vs_main(uint vertex_id : SV_VertexID)
 	float4x4 world_matrix = world_matrices[mesh_instance.transform_idx];
 	
 	Vertex_Out vertex_out;
-	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, mul(frame_info.view_matrix, frame_info.perspective_matrix))); 
+	// Use view_perspective_matrix instead of view_matrix * perspective_matrix because
+	// the latter causes z fighting. The same matrix as in the Depth Pass should be used here.
+	// A multiplied matrix on GPU is not equal to the multplied matrix on CPU.
+	vertex_out.position = mul(float4(vertex.position, 1.0f), mul(world_matrix, frame_info.view_perspective_matrix)); 
 	vertex_out.world_position = mul(float4(vertex.position, 1.0f), world_matrix).xyz;
 	vertex_out.normal = mul(vertex.normal, (float3x3)world_matrix);
 	vertex_out.tangent = mul(vertex.tangent, (float3x3)world_matrix);
@@ -70,7 +73,8 @@ GBuffer ps_main(Vertex_Out vertex_out)
     GBuffer gbuffer;
     gbuffer.albedo_metalness = float4(albedo, roughness_metalic.b);
     gbuffer.normal = float4(normal, 1.0f);
-    gbuffer.roughness = roughness_metalic.g;
+    //gbuffer.roughness = roughness_metalic.g;
+    gbuffer.roughness = vertex_out.position.z;
     return gbuffer;
 }
 

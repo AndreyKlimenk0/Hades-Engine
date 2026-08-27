@@ -43,23 +43,25 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 {
 	Array<String> command_args;
 	//command_args.push("vampire.fbx");
+	//command_args.push("point_light_200_models_test.glb");
+	//command_args.push("test_point_light.gltf");
 	//command_args.push("cm_to_m");
 	//command_args.push("sphere1.gltf");
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
-	command_args.push("DamagedHelmet.gltf");
+	//command_args.push("DamagedHelmet.gltf");
 	command_args.push("Sponza.gltf");
 	//command_args.push("testAABB1.gltf");
 	//command_args.push("shadows_occlusion_culling.gltf");
-	command_args.push("MetalRoughSpheres.gltf");
+	//command_args.push("MetalRoughSpheres.gltf");
 	//command_args.push("occlusion_culling_scene.gltf");
 	//command_args.push("test_shadows.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	//command_args.push("cm_to_m");
 	run_command("load mesh", command_args);
 
-	Entity *entity = game_world->get_entity(Entity_Id(ENTITY_TYPE_ENTITY, 0));
-	entity->position.z += -10.0f;
+	//Entity *entity = game_world->get_entity(Entity_Id(ENTITY_TYPE_ENTITY, 0));
+	//entity->position.z += -10.0f;
 
 	//Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.0f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.2f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);

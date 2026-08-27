@@ -823,7 +823,8 @@ void Depth_Pass::render(Graphics_Command_List *graphics_command_list, void *cont
 	graphics_command_list->set_graphics_descriptor_table(3, 0, SHADER_RESOURCE_REGISTER, mesh_storage->unified_index_buffer->shader_resource_descriptor());
 
 	Depth_Map_Pass_Data pass_data;
-
+	// GBuffer shader uses view perspective matrix. if view perspective matrix changes, update code in GBuffer shader.
+	// A multiplied matrix on GPU is not equal to the multplied matrix on CPU.
 	graphics_command_list->set_graphics_constants(1, 0, &render_world->get_camera()->view_perspective_matrix);
 
 	Render_Entity *render_entity = NULL;
