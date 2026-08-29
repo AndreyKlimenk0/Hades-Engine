@@ -59,7 +59,7 @@ void test_elements_layouting(u32 x, u32 y, Layout layout_direction, u32 alignmen
 	set_absolute_position(x, y);
 	set_size(fixed_size(400), fixed_size(300));
 	set_space(10);
-	set_padding(Padding(15));
+	set_padding(Padding(10));
 	set_layout(layout_direction);
 	set_alignment(alignment_flags);
 	set_background_color(GRAY);

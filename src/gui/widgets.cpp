@@ -637,8 +637,8 @@ bool edit_field(const char *label, Vector3 *vector)
 
 	Edit_Field_Theme edit_field_theme;
 	edit_field_theme.width = 80;
-	edit_field_theme.display_label = false;
-	edit_field_theme.display_outlining = true;
+	edit_field_theme.display_label = true;
+	edit_field_theme.display_outlining = false;
 	edit_field_theme.label_alignment = ALIGNMENT_LEFT;
 	
 	push_edit_field_theme(&edit_field_theme);
@@ -656,4 +656,48 @@ bool edit_field(const char *label, Vector3 *vector)
 	
 	end_ui_element();
 	return false;
+}
+
+void scroll_bar(UI_Element *ui_element)
+{
+	Rect_s32 ui_element_view_rect = ui_element->get_rect();
+
+	begin_ui_element("scroll_bar_ui_element_virtual_area");
+	set_absolute_position(ui_element_view_rect.x, ui_element_view_rect.y);
+	set_size(fixed_size(ui_element_view_rect.width), fixed_size(ui_element_view_rect.height));
+
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_VERTICAL_CENTER | ALIGNMENT_RIGHT);
+	
+	begin_ui_element("scroll_bar");
+	set_layout(COLUMN_LAYOUT);
+	set_alignment(ALIGNMENT_HORIZONTAL_CENTER | ALIGNMENT_TOP);
+	set_size(fixed_size(16), fixed_size(ui_element_view_rect.height));
+	set_background_color(Color::White);
+
+	float view_content_size_ratio = (float)ui_element_view_rect.height / (float)ui_element->max_content_border.y;
+	s32 thumb_size = s32((float)ui_element_view_rect.height * view_content_size_ratio);
+
+	s32 content_offset = math::abs(ui_element->content_offset.y);
+	s32 content_size_view_size_diff = ui_element->max_content_border.y - ui_element_view_rect.height;
+	float content_offset_ratio = content_size_view_size_diff > 0 ? (float)content_offset / (float)content_size_view_size_diff : 0.0f;
+	s32 scroll_bar_free_space = ui_element_view_rect.height - thumb_size;
+	s32 thumb_position = s32((float)scroll_bar_free_space * content_offset_ratio);
+	
+	begin_ui_element("thumb");
+	set_relative_position_y(thumb_position);
+	set_size(fixed_size(8), fixed_size(thumb_size));
+	set_background_color(Color::Black);
+	
+	if (ui_element_active()) {
+		s32 diff = ui_element->max_content_border.y - ui_element_view_rect.height;
+		//ui_element->content_offset.y = math::clamp(ui_element->content_offset.y - Mouse_State::y_delta(), -diff, 0);
+		ui_element->content_offset.y = math::clamp(ui_element->content_offset.y - imgui::get_delta_y(), -diff, 0);
+	}
+	
+	end_ui_element(); //thumb
+
+	end_ui_element(); //scroll_bar
+
+	end_ui_element(); //ScrollBar[UI Element Virtual Area]
 }

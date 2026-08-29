@@ -14,8 +14,8 @@ namespace imgui {
 	};
 
 	enum Layout {
-		ROW_LAYOUT = 0,
-		COLUMN_LAYOUT,
+		ROW_LAYOUT = 0,    // Place UI elements horizontally
+		COLUMN_LAYOUT = 1, // Place UI elements vertically
 	};
 
 	const u32 ALIGNMENT_TOP    = 0x1; // Top to bottom.
@@ -136,9 +136,10 @@ namespace imgui {
 		u32 children_id_counter;
 		u32 outlining_thikness;
 
-		/*Rect_s32 rect;*/
+		Point_s32 max_content_border;
 		Point_s32 position;
 		Point_s32 prev_position;
+		Point_s32 content_offset;
 		Element_Size size;
 		Element_Size prev_size;
 
@@ -206,11 +207,14 @@ namespace imgui {
 	bool ui_element_hovered();
 	bool ui_element_clicked();
 	bool ui_element_double_clicked();
+	bool ui_element_active();
 
 	Rect_s32 ui_element_rect();
 
 	UI_Element *get_ui_element();
 	UI_Element *get_last_ui_element();
 	Font *get_font();
+
+	s32 get_delta_y();
 }
 #endif

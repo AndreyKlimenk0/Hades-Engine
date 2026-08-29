@@ -179,7 +179,17 @@ struct UI_Context {
 	Font *font = NULL;
 	Render_2D *render_2d = NULL;
 	Render_Primitive_List *render_primitive_list = NULL;
+
+	s32 mouse_x;
+	s32 mouse_y;
+	s32 last_mouse_x;
+	s32 last_mouse_y;
+	s32 mouse_x_delta;
+	s32 mouse_y_delta;
 	
+	Element_ID hot_element;
+	Element_ID active_element;
+
 	UI_Element *root_element = NULL;
 	UI_Element *last_element = NULL;
 	
@@ -317,31 +327,13 @@ void add_space_to_child_elements(UI_Element *ui_element)
 {
 	bool condition1 = (ui_element->layout == ROW_LAYOUT) && (ui_element->alignment_flags & ALIGNMENT_RIGHT);
 	bool condition2 = (ui_element->layout == COLUMN_LAYOUT) && (ui_element->alignment_flags & ALIGNMENT_BOTTOM);
-	Array<UI_Element * > ordered_child_elements = ui_element->child_elements;
-	// If right or bottom alignment is set, child elements are laid out in reverse order.
-	// That's why they should be reversed before adding spaces.
-	if (condition1 || condition2) {
-		ordered_child_elements.reverse();
-	}
+	s32 sign = condition1 || condition2 ? -1 : 1;
 
 	u32 index = static_cast<u32>(ui_element->layout);
-	for (u32 i = 1; i < ordered_child_elements.count; i++) {
-		UI_Element *child = ordered_child_elements[i];
+	for (u32 i = 1; i < ui_element->child_elements.count; i++) {
+		UI_Element *child = ui_element->child_elements[i];
 		if (can_auto_layout_ui_element(child, ui_element->layout)) {
-			child->position[index] += ui_element->space * i;
-		}
-	}
-
-	// Should code be moved in 'calculate_fit_size' function ?
-	if ((ui_element->layout == ROW_LAYOUT) && (ui_element->size.width.type == SIZE_TYPE_FIT)) {
-		if (ui_element->child_elements.count > 1) {
-			ui_element->size.width.add((ui_element->child_elements.count - 1) * ui_element->space);
-		}
-	}
-
-	if ((ui_element->layout == COLUMN_LAYOUT) && (ui_element->size.height.type == SIZE_TYPE_FIT)) {
-		if (ui_element->child_elements.count > 1) {
-			ui_element->size.height.add((ui_element->child_elements.count - 1) * ui_element->space);
+			child->position[index] += sign * ui_element->space * i;
 		}
 	}
 }
@@ -360,13 +352,16 @@ static s32 calculate_fit_size(UI_Element *ui_element, AxisV2 axis)
 	if (layout_to_axis(ui_element->layout) == axis) {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			ASSERT_MSG(child->size[axis].type != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
+			ASSERT_MSG(child->size[axis].type != SIZE_TYPE_GROW, "It is not allowed to define UI element with growing size inside fit size UI element.");
 			result += child->size[axis].get();
+		}
+		if (!ui_element->child_elements.is_empty()) {
+			result += (ui_element->child_elements.count - 1) * ui_element->space;
 		}
 	} else {
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 			UI_Element *child = ui_element->child_elements[i];
-			ASSERT_MSG(child->size[axis].type != SIZE_TYPE_GROW, "It is not allowed to define UI element with fill size inside fit size UI element.");
+			ASSERT_MSG(child->size[axis].type != SIZE_TYPE_GROW, "It is not allowed to define UI element with growing size inside fit size UI element.");
 			result = math::max(child->size[axis].get(), result);
 		}
 	}
@@ -632,12 +627,28 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
 		}
 
+		if (ui_element->id.string == "Main plane") {
+		//if (ui_element->id.string != "Root Element") {
+			Rect_s32 temp = { position.x, position.y, ui_element->max_content_border.x, ui_element->max_content_border.y };
+			auto c = Color::Red;
+			c.value.w = 0.1f;
+			render_primitive_list->add_rect(&temp, c);
+		}
+
+		if (ui_element->id == ui_context.hot_element) {
+			//print("Hot element", ui_element->id.string);
+		}
+
+		if (ui_element->id == ui_context.active_element) {
+			//print("Active element", ui_element->id.string);
+		}
+
 		if (ui_element->outlining_thikness > 0) {
 			render_primitive_list->add_outlines(rect.x, rect.y, rect.width, rect.height, ui_element->outlining_color, (float)ui_element->outlining_thikness, ui_element->rounding);
 		}
 
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
-			fill_render_primitive_list(position, &clip_rect, ui_element->child_elements[i], render_primitive_list);
+			fill_render_primitive_list(position + ui_element->content_offset, &clip_rect, ui_element->child_elements[i], render_primitive_list);
 		}
 		render_primitive_list->pop_clip_rect();
 	}
@@ -684,6 +695,28 @@ void imgui::begin_frame()
 	ui_context.root_element->position.y = 0;
 	ui_context.root_element->size.width = fixed_size(temp_width);
 	ui_context.root_element->size.height = fixed_size(temp_height);
+
+	ui_context.mouse_x = Mouse_State::x;
+	ui_context.mouse_y = Mouse_State::y;
+	ui_context.mouse_x_delta = ui_context.mouse_x - ui_context.last_mouse_x;
+	ui_context.mouse_y_delta = ui_context.mouse_y - ui_context.last_mouse_y;
+}
+
+void calculate_content_size(UI_Element *ui_element)
+{
+	ui_element->max_content_border = Point_s32( 0, 0 );
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		UI_Element *child = ui_element->child_elements[i];
+		Rect_s32 rect = { child->position.x, child->position.y, child->size.width.get(), child->size.height.get() };
+		ui_element->max_content_border.x = math::max(ui_element->max_content_border.x, rect.right());
+		ui_element->max_content_border.y = math::max(ui_element->max_content_border.y, rect.bottom());
+	}
+	ui_element->max_content_border.x += ui_element->padding.right;
+	ui_element->max_content_border.y += ui_element->padding.bottom;
+
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		calculate_content_size(ui_element->child_elements[i]);
+	}
 }
 
 void imgui::end_frame()
@@ -699,10 +732,19 @@ void imgui::end_frame()
 
 	layout_child_elements(ui_context.root_element);
 
+	calculate_content_size(ui_context.root_element);
+
 	Rect_s32 clip_rect = { 0, 0, ui_context.root_element->size.width.get(), ui_context.root_element->size.height.get() };
 	fill_render_primitive_list(Point_s32(0, 0), &clip_rect, ui_context.root_element, ui_context.render_primitive_list);
 
 	ui_context.render_2d->add_render_primitive_list(ui_context.render_primitive_list);
+	
+	if (was_key_just_released(KEY_LMOUSE)) {
+		ui_context.active_element.reset();
+	}
+
+	ui_context.last_mouse_x = Mouse_State::x;
+	ui_context.last_mouse_y = Mouse_State::y;
 }
 
 void imgui::begin_ui_element(const char *format_name, ...)
@@ -725,6 +767,13 @@ void imgui::begin_ui_element(const char *format_name, ...)
 
 	ui_element->begin_frame();
 
+	Rect_s32 rect = ui_element->get_rect();
+	if (_detect_intersection(&rect)) {
+		ui_context.hot_element = ui_element->id;
+		if (was_key_just_pressed(KEY_LMOUSE)) {
+			ui_context.active_element = ui_element->id;
+		}
+	}
 	ui_context.push_ui_element(ui_element);
 }
 
@@ -877,6 +926,12 @@ bool imgui::ui_element_double_clicked()
 	return was_double_click(KEY_LMOUSE) && _detect_intersection(&rect);;
 }
 
+bool imgui::ui_element_active()
+{
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	return ui_element->id == ui_context.active_element;
+}
+
 Rect_s32 imgui::ui_element_rect()
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
@@ -896,4 +951,9 @@ UI_Element *imgui::get_last_ui_element()
 Font *imgui::get_font()
 {
 	return ui_context.font;
+}
+
+s32 imgui::get_delta_y()
+{
+	return ui_context.mouse_y_delta;
 }

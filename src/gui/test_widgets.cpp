@@ -25,7 +25,9 @@ void draw_test_widgets()
 	set_size(fixed_size(900), fixed_size(600));
 	//set_background_color(Color(128, 128, 128));
 	set_background_color(Color(45));
-	set_padding(Padding(15));
+	set_padding(Padding(0));
+
+	UI_Element *ui_element = get_ui_element();
 	
 	if (button("Button 1")) {
 		print("Click by button 1");
@@ -95,7 +97,15 @@ void draw_test_widgets()
 		print("Update entity position", &entity_position);
 	}
 
+	for (u32 i = 0; i < 10; i++) {
+		char *string = format("Button {}", i + 10);
+		button(string);
+		free_string(string);
+	}
+
 	end_ui_element(); //Main plane
+
+	scroll_bar(ui_element);
 
 	end_frame();
 }

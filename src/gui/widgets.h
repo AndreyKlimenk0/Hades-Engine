@@ -104,4 +104,6 @@ bool edit_field(const char *label, float *value);
 bool edit_field(const char *label, String *string);
 bool edit_field(const char *label, Vector3 *vector);
 
+void scroll_bar(imgui::UI_Element *ui_element);
+
 #endif
