@@ -208,6 +208,7 @@ namespace imgui {
 	bool ui_element_clicked();
 	bool ui_element_double_clicked();
 	bool ui_element_active();
+	bool ui_element_focused(Element_ID element_id);
 
 	Rect_s32 ui_element_rect();
 

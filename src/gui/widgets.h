@@ -78,6 +78,18 @@ struct Edit_Field_Theme {
 	Color outlining_color;
 };
 
+struct Scroll_Bar_Theme {
+	Scroll_Bar_Theme();
+	~Scroll_Bar_Theme();
+
+	u32 bar_size;
+	u32 thumb_size;
+	u32 rounding;
+	s32 wheel_speed;
+	Color bar_color;
+	Color thumb_color;
+};
+
 void init_widgets();
 
 void push_button_theme(Text_Button_Theme *button_theme);

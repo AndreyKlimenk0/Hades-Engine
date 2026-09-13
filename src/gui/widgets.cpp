@@ -10,6 +10,7 @@ static Text_Button_Theme button_theme;
 static List_Box_Theme list_theme;
 static Check_Box_Theme check_box_theme;
 static Slider_Theme slider_theme;
+static Scroll_Bar_Theme scroll_bar_theme;
 
 Text_Button_Theme::Text_Button_Theme()
 {
@@ -85,6 +86,20 @@ Edit_Field_Theme::Edit_Field_Theme()
 }
 
 Edit_Field_Theme::~Edit_Field_Theme()
+{
+}
+
+Scroll_Bar_Theme::Scroll_Bar_Theme()
+{
+	bar_size = 10;
+	thumb_size = 6;
+	rounding = 4;
+	wheel_speed = 20;
+	bar_color = Color(25);
+	thumb_color = Color(99);
+}
+
+Scroll_Bar_Theme::~Scroll_Bar_Theme()
 {
 }
 
@@ -658,6 +673,7 @@ bool edit_field(const char *label, Vector3 *vector)
 	return false;
 }
 
+// Define the function out of a ui element scope (after end_ui_element).
 void scroll_bar(UI_Element *ui_element)
 {
 	Rect_s32 ui_element_view_rect = ui_element->get_rect();
@@ -665,6 +681,7 @@ void scroll_bar(UI_Element *ui_element)
 	begin_ui_element("scroll_bar_ui_element_virtual_area");
 	set_absolute_position(ui_element_view_rect.x, ui_element_view_rect.y);
 	set_size(fixed_size(ui_element_view_rect.width), fixed_size(ui_element_view_rect.height));
+	auto scroll_bar_ui_element_virtual_area = get_ui_element();
 
 	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_VERTICAL_CENTER | ALIGNMENT_RIGHT);
@@ -672,8 +689,8 @@ void scroll_bar(UI_Element *ui_element)
 	begin_ui_element("scroll_bar");
 	set_layout(COLUMN_LAYOUT);
 	set_alignment(ALIGNMENT_HORIZONTAL_CENTER | ALIGNMENT_TOP);
-	set_size(fixed_size(16), fixed_size(ui_element_view_rect.height));
-	set_background_color(Color::White);
+	set_size(fixed_size(scroll_bar_theme.bar_size), fixed_size(ui_element_view_rect.height));
+	set_background_color(scroll_bar_theme.bar_color);
 
 	float view_content_size_ratio = (float)ui_element_view_rect.height / (float)ui_element->max_content_border.y;
 	s32 thumb_size = s32((float)ui_element_view_rect.height * view_content_size_ratio);
@@ -686,18 +703,25 @@ void scroll_bar(UI_Element *ui_element)
 	
 	begin_ui_element("thumb");
 	set_relative_position_y(thumb_position);
-	set_size(fixed_size(8), fixed_size(thumb_size));
-	set_background_color(Color::Black);
+	set_size(fixed_size(scroll_bar_theme.thumb_size), fixed_size(thumb_size));
+	set_background_color(scroll_bar_theme.thumb_color);
+	set_rounding(scroll_bar_theme.rounding);
 	
+	s32 delta = 0;
 	if (ui_element_active()) {
-		s32 diff = ui_element->max_content_border.y - ui_element_view_rect.height;
-		//ui_element->content_offset.y = math::clamp(ui_element->content_offset.y - Mouse_State::y_delta(), -diff, 0);
-		ui_element->content_offset.y = math::clamp(ui_element->content_offset.y - imgui::get_delta_y(), -diff, 0);
-	}
+		delta = imgui::get_delta_y();
+	} else if (ui_element_focused(ui_element->id)) {
+		Array<s32> *mouse_wheels = Async_Input::get_mouse_wheels();
+		for (u32 i = 0; i < mouse_wheels->count; i++) {
+			delta += mouse_wheels->get(i) > 0 ? -scroll_bar_theme.wheel_speed : scroll_bar_theme.wheel_speed;
+		}
+	} 
+	s32 diff = ui_element->max_content_border.y - ui_element_view_rect.height;
+	ui_element->content_offset.y = math::clamp(ui_element->content_offset.y - delta, -diff, 0);
 	
 	end_ui_element(); //thumb
 
 	end_ui_element(); //scroll_bar
 
-	end_ui_element(); //ScrollBar[UI Element Virtual Area]
+	end_ui_element(); //scroll_bar_ui_element_virtual_area
 }

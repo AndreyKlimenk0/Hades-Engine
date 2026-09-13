@@ -189,6 +189,7 @@ struct UI_Context {
 	
 	Element_ID hot_element;
 	Element_ID active_element;
+	Array<Element_ID> focus_elements;
 
 	UI_Element *root_element = NULL;
 	UI_Element *last_element = NULL;
@@ -627,22 +628,6 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
 		}
 
-		if (ui_element->id.string == "Main plane") {
-		//if (ui_element->id.string != "Root Element") {
-			Rect_s32 temp = { position.x, position.y, ui_element->max_content_border.x, ui_element->max_content_border.y };
-			auto c = Color::Red;
-			c.value.w = 0.1f;
-			render_primitive_list->add_rect(&temp, c);
-		}
-
-		if (ui_element->id == ui_context.hot_element) {
-			//print("Hot element", ui_element->id.string);
-		}
-
-		if (ui_element->id == ui_context.active_element) {
-			//print("Active element", ui_element->id.string);
-		}
-
 		if (ui_element->outlining_thikness > 0) {
 			render_primitive_list->add_outlines(rect.x, rect.y, rect.width, rect.height, ui_element->outlining_color, (float)ui_element->outlining_thikness, ui_element->rounding);
 		}
@@ -700,6 +685,10 @@ void imgui::begin_frame()
 	ui_context.mouse_y = Mouse_State::y;
 	ui_context.mouse_x_delta = ui_context.mouse_x - ui_context.last_mouse_x;
 	ui_context.mouse_y_delta = ui_context.mouse_y - ui_context.last_mouse_y;
+
+	if (was_click(KEY_LMOUSE)) {
+		ui_context.focus_elements.reset();
+	}
 }
 
 void calculate_content_size(UI_Element *ui_element)
@@ -707,6 +696,7 @@ void calculate_content_size(UI_Element *ui_element)
 	ui_element->max_content_border = Point_s32( 0, 0 );
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 		UI_Element *child = ui_element->child_elements[i];
+		//The function is called after ui elements are laid out, that's why accessing position field works. Tried to use get_rect method but It causes flickering.
 		Rect_s32 rect = { child->position.x, child->position.y, child->size.width.get(), child->size.height.get() };
 		ui_element->max_content_border.x = math::max(ui_element->max_content_border.x, rect.right());
 		ui_element->max_content_border.y = math::max(ui_element->max_content_border.y, rect.bottom());
@@ -772,6 +762,9 @@ void imgui::begin_ui_element(const char *format_name, ...)
 		ui_context.hot_element = ui_element->id;
 		if (was_key_just_pressed(KEY_LMOUSE)) {
 			ui_context.active_element = ui_element->id;
+		}
+		if (was_click(KEY_LMOUSE)) {
+			ui_context.focus_elements.push(ui_element->id);
 		}
 	}
 	ui_context.push_ui_element(ui_element);
@@ -930,6 +923,11 @@ bool imgui::ui_element_active()
 {
 	UI_Element *ui_element = ui_context.get_top_ui_element();
 	return ui_element->id == ui_context.active_element;
+}
+
+bool imgui::ui_element_focused(Element_ID element_id)
+{
+	return ui_context.focus_elements.find(element_id);
 }
 
 Rect_s32 imgui::ui_element_rect()
