@@ -117,7 +117,7 @@ void Engine::init(Win32_Window *window)
 	game_world.init();
 	render_world.init(this);
 
-	init_gui(window->width, window->height, "FiraCode-Regular", 12, &render_sys.render_2d);
+	init_gui(window->width, window->height, "FiraCode-Regular", 11, &render_sys.render_2d);
 
 	current_level_name = global_config.load_level;
 	if (!load_level(current_level_name, &game_world, &render_world)) {
@@ -149,8 +149,8 @@ void Engine::frame()
 	editor.handle_events();
 	editor.update();
 #if DRAW_TEST_GUI
-	//draw_test_gui();
-	draw_test_widgets();
+	draw_test_gui();
+	//draw_test_widgets();
 #else
 	editor.render();
 #endif

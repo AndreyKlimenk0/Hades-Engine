@@ -1,6 +1,9 @@
 #include "test_gui.h"
 #include "gui.h"
 #include "../sys/engine.h"
+#include "../libs/image/image.h"
+#include "../libs/os/path.h"
+#include "../render/helpers.h"
 
 const Color TEAL = Color(0, 128, 128);
 const Color NAVY = Color(0, 0, 128);
@@ -175,10 +178,6 @@ void test_layout_with_filled_size()
 	test_elements_size_filling(1450, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
 }
 
-#include "../libs/image/image.h"
-#include "../render/helpers.h"
-#include "../libs/os/path.h"
-
 void test_ui_image_element(Texture *texture)
 {
 	begin_ui_element("test_texture_ui_element");
@@ -193,6 +192,33 @@ void test_ui_image_element(Texture *texture)
 	end_ui_element(); //test_texture_ui_element
 }
 
+void test_two_level_growing_ui_elements()
+{
+	begin_ui_element("test_two_level_growing");
+	set_relative_position(50, 50);
+	set_size(fixed_size(600), fixed_size(600));
+	set_background_color(GRAY);
+
+	begin_ui_element("test_element1");
+	set_layout(ROW_LAYOUT);
+	set_size(grow_size(), grow_size());
+	set_background_color(DARK_ORANGE);
+
+	begin_ui_element("test_element2");
+	set_size(grow_size(), grow_size());
+	set_background_color(STEEL_BLUE);
+	end_ui_element();
+
+	begin_ui_element("test_element3");
+	set_size(grow_size(), grow_size());
+	set_background_color(CABET_BLUE);
+	end_ui_element();
+	
+	end_ui_element(); //test_element1
+
+	end_ui_element(); //test_texture_ui_element
+}
+
 void draw_test_gui()
 {
 	static bool init = true;
@@ -202,7 +228,7 @@ void draw_test_gui()
 		Engine *engine = Engine::get_instance();
 		Render_System *render_sys = &engine->render_sys;
 		Size_u32 size = render_sys->get_window_size();
-		init_gui(size.width, size.height, "FiraCode-Regular", 12, &render_sys->render_2d);
+		//init_gui(size.width, size.height, "FiraCode-Regular", 12, &render_sys->render_2d);
 
 		String full_path;
 		build_full_path_to_editor_file("entity.png", full_path);
@@ -223,7 +249,9 @@ void draw_test_gui()
 	//test_horizontal_and_vertical_center_layout_with_filled_size();
 	//test_layout_with_filled_size();
 
-	//test_ui_image_element(texture);
+    //test_ui_image_element(texture);
+
+	test_two_level_growing_ui_elements();
 
 	//begin_ui_element("Orange #hash%s #id", "Button");
 	////begin_ui_element("");

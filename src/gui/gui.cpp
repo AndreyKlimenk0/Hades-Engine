@@ -447,11 +447,6 @@ static void fit_size_if_needed(UI_Element *ui_element)
 
 static void grow_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 {
-	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
-		UI_Element *child = ui_element->child_elements[i];
-		grow_size_if_needed(child, axis);
-	}
-
  	if (layout_to_axis(ui_element->layout) == axis) {
 		s32 available_space = ui_element->size[axis].get() - ui_element->padding[axis];
 		for (u32 i = 0; i < ui_element->child_elements.count; i++) {
@@ -482,6 +477,11 @@ static void grow_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 				child->size[axis].set(available_space);
 			}
 		}
+	}
+	
+	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
+		UI_Element *child = ui_element->child_elements[i];
+		grow_size_if_needed(child, axis);
 	}
 }
 

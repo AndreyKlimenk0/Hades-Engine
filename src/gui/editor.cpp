@@ -386,14 +386,70 @@ void Editor::picking()
 	//}
 }
 
+void topbar_check_button(const char *text, u32 *flags, u32 value)
+{
+	begin_ui_element("Top Bar Button %s", text);
+	set_alignment(ALIGNMENT_CENTER);
+	set_size(fixed_size(100), fixed_size(18));
+
+	if (ui_element_clicked()) {
+		*flags = value;
+	}
+
+	if (*flags & value) {
+		set_background_color(Color(99));
+	} else {
+		if (ui_element_hovered()) {
+			set_background_color(Color(50));
+		} else {
+			set_background_color(Color(44));
+		}
+	}
+	
+	set_rounding(4);
+	ui_text_element(text);
+
+	end_ui_element();
+}
+
 void Editor::render()
 {
 	begin_frame();
 
-	begin_ui_element("Main window");
-	set_size(fixed_size(500), fixed_size(500));
-	set_relative_position(40, 40);
-	set_background_color(Color(88));
+	set_space(0);
+
+	begin_ui_element("Top Bar");
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_BOTTOM);
+	set_size(grow_size(), fixed_size(28));
+	//set_relative_position(0, 0);
+	set_background_color(Color(33));
+	set_padding(Padding(10, 0, 0, 4));
+
+	static bool draw_world_panel = false;
+	static bool draw_world_panel1 = false;
+	static bool draw_world_panel2 = false;
+
+	static u32 flags = 0;
+	
+	topbar_check_button("World", &flags, 0x2);
+	topbar_check_button("Rendering", &flags, 0x4);
+	topbar_check_button("View", &flags, 0x8);
+	
+	end_ui_element();
+
+	begin_ui_element("Main View");
+	set_size(grow_size(), grow_size());
+	set_background_color(Color::Red);
+
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_RIGHT | ALIGNMENT_VERTICAL_CENTER);
+	
+	begin_ui_element("Right Side Window");
+	set_size(fixed_size(400), grow_size());
+	set_background_color(Color::Black);
+	end_ui_element();
+	
 	end_ui_element();
 
 	end_frame();
