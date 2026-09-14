@@ -4,8 +4,6 @@
 #include "../libs/os/event.h"
 #include "../libs/os/input.h"
 
-using namespace imgui;
-
 static Text_Button_Theme button_theme;
 static List_Box_Theme list_theme;
 static Check_Box_Theme check_box_theme;
@@ -764,7 +762,7 @@ void scroll_bar(UI_Element *ui_element)
 	
 	s32 delta = 0;
 	if (ui_element_active()) {
-		delta = imgui::get_delta_y();
+		delta = get_delta_y();
 	} else if (ui_element_focused(ui_element->id)) {
 		Array<s32> *mouse_wheels = Async_Input::get_mouse_wheels();
 		for (u32 i = 0; i < mouse_wheels->count; i++) {

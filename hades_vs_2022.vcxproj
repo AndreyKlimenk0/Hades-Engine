@@ -208,7 +208,7 @@
     <ClCompile Include="src\collision\collision.cpp" />
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\gui\editor.cpp" />
-    <ClCompile Include="src\gui\guiv2.cpp" />
+    <ClCompile Include="src\gui\gui.cpp" />
     <ClCompile Include="src\gui\test_gui.cpp" />
     <ClCompile Include="src\gui\test_widgets.cpp" />
     <ClCompile Include="src\gui\widgets.cpp" />
@@ -406,7 +406,7 @@
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\gui\editor.h" />
     <ClInclude Include="src\gui\enum_helper.h" />
-    <ClInclude Include="src\gui\guiv2.h" />
+    <ClInclude Include="src\gui\gui.h" />
     <ClInclude Include="src\gui\test_gui.h" />
     <ClInclude Include="src\gui\test_widgets.h" />
     <ClInclude Include="src\gui\widgets.h" />

@@ -1,20 +1,18 @@
 #include "test_widgets.h"
 #include "test_gui.h"
-#include "guiv2.h"
+#include "gui.h"
 #include "../sys/engine.h"
 #include "widgets.h"
 
-using namespace imgui;
-
 void draw_test_widgets()
 {
-	static bool init_gui = true;
-	if (init_gui) {
-		init_gui = false;
+	static bool init = true;
+	if (init) {
+		init = false;
 		Engine *engine = Engine::get_instance();
 		Render_System *render_sys = &engine->render_sys;
 		Size_u32 size = render_sys->get_window_size();
-		init_guiv2(size.width, size.height, "Consola", 12, &render_sys->render_2d);
+		init_gui(size.width, size.height, "Consola", 12, &render_sys->render_2d);
 
 		init_widgets();
 	}

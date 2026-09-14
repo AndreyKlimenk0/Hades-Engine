@@ -1,8 +1,6 @@
 #include "test_gui.h"
-#include "guiv2.h"
+#include "gui.h"
 #include "../sys/engine.h"
-
-using namespace imgui;
 
 const Color TEAL = Color(0, 128, 128);
 const Color NAVY = Color(0, 0, 128);
@@ -197,14 +195,14 @@ void test_ui_image_element(Texture *texture)
 
 void draw_test_gui()
 {
-	static bool init_gui = true;
+	static bool init = true;
 	static Texture *texture = NULL;
-	if (init_gui) {
-		init_gui = false;
+	if (init) {
+		init = false;
 		Engine *engine = Engine::get_instance();
 		Render_System *render_sys = &engine->render_sys;
 		Size_u32 size = render_sys->get_window_size();
-		init_guiv2(size.width, size.height, "FiraCode-Regular", 12, &render_sys->render_2d);
+		init_gui(size.width, size.height, "FiraCode-Regular", 12, &render_sys->render_2d);
 
 		String full_path;
 		build_full_path_to_editor_file("entity.png", full_path);

@@ -1,15 +1,12 @@
 #ifndef GUI_WIDGETS_H
 #define GUI_WIDGETS_H
 
+#include "gui.h"
 #include "../libs/color.h"
 #include "../libs/str.h"
 #include "../libs/math/vector.h"
 #include "../libs/number_types.h"
 #include "../libs/structures/array.h"
-
-#include "guiv2.h"
-
-typedef void *Texture_View;
 
 struct Text_Button_Theme {
 	Text_Button_Theme();
@@ -35,8 +32,8 @@ struct List_Box_Theme {
 	u32 down_image_size;
 	Color background_color;
 	Color item_hover_color;
-	imgui::Padding list_panel_padding;
-	imgui::Padding list_item_padding;
+	Padding list_panel_padding;
+	Padding list_item_padding;
 };
 
 struct Check_Box_Theme {
@@ -117,6 +114,6 @@ bool edit_field(const char *label, float *value);
 bool edit_field(const char *label, String *string);
 bool edit_field(const char *label, Vector3 *vector);
 
-void scroll_bar(imgui::UI_Element *ui_element);
+void scroll_bar(UI_Element *ui_element);
 
 #endif

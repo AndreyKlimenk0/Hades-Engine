@@ -24,9 +24,6 @@
     <ClCompile Include="src\gui\editor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\gui\gui.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\gui\test_gui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -156,13 +153,13 @@
     <ClCompile Include="src\sys\global_config.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\gui\guiv2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\gui\widgets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\gui\test_widgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\gui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -614,9 +611,6 @@
     <ClInclude Include="src\gui\editor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\gui\gui.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\gui\test_gui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -845,7 +839,7 @@
     <ClInclude Include="src\sys\global_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\gui\guiv2.h">
+    <ClInclude Include="src\gui\gui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\gui\widgets.h">
