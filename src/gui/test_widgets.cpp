@@ -25,7 +25,7 @@ void draw_test_widgets()
 	set_size(fixed_size(900), fixed_size(600));
 	//set_background_color(Color(128, 128, 128));
 	set_background_color(Color(45));
-	set_padding(Padding(0));
+	set_padding(Padding(15));
 
 	UI_Element *ui_element = get_ui_element();
 	

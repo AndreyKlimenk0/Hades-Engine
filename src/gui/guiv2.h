@@ -8,6 +8,8 @@
 #include "../render/font.h"
 
 namespace imgui {
+	typedef void* Texture_View;
+
 	enum AxisV2 {
 		X_AXISV2 = 0,
 		Y_AXISV2 = 1
@@ -158,6 +160,7 @@ namespace imgui {
 		//Content
 		Text_Alignment text_alignment;
 		String text;
+		Texture_View texture_view;
 
 		//Context
 		Element_ID id;
@@ -203,6 +206,8 @@ namespace imgui {
 
 	void ui_text_element(const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
 	void ui_text_element(const char *ui_element_name, const char *text, Text_Alignment text_alignment = ALIGN_TEXT_BY_MAX_SYMBOL_IN_TEXT);
+
+	void ui_image_element(const char *ui_element_name, Texture_View texture_view, u32 width, u32 height);
 
 	bool ui_element_hovered();
 	bool ui_element_clicked();

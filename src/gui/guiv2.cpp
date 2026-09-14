@@ -20,9 +20,10 @@ static u32 ui_element_debug_counter = 0;
 static const u32 UI_ELEMENT_HORIZONTAL_AUTO_LAYOUT = 0x1;
 static const u32 UI_ELEMENT_VERTICAL_AUTO_LAYOUT = 0x2;
 static const u32 UI_ELEMENT_DRAW_TEXT = 0x4;
-static const u32 UI_ELEMENT_DRAW = 0x8;
-static const u32 UI_ELEMENT_SET_RELATIVE_X_POSITION = 0x10;
-static const u32 UI_ELEMENT_SET_RELATIVE_Y_POSITION = 0x20;
+static const u32 UI_ELEMENT_DRAW_TEXTURE = 0x8;
+static const u32 UI_ELEMENT_DRAW = 0x10;
+static const u32 UI_ELEMENT_SET_RELATIVE_X_POSITION = 0x20;
+static const u32 UI_ELEMENT_SET_RELATIVE_Y_POSITION = 0x40;
 
 static String format_c_string(const char *format, va_list args)
 {
@@ -387,8 +388,6 @@ static void fit_size_if_needed(UI_Element *ui_element)
 
 static void grow_size_if_needed(UI_Element *ui_element, AxisV2 axis)
 {
-	//assert(ui_element->size[axis].get() > 0);
-
 	for (u32 i = 0; i < ui_element->child_elements.count; i++) {
 		UI_Element *child = ui_element->child_elements[i];
 		grow_size_if_needed(child, axis);
@@ -623,6 +622,12 @@ static void fill_render_primitive_list(const Point_s32 &parent_position, Rect_s3
 			render_primitive_list->add_rect(&rect, ui_element->background_color);
 			
 			render_primitive_list->add_text(&rect, ui_element->text, ui_element->text_alignment);
+		} else if (ui_element->flags & UI_ELEMENT_DRAW_TEXTURE) {
+			render_primitive_list->push_clip_rect(&clip_rect);
+			render_primitive_list->add_rect(&rect, ui_element->background_color);
+
+			// Ideally Render Primitive List should accept Texture_View but currentlly it accept Texture *.
+			render_primitive_list->add_texture(&rect, static_cast<Texture *>(ui_element->texture_view));
 		} else {
 			render_primitive_list->push_clip_rect(&clip_rect);
 			render_primitive_list->add_rect(&rect, ui_element->background_color, ui_element->rounding, ui_element->rounding_flags);
@@ -896,6 +901,16 @@ void imgui::ui_text_element(const char *ui_element_name, const char *text, Text_
 		set_background_color(Color(1.0f, 0.0f, 0.0f, 0.0f));
 		end_ui_element();
 	}
+}
+
+void imgui::ui_image_element(const char *ui_element_name, Texture_View texture_view, u32 width, u32 height)
+{
+	begin_ui_element(ui_element_name);
+	UI_Element *ui_element = ui_context.get_top_ui_element();
+	ui_element->flags |= UI_ELEMENT_DRAW_TEXTURE;
+	ui_element->texture_view = texture_view;
+	set_size(fixed_size(width), fixed_size(height));
+	end_ui_element();
 }
 
 bool imgui::ui_element_hovered()

@@ -177,15 +177,38 @@ void test_layout_with_filled_size()
 	test_elements_size_filling(1450, 400, ROW_LAYOUT, ALIGNMENT_BOTTOM | ALIGNMENT_RIGHT);
 }
 
+#include "../libs/image/image.h"
+#include "../render/helpers.h"
+#include "../libs/os/path.h"
+
+void test_ui_image_element(Texture *texture)
+{
+	begin_ui_element("test_texture_ui_element");
+	set_relative_position(50, 50);
+	set_size(fixed_size(600), fixed_size(500));
+	set_background_color(Color(99));
+
+	ui_image_element("Test Image1", texture, 256, 256);
+	ui_image_element("Test Image2", texture, 128, 128);
+	ui_image_element("Test Image3", texture, 64, 64);
+
+	end_ui_element(); //test_texture_ui_element
+}
+
 void draw_test_gui()
 {
 	static bool init_gui = true;
+	static Texture *texture = NULL;
 	if (init_gui) {
 		init_gui = false;
 		Engine *engine = Engine::get_instance();
 		Render_System *render_sys = &engine->render_sys;
 		Size_u32 size = render_sys->get_window_size();
 		init_guiv2(size.width, size.height, "FiraCode-Regular", 12, &render_sys->render_2d);
+
+		String full_path;
+		build_full_path_to_editor_file("entity.png", full_path);
+		texture = create_texture_from_file(full_path);
 	}
 	begin_frame();
 
@@ -200,8 +223,9 @@ void draw_test_gui()
 
 	//test_center_layout_with_filled_size()
 	//test_horizontal_and_vertical_center_layout_with_filled_size();
-	test_layout_with_filled_size();
+	//test_layout_with_filled_size();
 
+	//test_ui_image_element(texture);
 
 	//begin_ui_element("Orange #hash%s #id", "Button");
 	////begin_ui_element("");

@@ -32,6 +32,7 @@ struct List_Box_Theme {
 	s32 field_panel_spacing;
 	s32 list_item_spacing;
 	u32 rounding;
+	u32 down_image_size;
 	Color background_color;
 	Color item_hover_color;
 	imgui::Padding list_panel_padding;

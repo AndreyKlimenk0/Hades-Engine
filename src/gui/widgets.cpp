@@ -32,6 +32,7 @@ List_Box_Theme::List_Box_Theme()
 	height = 26;
 	field_panel_spacing = 2;
 	rounding = 6;
+	down_image_size = 12;
 	list_item_spacing = 0;
 	background_color = Color(30);
 	item_hover_color = Color(45);
@@ -130,6 +131,16 @@ struct UI_State {
 	Edit_Field_State edit_field_state;
 
 	Array<Edit_Field_Theme> edit_field_theme_stack;
+
+	Texture *cross_icon_texture = NULL;
+	Texture *up_texture = NULL;
+	Texture *down_texture = NULL;
+	Texture *check_texture = NULL;
+	Texture *default_texture = NULL;
+	Texture *expand_down_texture = NULL;
+	Texture *expand_right_texture = NULL;
+
+	void load_textures();
 };
 
 static UI_State ui_state;
@@ -142,6 +153,40 @@ UI_State::UI_State()
 UI_State::~UI_State()
 {
 
+}
+
+#include "../libs/image/image.h"
+#include "../render/helpers.h"
+#include "../libs/os/path.h"
+
+struct Name_Texture {
+	const char *name = NULL;
+	Texture **texture = NULL;
+};
+
+void UI_State::load_textures()
+{
+	const u32 TEXTURE_COUNT = 6;
+	Name_Texture pairs[TEXTURE_COUNT] = { { "cross-small.png", &cross_icon_texture }, { "expand_down1.png", &expand_down_texture }, { "check2.png", &check_texture },
+										  { "up.png", &up_texture }, { "down.png", &down_texture }, { "expand_right.png", &expand_right_texture } };
+
+	Image default_image;
+	default_image.create(64, 64, DXGI_FORMAT_R8G8B8A8_UNORM, "Default Texture");
+	default_image.fill(Color(255, 255, 255, 0));
+
+	default_texture = create_texture_from_image(&default_image);
+
+	u8 *image_data = NULL;
+	u32 width = 0;
+	u32 height = 0;
+	String full_path;
+	for (u32 i = 0; i < TEXTURE_COUNT; i++) {
+		build_full_path_to_editor_file(pairs[i].name, full_path);
+		*pairs[i].texture = create_texture_from_file(full_path);
+		if (!*pairs[i].texture) {
+			*pairs[i].texture = default_texture;
+		}
+	}
 }
 
 Edit_Field_Theme *get_edit_field_theme()
@@ -296,6 +341,7 @@ static void handle_events(bool *text_edited, Rect_s32 *text_rect, Edit_Field_Sta
 
 void init_widgets()
 {
+	ui_state.load_textures();
 }
 
 bool button(const char *button_text)
@@ -337,12 +383,22 @@ void list_box(const char *label, Array<String> &list, u32 *index)
 	set_size(fixed_size(list_theme.width), fixed_size(list_theme.height));
 	set_rounding(list_theme.rounding, ROUND_RECT);
 	set_background_color(list_theme.background_color);
-	set_padding(list_theme.list_panel_padding + list_theme.list_item_padding);
+	set_padding(Padding(list_theme.list_panel_padding.left + list_theme.list_item_padding.left, list_theme.list_item_padding.top, list_theme.list_panel_padding.right + list_theme.list_item_padding.right, list_theme.list_item_padding.bottom));
 
-	set_layout(COLUMN_LAYOUT);
+	set_layout(ROW_LAYOUT);
 	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
 
-	ui_text_element(list[*index]);
+	begin_ui_element("text_layout");
+	set_layout(ROW_LAYOUT);
+	set_alignment(ALIGNMENT_LEFT | ALIGNMENT_VERTICAL_CENTER);
+	set_size(grow_size(), grow_size());
+	ui_text_element("current_item_text", list[*index]);
+	end_ui_element();
+
+	begin_ui_element("down_texture_layout");
+	set_size(fixed_size(list_theme.down_image_size), fixed_size(list_theme.down_image_size));
+	ui_image_element("down_texture", (Texture_View)ui_state.expand_down_texture, list_theme.down_image_size, list_theme.down_image_size);
+	end_ui_element();
 
 	if (ui_element_clicked() || ui_element_double_clicked()) {
 		if (list_field->id == ui_state.active_list_box) {
@@ -409,11 +465,10 @@ bool check_box(const char *label, bool *state)
 	}
 
 	if (*state) {
-		begin_ui_element("Check");
-		set_size(fixed_size(check_box_theme.width - 6), fixed_size(check_box_theme.height - 6));
-		set_background_color(Color(0, 60, 168));
-		set_rounding(6);
-		end_ui_element();
+		ui_image_element("check_image", (Texture_View *)ui_state.check_texture, check_box_theme.width - 4, check_box_theme.height - 4);
+		set_background_color(Color(42, 131, 95));
+	} else {
+		set_background_color(Color(30));
 	}
 
 	end_ui_element(); // Box

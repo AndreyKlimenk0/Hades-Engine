@@ -3,7 +3,7 @@
 #include "helpers.h"
 #include "../libs/utils.h"
 
-#define TRUN_ON_RECT_CLIPPING 0
+#define TURN_ON_RECT_CLIPPING 1
 
 inline void from_win32_screen_space(u32 screen_width, u32 screen_height, const Point_s32 &win32_point, Point_s32 &normal_point)
 {
@@ -163,14 +163,14 @@ Render_Primitive_List::Render_Primitive_List(Render_2D *render_2d, Font *font, R
 
 void Render_Primitive_List::push_clip_rect(Rect_s32 *rect)
 {
-#if TRUN_ON_RECT_CLIPPING
+#if TURN_ON_RECT_CLIPPING
 	clip_rects.push(*rect);
 #endif
 }
 
 void Render_Primitive_List::pop_clip_rect()
 {
-#if TRUN_ON_RECT_CLIPPING
+#if TURN_ON_RECT_CLIPPING
 	if (clip_rects.count > 0) {
 		clip_rects.pop();
 	}
