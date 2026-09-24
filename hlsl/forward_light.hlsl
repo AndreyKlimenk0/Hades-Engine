@@ -64,7 +64,11 @@ float4 ps_main(Vertex_Out vertex_out) : SV_Target
     float3 local_normal = normal_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
     float3 normal = normalize(vertex_out.normal);
     //float3 normal = normal_mapping(local_normal, normalize(vertex_out.normal), normalize(vertex_out.tangent));
+#ifdef RED_COLOR
+    float3 albedo = float3(1.0f, 0.0f, 0.0f);
+#else
     float3 albedo = albedo_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
+#endif
     float3 roughness_metalic = roughness_metalic_texture.SampleLevel(linear_sampler(), vertex_out.uv, 0).rgb;
     
     float3 V = normalize(frame_info.view_position - vertex_out.world_position);

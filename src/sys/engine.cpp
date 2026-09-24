@@ -42,7 +42,7 @@ inline String build_default_level_name()
 inline void build_default_world(Game_World *game_world, Render_World *render_world)
 {
 	Array<String> command_args;
-	command_args.push("vampire.fbx");
+	//command_args.push("vampire.fbx");
 	//command_args.push("cm_to_m");
 	//command_args.push("sphere1.gltf");
 	//command_args.push("sphere2.gltf");
@@ -51,7 +51,7 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("Sponza.gltf");
 	//command_args.push("testAABB1.gltf");
 	//command_args.push("shadows_occlusion_culling.gltf");
-	//command_args.push("occlusion_culling_scene.gltf");
+	command_args.push("occlusion_culling_scene.gltf");
 	//command_args.push("test_shadows.gltf");
 	//command_args.push("Scene_Demo.gltf");
 	//command_args.push("cm_to_m");

@@ -9,8 +9,9 @@
 #pragma comment(lib, "dxcompiler.lib")
 
 static const Shader_Entry SHADER_LIST[] = {
-	{ "render_2d.hlsl",              "render_2d",               "-DDEBUG_SHADOWS" },
+	{ "render_2d.hlsl",              "render_2d",               "-DDEBUG_SHADOWS -DRED_COLOR" },
 	{ "forward_light.hlsl",          "forward_light",           "-DDEBUG_SHADOWS" },
+	{ "forward_light.hlsl",          "forward_light_red",           "-DRED_COLOR -DDEBUG_SHADOWS" },
 	{ "depth_map.hlsl",              "depth_map",               "-DDEBUG_SHADOWS" },
 	{ "debug_cascaded_shadows.hlsl", "debug_cascaded_shadows",  "-DDEBUG_SHADOWS" },
 	{ "draw_vertices.hlsl",          "draw_vertices",           "-DDEBUG_SHADOWS" },
@@ -206,13 +207,11 @@ String build_cso_shader_file_name(const char *shader_file_name, Shader_Type shad
 	return base_file_name + "_" + get_shader_prefix(shader_type) + "." + "cso";
 }
 
-Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, Shader_Type shader_type)
+Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, const char *shader_alias, Shader_Type shader_type, const char *define_arguments)
 {
 	shader_source_directory = join_paths(get_base_path(), "hlsl");
 	shader_pdb_directory = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), "pdb");
 	cso_directory = join_paths(get_full_path_to_data_directory(), "shaders");
-
-	print("Shader_Compiler::compile: Compiling {} as {}.", file_name, to_string(shader_type));
 
 	ComPtr<IDxcBlobEncoding> shader_blob;
 	HR(utils->CreateBlob(shader_code, code_size, 0, shader_blob.ReleaseAndGetAddressOf()));
@@ -232,6 +231,16 @@ Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_s
 	arguments.push("2021");
 	arguments.push("-I");
 	arguments.push(shader_source_directory);
+
+	String _define_arguments = define_arguments;
+	Array<String> defines;
+	if (split(&_define_arguments, " ", &defines)) {
+		for (u32 i = 0; i < defines.count; i++) {
+			arguments.push(defines[i]);
+		}
+	} else {
+		arguments.push(_define_arguments);
+	}
 
 	Array<LPCWSTR> wstrings;
 	for (u32 i = 0; i < arguments.count; i++) {
@@ -262,12 +271,12 @@ Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_s
 		HR(dxc_result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(intermediate_code.ReleaseAndGetAddressOf()), NULL));
 
 		File pdb_file;
-		if (pdb_file.open(join_paths(shader_pdb_directory, build_pdb_shader_file_name(file_name, shader_type)), FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
+		if (pdb_file.open(join_paths(shader_pdb_directory, build_pdb_shader_file_name(shader_alias, shader_type)), FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
 			pdb_file.write(pdb->GetBufferPointer(), pdb->GetBufferSize());
 		}
 
 		File cso_file;
-		if (cso_file.open(join_paths(cso_directory, build_cso_shader_file_name(file_name, shader_type)), FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
+		if (cso_file.open(join_paths(cso_directory, build_cso_shader_file_name(shader_alias, shader_type)), FILE_MODE_WRITE, FILE_CREATE_ALWAYS)) {
 			cso_file.write(intermediate_code->GetBufferPointer(), intermediate_code->GetBufferSize());
 		}
 
@@ -277,7 +286,9 @@ Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_s
 		compilation_result.bytecode.data = new u8[intermediate_code->GetBufferSize()];
 		memcpy(compilation_result.bytecode.data, intermediate_code->GetBufferPointer(), intermediate_code->GetBufferSize());
 
-		print("Shader_Compiler::compile: {} as {} was successfully compiled.", file_name, to_string(shader_type));
+		String str_shader_type = to_string(shader_type);
+		str_shader_type.to_lower();
+		print("Shader_Compiler::compile: '{}' was successfully compiled as {}.", shader_alias, str_shader_type);
 	}
 
 	return compilation_result;
@@ -290,7 +301,7 @@ inline bool compare(const Shader_Compilation_Info &x, const String &y)
 
 void Shader_Manager::init()
 {
-	load_shader_compilation_info();
+	//load_shader_compilation_info();
 
 	for (u32 i = 0; i < ARRAY_SIZE(SHADER_LIST); i++) {
 		Shader_Entry shader_entry = SHADER_LIST[i];
@@ -313,7 +324,7 @@ void Shader_Manager::init()
 
 			if (shader_code.find(get_shader_entry_point(shader_type)) > -1) {
 
-				Find_Result<Shader_Compilation_Info> result = find_in_array(shader_info_list, build_cso_shader_file_name(shader_entry.shader_file_name, shader_type), compare);
+				Find_Result<Shader_Compilation_Info> result = find_in_array(shader_info_list, build_cso_shader_file_name(shader_entry.shader_alias, shader_type), compare);
 				if (result.found) {
 					String path_to_cso_file = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), result.data.cso_file_name);
 					String path_to_shader_file = join_paths(join_paths(get_base_path(), "hlsl"), result.data.shader_file_name);
@@ -323,7 +334,7 @@ void Shader_Manager::init()
 						u64 cso_file_last_write_time = cso_file.get_last_write_time();
 						u64 shader_file_last_write_time = shader_file.get_last_write_time();
 						if (cso_file_last_write_time >= shader_file_last_write_time) {
-							print("Shader_Compiler::init: {} as {} has already beed compiled. Loading the shader.", result.data.shader_file_name, to_string(shader_type));
+							print("Shader_Compiler::init: '{}' as {} has already beed compiled. Loading the shader.", result.data.shader_alias, to_string(shader_type));
 
 							Shader_Data *shader_data = NULL;
 							if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
@@ -331,15 +342,15 @@ void Shader_Manager::init()
 								shader_data->source_file = shader_entry.shader_file_name;
 								shader_table.set(shader_entry.shader_alias, shader_data);
 							}
-							u8 *buffer = new u8[GetFileSize(cso_file.file_handle, NULL)];
-							cso_file.read((void *)buffer, GetFileSize(cso_file.file_handle, NULL));
-							shader_data->set_bytecode(shader_type, { buffer, GetFileSize(cso_file.file_handle, NULL) });
+							u8 *buffer = new u8[cso_file.file_size];
+							cso_file.read((void *)buffer, cso_file.file_size);
+							shader_data->set_bytecode(shader_type, { buffer,  cso_file.file_size });
 							continue;
 						}
 					}
 				}
 
-				Shader_Compilation_Result compilation_result = shader_compiler.compile((void *)shader_code.data, shader_code.len, full_path_to_shader_file, shader_entry.shader_file_name, shader_type);
+				Shader_Compilation_Result compilation_result = shader_compiler.compile((void *)shader_code.data, shader_code.len, full_path_to_shader_file, shader_entry.shader_file_name, shader_entry.shader_alias, shader_type, shader_entry.arguments);
 
 				if (compilation_result.compiled) {
 					Shader_Data *shader_data = NULL;
@@ -396,33 +407,37 @@ void Shader_Manager::shutdown()
 	}
 }
 
+static const String SHADER_FILE_NAME = "shader_compilation_info.txt";
+
 void Shader_Manager::load_shader_compilation_info()
 {
-	String path = join_paths(get_full_path_to_data_directory(), "shader_compilation_info.txt");
+	String path = join_paths(get_full_path_to_data_directory(), SHADER_FILE_NAME);
 
-	String buffer = read_entire_file(path, "rb");
-	char *text = buffer.data;
-	//buffer.reset();
-	while (true) {
-		char *line = get_next_line(&text);
-		if (!line) {
-			break;
+	File shader_compilation_info_file;
+	if (shader_compilation_info_file.open(path, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
+		if (shader_compilation_info_file.file_size > 0) {
+			print("Shader_Manager::load_shader_compilation_info: Reading and parsing '{}'.", SHADER_FILE_NAME);
+			u8 *buffer = new u8[shader_compilation_info_file.file_size + 1];
+			memset((void *)buffer, 0, shader_compilation_info_file.file_size + 1);
+
+			shader_compilation_info_file.read((void *)buffer, shader_compilation_info_file.file_size);
+			char *text = (char *)buffer;
+			while (true) {
+				char *line = get_next_line(&text);
+				if (!line) {
+					break;
+				}
+				Array<String> result;
+				String temp = line;
+				split(&temp, " ", &result);
+				int x = 0;
+				Shader_Compilation_Info shader_info = { result[0], result[1], result[2], static_cast<u64>(atoll(result[3])), result[4] };
+				shader_info_list.push(shader_info);
+			}
 		}
-		Array<String> result;
-		String temp = line;
-		split(&temp, " ", &result);
-		int x = 0;
-		Shader_Compilation_Info shader_info = { result[0], result[1], result[2], static_cast<u64>(atoll(result[3])), result[4] };
-		shader_info_list.push(shader_info);
+	} else {
+		print("Shader_Manager::load_shader_compilation_info: Cached shader compilation info file '{}' is missing.", SHADER_FILE_NAME);
 	}
-	//free_string(text);
-	int xi = 0;
-	//File shader_compilation_info_file;
-	//if (shader_compilation_info_file.open(path, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
-	//	u8 *buffer = NULL;
-	//	u32 data_size = 0;
-	//	shader_compilation_info_file.read((void *)buffer, data_size);
-	//}
 }
 
 void Shader_Manager::update_shader_compilation_info(u64 cso_file_last_write_time, Shader_Entry *shader_entry, Shader_Type shader_type)

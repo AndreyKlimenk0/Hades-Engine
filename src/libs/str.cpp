@@ -150,7 +150,7 @@ char *__do_formatting(Array<char *> *strings)
 		char *string = strings->get(i);
 		int result = is_format_string(string);
 		if (result) {
-			assert(strings->count >= (u32)result);
+			assert((strings->count - (i + 1)) >= (u32)result);
 			int var_index = i + 1;
 			for (int j = 0; j < result; j++, i++) {
 				vars_buffer.push(strings->get(var_index++));

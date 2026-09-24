@@ -349,8 +349,10 @@ void Forward_Pass::setup_pipeline(Render_Device *render_device, Shader_Manager *
 {
 	Graphics_Pipeline_Desc graphics_pipeline_desc;
 	graphics_pipeline_desc.root_signature = root_signature;
-	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("forward_light", VERTEX_SHADER);
-	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("forward_light", PIXEL_SHADER);
+	graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("forward_light_red", VERTEX_SHADER);
+	//graphics_pipeline_desc.vs_bytecode = shader_manager->get_shader_bytecode("forward_light", VERTEX_SHADER);
+	graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("forward_light_red", PIXEL_SHADER);
+	//graphics_pipeline_desc.ps_bytecode = shader_manager->get_shader_bytecode("forward_light", PIXEL_SHADER);
 	graphics_pipeline_desc.depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	graphics_pipeline_desc.add_render_target(DXGI_FORMAT_R8G8B8A8_UNORM);
 

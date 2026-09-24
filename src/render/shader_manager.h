@@ -47,7 +47,7 @@ struct Shader_Compiler {
 	ComPtr<IDxcCompiler3> compiler;
 	ComPtr<IDxcIncludeHandler> include_handler;
 
-	Shader_Compilation_Result compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, Shader_Type shader_type);
+	Shader_Compilation_Result compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, const char *shader_alias, Shader_Type shader_type, const char *define_arguments);
 };
 
 struct Shader_Data {
