@@ -321,7 +321,7 @@ void D3D12_Command_Signature::add_constant_buffer_view(u32 root_parameter_index)
 	indirect_arg_desc_list.push(indirect_argument_desc);
 }
 
-D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Compute_Pipeline_Desc *pipeline_desc)
+D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device5> &device, Compute_Pipeline_Desc *pipeline_desc)
 {
 	assert(type == PIPELINE_TYPE_UNKNOWN);
 
@@ -338,7 +338,7 @@ D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Compute
 	HR(device->CreateComputePipelineState(&d3d12_compute_pipeline_state, IID_PPV_ARGS(d3d12_pipeline.ReleaseAndGetAddressOf())));
 }
 
-D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Graphics_Pipeline_Desc *pipeline_desc)
+D3D12_Pipeline_State::D3D12_Pipeline_State(ComPtr<ID3D12Device5> &device, Graphics_Pipeline_Desc *pipeline_desc)
 {
 	assert(type == PIPELINE_TYPE_UNKNOWN);
 
@@ -402,7 +402,7 @@ D3D12_Command_List::D3D12_Command_List(Command_List_Type command_list_type, D3D1
 	type = command_list_type;
 	render_device = _render_device;
 
-	ComPtr<ID3D12Device> device = render_device->device;
+	ComPtr<ID3D12Device5> device = render_device->device;
 	HR(device->CreateCommandAllocator(to_d3d12_command_list_type(type), IID_PPV_ARGS(command_allocator.ReleaseAndGetAddressOf())));
 	device->CreateCommandList(0, to_d3d12_command_list_type(type), command_allocator.Get(), NULL, IID_PPV_ARGS(command_list.ReleaseAndGetAddressOf()));
 
@@ -413,7 +413,7 @@ D3D12_Command_List::~D3D12_Command_List()
 {
 }
 
-ID3D12GraphicsCommandList *D3D12_Command_List::get()
+ID3D12GraphicsCommandList4 *D3D12_Command_List::get()
 {
 	return command_list.Get();
 }
@@ -793,7 +793,59 @@ void D3D12_Command_List::execute_indirect(Command_Signature *command_signature, 
 	command_list->ExecuteIndirect(internal_command_signature->d3d12_command_signature.Get(), command_count, internal_argument_buffer->current_buffer()->get(), 0, internal_count_buffer->current_buffer()->get(), count_buffer_offset);
 }
 
-D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value, const char *name)
+void D3D12_Command_List::build_raytracing_acceleration_structure(Array<Raytracing_Triangle_Geometry_Desc> &geometry_descs)
+{
+	Array<D3D12_RAYTRACING_GEOMETRY_DESC> d3d12_geometry_descs;
+	for (u32 i = 0; i < geometry_descs.count; i++) {
+		D3D12_RAYTRACING_GEOMETRY_DESC d3d12_geometry_desc;
+		ZeroMemory(&d3d12_geometry_desc, sizeof(D3D12_RAYTRACING_GEOMETRY_DESC));
+		d3d12_geometry_desc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		d3d12_geometry_desc.Flags = static_cast<D3D12_RAYTRACING_GEOMETRY_FLAGS>(geometry_descs[i].flags);
+		d3d12_geometry_desc.Triangles.Transform3x4 = geometry_descs[i].transform3x4;
+		d3d12_geometry_desc.Triangles.IndexFormat = geometry_descs[i].index_format;
+		d3d12_geometry_desc.Triangles.VertexFormat = geometry_descs[i].vertex_format;
+		d3d12_geometry_desc.Triangles.IndexCount = geometry_descs[i].index_count;
+		d3d12_geometry_desc.Triangles.VertexCount = geometry_descs[i].vertex_count;
+		d3d12_geometry_desc.Triangles.IndexBuffer = geometry_descs[i].index_buffer;
+		d3d12_geometry_desc.Triangles.VertexBuffer = { geometry_descs[i].vertex_buffer_address, geometry_descs[i].vertex_buffer_stride };
+		
+		d3d12_geometry_descs.push(d3d12_geometry_desc);
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS acceleration_structure_input;
+	ZeroMemory(&acceleration_structure_input, sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS));
+	
+	acceleration_structure_input.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+	acceleration_structure_input.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	acceleration_structure_input.pGeometryDescs = d3d12_geometry_descs.items;
+
+	acceleration_structure_input.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO acceleration_structure_prebuild_info;
+	ZeroMemory(&acceleration_structure_prebuild_info, sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO));
+	internal_render_device_reference->device->GetRaytracingAccelerationStructurePrebuildInfo(&acceleration_structure_input, &acceleration_structure_prebuild_info);
+
+	Buffer_Desc blas_scratch_buffer_desc;
+	blas_scratch_buffer_desc.stride = acceleration_structure_prebuild_info.ScratchDataSizeInBytes;
+	blas_scratch_buffer_desc.size = RAYTRACING_ACCELERATION_STRUCTURE | ALLOW_UNORDERED_ACCESS;
+	
+	Buffer_Desc blas_result_buffer_desc;
+	blas_result_buffer_desc.stride = acceleration_structure_prebuild_info.ResultDataMaxSizeInBytes;
+	blas_result_buffer_desc.size = RAYTRACING_ACCELERATION_STRUCTURE | ALLOW_UNORDERED_ACCESS;
+	
+	Buffer *blas_scratch = internal_render_device_reference->create_buffer(&blas_scratch_buffer_desc);
+	Buffer *blas_result = internal_render_device_reference->create_buffer(&blas_result_buffer_desc);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC build_raytracing_accleration_structure_desc;
+	ZeroMemory(&build_raytracing_accleration_structure_desc, sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC));
+	build_raytracing_accleration_structure_desc.Inputs = acceleration_structure_input;
+	build_raytracing_accleration_structure_desc.ScratchAccelerationStructureData = ((D3D12_Buffer *)blas_scratch)->gpu_virtual_address();
+	build_raytracing_accleration_structure_desc.DestAccelerationStructureData = ((D3D12_Buffer *)blas_result)->gpu_virtual_address();
+
+	command_list->BuildRaytracingAccelerationStructure(&build_raytracing_accleration_structure_desc, 0, NULL);
+}
+
+D3D12_Fence::D3D12_Fence(ComPtr<ID3D12Device5> &device, u64 initial_expected_value, const char *name)
 {
 	handle = create_event_handle();
 	expected_value = initial_expected_value;
@@ -846,7 +898,7 @@ ID3D12Fence *D3D12_Fence::get()
 	return d3d12_fence.Get();
 }
 
-D3D12_Command_Queue::D3D12_Command_Queue(ComPtr<ID3D12Device> &device, Command_List_Type command_list_type)
+D3D12_Command_Queue::D3D12_Command_Queue(ComPtr<ID3D12Device5> &device, Command_List_Type command_list_type)
 {
 
 	D3D12_COMMAND_QUEUE_DESC command_queue_desc;
@@ -888,7 +940,7 @@ ID3D12CommandQueue *D3D12_Command_Queue::get()
 	return d3d12_command_queue.Get();
 }
 
-D3D12_Render_Device::D3D12_Render_Device(u64 initial_expected_value, ComPtr<ID3D12Device> &_device)
+D3D12_Render_Device::D3D12_Render_Device(u64 initial_expected_value, ComPtr<ID3D12Device5> &_device)
 {
 	frame_number = initial_expected_value;
 	device = _device;
@@ -1188,7 +1240,7 @@ u32 D3D12_Swap_Chain::get_current_back_buffer_index()
 	return dxgi_swap_chain->GetCurrentBackBufferIndex();
 }
 
-bool create_d3d12_device(ComPtr<ID3D12Device> &device)
+bool create_d3d12_device(ComPtr<ID3D12Device5> &device)
 {
 	bool result = false;
 	u32 factory_flags = 0;
@@ -1254,7 +1306,7 @@ bool create_d3d12_device(ComPtr<ID3D12Device> &device)
 
 D3D12_Render_Device *create_d3d12_render_device(u64 initial_expected_value)
 {
-	ComPtr<ID3D12Device> device;
+	ComPtr<ID3D12Device5> device;
 	if (create_d3d12_device(device)) {
 		internal_render_device_reference = new D3D12_Render_Device(initial_expected_value, device);
 		return internal_render_device_reference;

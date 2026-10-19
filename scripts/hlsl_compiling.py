@@ -24,12 +24,19 @@ class Shader_Type(enum.Enum):
     DOMAIN_SHADER = 3
     GEOMETRY_SHADER = 4
     PIXEL_SHADER = 5
+    RAYTRACED_SHADER = 6
  
     
 class Shader_File:
     def __init__(self, name, *args):
         self.name : str = name
         self.shader_types: [Shader_Type] = [item for item in args if isinstance(item, Shader_Type)]
+        self.alias = None
+        self.entry_point = None
+        for arg in args:
+            if isinstance(arg, dict):
+                self.alias = arg.get("alias")
+                self.entry_point = arg.get("entry_point")
 
 
 class Compilation_Params:
@@ -54,12 +61,9 @@ shader_files = [
     Shader_File("gbuffer.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("deferred_light.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
     Shader_File("back_buffer_output.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    # Shader_File("voxelization.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.GEOMETRY_SHADER, Shader_Type.PIXEL_SHADER),
-    # Shader_File("draw_box.hlsl", Shader_Type.VERTEX_SHADER, Shader_Type.PIXEL_SHADER),
-    # Shader_File("generate_mips_linear.hlsl", Shader_Type.COMPUTE_SHADER),
-    # Shader_File("generate_mips_linear_odd.hlsl", Shader_Type.COMPUTE_SHADER),
-    # Shader_File("generate_mips_linear_oddx.hlsl", Shader_Type.COMPUTE_SHADER),
-    # Shader_File("generate_mips_linear_oddy.hlsl", Shader_Type.COMPUTE_SHADER),
+    Shader_File("raytraced_shadows.hlsl", Shader_Type.RAYTRACED_SHADER, { "alias" : "generate_shadow_ray", "entry_point" : "cast_shadow_ray"}),
+    Shader_File("raytraced_shadows.hlsl", Shader_Type.RAYTRACED_SHADER, { "alias" : "shadow_ray_miss",     "entry_point" : "ShadowMiss"}),
+    Shader_File("raytraced_shadows.hlsl", Shader_Type.RAYTRACED_SHADER, { "alias" : "shadow_ray_anyhit",   "entry_point" : "ShadowAnyHit"}),
 ]
 
 
@@ -93,6 +97,7 @@ def get_output_file_name(shader_name: str, shader_type : Shader_Type) -> str:
         Shader_Type.DOMAIN_SHADER : "_ds",
         Shader_Type.GEOMETRY_SHADER : "_gs",
         Shader_Type.PIXEL_SHADER : "_ps",
+        Shader_Type.RAYTRACED_SHADER : "_rs",
     }
     name = shader_name.split(".")[0]
     return name + file_prefix[shader_type] + ".cso"
@@ -154,12 +159,21 @@ def compile_hlsl_shaders(compilation_params : Compilation_Params):
         full_path_to_shader = os.path.join(PROJECT_DIR, HLSH_DIR, shader_file.name)
         
         for shader_type in shader_file.shader_types:
-            profile = get_profile(shader_type)
-            entiry_point = get_entry_point(shader_type)
-            output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     
-            full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
-            
-            result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
+            if shader_type == Shader_Type.RAYTRACED_SHADER:
+                shader_file_name = shader_file.alias + ".hlsl"
+                profile = "lib_6_6"
+                entiry_point = shader_file.entry_point
+                output_shader_file_name = get_output_file_name(shader_file_name, shader_type)     
+                full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
+                
+                result, command_line_params = build_fxc_command_line_params(shader_file_name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
+            else:
+                profile = get_profile(shader_type)
+                entiry_point = get_entry_point(shader_type)
+                output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     
+                full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
+                
+                result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
             if result:
                 result = subprocess.run(f'dxc {command_line_params}', shell=True, stdout=subprocess.PIPE)  
                 if result.returncode != 0:

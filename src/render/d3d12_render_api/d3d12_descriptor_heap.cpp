@@ -16,7 +16,7 @@ Descriptor_Heap::~Descriptor_Heap()
 {
 }
 
-void Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE descriptor_heap_type)
+void Descriptor_Heap::create(ComPtr<ID3D12Device5> &device, u32 descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE descriptor_heap_type)
 {
 	d3d12_device = device;
 	bool shader_visible = (descriptor_heap_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) || (descriptor_heap_type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -72,7 +72,7 @@ CBSRUA_Descriptor_Heap::~CBSRUA_Descriptor_Heap()
 {
 }
 
-void CBSRUA_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
+void CBSRUA_Descriptor_Heap::create(ComPtr<ID3D12Device5> &device, u32 descriptors_number)
 {
 	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
@@ -180,7 +180,7 @@ Sampler_Descriptor_Heap::~Sampler_Descriptor_Heap()
 {
 }
 
-void Sampler_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
+void Sampler_Descriptor_Heap::create(ComPtr<ID3D12Device5> &device, u32 descriptors_number)
 {
 	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 }
@@ -200,7 +200,7 @@ RT_Descriptor_Heap::~RT_Descriptor_Heap()
 {
 }
 
-void RT_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
+void RT_Descriptor_Heap::create(ComPtr<ID3D12Device5> &device, u32 descriptors_number)
 {
 	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
@@ -237,7 +237,7 @@ DS_Descriptor_Heap::~DS_Descriptor_Heap()
 {
 }
 
-void DS_Descriptor_Heap::create(ComPtr<ID3D12Device> &device, u32 descriptors_number)
+void DS_Descriptor_Heap::create(ComPtr<ID3D12Device5> &device, u32 descriptors_number)
 {
 	Descriptor_Heap::create(device, descriptors_number, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
@@ -303,7 +303,7 @@ D3D12_GPU_Descriptor Descriptor_Heap_Pool::allocate_sampler_descriptor(D3D12_Sam
 	return sampler_descriptor_heap.place_descriptor(sampler_descriptor_indices.pop(), sampler);
 }
 
-void Descriptor_Heap_Pool::allocate_pool(ComPtr<ID3D12Device> &device, u32 descriptors_count)
+void Descriptor_Heap_Pool::allocate_pool(ComPtr<ID3D12Device5> &device, u32 descriptors_count)
 {
 	cbsrua_descriptor_heap.create(device, descriptors_count);
 	sampler_descriptor_heap.create(device, descriptors_count);

@@ -13,6 +13,7 @@
 #include "../libs/math/structures.h"
 #include "../libs/math/3dmath.h"
 
+#include "d3d12_render_api/d3d12_device.h"
 #include "d3d12_render_api/d3d12_functions.h"
 
 
@@ -77,6 +78,16 @@ void Render_System::init(Win32_Window *win32_window, Variable_Service *variable_
 	render_device = create_render_device(back_buffer_count);
 	if (!render_device) {
 		error("Failed to create render device.");
+	}
+
+	D3D12_FEATURE_DATA_SHADER_MODEL shader_model = check_feature_support<D3D12_FEATURE_DATA_SHADER_MODEL>((D3D12_Render_Device *)render_device, D3D12_FEATURE_SHADER_MODEL);
+	if (shader_model.HighestShaderModel < D3D_SHADER_MODEL_6_6) {
+		error("Device or driver does not support shader model 6.6");
+	}
+
+	D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = check_feature_support<D3D12_FEATURE_DATA_D3D12_OPTIONS5>((D3D12_Render_Device *)render_device, D3D12_FEATURE_D3D12_OPTIONS5);
+	if (options5.RaytracingTier < D3D12_RAYTRACING_TIER_1_0) {
+		error("Device or driver does not support ray tracing!");
 	}
 
 	frame_fence = render_device->create_fence(back_buffer_count, "Frame fence");

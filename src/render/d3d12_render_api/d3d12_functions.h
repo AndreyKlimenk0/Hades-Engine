@@ -3,6 +3,7 @@
 
 #include <d3d12.h>
 #include <dxgiformat.h>
+#include "d3d12_device.h"
 #include "../../libs/str.h"
 #include "../../libs/number_types.h"
 
@@ -19,5 +20,25 @@ inline void set_name(ID3D12Object *object, Args... args)
 
 	free_string(formatted_string);
 	free_string(wstring);
+}
+
+template <typename T>
+inline T check_feature_support(D3D12_Render_Device *render_device, D3D12_FEATURE feature)
+{
+	T data;
+	ZeroMemory(&data, sizeof(T));
+
+	HR(render_device->device->CheckFeatureSupport(feature, (void *)&data, sizeof(T)));
+	return data;
+}
+
+template <>
+inline D3D12_FEATURE_DATA_SHADER_MODEL check_feature_support<D3D12_FEATURE_DATA_SHADER_MODEL>(D3D12_Render_Device *render_device, D3D12_FEATURE feature)
+{
+	D3D12_FEATURE_DATA_SHADER_MODEL data;
+	data.HighestShaderModel = D3D_HIGHEST_SHADER_MODEL;
+
+	HR(render_device->device->CheckFeatureSupport(feature, (void *)&data, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL)));
+	return data;
 }
 #endif

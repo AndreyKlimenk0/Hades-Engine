@@ -98,8 +98,8 @@ struct D3D12_Command_Signature : Command_Signature {
 };
 
 struct D3D12_Pipeline_State : Pipeline_State {
-	D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Compute_Pipeline_Desc *pipeline_desc);
-	D3D12_Pipeline_State(ComPtr<ID3D12Device> &device, Graphics_Pipeline_Desc *pipeline_desc);
+	D3D12_Pipeline_State(ComPtr<ID3D12Device5> &device, Compute_Pipeline_Desc *pipeline_desc);
+	D3D12_Pipeline_State(ComPtr<ID3D12Device5> &device, Graphics_Pipeline_Desc *pipeline_desc);
 	~D3D12_Pipeline_State();
 
 	ComPtr<ID3D12PipelineState> d3d12_pipeline;
@@ -115,9 +115,9 @@ struct D3D12_Command_List : Graphics_Command_List {
 	D3D12_Root_Signature *last_set_root_signature = NULL;
 
 	ComPtr<ID3D12CommandAllocator> command_allocator;
-	ComPtr<ID3D12GraphicsCommandList> command_list;
+	ComPtr<ID3D12GraphicsCommandList4> command_list;
 
-	ID3D12GraphicsCommandList *get();
+	ID3D12GraphicsCommandList4 *get();
 
 	void reset();
 	void close();
@@ -170,10 +170,13 @@ struct D3D12_Command_List : Graphics_Command_List {
 	void draw_indexed(u32 index_count, u32 index_offset, u32 vertex_offset);
 	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer);
 	void execute_indirect(Command_Signature *command_signature, u32 command_count, Buffer *argument_buffer, Buffer *count_buffer, u64 count_buffer_offset);
+
+	// Ray tracing commad list methods
+	void build_raytracing_acceleration_structure(Array<Raytracing_Triangle_Geometry_Desc> &geometry_desc);
 };
 
 struct D3D12_Fence : Fence {
-	D3D12_Fence(ComPtr<ID3D12Device> &device, u64 initial_expected_value, const char *name);
+	D3D12_Fence(ComPtr<ID3D12Device5> &device, u64 initial_expected_value, const char *name);
 	virtual ~D3D12_Fence();
 
 	HANDLE handle;
@@ -187,7 +190,7 @@ struct D3D12_Fence : Fence {
 };
 
 struct D3D12_Command_Queue : Command_Queue {
-	D3D12_Command_Queue(ComPtr<ID3D12Device> &device, Command_List_Type command_list_type);
+	D3D12_Command_Queue(ComPtr<ID3D12Device5> &device, Command_List_Type command_list_type);
 	~D3D12_Command_Queue();
 
 	ComPtr<ID3D12CommandQueue> d3d12_command_queue;
@@ -204,14 +207,14 @@ struct Resource_Allocation_Info {
 };
 
 struct D3D12_Render_Device : Render_Device {
-	D3D12_Render_Device(u64 initial_expected_value, ComPtr<ID3D12Device> &_device);
+	D3D12_Render_Device(u64 initial_expected_value, ComPtr<ID3D12Device5> &_device);
 	~D3D12_Render_Device();
 
 	u64 frame_number = 0;
 
 	Descriptor_Heap_Pool *descriptor_pool = NULL;
 
-	ComPtr<ID3D12Device> device;
+	ComPtr<ID3D12Device5> device;
 
 	Array<D3D12_Buffer *> buffers;
 	Queue<Pair<u64, D3D12_Resource *>> resource_release_queue2;

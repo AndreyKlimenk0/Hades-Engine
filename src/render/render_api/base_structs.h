@@ -176,4 +176,19 @@ struct Compute_Pipeline_Desc {
 	Root_Signature *root_signature = NULL;
 	Bytecode_Ref cs_bytecode;
 };
+
+typedef u64 GPU_Address;
+
+struct Raytracing_Triangle_Geometry_Desc {
+	u32 flags = 0;
+	GPU_Address transform3x4 = 0;
+	DXGI_FORMAT index_format = DXGI_FORMAT_UNKNOWN;
+	DXGI_FORMAT vertex_format = DXGI_FORMAT_UNKNOWN;
+	u32 index_count = 0;
+	u32 vertex_count = 0;
+	GPU_Address index_buffer = 0;
+	GPU_Address vertex_buffer_address = 0;
+	GPU_Address vertex_buffer_stride = 0;
+};
+
 #endif

@@ -38,9 +38,9 @@ struct Resource_Desc {
 };
 
 struct D3D12_Resource {
-	D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *resource_desc);
-	D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resource> &existing_resource);
-	D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Heap> &heap, u64 heap_offset, Resource_Desc &resource_desc);
+	D3D12_Resource(ComPtr<ID3D12Device5> &device, Resource_Desc *resource_desc);
+	D3D12_Resource(ComPtr<ID3D12Device5> &device, ComPtr<ID3D12Resource> &existing_resource);
+	D3D12_Resource(ComPtr<ID3D12Device5> &device, ComPtr<ID3D12Heap> &heap, u64 heap_offset, Resource_Desc &resource_desc);
 	virtual ~D3D12_Resource();
 
 	void *mapped_memory = NULL;
@@ -63,7 +63,7 @@ struct D3D12_Resource {
 
 struct D3D12_Base_Buffer : D3D12_Resource {
 	D3D12_Base_Buffer(D3D12_Render_Device *render_device, Resource_Desc *resource_desc);
-	//D3D12_Base_Buffer(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Heap> &heap, u64 heap_offset, Resource_Desc &resource_desc);
+	//D3D12_Base_Buffer(ComPtr<ID3D12Device5> &device, ComPtr<ID3D12Heap> &heap, u64 heap_offset, Resource_Desc &resource_desc);
 	~D3D12_Base_Buffer();
 
 	D3D12_Render_Device *render_device = NULL;

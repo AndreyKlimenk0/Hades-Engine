@@ -94,7 +94,7 @@ Resource_Desc::~Resource_Desc()
 {
 }
 
-D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *resource_desc)
+D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device5> &device, Resource_Desc *resource_desc)
 {
 	D3D12_RESOURCE_DESC d3d12_resource_desc = resource_desc->d3d12_resource_desc;
 
@@ -124,7 +124,7 @@ D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, Resource_Desc *reso
 	HR(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &d3d12_resource_desc, to_d3d12_resource_state(resource_state), d3d12_clear_value_ptr, IID_PPV_ARGS(d3d12_resource.ReleaseAndGetAddressOf())));
 }
 
-D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resource> &existing_resource)
+D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device5> &device, ComPtr<ID3D12Resource> &existing_resource)
 {
 	D3D12_RESOURCE_DESC d3d12_resource_desc = existing_resource->GetDesc();
 	if (d3d12_resource_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -140,7 +140,7 @@ D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Resour
 	d3d12_resource = existing_resource;
 }
 
-D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device> &device, ComPtr<ID3D12Heap> &heap, u64 heap_offset, Resource_Desc &resource_desc)
+D3D12_Resource::D3D12_Resource(ComPtr<ID3D12Device5> &device, ComPtr<ID3D12Heap> &heap, u64 heap_offset, Resource_Desc &resource_desc)
 {
 }
 
@@ -179,7 +179,7 @@ void D3D12_Resource::resource_footprint(Resource_Footprint *resource_footprint)
 	row_sizes.resize(subresource_number);
 	d3d12_footprints.resize(subresource_number);
 
-	ComPtr<ID3D12Device> device;
+	ComPtr<ID3D12Device5> device;
 	d3d12_resource->GetDevice(IID_PPV_ARGS(device.GetAddressOf()));
 	device->GetCopyableFootprints(&desc, 0, subresource_number, 0, d3d12_footprints.items, row_counts.items, row_sizes.items, &total_size);
 
