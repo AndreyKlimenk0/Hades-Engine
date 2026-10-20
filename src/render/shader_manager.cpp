@@ -9,19 +9,28 @@
 #pragma comment(lib, "dxcompiler.lib")
 
 static const Shader_Entry SHADER_LIST[] = {
-	{ "render_2d.hlsl",              "render_2d",               "-DDEBUG_SHADOWS -DRED_COLOR" },
-	{ "forward_light.hlsl",          "forward_light",           "-DDEBUG_SHADOWS" },
-	{ "forward_light.hlsl",          "forward_light_red",           "-DRED_COLOR -DDEBUG_SHADOWS" },
-	{ "depth_map.hlsl",              "depth_map",               "-DDEBUG_SHADOWS" },
-	{ "debug_cascaded_shadows.hlsl", "debug_cascaded_shadows",  "-DDEBUG_SHADOWS" },
-	{ "draw_vertices.hlsl",          "draw_vertices",           "-DDEBUG_SHADOWS" },
-	{ "silhouette.hlsl",             "silhouette",              "-DDEBUG_SHADOWS" },
-	{ "outlining.hlsl",              "outlining",               "-DDEBUG_SHADOWS" },
-	{ "downsample_hzb.hlsl",         "downsample_hzb",          "-DDEBUG_SHADOWS" },
-	{ "ui_rendering.hlsl",           "ui_rendering",            "-DDEBUG_SHADOWS" },
-	{ "culling.hlsl",                "culling",                 "-DDEBUG_SHADOWS" },
-	{ "shadows_culling.hlsl",        "shadows_culling",         "-DDEBUG_SHADOWS" },
-	{ "tile_frustum.hlsl",           "tile_frustum",            "-DDEBUG_SHADOWS" },
+	//{ "render_2d.hlsl",              "render_2d",               "-DDEBUG_SHADOWS -DRED_COLOR" },
+	//{ "forward_light.hlsl",          "forward_light",           "-DDEBUG_SHADOWS" },
+	//{ "forward_light.hlsl",          "forward_light_red",           "-DRED_COLOR -DDEBUG_SHADOWS" },
+	//{ "depth_map.hlsl",              "depth_map",               "-DDEBUG_SHADOWS" },
+	//{ "debug_cascaded_shadows.hlsl", "debug_cascaded_shadows",  "-DDEBUG_SHADOWS" },
+	//{ "draw_vertices.hlsl",          "draw_vertices",           "-DDEBUG_SHADOWS" },
+	//{ "silhouette.hlsl",             "silhouette",              "-DDEBUG_SHADOWS" },
+	//{ "outlining.hlsl",              "outlining",               "-DDEBUG_SHADOWS" },
+	//{ "downsample_hzb.hlsl",         "downsample_hzb",          "-DDEBUG_SHADOWS" },
+	//{ "ui_rendering.hlsl",           "ui_rendering",            "-DDEBUG_SHADOWS" },
+	//{ "culling.hlsl",                "culling",                 "-DDEBUG_SHADOWS" },
+	//{ "shadows_culling.hlsl",        "shadows_culling",         "-DDEBUG_SHADOWS" },
+	//{ "tile_frustum.hlsl",           "tile_frustum",            "-DDEBUG_SHADOWS" },
+	{ "raytraced_shadows.hlsl",      "raytraced_shadows.raygen",       "entrypoint: cast_shadow_ray profile: lib_6_6 defines: DEBUG_SHADOWS RED_COLOR" },
+	{ "raytraced_shadows.hlsl",      "raytraced_shadows.ShadowAnyHit", "entrypoint: ShadowAnyHit profile: lib_6_6" },
+	{ "raytraced_shadows.hlsl",      "raytraced_shadows.ShadowMiss",   "entrypoint: ShadowMiss profile: lib_6_6" },
+};
+
+struct Shader_Compilation_Args {
+	String entrypoint;
+	String profile;
+	Array<String> defines;
 };
 
 static const Shader_Type SHADER_TYPE_LIST[] = {
@@ -207,7 +216,7 @@ String build_cso_shader_file_name(const char *shader_file_name, Shader_Type shad
 	return base_file_name + "_" + get_shader_prefix(shader_type) + "." + "cso";
 }
 
-Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, const char *shader_alias, Shader_Type shader_type, const char *define_arguments)
+Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_size, const char *path_to_shader_file, const char *file_name, const char *shader_alias, Shader_Type shader_type, Shader_Compilation_Args *shader_compilation_args)
 {
 	shader_source_directory = join_paths(get_base_path(), "hlsl");
 	shader_pdb_directory = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), "pdb");
@@ -224,22 +233,25 @@ Shader_Compilation_Result Shader_Compiler::compile(void *shader_code, u32 code_s
 	arguments.push("-Od");  // Disable optimization;
 	arguments.push("-Zpr"); // Row major matrix order
 	arguments.push("-E");   // Entry point
-	arguments.push(get_shader_entry_point(shader_type));
+	if (shader_compilation_args->entrypoint) {
+		arguments.push(shader_compilation_args->entrypoint);
+	} else {
+		arguments.push(get_shader_entry_point(shader_type));
+	}
 	arguments.push("-T");   // Profile
-	arguments.push(get_shader_profile(shader_type));
+	if (shader_compilation_args->profile) {
+		arguments.push(shader_compilation_args->profile);
+	} else {
+		arguments.push(get_shader_profile(shader_type));
+	}
 	arguments.push("-HV");  // HLSL verison (2016, 2017, 2018, 2021). Default is 2018
 	arguments.push("2021");
 	arguments.push("-I");
-	arguments.push(shader_source_directory);
+	arguments.push("d:\\dev\\hades-engine\\hlsl\\utils.hlsl");
+	//arguments.push(shader_source_directory);
 
-	String _define_arguments = define_arguments;
-	Array<String> defines;
-	if (split(&_define_arguments, " ", &defines)) {
-		for (u32 i = 0; i < defines.count; i++) {
-			arguments.push(defines[i]);
-		}
-	} else {
-		arguments.push(_define_arguments);
+	for (u32 i = 0; i < shader_compilation_args->defines.count; i++) {
+		arguments.push("-D" + shader_compilation_args->defines[i]);
 	}
 
 	Array<LPCWSTR> wstrings;
@@ -299,6 +311,40 @@ inline bool compare(const Shader_Compilation_Info &x, const String &y)
 	return x.cso_file_name == y;
 }
 
+void parse_shader_compilation_args(const char *string, Shader_Compilation_Args *shader_compilation_args)
+{
+	Array<String> substrings;
+	String temp = string;
+	split(&temp, " ", &substrings);
+
+	//"entrypoint: cast_shadow_ray profile: lib6_6 defines: DEBUG_SHADOWS RED_COLOR"
+
+	for (u32 i = 0; i < substrings.count; i++) {
+		String &string = substrings[i];
+		if (string == "entrypoint:") {
+			if ((i + 1) < substrings.count) {
+				shader_compilation_args->entrypoint = substrings[i + 1];
+			}
+		} else if (string == "profile:") {
+			if ((i + 1) < substrings.count) {
+				shader_compilation_args->profile = substrings[i + 1];
+			}
+		} else if (string == "defines:") {
+			if ((i + 1) < substrings.count) {
+				for (u32 j = i + 1; j < substrings.count; j++) {
+					String &define = substrings[j];
+
+					if (!define.is_empty() && (define[define.len - 1] == ':')) {
+						break;
+					} else {
+						shader_compilation_args->defines.push(define);
+					}
+				}
+			}
+		}
+	}
+}
+
 void Shader_Manager::init()
 {
 	//load_shader_compilation_info();
@@ -319,56 +365,63 @@ void Shader_Manager::init()
 			continue;
 		}
 
-		for (u32 j = 0; j < ARRAY_SIZE(SHADER_TYPE_LIST); j++) {
-			Shader_Type shader_type = SHADER_TYPE_LIST[j];
+		Shader_Compilation_Args shader_compilation_args;
+		parse_shader_compilation_args(shader_entry.arguments, &shader_compilation_args);
 
-			if (shader_code.find(get_shader_entry_point(shader_type)) > -1) {
+		if (shader_compilation_args.entrypoint.is_empty()) {
+			for (u32 j = 0; j < ARRAY_SIZE(SHADER_TYPE_LIST); j++) {
+				Shader_Type shader_type = SHADER_TYPE_LIST[j];
 
-				Find_Result<Shader_Compilation_Info> result = find_in_array(shader_info_list, build_cso_shader_file_name(shader_entry.shader_alias, shader_type), compare);
-				if (result.found) {
-					String path_to_cso_file = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), result.data.cso_file_name);
-					String path_to_shader_file = join_paths(join_paths(get_base_path(), "hlsl"), result.data.shader_file_name);
-					File cso_file;
-					File shader_file;
-					if (cso_file.open(path_to_cso_file, FILE_MODE_READ, FILE_OPEN_EXISTING) && shader_file.open(path_to_shader_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
-						u64 cso_file_last_write_time = cso_file.get_last_write_time();
-						u64 shader_file_last_write_time = shader_file.get_last_write_time();
-						if (cso_file_last_write_time >= shader_file_last_write_time) {
-							print("Shader_Compiler::init: '{}' as {} has already beed compiled. Loading the shader.", result.data.shader_alias, to_string(shader_type));
+				if (shader_code.find(get_shader_entry_point(shader_type)) > -1) {
 
-							Shader_Data *shader_data = NULL;
-							if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
-								shader_data = new Shader_Data();
-								shader_data->source_file = shader_entry.shader_file_name;
-								shader_table.set(shader_entry.shader_alias, shader_data);
+					Find_Result<Shader_Compilation_Info> result = find_in_array(shader_info_list, build_cso_shader_file_name(shader_entry.shader_alias, shader_type), compare);
+					if (result.found) {
+						String path_to_cso_file = join_paths(join_paths(get_full_path_to_data_directory(), "shaders"), result.data.cso_file_name);
+						String path_to_shader_file = join_paths(join_paths(get_base_path(), "hlsl"), result.data.shader_file_name);
+						File cso_file;
+						File shader_file;
+						if (cso_file.open(path_to_cso_file, FILE_MODE_READ, FILE_OPEN_EXISTING) && shader_file.open(path_to_shader_file, FILE_MODE_READ, FILE_OPEN_EXISTING)) {
+							u64 cso_file_last_write_time = cso_file.get_last_write_time();
+							u64 shader_file_last_write_time = shader_file.get_last_write_time();
+							if (cso_file_last_write_time >= shader_file_last_write_time) {
+								print("Shader_Compiler::init: '{}' as {} has already beed compiled. Loading the shader.", result.data.shader_alias, to_string(shader_type));
+
+								Shader_Data *shader_data = NULL;
+								if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
+									shader_data = new Shader_Data();
+									shader_data->source_file = shader_entry.shader_file_name;
+									shader_table.set(shader_entry.shader_alias, shader_data);
+								}
+								u8 *buffer = new u8[cso_file.file_size];
+								cso_file.read((void *)buffer, cso_file.file_size);
+								shader_data->set_bytecode(shader_type, { buffer,  cso_file.file_size });
+								continue;
 							}
-							u8 *buffer = new u8[cso_file.file_size];
-							cso_file.read((void *)buffer, cso_file.file_size);
-							shader_data->set_bytecode(shader_type, { buffer,  cso_file.file_size });
-							continue;
 						}
 					}
-				}
 
-				Shader_Compilation_Result compilation_result = shader_compiler.compile((void *)shader_code.data, shader_code.len, full_path_to_shader_file, shader_entry.shader_file_name, shader_entry.shader_alias, shader_type, shader_entry.arguments);
+					Shader_Compilation_Result compilation_result = shader_compiler.compile((void *)shader_code.data, shader_code.len, full_path_to_shader_file, shader_entry.shader_file_name, shader_entry.shader_alias, shader_type, &shader_compilation_args);
 
-				if (compilation_result.compiled) {
-					Shader_Data *shader_data = NULL;
-					if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
-						shader_data = new Shader_Data();
-						shader_data->source_file = shader_entry.shader_file_name;
-						shader_table.set(shader_entry.shader_alias, shader_data);
+					if (compilation_result.compiled) {
+						Shader_Data *shader_data = NULL;
+						if (!shader_table.get(shader_entry.shader_alias, &shader_data)) {
+							shader_data = new Shader_Data();
+							shader_data->source_file = shader_entry.shader_file_name;
+							shader_table.set(shader_entry.shader_alias, shader_data);
+						}
+						shader_data->set_bytecode(shader_type, compilation_result.bytecode);
+
+
+						Shader_Compilation_Info shader_info = { shader_entry.shader_file_name, shader_entry.shader_alias,
+							build_cso_shader_file_name(shader_entry.shader_file_name, shader_type),  compilation_result.last_write_time, shader_entry.arguments };
+						shader_info_list.push(shader_info);
+
+						//update_shader_compilation_info(compilation_result.last_write_time, &shader_entry, shader_type);
 					}
-					shader_data->set_bytecode(shader_type, compilation_result.bytecode);
-
-
-					Shader_Compilation_Info shader_info = { shader_entry.shader_file_name, shader_entry.shader_alias,
-						build_cso_shader_file_name(shader_entry.shader_file_name, shader_type),  compilation_result.last_write_time, shader_entry.arguments };
-					shader_info_list.push(shader_info);
-
-					//update_shader_compilation_info(compilation_result.last_write_time, &shader_entry, shader_type);
 				}
 			}
+		} else {
+			Shader_Compilation_Result compilation_result = shader_compiler.compile((void *)shader_code.data, shader_code.len, full_path_to_shader_file, shader_entry.shader_file_name, shader_entry.shader_alias, COMPUTE_SHADER, &shader_compilation_args);
 		}
 	}
 
