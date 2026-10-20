@@ -1,9 +1,10 @@
 #ifndef MESH_LOADER_H
 #define MESH_LOADER_H
 
+#include "color.h"
 #include "number_types.h"
-#include "../render/mesh.h"
 #include "structures/array.h"
+#include "../render/mesh.h"
 
 struct Loading_Models_Info {
 	u32 model_count = 0;
@@ -32,6 +33,10 @@ struct Loading_Model {
 
 	String name;
 	String file_name;
+
+	Color base_color;
+	float metalness = 1.0f;
+	float roughness = 1.0f;
 
 	String normal_texture_name;
 	String albedo_texture_name;

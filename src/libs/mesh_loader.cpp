@@ -265,11 +265,11 @@ inline void process_mesh(aiMesh *ai_mesh, Loading_Model *loading_model, Loading_
 
 inline void process_material(aiMaterial *material, Loading_Model *loading_model, Array<String> &textures)
 {
-	float shininess = 0.0f;
-	float shininess_strength = 1.0f;
-
-	material->Get(AI_MATKEY_SHININESS, shininess);
-	material->Get(AI_MATKEY_SHININESS_STRENGTH, shininess_strength);
+	aiColor4D base_color(1, 1, 1, 1);
+	material->Get(AI_MATKEY_BASE_COLOR, base_color);
+	material->Get(AI_MATKEY_METALLIC_FACTOR, loading_model->metalness);
+	material->Get(AI_MATKEY_ROUGHNESS_FACTOR, loading_model->roughness);
+	loading_model->base_color = Color(base_color.r, base_color.g, base_color.b, base_color.a);
 
 	if (get_texture_file_name(material, aiTextureType_NORMALS, loading_model->normal_texture_name) || get_texture_file_name(material, aiTextureType_HEIGHT, loading_model->normal_texture_name)) {
 		textures.push(loading_model->normal_texture_name);

@@ -16,6 +16,7 @@ struct GPU_Global_Info {
 	u32 linear_sampler_idx;
 	u32 point_sampler_idx;
 	u32 point_clamp_sampler_idx;
+	u32 point_border_sampler_idx;
 	u32 hzb_width;
 	u32 hzb_height;
 	u32 hzb_mips;
@@ -30,6 +31,7 @@ struct GPU_Frame_Info {
 	Matrix4 perspective_matrix;
 	Matrix4 orthographic_matrix;
 	Matrix4 view_perspective_matrix;
+	Matrix4 inverse_perspective_matrix;
 	Matrix4 inverse_view_perspective_matrix;
 	Vector4 frustum_planes[6];
 	Vector3 view_position;

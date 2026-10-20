@@ -70,6 +70,12 @@ inline bool saturated(T a)
 }
 
 template<typename T>
+float min2(T vec)
+{
+    return min(vec.x, vec.y);
+}
+
+template<typename T>
 float max2(T vec)
 {
     return max(vec.x, vec.y);

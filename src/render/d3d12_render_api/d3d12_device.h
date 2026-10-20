@@ -230,8 +230,7 @@ struct D3D12_Render_Device : Render_Device {
 	Texture *create_texture(Texture_Desc *texture_desc);
 	
 	Fence *create_fence(u64 initial_expected_value, const char *name = NULL);
-	Sampler *create_sampler(Sampler_Filter filter, Address_Mode uvw);
-	//GPU_Heap *create_gpu_heap(u64 size, GPU_Heap_Type heap_type, GPU_Heap_Content conten);
+	Sampler *create_sampler(Sampler_Filter filter, Address_Mode uvw, float border_color = 0.0f);
 	
 	Command_List *create_command_list(Command_List_Type type);
 	Copy_Command_List *create_copy_command_list();

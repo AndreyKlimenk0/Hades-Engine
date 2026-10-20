@@ -134,10 +134,11 @@ struct D3D12_Texture : Texture {
 };
 
 struct D3D12_Sampler : Sampler {
-	D3D12_Sampler(D3D12_Render_Device *render_device, Sampler_Filter filter, Address_Mode uvw);
+	D3D12_Sampler(D3D12_Render_Device *render_device, Sampler_Filter filter, Address_Mode uvw, float border_color);
 	~D3D12_Sampler();
 
 	D3D12_Render_Device *render_device = NULL;
+	float border_color;
 	Sampler_Filter filter;
 	Address_Mode u;
 	Address_Mode v;

@@ -19,7 +19,7 @@ struct Pass_Data {
 
 ConstantBuffer<Pass_Data> pass_data : register(b0, space0);
 
-Texture2D<float> hzb_texture : register(t0, space0);
+Texture2D<float2> hzb_texture : register(t0, space0);
 
 StructuredBuffer<float4x4> world_matrices : register(t1, space0);
 
@@ -97,10 +97,10 @@ bool occlusion_culled(float3 min_AABB, float3 max_AABB)
     
     if (mip_level < pass_data.hzb_width_height_mips.z) {
         float4 depths;
-        depths.x = hzb_texture.SampleLevel(point_clamp_sampler(), uv_min_AABB, mip_level);
-        depths.y = hzb_texture.SampleLevel(point_clamp_sampler(), uv_max_AABB, mip_level);
-        depths.w = hzb_texture.SampleLevel(point_clamp_sampler(), float2(uv_min_AABB.x, uv_max_AABB.y), mip_level);
-        depths.z = hzb_texture.SampleLevel(point_clamp_sampler(), float2(uv_max_AABB.x, uv_min_AABB.y), mip_level);
+        depths.x = hzb_texture.SampleLevel(point_clamp_sampler(), uv_min_AABB, mip_level).g;
+        depths.y = hzb_texture.SampleLevel(point_clamp_sampler(), uv_max_AABB, mip_level).g;
+        depths.w = hzb_texture.SampleLevel(point_clamp_sampler(), float2(uv_min_AABB.x, uv_max_AABB.y), mip_level).g;
+        depths.z = hzb_texture.SampleLevel(point_clamp_sampler(), float2(uv_max_AABB.x, uv_min_AABB.y), mip_level).g;
         
         // if (any(depths == 1.0f)) {
         // depths.x = depths.x == 1.0f ? 0.0f : depths.x;

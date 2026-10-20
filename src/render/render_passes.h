@@ -214,6 +214,7 @@ struct Deferred_Shading : Render_Pass {
 	Texture *depth_texture = NULL;
 	Texture *shading_result = NULL;
 	Texture *shadow_atlas = NULL;
+	Texture *hzb = NULL;
 
 	void init(Render_Device *device, Shader_Manager *shader_manager, Pipeline_Resource_Manager *resource_manager);
 	void schedule_resources(Pipeline_Resource_Manager *resource_manager);

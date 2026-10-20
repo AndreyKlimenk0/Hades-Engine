@@ -291,12 +291,14 @@ void Pipeline_Resource_Manager::init(Render_Device *_render_device, Texture_Desc
 	linear_sampler = render_device->create_sampler(SAMPLER_FILTER_LINEAR, ADDRESS_MODE_WRAP);
 	point_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_WRAP);
 	point_clamp_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_CLAMP);
+	point_border_sampler = render_device->create_sampler(SAMPLER_FILTER_POINT, ADDRESS_MODE_BORDER, 1.0f);
 
 	GPU_Global_Info global_info;
 	global_info.anisotropic_sampler_idx = anisotropic_sampler->sampler_descriptor()->index();
 	global_info.linear_sampler_idx = linear_sampler->sampler_descriptor()->index();
 	global_info.point_sampler_idx = point_sampler->sampler_descriptor()->index();
 	global_info.point_clamp_sampler_idx = point_clamp_sampler->sampler_descriptor()->index();
+	global_info.point_border_sampler_idx = point_border_sampler->sampler_descriptor()->index();
 	global_info.hzb_width = round_down_to_power_of_two(back_buffer_texture_desc->width);
 	global_info.hzb_height = round_down_to_power_of_two(back_buffer_texture_desc->height);
 	global_info.hzb_mips = find_max_mip_level(global_info.hzb_width, global_info.hzb_height);
@@ -335,6 +337,7 @@ void Pipeline_Resource_Manager::update_common_constant_buffers()
 	frame_info.perspective_matrix = camera->perspective_matrix;
 	frame_info.orthographic_matrix = make_orthographic_matrix(0.0f, (float)window_size.width, (float)window_size.height, 0.0f, camera->near_plane, camera->far_plane);
 	frame_info.view_perspective_matrix = camera->view_perspective_matrix;
+	frame_info.inverse_perspective_matrix = inverse(camera->perspective_matrix);
 	frame_info.inverse_view_perspective_matrix = inverse(camera->get_view_perspective_matrix());
 	frame_info.near_plane = camera->near_plane;
 	frame_info.far_plane = camera->far_plane;

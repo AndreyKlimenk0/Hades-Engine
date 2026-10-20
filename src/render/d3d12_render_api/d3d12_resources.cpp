@@ -574,7 +574,7 @@ RTV_Descriptor *D3D12_Texture::render_target_descriptor()
 	return &_render_target_descriptor;
 }
 
-D3D12_Sampler::D3D12_Sampler(D3D12_Render_Device *render_device, Sampler_Filter filter, Address_Mode uvw) : render_device(render_device), filter(filter), u(uvw), v(uvw), w(uvw)
+D3D12_Sampler::D3D12_Sampler(D3D12_Render_Device *render_device, Sampler_Filter filter, Address_Mode uvw, float border_color) : render_device(render_device), filter(filter), u(uvw), v(uvw), w(uvw), border_color(border_color)
 {
 }
 
@@ -602,10 +602,10 @@ D3D12_SAMPLER_DESC D3D12_Sampler::d3d12_sampler_desc()
 	d3d12_sampler_desc.MipLODBias = 0;
 	d3d12_sampler_desc.MaxAnisotropy = filter == SAMPLER_FILTER_ANISOTROPIC ? 16 : 0;
 	d3d12_sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	d3d12_sampler_desc.BorderColor[0] = 0;
-	d3d12_sampler_desc.BorderColor[1] = 0;
-	d3d12_sampler_desc.BorderColor[2] = 0;
-	d3d12_sampler_desc.BorderColor[3] = 0;
+	d3d12_sampler_desc.BorderColor[0] = border_color;
+	d3d12_sampler_desc.BorderColor[1] = border_color;
+	d3d12_sampler_desc.BorderColor[2] = border_color;
+	d3d12_sampler_desc.BorderColor[3] = border_color;
 	d3d12_sampler_desc.MinLOD = 0;
 	d3d12_sampler_desc.MaxLOD = D3D12_FLOAT32_MAX;
 	return d3d12_sampler_desc;

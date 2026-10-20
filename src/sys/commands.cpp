@@ -20,6 +20,8 @@
 #include "../collision/collision.h"
 #include "../win32/win_time.h"
 
+#include "../render/helpers.h"
+
 static Engine *engine = NULL;
 static Game_World *game_world = NULL;
 static Render_World *render_world = NULL;
@@ -75,10 +77,43 @@ static void load_meshes(Array<String> &command_args)
 				Loading_Model *loading_model = loaded_models[j];
 
 				Mesh_Storage_Info mesh_info = mesh_storage->add_mesh(loading_model->name, &loading_model->mesh, loading_model->mesh_points);
-			
+
+				u32 albedo_texture_idx = UINT32_MAX;
+				u32 roughness_metalic_idx = UINT32_MAX;
+				
 				u32 normal_texture_idx = texture_storage->find_texture_or_get_default(loading_model->normal_texture_name, DEFAULT_NORMAL_TEXTURE)->shader_resource_descriptor()->index();
-				u32 albedo_texture_idx = texture_storage->find_texture_or_get_default(loading_model->albedo_texture_name, DEFAULT_ALBEDO_TEXTURE)->shader_resource_descriptor()->index();
-				u32 roughness_metalic_idx = texture_storage->find_texture_or_get_default(loading_model->roughness_metalic_texture_name, DEFAULT_ROUGHNESS_METALIC_TEXTURE)->shader_resource_descriptor()->index();
+
+				if (loading_model->albedo_texture_name) {
+					albedo_texture_idx = texture_storage->find_texture_or_get_default(loading_model->albedo_texture_name, DEFAULT_ALBEDO_TEXTURE)->shader_resource_descriptor()->index();
+				} else {
+					u32 width = 256;
+					u32 height = 256;
+
+					Image color_buffer;
+					color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+					color_buffer.name = loading_model->name + "_albedo";
+					color_buffer.fill(loading_model->base_color);
+					auto texture = create_texture_from_image(&color_buffer);
+					texture_storage->textures_table.set(loading_model->name + "_albedo", texture);
+					albedo_texture_idx = texture->shader_resource_descriptor()->index();
+				}
+
+				if (loading_model->roughness_metalic_texture_name) {
+					roughness_metalic_idx = texture_storage->find_texture_or_get_default(loading_model->roughness_metalic_texture_name, DEFAULT_ROUGHNESS_METALIC_TEXTURE)->shader_resource_descriptor()->index();
+				} else {
+					u32 width = 256;
+					u32 height = 256;
+
+					Image color_buffer;
+					color_buffer.create(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+					color_buffer.name = loading_model->name + "_roughness_metalic";
+					color_buffer.fill(Color(loading_model->roughness, loading_model->metalness, 0.0f));
+					auto texture = create_texture_from_image(&color_buffer);
+					texture_storage->textures_table.set(loading_model->name + "_roughness_metalic", texture);
+					texture->shader_resource_descriptor()->index();
+				}
 
 				u32 material_idx = material_storage->add_material(normal_texture_idx, albedo_texture_idx, roughness_metalic_idx);
 

@@ -56,6 +56,7 @@ struct Pipeline_Resource_Manager {
 	Sampler *linear_sampler = NULL;
 	Sampler *point_sampler = NULL;
 	Sampler *point_clamp_sampler = NULL;
+	Sampler *point_border_sampler = NULL;
 
 	Array<Buffer *> buffers;
 	Array<Texture *> textures;

@@ -974,9 +974,9 @@ Fence *D3D12_Render_Device::create_fence(u64 initial_expected_value, const char 
 	return new D3D12_Fence(device, initial_expected_value, name);
 }
 
-Sampler *D3D12_Render_Device::create_sampler(Sampler_Filter filter, Address_Mode uvw)
+Sampler *D3D12_Render_Device::create_sampler(Sampler_Filter filter, Address_Mode uvw, float border_color)
 {
-	return new D3D12_Sampler(this, filter, uvw);
+	return new D3D12_Sampler(this, filter, uvw, border_color);
 }
 
 Command_List *D3D12_Render_Device::create_command_list(Command_List_Type command_list_type)

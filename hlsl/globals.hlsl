@@ -6,6 +6,7 @@ struct Global_Info {
     uint linear_sampler_idx;
     uint point_sampler_idx;
     uint point_clamp_sampler_idx;
+    uint point_border_sampler_idx;
     uint3 hzb_width_height_mips;
     float min_depth;
     float max_depth;
@@ -18,6 +19,7 @@ struct Frame_Info {
 	float4x4 perspective_matrix;
 	float4x4 orthographics_matrix;
 	float4x4 view_perspective_matrix;
+	float4x4 inverse_perspective_matrix;
 	float4x4 inverse_view_perspective_matrix;
 	// Left, Right, Bottom, Top, Near, Far
 	float4 frustum_planes[6]; 
@@ -53,5 +55,9 @@ SamplerState point_sampler()
 SamplerState point_clamp_sampler()
 {
     return samplers[global_info.point_clamp_sampler_idx];
+}
+SamplerState point_border_sampler()
+{
+	return samplers[global_info.point_border_sampler_idx];
 }
 #endif

@@ -97,6 +97,16 @@ def get_output_file_name(shader_name: str, shader_type : Shader_Type) -> str:
     name = shader_name.split(".")[0]
     return name + file_prefix[shader_type] + ".cso"
 
+def get_debug_shader_file_name(shader_name: str, shader_type : Shader_Type) -> str:
+    file_prefix = { 
+        Shader_Type.VERTEX_SHADER : "_vs",
+        Shader_Type.COMPUTE_SHADER : "_cs",
+        Shader_Type.DOMAIN_SHADER : "_ds",
+        Shader_Type.GEOMETRY_SHADER : "_gs",
+        Shader_Type.PIXEL_SHADER : "_ps",
+    }
+    name = shader_name.split(".")[0]
+    return name + file_prefix[shader_type] + ".pdb"
 
 def find_shader_file_in_list(shader_name : str):
     for shader_file in shader_files:
@@ -105,16 +115,16 @@ def find_shader_file_in_list(shader_name : str):
     return None
 
 
-def build_fxc_command_line_params(shader_name: str, profile : str, entry_point : str, full_path_to_output_file : str, full_path_to_shader : str, compilation_mode = Compilation_Mode.DEBUG) -> (bool, str):
+def build_fxc_command_line_params(shader_name: str, shader_debug_file_name: str, profile : str, entry_point : str, full_path_to_output_file : str, full_path_to_shader : str, compilation_mode = Compilation_Mode.DEBUG) -> (bool, str):
     row_major_oder_matrices = "-Zpr"
     if compilation_mode == Compilation_Mode.DEBUG:
-        path_to_shader_pdb_file = os.path.join(PROJECT_DIR, PDB_FILES_DIR, shader_name.replace("hlsl", "pdb"))
+        path_to_shader_pdb_file = os.path.join(PROJECT_DIR, PDB_FILES_DIR, shader_debug_file_name)
         hlsl_version = "-HV 2021" #(2016, 2017, 2018, 2021). Default is 2018
         disable_optimizations = "-Od"
         enable_debugging_information = "-Zi" #Enable debug information. Cannot be used together with -Zs
         shader_debug_file = f'-Fd "{path_to_shader_pdb_file}"'
+        # embed_pdb = "" #Embed PDB in shader container (must be used with /Zi)
         embed_pdb = "-Qembed_debug" #Embed PDB in shader container (must be used with /Zi)
-        #command_line_params = f'"{full_path_to_shader}" -E {entry_point} -T {profile} -Fo "{full_path_to_output_file}" {disable_optimizations} {row_major_oder_matrices} {enable_debugging_information} {shader_debug_file} /enable_unbounded_descriptor_tables'
         command_line_params = f'"{full_path_to_shader}" -E {entry_point} -T {profile} -Fo "{full_path_to_output_file}" {disable_optimizations} {row_major_oder_matrices} {enable_debugging_information} {shader_debug_file} {hlsl_version} {embed_pdb}'
         return (True, command_line_params)
     
@@ -156,10 +166,11 @@ def compile_hlsl_shaders(compilation_params : Compilation_Params):
         for shader_type in shader_file.shader_types:
             profile = get_profile(shader_type)
             entiry_point = get_entry_point(shader_type)
-            output_shader_file_name = get_output_file_name(shader_file.name, shader_type)     
+            output_shader_file_name = get_output_file_name(shader_file.name, shader_type)
+            debug_shader_file_name = get_debug_shader_file_name(shader_file.name, shader_type)
             full_path_to_output_file = os.path.join(PROJECT_DIR, OUTPUT_DIR, output_shader_file_name)
             
-            result, command_line_params = build_fxc_command_line_params(shader_file.name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
+            result, command_line_params = build_fxc_command_line_params(shader_file.name, debug_shader_file_name, profile, entiry_point, full_path_to_output_file, full_path_to_shader, compilation_params.compilation_mode)
             if result:
                 result = subprocess.run(f'dxc {command_line_params}', shell=True, stdout=subprocess.PIPE)  
                 if result.returncode != 0:

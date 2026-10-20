@@ -245,9 +245,7 @@ struct Render_Device {
 
 	virtual Buffer *create_buffer(Buffer_Desc *buffer_desc) = 0;
 	virtual Texture *create_texture(Texture_Desc *texture_desc) = 0;
-	virtual Sampler *create_sampler(Sampler_Filter filter, Address_Mode uvw) = 0;
-	
-	//virtual GPU_Heap *create_gpu_heap(u64 size, GPU_Heap_Type heap_type, GPU_Heap_Content conten) = 0;
+	virtual Sampler *create_sampler(Sampler_Filter filter, Address_Mode uvw, float border_color = 0.0f) = 0;
 
 	// TEMP CODE ????????????????
 	virtual void set_upload_command_list(Command_List *command_list) = 0;

@@ -848,7 +848,7 @@ void Generate_HZB::schedule_resources(Pipeline_Resource_Manager *resource_manage
 	texture_desc.width = round_down_to_power_of_two(resource_manager->default_depth_stencil_desc.width);
 	texture_desc.height = round_down_to_power_of_two(resource_manager->default_depth_stencil_desc.height);
 	texture_desc.miplevels = find_max_mip_level(texture_desc.width, texture_desc.height);
-	texture_desc.format = DXGI_FORMAT_R32_FLOAT;
+	texture_desc.format = DXGI_FORMAT_R32G32_FLOAT;
 	texture_desc.flags = ALLOW_UNORDERED_ACCESS;
 	texture_desc.name = "HZB";
 
@@ -1696,6 +1696,7 @@ void Deferred_Shading::schedule_resources(Pipeline_Resource_Manager *resource_ma
 	depth_texture = resource_manager->read_texture("Z buffer");
 	shading_result = resource_manager->create_render_target("ShadingBuffer");
 	shadow_atlas = resource_manager->read_texture("shadow_atlas");
+	hzb = resource_manager->read_texture("HZB");
 }
 
 struct Deferred_Shading_Pass_Data {
@@ -1703,6 +1704,8 @@ struct Deferred_Shading_Pass_Data {
 	u32 normal_idx;
 	u32 roughness_idx;
 	u32 depth_idx;
+	u32 hzb_idx;
+	Pad3 pad;
 	Vector4 sky_color;
 };
 
@@ -1786,6 +1789,7 @@ void Deferred_Shading::render(Graphics_Command_List *graphics_command_list, void
 	pass_data.normal_idx = normal_texture->shader_resource_descriptor()->index();
 	pass_data.roughness_idx = roughness_texture->shader_resource_descriptor()->index();
 	pass_data.depth_idx = depth_texture->shader_resource_descriptor()->index();
+	pass_data.hzb_idx = hzb->shader_resource_descriptor()->index();
 	pass_data.sky_color = Color::LightSteelBlue;
 
 	graphics_command_list->set_graphics_constants(0, 0, &pass_data);

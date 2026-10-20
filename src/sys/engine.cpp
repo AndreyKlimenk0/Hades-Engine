@@ -50,6 +50,7 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//command_args.push("sphere2.gltf");
 	//command_args.push("sphere3.gltf");
 	//command_args.push("DamagedHelmet.gltf");
+	//command_args.push("test_reflections.gltf");
 	command_args.push("Sponza.gltf");
 	//command_args.push("testAABB1.gltf");
 	//command_args.push("shadows_occlusion_culling.gltf");
@@ -64,7 +65,7 @@ inline void build_default_world(Game_World *game_world, Render_World *render_wor
 	//entity->position.z += -10.0f;
 
 	//Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.0f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
-	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -14.0f), Vector3(0.0f, 0.2f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
+	Entity_Id camera_id = game_world->make_perspective_camera(Vector3(0.0f, 3.0f, -1.0f), Vector3(0.0f, 0.2f, 1.0f), engine->global_config.fov, engine->render_sys.window.aspect_ration, engine->global_config.near_plane, engine->global_config.far_plane);
 	render_world->set_rendering_view(camera_id);
 
 	Entity_Id entity_id = game_world->make_direction_light(Vector3(0.2f, -1.0f, 0.2f), Color::White.get_rgb());
